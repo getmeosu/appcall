@@ -85,31 +85,64 @@
     "disposition": "APPROVED",
     "edition": "international BigMailer REST API v1",
     "operations": [
-      "healthcheck",
-      "brands.list",
       "brands.get",
-      "lists.list",
+      "brands.list",
       "contacts.list",
+      "healthcheck",
+      "lists.list",
       "brands.create",
       "brands.update",
-      "lists.get",
-      "lists.create",
-      "lists.update",
-      "lists.delete",
-      "contacts.get",
+      "properties.list",
+      "properties.create",
+      "properties.get",
+      "properties.update",
+      "properties.delete",
+      "bulkCampaigns.list",
+      "bulkCampaigns.create",
+      "bulkCampaigns.get",
+      "bulkCampaigns.update",
       "contacts.create",
+      "contacts.get",
       "contacts.update",
       "contacts.delete",
+      "contacts.upsert",
+      "contactBatches.create",
+      "contactBatches.get",
+      "fields.list",
+      "fields.create",
+      "fields.get",
+      "fields.update",
+      "fields.delete",
+      "lists.create",
+      "lists.get",
+      "lists.update",
+      "lists.delete",
+      "segments.list",
+      "segments.create",
+      "segments.get",
+      "segments.update",
+      "segments.delete",
+      "suppressionLists.list",
+      "suppressionLists.create",
+      "suppressionLists.get",
       "templates.list",
+      "templates.create",
       "templates.get",
+      "templates.update",
+      "templates.delete",
       "transactionalCampaigns.list",
+      "transactionalCampaigns.create",
       "transactionalCampaigns.get",
-      "transactionalCampaigns.send",
-      "webhook.bounce",
-      "webhook.click",
-      "webhook.complaint",
-      "webhook.open",
-      "webhook.unsubscribe"
+      "transactionalCampaigns.update",
+      "users.list",
+      "users.create",
+      "users.get",
+      "users.update",
+      "users.delete",
+      "users.me",
+      "connections.list",
+      "messageTypes.list",
+      "senders.list"
     ],
     "upstreamSha": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
     "marketFocus": "international",
@@ -125,7 +158,14 @@
         "https://docs.bigmailer.io/reference/listlists",
         "https://docs.bigmailer.io/reference/listcontacts",
         "https://www.bigmailer.io/",
-        "https://www.bigmailer.io/contact-us/"
+        "https://www.bigmailer.io/contact-us/",
+        "https://docs.bigmailer.io/reference/createbrand",
+        "https://docs.bigmailer.io/reference/createcontact",
+        "https://docs.bigmailer.io/reference/upsertcontact",
+        "https://docs.bigmailer.io/reference/createbulkcampaign",
+        "https://docs.bigmailer.io/reference/createsuppressionlist",
+        "https://docs.bigmailer.io/reference/listconnections",
+        "https://docs.bigmailer.io/reference/listusers"
       ]
     },
     "breach": {
@@ -252,7 +292,7 @@
       ]
     },
     "brands.create": {
-      "upstreamActionId": "create_brand",
+      "upstreamActionId": "brands_create",
       "sourceRefs": [
         "runtime-headers",
         "runtime-base"
@@ -262,11 +302,12 @@
       ],
       "responseContract": "appcall-provider-json-v1",
       "adaptations": [
-        "Maps fromName/fromEmail to official from_name/from_email on POST /v1/brands."
+        "Maps camelCase fromName/fromEmail onto official from_name/from_email JSON fields.",
+        "Returns raw BigMailer JSON under data."
       ]
     },
     "brands.update": {
-      "upstreamActionId": "update_brand",
+      "upstreamActionId": "brands_update",
       "sourceRefs": [
         "runtime-headers",
         "runtime-base"
@@ -276,81 +317,150 @@
       ],
       "responseContract": "appcall-provider-json-v1",
       "adaptations": [
-        "PUT /v1/brands/{brandId} with optional name and from fields."
+        "Official brand updates use POST /v1/brands/{brand_id}, not PATCH.",
+        "Renames official brand_id to brandId as a required encoded path segment.",
+        "Returns raw BigMailer JSON under data."
       ]
     },
-    "lists.get": {
-      "upstreamActionId": "get_list",
+    "properties.list": {
+      "upstreamActionId": "list_brand_properties",
       "sourceRefs": [
         "runtime-headers",
         "runtime-base"
       ],
       "documentationUrls": [
-        "https://docs.bigmailer.io/reference/getlist"
+        "https://docs.bigmailer.io/reference/listbrandproperties"
       ],
       "responseContract": "appcall-provider-json-v1",
       "adaptations": [
-        "Renames official brand_id/list_id to brandId/listId path segments."
+        "Renames official brand_id to brandId as a required encoded path segment.",
+        "Returns raw BigMailer JSON under data."
       ]
     },
-    "lists.create": {
-      "upstreamActionId": "create_list",
+    "properties.create": {
+      "upstreamActionId": "create_brand_property",
       "sourceRefs": [
         "runtime-headers",
         "runtime-base"
       ],
       "documentationUrls": [
-        "https://docs.bigmailer.io/reference/createlist"
+        "https://docs.bigmailer.io/reference/createbrandproperty"
       ],
       "responseContract": "appcall-provider-json-v1",
       "adaptations": [
-        "POST /v1/brands/{brandId}/lists with official name field."
+        "Renames official brand_id to brandId as a required encoded path segment.",
+        "Returns raw BigMailer JSON under data."
       ]
     },
-    "lists.update": {
-      "upstreamActionId": "update_list",
+    "properties.get": {
+      "upstreamActionId": "get_brand_property",
       "sourceRefs": [
         "runtime-headers",
         "runtime-base"
       ],
       "documentationUrls": [
-        "https://docs.bigmailer.io/reference/updatelist"
+        "https://docs.bigmailer.io/reference/getbrandproperty"
       ],
       "responseContract": "appcall-provider-json-v1",
       "adaptations": [
-        "PUT /v1/brands/{brandId}/lists/{listId}."
+        "Renames official brand_id to brandId as a required encoded path segment.",
+        "Returns raw BigMailer JSON under data."
       ]
     },
-    "lists.delete": {
-      "upstreamActionId": "delete_list",
+    "properties.update": {
+      "upstreamActionId": "update_brand_property",
       "sourceRefs": [
         "runtime-headers",
         "runtime-base"
       ],
       "documentationUrls": [
-        "https://docs.bigmailer.io/reference/deletelist"
+        "https://docs.bigmailer.io/reference/updatebrandproperty"
       ],
       "responseContract": "appcall-provider-json-v1",
       "adaptations": [
-        "DELETE /v1/brands/{brandId}/lists/{listId}. Contacts in the list are not deleted."
+        "Official updates use POST rather than PATCH.",
+        "Renames official brand_id to brandId as a required encoded path segment.",
+        "Returns raw BigMailer JSON under data."
       ]
     },
-    "contacts.get": {
-      "upstreamActionId": "get_contact",
+    "properties.delete": {
+      "upstreamActionId": "delete_brand_property",
       "sourceRefs": [
         "runtime-headers",
         "runtime-base"
       ],
       "documentationUrls": [
-        "https://docs.bigmailer.io/reference/getcontact"
+        "https://docs.bigmailer.io/reference/deletebrandproperty"
       ],
       "responseContract": "appcall-provider-json-v1",
       "adaptations": [
-        "contactId is the official contact_id path segment (ID or email)."
+        "Renames official brand_id to brandId as a required encoded path segment.",
+        "Returns raw BigMailer JSON under data."
+      ]
+    },
+    "bulkCampaigns.list": {
+      "upstreamActionId": "list_bulk_campaigns",
+      "sourceRefs": [
+        "runtime-headers",
+        "runtime-base"
+      ],
+      "documentationUrls": [
+        "https://docs.bigmailer.io/reference/listbulkcampaigns"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Renames official brand_id to brandId as a required encoded path segment.",
+        "Returns raw BigMailer JSON under data."
+      ]
+    },
+    "bulkCampaigns.create": {
+      "upstreamActionId": "create_bulk_campaign",
+      "sourceRefs": [
+        "runtime-headers",
+        "runtime-base"
+      ],
+      "documentationUrls": [
+        "https://docs.bigmailer.io/reference/createbulkcampaign"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Maps fromAddress to the official from object and replyTo to reply_to.",
+        "Returns raw BigMailer JSON under data."
+      ]
+    },
+    "bulkCampaigns.get": {
+      "upstreamActionId": "get_bulk_campaign",
+      "sourceRefs": [
+        "runtime-headers",
+        "runtime-base"
+      ],
+      "documentationUrls": [
+        "https://docs.bigmailer.io/reference/getbulkcampaign"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Renames official brand_id to brandId as a required encoded path segment.",
+        "Returns raw BigMailer JSON under data."
+      ]
+    },
+    "bulkCampaigns.update": {
+      "upstreamActionId": "update_bulk_campaign",
+      "sourceRefs": [
+        "runtime-headers",
+        "runtime-base"
+      ],
+      "documentationUrls": [
+        "https://docs.bigmailer.io/reference/updatebulkcampaign"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Official updates use POST rather than PATCH.",
+        "Renames official brand_id to brandId as a required encoded path segment.",
+        "Returns raw BigMailer JSON under data."
       ]
     },
     "contacts.create": {
-      "upstreamActionId": "create_contact",
+      "upstreamActionId": "contacts_create",
       "sourceRefs": [
         "runtime-headers",
         "runtime-base"
@@ -360,11 +470,28 @@
       ],
       "responseContract": "appcall-provider-json-v1",
       "adaptations": [
-        "Maps optional listId into official list_ids array on POST /v1/brands/{brandId}/contacts."
+        "Renames official brand_id to brandId as a required encoded path segment.",
+        "Maps validateEmail to the documented validate query and fieldValues/listIds to snake_case JSON.",
+        "Returns raw BigMailer JSON under data."
+      ]
+    },
+    "contacts.get": {
+      "upstreamActionId": "contacts_get",
+      "sourceRefs": [
+        "runtime-headers",
+        "runtime-base"
+      ],
+      "documentationUrls": [
+        "https://docs.bigmailer.io/reference/getcontact"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Renames official brand_id to brandId as a required encoded path segment.",
+        "Returns raw BigMailer JSON under data."
       ]
     },
     "contacts.update": {
-      "upstreamActionId": "update_contact",
+      "upstreamActionId": "contacts_update",
       "sourceRefs": [
         "runtime-headers",
         "runtime-base"
@@ -374,11 +501,13 @@
       ],
       "responseContract": "appcall-provider-json-v1",
       "adaptations": [
-        "PUT /v1/brands/{brandId}/contacts/{contactId}."
+        "Official contact updates use POST with field_values_op, list_ids_op, and unsubscribe_ids_op queries.",
+        "Renames official brand_id/contact_id to brandId/contactId.",
+        "Returns raw BigMailer JSON under data."
       ]
     },
     "contacts.delete": {
-      "upstreamActionId": "delete_contact",
+      "upstreamActionId": "contacts_delete",
       "sourceRefs": [
         "runtime-headers",
         "runtime-base"
@@ -388,11 +517,317 @@
       ],
       "responseContract": "appcall-provider-json-v1",
       "adaptations": [
-        "DELETE /v1/brands/{brandId}/contacts/{contactId}."
+        "Renames official brand_id to brandId as a required encoded path segment.",
+        "Returns raw BigMailer JSON under data."
+      ]
+    },
+    "contacts.upsert": {
+      "upstreamActionId": "upsert_contact",
+      "sourceRefs": [
+        "runtime-headers",
+        "runtime-base"
+      ],
+      "documentationUrls": [
+        "https://docs.bigmailer.io/reference/upsertcontact"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Uses official POST /v1/brands/{brand_id}/contacts/upsert with validate query.",
+        "Returns raw BigMailer JSON under data."
+      ]
+    },
+    "contactBatches.create": {
+      "upstreamActionId": "create_contact_batch",
+      "sourceRefs": [
+        "runtime-headers",
+        "runtime-base"
+      ],
+      "documentationUrls": [
+        "https://docs.bigmailer.io/reference/createcontactbatch"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Nested batch items keep official snake_case keys (field_values, list_ids, custom_id) because they pass through as JSON.",
+        "Maps validateEmails onto the official validate body field.",
+        "Returns raw BigMailer JSON under data."
+      ]
+    },
+    "contactBatches.get": {
+      "upstreamActionId": "get_contact_batch",
+      "sourceRefs": [
+        "runtime-headers",
+        "runtime-base"
+      ],
+      "documentationUrls": [
+        "https://docs.bigmailer.io/reference/getcontactbatch"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Renames official brand_id to brandId as a required encoded path segment.",
+        "Returns raw BigMailer JSON under data."
+      ]
+    },
+    "fields.list": {
+      "upstreamActionId": "fields_list",
+      "sourceRefs": [
+        "runtime-headers",
+        "runtime-base"
+      ],
+      "documentationUrls": [
+        "https://docs.bigmailer.io/reference/listfields"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Renames official brand_id to brandId as a required encoded path segment.",
+        "Returns raw BigMailer JSON under data."
+      ]
+    },
+    "fields.create": {
+      "upstreamActionId": "fields_create",
+      "sourceRefs": [
+        "runtime-headers",
+        "runtime-base"
+      ],
+      "documentationUrls": [
+        "https://docs.bigmailer.io/reference/createfield"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Renames official brand_id to brandId as a required encoded path segment.",
+        "Returns raw BigMailer JSON under data."
+      ]
+    },
+    "fields.get": {
+      "upstreamActionId": "fields_get",
+      "sourceRefs": [
+        "runtime-headers",
+        "runtime-base"
+      ],
+      "documentationUrls": [
+        "https://docs.bigmailer.io/reference/getfield"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Renames official brand_id to brandId as a required encoded path segment.",
+        "Returns raw BigMailer JSON under data."
+      ]
+    },
+    "fields.update": {
+      "upstreamActionId": "fields_update",
+      "sourceRefs": [
+        "runtime-headers",
+        "runtime-base"
+      ],
+      "documentationUrls": [
+        "https://docs.bigmailer.io/reference/updatefield"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Official updates use POST rather than PATCH.",
+        "Renames official brand_id to brandId as a required encoded path segment.",
+        "Returns raw BigMailer JSON under data."
+      ]
+    },
+    "fields.delete": {
+      "upstreamActionId": "fields_delete",
+      "sourceRefs": [
+        "runtime-headers",
+        "runtime-base"
+      ],
+      "documentationUrls": [
+        "https://docs.bigmailer.io/reference/deletefield"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Renames official brand_id to brandId as a required encoded path segment.",
+        "Returns raw BigMailer JSON under data."
+      ]
+    },
+    "lists.create": {
+      "upstreamActionId": "lists_create",
+      "sourceRefs": [
+        "runtime-headers",
+        "runtime-base"
+      ],
+      "documentationUrls": [
+        "https://docs.bigmailer.io/reference/createlist"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Renames official brand_id to brandId as a required encoded path segment.",
+        "Returns raw BigMailer JSON under data."
+      ]
+    },
+    "lists.get": {
+      "upstreamActionId": "lists_get",
+      "sourceRefs": [
+        "runtime-headers",
+        "runtime-base"
+      ],
+      "documentationUrls": [
+        "https://docs.bigmailer.io/reference/getlist"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Renames official brand_id to brandId as a required encoded path segment.",
+        "Returns raw BigMailer JSON under data."
+      ]
+    },
+    "lists.update": {
+      "upstreamActionId": "lists_update",
+      "sourceRefs": [
+        "runtime-headers",
+        "runtime-base"
+      ],
+      "documentationUrls": [
+        "https://docs.bigmailer.io/reference/updatelist"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Official updates use POST rather than PATCH.",
+        "Renames official brand_id to brandId as a required encoded path segment.",
+        "Returns raw BigMailer JSON under data."
+      ]
+    },
+    "lists.delete": {
+      "upstreamActionId": "lists_delete",
+      "sourceRefs": [
+        "runtime-headers",
+        "runtime-base"
+      ],
+      "documentationUrls": [
+        "https://docs.bigmailer.io/reference/deletelist"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Renames official brand_id to brandId as a required encoded path segment.",
+        "Returns raw BigMailer JSON under data."
+      ]
+    },
+    "segments.list": {
+      "upstreamActionId": "segments_list",
+      "sourceRefs": [
+        "runtime-headers",
+        "runtime-base"
+      ],
+      "documentationUrls": [
+        "https://docs.bigmailer.io/reference/listsegments"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Renames official brand_id to brandId as a required encoded path segment.",
+        "Returns raw BigMailer JSON under data."
+      ]
+    },
+    "segments.create": {
+      "upstreamActionId": "segments_create",
+      "sourceRefs": [
+        "runtime-headers",
+        "runtime-base"
+      ],
+      "documentationUrls": [
+        "https://docs.bigmailer.io/reference/createsegment"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Renames official brand_id to brandId as a required encoded path segment.",
+        "Returns raw BigMailer JSON under data."
+      ]
+    },
+    "segments.get": {
+      "upstreamActionId": "segments_get",
+      "sourceRefs": [
+        "runtime-headers",
+        "runtime-base"
+      ],
+      "documentationUrls": [
+        "https://docs.bigmailer.io/reference/getsegment"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Renames official brand_id to brandId as a required encoded path segment.",
+        "Returns raw BigMailer JSON under data."
+      ]
+    },
+    "segments.update": {
+      "upstreamActionId": "segments_update",
+      "sourceRefs": [
+        "runtime-headers",
+        "runtime-base"
+      ],
+      "documentationUrls": [
+        "https://docs.bigmailer.io/reference/updatesegment"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Official updates use POST rather than PATCH.",
+        "Renames official brand_id to brandId as a required encoded path segment.",
+        "Returns raw BigMailer JSON under data."
+      ]
+    },
+    "segments.delete": {
+      "upstreamActionId": "segments_delete",
+      "sourceRefs": [
+        "runtime-headers",
+        "runtime-base"
+      ],
+      "documentationUrls": [
+        "https://docs.bigmailer.io/reference/deletesegment"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Renames official brand_id to brandId as a required encoded path segment.",
+        "Returns raw BigMailer JSON under data."
+      ]
+    },
+    "suppressionLists.list": {
+      "upstreamActionId": "list_suppression_lists",
+      "sourceRefs": [
+        "runtime-headers",
+        "runtime-base"
+      ],
+      "documentationUrls": [
+        "https://docs.bigmailer.io/reference/listsuppressionlists"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Renames official brand_id to brandId as a required encoded path segment.",
+        "Returns raw BigMailer JSON under data."
+      ]
+    },
+    "suppressionLists.create": {
+      "upstreamActionId": "create_suppression_list",
+      "sourceRefs": [
+        "runtime-headers",
+        "runtime-base"
+      ],
+      "documentationUrls": [
+        "https://docs.bigmailer.io/reference/createsuppressionlist"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Handwritten multipart/form-data POST because the compiler only JSON-encodes bodies.",
+        "Accepts base64 CSV bytes as contentBase64 and sends them as the official file part.",
+        "Returns raw BigMailer JSON under data."
+      ]
+    },
+    "suppressionLists.get": {
+      "upstreamActionId": "get_suppression_list",
+      "sourceRefs": [
+        "runtime-headers",
+        "runtime-base"
+      ],
+      "documentationUrls": [
+        "https://docs.bigmailer.io/reference/getsuppressionlist"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Renames official brand_id to brandId as a required encoded path segment.",
+        "Returns raw BigMailer JSON under data."
       ]
     },
     "templates.list": {
-      "upstreamActionId": "list_templates",
+      "upstreamActionId": "templates_list",
       "sourceRefs": [
         "runtime-headers",
         "runtime-base"
@@ -402,11 +837,27 @@
       ],
       "responseContract": "appcall-provider-json-v1",
       "adaptations": [
-        "GET /v1/brands/{brandId}/templates with optional limit and cursor."
+        "Renames official brand_id to brandId as a required encoded path segment.",
+        "Returns raw BigMailer JSON under data."
+      ]
+    },
+    "templates.create": {
+      "upstreamActionId": "templates_create",
+      "sourceRefs": [
+        "runtime-headers",
+        "runtime-base"
+      ],
+      "documentationUrls": [
+        "https://docs.bigmailer.io/reference/createtemplate"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Renames official brand_id to brandId as a required encoded path segment.",
+        "Returns raw BigMailer JSON under data."
       ]
     },
     "templates.get": {
-      "upstreamActionId": "get_template",
+      "upstreamActionId": "templates_get",
       "sourceRefs": [
         "runtime-headers",
         "runtime-base"
@@ -416,7 +867,39 @@
       ],
       "responseContract": "appcall-provider-json-v1",
       "adaptations": [
-        "GET /v1/brands/{brandId}/templates/{templateId}."
+        "Renames official brand_id to brandId as a required encoded path segment.",
+        "Returns raw BigMailer JSON under data."
+      ]
+    },
+    "templates.update": {
+      "upstreamActionId": "templates_update",
+      "sourceRefs": [
+        "runtime-headers",
+        "runtime-base"
+      ],
+      "documentationUrls": [
+        "https://docs.bigmailer.io/reference/updatetemplate"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Official updates use POST rather than PATCH.",
+        "Renames official brand_id to brandId as a required encoded path segment.",
+        "Returns raw BigMailer JSON under data."
+      ]
+    },
+    "templates.delete": {
+      "upstreamActionId": "templates_delete",
+      "sourceRefs": [
+        "runtime-headers",
+        "runtime-base"
+      ],
+      "documentationUrls": [
+        "https://docs.bigmailer.io/reference/deletetemplate"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Renames official brand_id to brandId as a required encoded path segment.",
+        "Returns raw BigMailer JSON under data."
       ]
     },
     "transactionalCampaigns.list": {
@@ -430,7 +913,23 @@
       ],
       "responseContract": "appcall-provider-json-v1",
       "adaptations": [
-        "GET /v1/brands/{brandId}/transactional-campaigns with optional limit and cursor."
+        "Renames official brand_id to brandId as a required encoded path segment.",
+        "Returns raw BigMailer JSON under data."
+      ]
+    },
+    "transactionalCampaigns.create": {
+      "upstreamActionId": "create_transactional_campaign",
+      "sourceRefs": [
+        "runtime-headers",
+        "runtime-base"
+      ],
+      "documentationUrls": [
+        "https://docs.bigmailer.io/reference/createtransactionalcampaign"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Uses official html/text and from object fields rather than Composio html_content/from_email aliases.",
+        "Returns raw BigMailer JSON under data."
       ]
     },
     "transactionalCampaigns.get": {
@@ -444,103 +943,161 @@
       ],
       "responseContract": "appcall-provider-json-v1",
       "adaptations": [
-        "GET /v1/brands/{brandId}/transactional-campaigns/{campaignId}."
+        "Renames official brand_id to brandId as a required encoded path segment.",
+        "Returns raw BigMailer JSON under data."
       ]
     },
-    "transactionalCampaigns.send": {
-      "upstreamActionId": "send_transactional_campaign",
+    "transactionalCampaigns.update": {
+      "upstreamActionId": "update_transactional_campaign",
       "sourceRefs": [
         "runtime-headers",
         "runtime-base"
       ],
       "documentationUrls": [
-        "https://docs.bigmailer.io/reference/sendtransactionalcampaign"
+        "https://docs.bigmailer.io/reference/updatetransactionalcampaign"
       ],
       "responseContract": "appcall-provider-json-v1",
       "adaptations": [
-        "POST /v1/brands/{brandId}/transactional-campaigns/{campaignId}/send with official email field."
+        "Official updates use POST rather than PATCH.",
+        "Renames official brand_id to brandId as a required encoded path segment.",
+        "Returns raw BigMailer JSON under data."
       ]
     },
-    "webhook.bounce": {
-      "upstreamActionId": "webhook_bounce",
+    "users.list": {
+      "upstreamActionId": "users_list",
       "sourceRefs": [
+        "runtime-headers",
         "runtime-base"
       ],
       "documentationUrls": [
-        "https://docs.bigmailer.io/docs/webhook-event-types"
+        "https://docs.bigmailer.io/reference/listusers"
       ],
       "responseContract": "appcall-provider-json-v1",
       "adaptations": [
-        "EventOnly inbound webhook. No outbound HTTP request."
+        "Returns raw BigMailer JSON under data."
       ]
     },
-    "webhook.click": {
-      "upstreamActionId": "webhook_click",
+    "users.create": {
+      "upstreamActionId": "users_create",
       "sourceRefs": [
+        "runtime-headers",
         "runtime-base"
       ],
       "documentationUrls": [
-        "https://docs.bigmailer.io/docs/webhook-event-types"
+        "https://docs.bigmailer.io/reference/createuser"
       ],
       "responseContract": "appcall-provider-json-v1",
       "adaptations": [
-        "EventOnly inbound webhook. No outbound HTTP request."
+        "Returns raw BigMailer JSON under data."
       ]
     },
-    "webhook.complaint": {
-      "upstreamActionId": "webhook_complaint",
+    "users.get": {
+      "upstreamActionId": "users_get",
       "sourceRefs": [
+        "runtime-headers",
         "runtime-base"
       ],
       "documentationUrls": [
-        "https://docs.bigmailer.io/docs/webhook-event-types"
+        "https://docs.bigmailer.io/reference/getuser"
       ],
       "responseContract": "appcall-provider-json-v1",
       "adaptations": [
-        "EventOnly inbound webhook. No outbound HTTP request."
+        "Returns raw BigMailer JSON under data."
       ]
     },
-    "webhook.open": {
-      "upstreamActionId": "webhook_open",
+    "users.update": {
+      "upstreamActionId": "users_update",
       "sourceRefs": [
+        "runtime-headers",
         "runtime-base"
       ],
       "documentationUrls": [
-        "https://docs.bigmailer.io/docs/webhook-event-types"
+        "https://docs.bigmailer.io/reference/updateuser"
       ],
       "responseContract": "appcall-provider-json-v1",
       "adaptations": [
-        "EventOnly inbound webhook. No outbound HTTP request."
+        "Official updates use POST rather than PATCH.",
+        "Returns raw BigMailer JSON under data."
       ]
     },
-    "webhook.unsubscribe": {
-      "upstreamActionId": "webhook_unsubscribe",
+    "users.delete": {
+      "upstreamActionId": "users_delete",
       "sourceRefs": [
+        "runtime-headers",
         "runtime-base"
       ],
       "documentationUrls": [
-        "https://docs.bigmailer.io/docs/webhook-event-types"
+        "https://docs.bigmailer.io/reference/deleteuser"
       ],
       "responseContract": "appcall-provider-json-v1",
       "adaptations": [
-        "EventOnly inbound webhook. No outbound HTTP request."
+        "Returns raw BigMailer JSON under data."
+      ]
+    },
+    "users.me": {
+      "upstreamActionId": "get_user_info",
+      "sourceRefs": [
+        "runtime-headers",
+        "runtime-base"
+      ],
+      "documentationUrls": [
+        "https://docs.bigmailer.io/reference/getuser"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Composio GET /me is implemented as GET /v1/users/me on api.bigmailer.io.",
+        "Returns raw BigMailer JSON under data."
+      ]
+    },
+    "connections.list": {
+      "upstreamActionId": "connections_list",
+      "sourceRefs": [
+        "runtime-headers",
+        "runtime-base"
+      ],
+      "documentationUrls": [
+        "https://docs.bigmailer.io/reference/listconnections"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Returns raw BigMailer JSON under data."
+      ]
+    },
+    "messageTypes.list": {
+      "upstreamActionId": "list_message_types",
+      "sourceRefs": [
+        "runtime-headers",
+        "runtime-base"
+      ],
+      "documentationUrls": [
+        "https://docs.bigmailer.io/reference/listmessagetypes"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Renames official brand_id to brandId as a required encoded path segment.",
+        "Returns raw BigMailer JSON under data."
+      ]
+    },
+    "senders.list": {
+      "upstreamActionId": "senders_list",
+      "sourceRefs": [
+        "runtime-headers",
+        "runtime-base"
+      ],
+      "documentationUrls": [
+        "https://docs.bigmailer.io/reference/listsenders"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Renames official brand_id to brandId as a required encoded path segment.",
+        "Returns raw BigMailer JSON under data."
       ]
     }
   },
   "manifest": {
-    "key": "bigmailer",
-    "name": "BigMailer",
-    "version": "0.2.0",
-    "runtime": "bun",
-    "visibility": "public",
-    "categories": [
-      "email-marketing"
-    ],
     "auth": {
-      "type": "api_key",
       "scopes": [],
       "setup": {
-        "mode": "api_key",
         "fields": [
           {
             "key": "apiKey",
@@ -548,70 +1105,249 @@
             "required": true,
             "secret": true
           }
-        ]
+        ],
+        "mode": "api_key"
+      },
+      "type": "api_key"
+    },
+    "categories": [
+      "email-marketing"
+    ],
+    "evidence": {
+      "fixture": {
+        "status": "supplied"
+      },
+      "live": {
+        "status": "unverified"
       }
     },
-    "network": {
-      "allowedHosts": [
-        "api.bigmailer.io"
-      ]
-    },
-    "models": [
-      "brand",
-      "list",
-      "contact",
-      "template",
-      "transactionalCampaign"
-    ],
     "http": {
-      "baseUrl": "https://api.bigmailer.io",
       "auth": {
         "field": "apiKey",
         "in": "header",
         "name": "X-API-Key",
         "value": "{{apiKey}}"
       },
-      "headers": {
-        "Accept": "application/json"
-      },
+      "baseUrl": "https://api.bigmailer.io",
       "errors": {
-        "rateLimitStatuses": [
-          429
-        ],
-        "retryAfterHeader": "retry-after",
         "defaultRetryAfterSeconds": 30,
         "messagePaths": [
           "message",
           "code",
           "type"
-        ]
+        ],
+        "rateLimitStatuses": [
+          429
+        ],
+        "retryAfterHeader": "retry-after"
+      },
+      "headers": {
+        "Accept": "application/json"
       }
     },
+    "key": "bigmailer",
+    "models": [
+      "brand",
+      "list",
+      "contact",
+      "field",
+      "segment",
+      "template",
+      "bulk_campaign",
+      "transactional_campaign",
+      "user",
+      "brand_property",
+      "suppression_list",
+      "connection",
+      "sender",
+      "message_type",
+      "contact_batch"
+    ],
+    "name": "BigMailer",
+    "network": {
+      "allowedHosts": [
+        "api.bigmailer.io"
+      ]
+    },
     "operations": {
-      "healthcheck": {
-        "timeoutMs": 5000,
-        "maxInputBytes": 4096,
-        "maxResponseBytes": 65536,
-        "kind": "action",
-        "sideEffect": "read",
-        "title": "Healthcheck",
-        "description": "Validate the BigMailer API key with GET /v1/brands?limit=1.",
+      "brands.get": {
+        "description": "Get one BigMailer brand by ID.",
+        "enforceOutputSchema": true,
         "inputSchema": {
-          "type": "object",
-          "properties": {},
-          "additionalProperties": false
-        },
-        "outputSchema": {
-          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "brandId": {
+              "minLength": 1,
+              "type": "string"
+            }
+          },
           "required": [
-            "data"
+            "brandId"
           ],
+          "type": "object"
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "additionalProperties": false,
           "properties": {
             "data": {
               "type": "object"
             }
           },
-          "additionalProperties": false
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        },
+        "request": {
+          "method": "GET",
+          "path": "/v1/brands/{{brandId}}",
+          "success": [
+            200
+          ]
+        },
+        "responseFormat": "json",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "title": "Get brand",
+        "validationMode": "strict-generated"
+      },
+      "brands.list": {
+        "description": "List BigMailer brands with optional cursor pagination.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "cursor": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "limit": {
+              "maximum": 100,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          "type": "object"
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        },
+        "request": {
+          "method": "GET",
+          "path": "/v1/brands",
+          "query": {
+            "cursor": "{{cursor}}",
+            "limit": "{{limit}}"
+          },
+          "success": [
+            200
+          ]
+        },
+        "responseFormat": "json",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "title": "List brands",
+        "validationMode": "strict-generated"
+      },
+      "contacts.list": {
+        "description": "List contacts in a BigMailer brand, optionally filtered by list.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "brandId": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "cursor": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "limit": {
+              "maximum": 100,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "listId": {
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "brandId"
+          ],
+          "type": "object"
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        },
+        "request": {
+          "method": "GET",
+          "path": "/v1/brands/{{brandId}}/contacts",
+          "query": {
+            "cursor": "{{cursor}}",
+            "limit": "{{limit}}",
+            "list_id": "{{listId}}"
+          },
+          "success": [
+            200
+          ]
+        },
+        "responseFormat": "json",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "title": "List contacts",
+        "validationMode": "strict-generated"
+      },
+      "healthcheck": {
+        "description": "Validate the BigMailer API key with GET /v1/brands?limit=1.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {},
+          "type": "object"
+        },
+        "kind": "action",
+        "maxInputBytes": 4096,
+        "maxResponseBytes": 65536,
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
         },
         "request": {
           "method": "GET",
@@ -623,255 +1359,131 @@
             200
           ]
         },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "brands.list": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
+        "responseFormat": "json",
         "sideEffect": "read",
-        "title": "List brands",
-        "description": "List BigMailer brands with optional cursor pagination.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "limit": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 100
-            },
-            "cursor": {
-              "type": "string",
-              "minLength": 1
-            }
-          },
-          "additionalProperties": false
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "GET",
-          "path": "/v1/brands",
-          "query": {
-            "limit": "{{limit}}",
-            "cursor": "{{cursor}}"
-          },
-          "success": [
-            200
-          ]
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "brands.get": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
-        "sideEffect": "read",
-        "title": "Get brand",
-        "description": "Get one BigMailer brand by ID.",
-        "inputSchema": {
-          "type": "object",
-          "required": [
-            "brandId"
-          ],
-          "properties": {
-            "brandId": {
-              "type": "string",
-              "minLength": 1
-            }
-          },
-          "additionalProperties": false
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "GET",
-          "path": "/v1/brands/{{brandId}}",
-          "success": [
-            200
-          ]
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
+        "timeoutMs": 5000,
+        "title": "Healthcheck",
+        "validationMode": "strict-generated"
       },
       "lists.list": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
-        "sideEffect": "read",
-        "title": "List lists",
         "description": "List contact lists in a BigMailer brand.",
+        "enforceOutputSchema": true,
         "inputSchema": {
-          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "brandId": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "cursor": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "limit": {
+              "maximum": 100,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
           "required": [
             "brandId"
           ],
-          "properties": {
-            "brandId": {
-              "type": "string",
-              "minLength": 1
-            },
-            "limit": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 100
-            },
-            "cursor": {
-              "type": "string",
-              "minLength": 1
-            }
-          },
-          "additionalProperties": false
+          "type": "object"
         },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
         "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
+          "additionalProperties": false,
           "properties": {
             "data": {
               "type": "object"
             }
           },
-          "additionalProperties": false
+          "required": [
+            "data"
+          ],
+          "type": "object"
         },
         "request": {
           "method": "GET",
           "path": "/v1/brands/{{brandId}}/lists",
           "query": {
-            "limit": "{{limit}}",
-            "cursor": "{{cursor}}"
-          },
-          "success": [
-            200
-          ]
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "contacts.list": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
-        "sideEffect": "read",
-        "title": "List contacts",
-        "description": "List contacts in a BigMailer brand, optionally filtered by list.",
-        "inputSchema": {
-          "type": "object",
-          "required": [
-            "brandId"
-          ],
-          "properties": {
-            "brandId": {
-              "type": "string",
-              "minLength": 1
-            },
-            "listId": {
-              "type": "string",
-              "minLength": 1
-            },
-            "limit": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 100
-            },
-            "cursor": {
-              "type": "string",
-              "minLength": 1
-            }
-          },
-          "additionalProperties": false
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "GET",
-          "path": "/v1/brands/{{brandId}}/contacts",
-          "query": {
-            "limit": "{{limit}}",
             "cursor": "{{cursor}}",
-            "list_id": "{{listId}}"
+            "limit": "{{limit}}"
           },
           "success": [
             200
           ]
         },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
+        "responseFormat": "json",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "title": "List lists",
+        "validationMode": "strict-generated"
       },
       "brands.create": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
-        "sideEffect": "write",
-        "title": "Create brand",
-        "description": "Create a BigMailer brand.",
+        "description": "Create a BigMailer brand with a name and default from address.",
+        "enforceOutputSchema": true,
         "inputSchema": {
           "type": "object",
           "properties": {
             "name": {
               "type": "string",
-              "minLength": 1,
-              "description": "Brand name."
+              "minLength": 1
             },
             "fromName": {
               "type": "string",
-              "minLength": 1,
-              "description": "Default From name."
+              "minLength": 1
             },
             "fromEmail": {
               "type": "string",
-              "minLength": 1,
-              "description": "Default From email."
+              "minLength": 1
+            },
+            "timezone": {
+              "type": "string",
+              "minLength": 1
+            },
+            "bounceDangerPercent": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 15
+            },
+            "maxSoftBounces": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 20
+            },
+            "url": {
+              "type": "string",
+              "minLength": 1
+            },
+            "unsubscribeText": {
+              "type": "string"
+            },
+            "contactLimit": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "logo": {
+              "type": "string",
+              "minLength": 1
+            },
+            "connectionId": {
+              "type": "string",
+              "minLength": 1
             }
           },
           "additionalProperties": false,
           "required": [
-            "name"
+            "name",
+            "fromName",
+            "fromEmail"
           ]
         },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
         "outputSchema": {
           "type": "object",
           "required": [
@@ -888,8 +1500,7 @@
           "method": "POST",
           "path": "/v1/brands",
           "success": [
-            200,
-            201
+            200
           ],
           "headers": {
             "Content-Type": "application/json"
@@ -897,43 +1508,77 @@
           "body": {
             "name": "{{name}}",
             "from_name": "{{fromName}}",
-            "from_email": "{{fromEmail}}"
+            "from_email": "{{fromEmail}}",
+            "timezone": "{{timezone}}",
+            "bounce_danger_percent": "{{bounceDangerPercent}}",
+            "max_soft_bounces": "{{maxSoftBounces}}",
+            "url": "{{url}}",
+            "unsubscribe_text": "{{unsubscribeText}}",
+            "contact_limit": "{{contactLimit}}",
+            "logo": "{{logo}}",
+            "connection_id": "{{connectionId}}"
           }
         },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
+        "responseFormat": "json",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "title": "Create brand",
+        "validationMode": "strict-generated"
       },
       "brands.update": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
-        "sideEffect": "write",
-        "title": "Update brand",
-        "description": "Update a BigMailer brand. Fields not provided are left unchanged.",
+        "description": "Update a BigMailer brand. Official updates use POST /v1/brands/{brand_id}.",
+        "enforceOutputSchema": true,
         "inputSchema": {
           "type": "object",
           "properties": {
             "brandId": {
               "type": "string",
-              "minLength": 1,
-              "description": "Brand ID."
+              "minLength": 1
             },
             "name": {
               "type": "string",
-              "minLength": 1,
-              "description": "Brand name."
+              "minLength": 1
             },
             "fromName": {
               "type": "string",
-              "minLength": 1,
-              "description": "Default From name."
+              "minLength": 1
             },
             "fromEmail": {
               "type": "string",
-              "minLength": 1,
-              "description": "Default From email."
+              "minLength": 1
+            },
+            "timezone": {
+              "type": "string",
+              "minLength": 1
+            },
+            "bounceDangerPercent": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 15
+            },
+            "maxSoftBounces": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 20
+            },
+            "url": {
+              "type": "string",
+              "minLength": 1
+            },
+            "unsubscribeText": {
+              "type": "string"
+            },
+            "contactLimit": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "logo": {
+              "type": "string",
+              "minLength": 1
+            },
+            "connectionId": {
+              "type": "string",
+              "minLength": 1
             }
           },
           "additionalProperties": false,
@@ -941,6 +1586,9 @@
             "brandId"
           ]
         },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
         "outputSchema": {
           "type": "object",
           "required": [
@@ -954,7 +1602,7 @@
           "additionalProperties": false
         },
         "request": {
-          "method": "PUT",
+          "method": "POST",
           "path": "/v1/brands/{{brandId}}",
           "success": [
             200
@@ -965,33 +1613,1794 @@
           "body": {
             "name": "{{name}}",
             "from_name": "{{fromName}}",
-            "from_email": "{{fromEmail}}"
+            "from_email": "{{fromEmail}}",
+            "timezone": "{{timezone}}",
+            "bounce_danger_percent": "{{bounceDangerPercent}}",
+            "max_soft_bounces": "{{maxSoftBounces}}",
+            "url": "{{url}}",
+            "unsubscribe_text": "{{unsubscribeText}}",
+            "contact_limit": "{{contactLimit}}",
+            "logo": "{{logo}}",
+            "connection_id": "{{connectionId}}"
           }
         },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "lists.get": {
+        "responseFormat": "json",
+        "sideEffect": "write",
         "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
-        "sideEffect": "read",
-        "title": "Get list",
-        "description": "Get one contact list in a BigMailer brand.",
+        "title": "Update brand",
+        "validationMode": "strict-generated"
+      },
+      "properties.list": {
+        "description": "List custom brand properties used as merge tags in a BigMailer brand.",
+        "enforceOutputSchema": true,
         "inputSchema": {
           "type": "object",
           "properties": {
             "brandId": {
               "type": "string",
-              "minLength": 1,
-              "description": "Brand ID."
+              "minLength": 1
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            },
+            "cursor": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "brandId"
+          ]
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/v1/brands/{{brandId}}/properties",
+          "success": [
+            200
+          ],
+          "query": {
+            "limit": "{{limit}}",
+            "cursor": "{{cursor}}"
+          }
+        },
+        "responseFormat": "json",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "title": "List brand properties",
+        "validationMode": "strict-generated"
+      },
+      "properties.create": {
+        "description": "Create a brand property that can be referenced in templates via a merge tag.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "brandId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "name": {
+              "type": "string",
+              "minLength": 1
+            },
+            "mergeTagName": {
+              "type": "string",
+              "minLength": 1
+            },
+            "isHtml": {
+              "type": "boolean"
+            },
+            "stringValue": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "brandId",
+            "name"
+          ]
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "POST",
+          "path": "/v1/brands/{{brandId}}/properties",
+          "success": [
+            200
+          ],
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "name": "{{name}}",
+            "merge_tag_name": "{{mergeTagName}}",
+            "is_html": "{{isHtml}}",
+            "string_value": "{{stringValue}}"
+          }
+        },
+        "responseFormat": "json",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "title": "Create brand property",
+        "validationMode": "strict-generated"
+      },
+      "properties.get": {
+        "description": "Get one brand property by brand ID and property ID.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "brandId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "propertyId": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "brandId",
+            "propertyId"
+          ]
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/v1/brands/{{brandId}}/properties/{{propertyId}}",
+          "success": [
+            200
+          ]
+        },
+        "responseFormat": "json",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "title": "Get brand property",
+        "validationMode": "strict-generated"
+      },
+      "properties.update": {
+        "description": "Update a brand property. Official updates use POST.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "brandId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "propertyId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "name": {
+              "type": "string",
+              "minLength": 1
+            },
+            "mergeTagName": {
+              "type": "string",
+              "minLength": 1
+            },
+            "isHtml": {
+              "type": "boolean"
+            },
+            "stringValue": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "brandId",
+            "propertyId"
+          ]
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "POST",
+          "path": "/v1/brands/{{brandId}}/properties/{{propertyId}}",
+          "success": [
+            200
+          ],
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "name": "{{name}}",
+            "merge_tag_name": "{{mergeTagName}}",
+            "is_html": "{{isHtml}}",
+            "string_value": "{{stringValue}}"
+          }
+        },
+        "responseFormat": "json",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "title": "Update brand property",
+        "validationMode": "strict-generated"
+      },
+      "properties.delete": {
+        "description": "Delete a brand property from a BigMailer brand.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "brandId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "propertyId": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "brandId",
+            "propertyId"
+          ]
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "DELETE",
+          "path": "/v1/brands/{{brandId}}/properties/{{propertyId}}",
+          "success": [
+            200
+          ]
+        },
+        "responseFormat": "json",
+        "sideEffect": "destructive",
+        "timeoutMs": 15000,
+        "title": "Delete brand property",
+        "validationMode": "strict-generated"
+      },
+      "bulkCampaigns.list": {
+        "description": "List bulk email campaigns in a BigMailer brand.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "brandId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            },
+            "cursor": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "brandId"
+          ]
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/v1/brands/{{brandId}}/bulk-campaigns",
+          "success": [
+            200
+          ],
+          "query": {
+            "limit": "{{limit}}",
+            "cursor": "{{cursor}}"
+          }
+        },
+        "responseFormat": "json",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "title": "List bulk campaigns",
+        "validationMode": "strict-generated"
+      },
+      "bulkCampaigns.create": {
+        "description": "Create a bulk email campaign. fromAddress maps to the official from object.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "brandId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "name": {
+              "type": "string",
+              "minLength": 1
+            },
+            "subject": {
+              "type": "string"
+            },
+            "fromAddress": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "email": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "name": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            },
+            "recipientName": {
+              "type": "string"
+            },
+            "replyTo": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "email": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "name": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            },
+            "linkParams": {
+              "type": "string"
+            },
+            "preview": {
+              "type": "string"
+            },
+            "autoText": {
+              "type": "boolean"
+            },
+            "html": {
+              "type": "string"
+            },
+            "text": {
+              "type": "string"
+            },
+            "templateId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "trackOpens": {
+              "type": "boolean"
+            },
+            "trackClicks": {
+              "type": "boolean"
+            },
+            "trackTextClicks": {
+              "type": "boolean"
+            },
+            "segmentId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "messageTypeId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "listIds": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "excludedListIds": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "scheduledFor": {
+              "type": "integer"
+            },
+            "throttlingType": {
+              "type": "string",
+              "enum": [
+                "none",
+                "burst"
+              ]
+            },
+            "throttlingAmount": {
+              "type": "integer",
+              "minimum": 1000
+            },
+            "throttlingPeriod": {
+              "type": "integer",
+              "enum": [
+                900,
+                1800,
+                3600,
+                7200
+              ]
+            },
+            "suppressionListId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "ready": {
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "brandId",
+            "name"
+          ]
+        },
+        "kind": "action",
+        "maxInputBytes": 1048576,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "POST",
+          "path": "/v1/brands/{{brandId}}/bulk-campaigns",
+          "success": [
+            200
+          ],
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "name": "{{name}}",
+            "subject": "{{subject}}",
+            "from": "{{fromAddress}}",
+            "recipient_name": "{{recipientName}}",
+            "reply_to": "{{replyTo}}",
+            "link_params": "{{linkParams}}",
+            "preview": "{{preview}}",
+            "auto_text": "{{autoText}}",
+            "html": "{{html}}",
+            "text": "{{text}}",
+            "template_id": "{{templateId}}",
+            "track_opens": "{{trackOpens}}",
+            "track_clicks": "{{trackClicks}}",
+            "track_text_clicks": "{{trackTextClicks}}",
+            "segment_id": "{{segmentId}}",
+            "message_type_id": "{{messageTypeId}}",
+            "list_ids": "{{listIds}}",
+            "excluded_list_ids": "{{excludedListIds}}",
+            "scheduled_for": "{{scheduledFor}}",
+            "throttling_type": "{{throttlingType}}",
+            "throttling_amount": "{{throttlingAmount}}",
+            "throttling_period": "{{throttlingPeriod}}",
+            "suppression_list_id": "{{suppressionListId}}",
+            "ready": "{{ready}}"
+          }
+        },
+        "responseFormat": "json",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "title": "Create bulk campaign",
+        "validationMode": "strict-generated"
+      },
+      "bulkCampaigns.get": {
+        "description": "Get one bulk campaign by brand ID and campaign ID.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "brandId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "campaignId": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "brandId",
+            "campaignId"
+          ]
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/v1/brands/{{brandId}}/bulk-campaigns/{{campaignId}}",
+          "success": [
+            200
+          ]
+        },
+        "responseFormat": "json",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "title": "Get bulk campaign",
+        "validationMode": "strict-generated"
+      },
+      "bulkCampaigns.update": {
+        "description": "Update a bulk campaign. Official updates use POST.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "brandId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "campaignId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "name": {
+              "type": "string",
+              "minLength": 1
+            },
+            "subject": {
+              "type": "string"
+            },
+            "fromAddress": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "email": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "name": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            },
+            "recipientName": {
+              "type": "string"
+            },
+            "replyTo": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "email": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "name": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            },
+            "linkParams": {
+              "type": "string"
+            },
+            "preview": {
+              "type": "string"
+            },
+            "autoText": {
+              "type": "boolean"
+            },
+            "html": {
+              "type": "string"
+            },
+            "text": {
+              "type": "string"
+            },
+            "templateId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "trackOpens": {
+              "type": "boolean"
+            },
+            "trackClicks": {
+              "type": "boolean"
+            },
+            "trackTextClicks": {
+              "type": "boolean"
+            },
+            "segmentId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "messageTypeId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "listIds": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "excludedListIds": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "scheduledFor": {
+              "type": "integer"
+            },
+            "throttlingType": {
+              "type": "string",
+              "enum": [
+                "none",
+                "burst"
+              ]
+            },
+            "throttlingAmount": {
+              "type": "integer",
+              "minimum": 1000
+            },
+            "throttlingPeriod": {
+              "type": "integer",
+              "enum": [
+                900,
+                1800,
+                3600,
+                7200
+              ]
+            },
+            "suppressionListId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "ready": {
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "brandId",
+            "campaignId"
+          ]
+        },
+        "kind": "action",
+        "maxInputBytes": 1048576,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "POST",
+          "path": "/v1/brands/{{brandId}}/bulk-campaigns/{{campaignId}}",
+          "success": [
+            200
+          ],
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "name": "{{name}}",
+            "subject": "{{subject}}",
+            "from": "{{fromAddress}}",
+            "recipient_name": "{{recipientName}}",
+            "reply_to": "{{replyTo}}",
+            "link_params": "{{linkParams}}",
+            "preview": "{{preview}}",
+            "auto_text": "{{autoText}}",
+            "html": "{{html}}",
+            "text": "{{text}}",
+            "template_id": "{{templateId}}",
+            "track_opens": "{{trackOpens}}",
+            "track_clicks": "{{trackClicks}}",
+            "track_text_clicks": "{{trackTextClicks}}",
+            "segment_id": "{{segmentId}}",
+            "message_type_id": "{{messageTypeId}}",
+            "list_ids": "{{listIds}}",
+            "excluded_list_ids": "{{excludedListIds}}",
+            "scheduled_for": "{{scheduledFor}}",
+            "throttling_type": "{{throttlingType}}",
+            "throttling_amount": "{{throttlingAmount}}",
+            "throttling_period": "{{throttlingPeriod}}",
+            "suppression_list_id": "{{suppressionListId}}",
+            "ready": "{{ready}}"
+          }
+        },
+        "responseFormat": "json",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "title": "Update bulk campaign",
+        "validationMode": "strict-generated"
+      },
+      "contacts.create": {
+        "description": "Create a contact in a brand. validateEmail maps to the official validate query.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "brandId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "validateEmail": {
+              "type": "boolean"
+            },
+            "email": {
+              "type": "string",
+              "minLength": 1
+            },
+            "fieldValues": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "name"
+                ],
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "string": {
+                    "type": "string"
+                  },
+                  "integer": {
+                    "type": "integer"
+                  },
+                  "date": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                }
+              }
+            },
+            "listIds": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "unsubscribeAll": {
+              "type": "boolean"
+            },
+            "unsubscribeIds": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "brandId",
+            "email"
+          ]
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "POST",
+          "path": "/v1/brands/{{brandId}}/contacts",
+          "success": [
+            200
+          ],
+          "query": {
+            "validate": "{{validateEmail}}"
+          },
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "email": "{{email}}",
+            "field_values": "{{fieldValues}}",
+            "list_ids": "{{listIds}}",
+            "unsubscribe_all": "{{unsubscribeAll}}",
+            "unsubscribe_ids": "{{unsubscribeIds}}"
+          }
+        },
+        "responseFormat": "json",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "title": "Create contact",
+        "validationMode": "strict-generated"
+      },
+      "contacts.get": {
+        "description": "Get a contact by ID or email address.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "brandId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "contactId": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "brandId",
+            "contactId"
+          ]
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/v1/brands/{{brandId}}/contacts/{{contactId}}",
+          "success": [
+            200
+          ]
+        },
+        "responseFormat": "json",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "title": "Get contact",
+        "validationMode": "strict-generated"
+      },
+      "contacts.update": {
+        "description": "Update a contact. fieldValuesOp, listIdsOp, and unsubscribeIdsOp map to official *_op query names.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "brandId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "contactId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "fieldValuesOp": {
+              "type": "string",
+              "enum": [
+                "add",
+                "remove",
+                "replace"
+              ]
+            },
+            "listIdsOp": {
+              "type": "string",
+              "enum": [
+                "add",
+                "remove",
+                "replace"
+              ]
+            },
+            "unsubscribeIdsOp": {
+              "type": "string",
+              "enum": [
+                "add",
+                "remove",
+                "replace"
+              ]
+            },
+            "email": {
+              "type": "string",
+              "minLength": 1
+            },
+            "fieldValues": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "name"
+                ],
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "string": {
+                    "type": "string"
+                  },
+                  "integer": {
+                    "type": "integer"
+                  },
+                  "date": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                }
+              }
+            },
+            "listIds": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "unsubscribeAll": {
+              "type": "boolean"
+            },
+            "unsubscribeIds": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "brandId",
+            "contactId"
+          ]
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "POST",
+          "path": "/v1/brands/{{brandId}}/contacts/{{contactId}}",
+          "success": [
+            200
+          ],
+          "query": {
+            "field_values_op": "{{fieldValuesOp}}",
+            "list_ids_op": "{{listIdsOp}}",
+            "unsubscribe_ids_op": "{{unsubscribeIdsOp}}"
+          },
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "email": "{{email}}",
+            "field_values": "{{fieldValues}}",
+            "list_ids": "{{listIds}}",
+            "unsubscribe_all": "{{unsubscribeAll}}",
+            "unsubscribe_ids": "{{unsubscribeIds}}"
+          }
+        },
+        "responseFormat": "json",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "title": "Update contact",
+        "validationMode": "strict-generated"
+      },
+      "contacts.delete": {
+        "description": "Delete a contact by ID or email address.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "brandId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "contactId": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "brandId",
+            "contactId"
+          ]
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "DELETE",
+          "path": "/v1/brands/{{brandId}}/contacts/{{contactId}}",
+          "success": [
+            200
+          ]
+        },
+        "responseFormat": "json",
+        "sideEffect": "destructive",
+        "timeoutMs": 15000,
+        "title": "Delete contact",
+        "validationMode": "strict-generated"
+      },
+      "contacts.upsert": {
+        "description": "Create or update a contact by email via POST /v1/brands/{brand_id}/contacts/upsert.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "brandId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "validateEmail": {
+              "type": "boolean"
+            },
+            "email": {
+              "type": "string",
+              "minLength": 1
+            },
+            "fieldValues": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "name"
+                ],
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "string": {
+                    "type": "string"
+                  },
+                  "integer": {
+                    "type": "integer"
+                  },
+                  "date": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                }
+              }
+            },
+            "listIds": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "unsubscribeAll": {
+              "type": "boolean"
+            },
+            "unsubscribeIds": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "brandId",
+            "email"
+          ]
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "POST",
+          "path": "/v1/brands/{{brandId}}/contacts/upsert",
+          "success": [
+            200
+          ],
+          "query": {
+            "validate": "{{validateEmail}}"
+          },
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "email": "{{email}}",
+            "field_values": "{{fieldValues}}",
+            "list_ids": "{{listIds}}",
+            "unsubscribe_all": "{{unsubscribeAll}}",
+            "unsubscribe_ids": "{{unsubscribeIds}}"
+          }
+        },
+        "responseFormat": "json",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "title": "Upsert contact",
+        "validationMode": "strict-generated"
+      },
+      "contactBatches.create": {
+        "description": "Queue 1\u20131000 contacts for asynchronous import. Nested item keys use official snake_case.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "brandId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "validateEmails": {
+              "type": "boolean"
+            },
+            "items": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "email"
+                ],
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "field_values": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "name"
+                      ],
+                      "properties": {
+                        "name": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "string": {
+                          "type": "string"
+                        },
+                        "integer": {
+                          "type": "integer"
+                        },
+                        "date": {
+                          "type": "string",
+                          "minLength": 1
+                        }
+                      }
+                    }
+                  },
+                  "list_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  },
+                  "unsubscribe_all": {
+                    "type": "boolean"
+                  },
+                  "unsubscribe_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  },
+                  "custom_id": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                }
+              }
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "brandId",
+            "items"
+          ]
+        },
+        "kind": "action",
+        "maxInputBytes": 1048576,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "POST",
+          "path": "/v1/brands/{{brandId}}/contacts/batches",
+          "success": [
+            200
+          ],
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "validate": "{{validateEmails}}",
+            "items": "{{items}}"
+          }
+        },
+        "responseFormat": "json",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "title": "Create contact batch",
+        "validationMode": "strict-generated"
+      },
+      "contactBatches.get": {
+        "description": "Get the status of a contact batch upload.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "brandId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "batchId": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "brandId",
+            "batchId"
+          ]
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/v1/brands/{{brandId}}/contacts/batches/{{batchId}}",
+          "success": [
+            200
+          ]
+        },
+        "responseFormat": "json",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "title": "Get contact batch",
+        "validationMode": "strict-generated"
+      },
+      "fields.list": {
+        "description": "List custom contact fields in a BigMailer brand.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "brandId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            },
+            "cursor": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "brandId"
+          ]
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/v1/brands/{{brandId}}/fields",
+          "success": [
+            200
+          ],
+          "query": {
+            "limit": "{{limit}}",
+            "cursor": "{{cursor}}"
+          }
+        },
+        "responseFormat": "json",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "title": "List fields",
+        "validationMode": "strict-generated"
+      },
+      "fields.create": {
+        "description": "Create a custom contact field (text, date, or integer).",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "brandId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "name": {
+              "type": "string",
+              "minLength": 1
+            },
+            "mergeTagName": {
+              "type": "string",
+              "minLength": 1
+            },
+            "sampleValue": {
+              "type": "string"
+            },
+            "type": {
+              "type": "string",
+              "enum": [
+                "date",
+                "integer",
+                "text"
+              ]
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "brandId",
+            "name",
+            "type"
+          ]
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "POST",
+          "path": "/v1/brands/{{brandId}}/fields",
+          "success": [
+            200
+          ],
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "name": "{{name}}",
+            "merge_tag_name": "{{mergeTagName}}",
+            "sample_value": "{{sampleValue}}",
+            "type": "{{type}}"
+          }
+        },
+        "responseFormat": "json",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "title": "Create field",
+        "validationMode": "strict-generated"
+      },
+      "fields.get": {
+        "description": "Get one custom field by ID.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "brandId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "fieldId": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "brandId",
+            "fieldId"
+          ]
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/v1/brands/{{brandId}}/fields/{{fieldId}}",
+          "success": [
+            200
+          ]
+        },
+        "responseFormat": "json",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "title": "Get field",
+        "validationMode": "strict-generated"
+      },
+      "fields.update": {
+        "description": "Update a custom field. Official updates use POST.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "brandId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "fieldId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "name": {
+              "type": "string",
+              "minLength": 1
+            },
+            "mergeTagName": {
+              "type": "string",
+              "minLength": 1
+            },
+            "sampleValue": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "brandId",
+            "fieldId"
+          ]
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "POST",
+          "path": "/v1/brands/{{brandId}}/fields/{{fieldId}}",
+          "success": [
+            200
+          ],
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "name": "{{name}}",
+            "merge_tag_name": "{{mergeTagName}}",
+            "sample_value": "{{sampleValue}}"
+          }
+        },
+        "responseFormat": "json",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "title": "Update field",
+        "validationMode": "strict-generated"
+      },
+      "fields.delete": {
+        "description": "Delete a custom field from a brand.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "brandId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "fieldId": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "brandId",
+            "fieldId"
+          ]
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "DELETE",
+          "path": "/v1/brands/{{brandId}}/fields/{{fieldId}}",
+          "success": [
+            200
+          ]
+        },
+        "responseFormat": "json",
+        "sideEffect": "destructive",
+        "timeoutMs": 15000,
+        "title": "Delete field",
+        "validationMode": "strict-generated"
+      },
+      "lists.create": {
+        "description": "Create a contact list in a BigMailer brand.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "brandId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "name": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "brandId",
+            "name"
+          ]
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "POST",
+          "path": "/v1/brands/{{brandId}}/lists",
+          "success": [
+            200
+          ],
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "name": "{{name}}"
+          }
+        },
+        "responseFormat": "json",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "title": "Create list",
+        "validationMode": "strict-generated"
+      },
+      "lists.get": {
+        "description": "Get one contact list by ID.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "brandId": {
+              "type": "string",
+              "minLength": 1
             },
             "listId": {
               "type": "string",
-              "minLength": 1,
-              "description": "List ID."
+              "minLength": 1
             }
           },
           "additionalProperties": false,
@@ -1000,6 +3409,9 @@
             "listId"
           ]
         },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
         "outputSchema": {
           "type": "object",
           "required": [
@@ -1019,93 +3431,29 @@
             200
           ]
         },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "lists.create": {
+        "responseFormat": "json",
+        "sideEffect": "read",
         "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
-        "sideEffect": "write",
-        "title": "Create list",
-        "description": "Create a contact list in a BigMailer brand.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "brandId": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Brand ID."
-            },
-            "name": {
-              "type": "string",
-              "minLength": 1,
-              "description": "List name."
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "brandId",
-            "name"
-          ]
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "POST",
-          "path": "/v1/brands/{{brandId}}/lists",
-          "success": [
-            200,
-            201
-          ],
-          "headers": {
-            "Content-Type": "application/json"
-          },
-          "body": {
-            "name": "{{name}}"
-          }
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
+        "title": "Get list",
+        "validationMode": "strict-generated"
       },
       "lists.update": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
-        "sideEffect": "write",
-        "title": "Update list",
-        "description": "Update a contact list in a BigMailer brand.",
+        "description": "Rename a contact list. Official updates use POST.",
+        "enforceOutputSchema": true,
         "inputSchema": {
           "type": "object",
           "properties": {
             "brandId": {
               "type": "string",
-              "minLength": 1,
-              "description": "Brand ID."
+              "minLength": 1
             },
             "listId": {
               "type": "string",
-              "minLength": 1,
-              "description": "List ID."
+              "minLength": 1
             },
             "name": {
               "type": "string",
-              "minLength": 1,
-              "description": "List name."
+              "minLength": 1
             }
           },
           "additionalProperties": false,
@@ -1115,171 +3463,9 @@
             "name"
           ]
         },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "PUT",
-          "path": "/v1/brands/{{brandId}}/lists/{{listId}}",
-          "success": [
-            200
-          ],
-          "headers": {
-            "Content-Type": "application/json"
-          },
-          "body": {
-            "name": "{{name}}"
-          }
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "lists.delete": {
-        "timeoutMs": 15000,
+        "kind": "action",
         "maxInputBytes": 65536,
         "maxResponseBytes": 5242880,
-        "kind": "action",
-        "sideEffect": "destructive",
-        "title": "Delete list",
-        "description": "Delete a contact list. Contacts in the list are not deleted.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "brandId": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Brand ID."
-            },
-            "listId": {
-              "type": "string",
-              "minLength": 1,
-              "description": "List ID."
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "brandId",
-            "listId"
-          ]
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "DELETE",
-          "path": "/v1/brands/{{brandId}}/lists/{{listId}}",
-          "success": [
-            200,
-            204
-          ]
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "contacts.get": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
-        "sideEffect": "read",
-        "title": "Get contact",
-        "description": "Get one contact in a BigMailer brand by ID or email.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "brandId": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Brand ID."
-            },
-            "contactId": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Contact ID or email address."
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "brandId",
-            "contactId"
-          ]
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "GET",
-          "path": "/v1/brands/{{brandId}}/contacts/{{contactId}}",
-          "success": [
-            200
-          ]
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "contacts.create": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
-        "sideEffect": "write",
-        "title": "Create contact",
-        "description": "Create a contact in a BigMailer brand.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "brandId": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Brand ID."
-            },
-            "email": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Contact email address."
-            },
-            "listId": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Optional list to add the contact to."
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "brandId",
-            "email"
-          ]
-        },
         "outputSchema": {
           "type": "object",
           "required": [
@@ -1294,73 +3480,7 @@
         },
         "request": {
           "method": "POST",
-          "path": "/v1/brands/{{brandId}}/contacts",
-          "success": [
-            200,
-            201
-          ],
-          "headers": {
-            "Content-Type": "application/json"
-          },
-          "body": {
-            "email": "{{email}}",
-            "list_ids": [
-              "{{listId}}"
-            ]
-          }
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "contacts.update": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
-        "sideEffect": "write",
-        "title": "Update contact",
-        "description": "Update a contact in a BigMailer brand. Fields not provided are left unchanged.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "brandId": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Brand ID."
-            },
-            "contactId": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Contact ID or email address."
-            },
-            "email": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Contact email address."
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "brandId",
-            "contactId"
-          ]
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "PUT",
-          "path": "/v1/brands/{{brandId}}/contacts/{{contactId}}",
+          "path": "/v1/brands/{{brandId}}/lists/{{listId}}",
           "success": [
             200
           ],
@@ -1368,41 +3488,39 @@
             "Content-Type": "application/json"
           },
           "body": {
-            "email": "{{email}}"
+            "name": "{{name}}"
           }
         },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "contacts.delete": {
+        "responseFormat": "json",
+        "sideEffect": "write",
         "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
-        "sideEffect": "destructive",
-        "title": "Delete contact",
-        "description": "Delete a contact from a BigMailer brand.",
+        "title": "Update list",
+        "validationMode": "strict-generated"
+      },
+      "lists.delete": {
+        "description": "Delete a contact list from a brand.",
+        "enforceOutputSchema": true,
         "inputSchema": {
           "type": "object",
           "properties": {
             "brandId": {
               "type": "string",
-              "minLength": 1,
-              "description": "Brand ID."
+              "minLength": 1
             },
-            "contactId": {
+            "listId": {
               "type": "string",
-              "minLength": 1,
-              "description": "Contact ID or email address."
+              "minLength": 1
             }
           },
           "additionalProperties": false,
           "required": [
             "brandId",
-            "contactId"
+            "listId"
           ]
         },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
         "outputSchema": {
           "type": "object",
           "required": [
@@ -1417,42 +3535,35 @@
         },
         "request": {
           "method": "DELETE",
-          "path": "/v1/brands/{{brandId}}/contacts/{{contactId}}",
+          "path": "/v1/brands/{{brandId}}/lists/{{listId}}",
           "success": [
-            200,
-            204
+            200
           ]
         },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "templates.list": {
+        "responseFormat": "json",
+        "sideEffect": "destructive",
         "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
-        "sideEffect": "read",
-        "title": "List templates",
-        "description": "List email templates in a BigMailer brand.",
+        "title": "Delete list",
+        "validationMode": "strict-generated"
+      },
+      "segments.list": {
+        "description": "List segments in a BigMailer brand.",
+        "enforceOutputSchema": true,
         "inputSchema": {
           "type": "object",
           "properties": {
             "brandId": {
               "type": "string",
-              "minLength": 1,
-              "description": "Brand ID."
+              "minLength": 1
             },
             "limit": {
               "type": "integer",
               "minimum": 1,
-              "maximum": 100,
-              "description": "Page size (1-100)."
+              "maximum": 100
             },
             "cursor": {
               "type": "string",
-              "minLength": 1,
-              "description": "Pagination cursor from a previous list call."
+              "minLength": 1
             }
           },
           "additionalProperties": false,
@@ -1460,6 +3571,471 @@
             "brandId"
           ]
         },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/v1/brands/{{brandId}}/segments",
+          "success": [
+            200
+          ],
+          "query": {
+            "limit": "{{limit}}",
+            "cursor": "{{cursor}}"
+          }
+        },
+        "responseFormat": "json",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "title": "List segments",
+        "validationMode": "strict-generated"
+      },
+      "segments.create": {
+        "description": "Create a segment with an all/any operator and condition objects.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "brandId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "name": {
+              "type": "string",
+              "minLength": 1
+            },
+            "operator": {
+              "type": "string",
+              "enum": [
+                "all",
+                "any"
+              ]
+            },
+            "conditions": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "brandId",
+            "name",
+            "operator",
+            "conditions"
+          ]
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "POST",
+          "path": "/v1/brands/{{brandId}}/segments",
+          "success": [
+            200
+          ],
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "name": "{{name}}",
+            "operator": "{{operator}}",
+            "conditions": "{{conditions}}"
+          }
+        },
+        "responseFormat": "json",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "title": "Create segment",
+        "validationMode": "strict-generated"
+      },
+      "segments.get": {
+        "description": "Get one segment by ID.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "brandId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "segmentId": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "brandId",
+            "segmentId"
+          ]
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/v1/brands/{{brandId}}/segments/{{segmentId}}",
+          "success": [
+            200
+          ]
+        },
+        "responseFormat": "json",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "title": "Get segment",
+        "validationMode": "strict-generated"
+      },
+      "segments.update": {
+        "description": "Update a segment. Official updates use POST.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "brandId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "segmentId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "name": {
+              "type": "string",
+              "minLength": 1
+            },
+            "operator": {
+              "type": "string",
+              "enum": [
+                "all",
+                "any"
+              ]
+            },
+            "conditions": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "brandId",
+            "segmentId"
+          ]
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "POST",
+          "path": "/v1/brands/{{brandId}}/segments/{{segmentId}}",
+          "success": [
+            200
+          ],
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "name": "{{name}}",
+            "operator": "{{operator}}",
+            "conditions": "{{conditions}}"
+          }
+        },
+        "responseFormat": "json",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "title": "Update segment",
+        "validationMode": "strict-generated"
+      },
+      "segments.delete": {
+        "description": "Delete a segment from a brand.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "brandId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "segmentId": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "brandId",
+            "segmentId"
+          ]
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "DELETE",
+          "path": "/v1/brands/{{brandId}}/segments/{{segmentId}}",
+          "success": [
+            200
+          ]
+        },
+        "responseFormat": "json",
+        "sideEffect": "destructive",
+        "timeoutMs": 15000,
+        "title": "Delete segment",
+        "validationMode": "strict-generated"
+      },
+      "suppressionLists.list": {
+        "description": "List suppression lists in a BigMailer brand.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "brandId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            },
+            "cursor": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "brandId"
+          ]
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/v1/brands/{{brandId}}/suppression-lists",
+          "success": [
+            200
+          ],
+          "query": {
+            "limit": "{{limit}}",
+            "cursor": "{{cursor}}"
+          }
+        },
+        "responseFormat": "json",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "title": "List suppression lists",
+        "validationMode": "strict-generated"
+      },
+      "suppressionLists.create": {
+        "description": "Upload a CSV suppression list as multipart/form-data. The file field is a base64-encoded CSV with emails in the first column.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "brandId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "fileName": {
+              "type": "string",
+              "minLength": 1
+            },
+            "contentBase64": {
+              "type": "string",
+              "minLength": 1
+            },
+            "contentType": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "brandId",
+            "fileName",
+            "contentBase64"
+          ]
+        },
+        "kind": "action",
+        "maxInputBytes": 8388608,
+        "maxResponseBytes": 1048576,
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "responseFormat": "json",
+        "sideEffect": "write",
+        "timeoutMs": 60000,
+        "title": "Create suppression list",
+        "validationMode": "strict-generated"
+      },
+      "suppressionLists.get": {
+        "description": "Get one suppression list by ID.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "brandId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "suppressionListId": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "brandId",
+            "suppressionListId"
+          ]
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/v1/brands/{{brandId}}/suppression-lists/{{suppressionListId}}",
+          "success": [
+            200
+          ]
+        },
+        "responseFormat": "json",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "title": "Get suppression list",
+        "validationMode": "strict-generated"
+      },
+      "templates.list": {
+        "description": "List email and page templates in a BigMailer brand.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "brandId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            },
+            "cursor": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "brandId"
+          ]
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
         "outputSchema": {
           "type": "object",
           "required": [
@@ -1475,38 +4051,107 @@
         "request": {
           "method": "GET",
           "path": "/v1/brands/{{brandId}}/templates",
+          "success": [
+            200
+          ],
           "query": {
             "limit": "{{limit}}",
             "cursor": "{{cursor}}"
-          },
-          "success": [
-            200
-          ]
+          }
         },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "templates.get": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
+        "responseFormat": "json",
         "sideEffect": "read",
-        "title": "Get template",
-        "description": "Get one email template in a BigMailer brand.",
+        "timeoutMs": 15000,
+        "title": "List templates",
+        "validationMode": "strict-generated"
+      },
+      "templates.create": {
+        "description": "Create an email or page template.",
+        "enforceOutputSchema": true,
         "inputSchema": {
           "type": "object",
           "properties": {
             "brandId": {
               "type": "string",
-              "minLength": 1,
-              "description": "Brand ID."
+              "minLength": 1
+            },
+            "name": {
+              "type": "string",
+              "minLength": 1
+            },
+            "type": {
+              "type": "string",
+              "enum": [
+                "email",
+                "page"
+              ]
+            },
+            "html": {
+              "type": "string",
+              "minLength": 1
+            },
+            "sharedWithAccount": {
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "brandId",
+            "name",
+            "type",
+            "html"
+          ]
+        },
+        "kind": "action",
+        "maxInputBytes": 1048576,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "POST",
+          "path": "/v1/brands/{{brandId}}/templates",
+          "success": [
+            200
+          ],
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "name": "{{name}}",
+            "type": "{{type}}",
+            "html": "{{html}}",
+            "shared_with_account": "{{sharedWithAccount}}"
+          }
+        },
+        "responseFormat": "json",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "title": "Create template",
+        "validationMode": "strict-generated"
+      },
+      "templates.get": {
+        "description": "Get one template by ID.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "brandId": {
+              "type": "string",
+              "minLength": 1
             },
             "templateId": {
               "type": "string",
-              "minLength": 1,
-              "description": "Template ID."
+              "minLength": 1
             }
           },
           "additionalProperties": false,
@@ -1515,6 +4160,9 @@
             "templateId"
           ]
         },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
         "outputSchema": {
           "type": "object",
           "required": [
@@ -1534,36 +4182,155 @@
             200
           ]
         },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "transactionalCampaigns.list": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
+        "responseFormat": "json",
         "sideEffect": "read",
-        "title": "List transactional campaigns",
-        "description": "List transactional campaigns in a BigMailer brand.",
+        "timeoutMs": 15000,
+        "title": "Get template",
+        "validationMode": "strict-generated"
+      },
+      "templates.update": {
+        "description": "Update a template. Official updates use POST.",
+        "enforceOutputSchema": true,
         "inputSchema": {
           "type": "object",
           "properties": {
             "brandId": {
               "type": "string",
-              "minLength": 1,
-              "description": "Brand ID."
+              "minLength": 1
+            },
+            "templateId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "name": {
+              "type": "string",
+              "minLength": 1
+            },
+            "type": {
+              "type": "string",
+              "enum": [
+                "email",
+                "page"
+              ]
+            },
+            "html": {
+              "type": "string",
+              "minLength": 1
+            },
+            "sharedWithAccount": {
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "brandId",
+            "templateId"
+          ]
+        },
+        "kind": "action",
+        "maxInputBytes": 1048576,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "POST",
+          "path": "/v1/brands/{{brandId}}/templates/{{templateId}}",
+          "success": [
+            200
+          ],
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "name": "{{name}}",
+            "type": "{{type}}",
+            "html": "{{html}}",
+            "shared_with_account": "{{sharedWithAccount}}"
+          }
+        },
+        "responseFormat": "json",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "title": "Update template",
+        "validationMode": "strict-generated"
+      },
+      "templates.delete": {
+        "description": "Delete a template from a brand.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "brandId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "templateId": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "brandId",
+            "templateId"
+          ]
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "DELETE",
+          "path": "/v1/brands/{{brandId}}/templates/{{templateId}}",
+          "success": [
+            200
+          ]
+        },
+        "responseFormat": "json",
+        "sideEffect": "destructive",
+        "timeoutMs": 15000,
+        "title": "Delete template",
+        "validationMode": "strict-generated"
+      },
+      "transactionalCampaigns.list": {
+        "description": "List transactional campaigns in a BigMailer brand.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "brandId": {
+              "type": "string",
+              "minLength": 1
             },
             "limit": {
               "type": "integer",
               "minimum": 1,
-              "maximum": 100,
-              "description": "Page size (1-100)."
+              "maximum": 100
             },
             "cursor": {
               "type": "string",
-              "minLength": 1,
-              "description": "Pagination cursor from a previous list call."
+              "minLength": 1
             }
           },
           "additionalProperties": false,
@@ -1571,6 +4338,9 @@
             "brandId"
           ]
         },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
         "outputSchema": {
           "type": "object",
           "required": [
@@ -1586,38 +4356,177 @@
         "request": {
           "method": "GET",
           "path": "/v1/brands/{{brandId}}/transactional-campaigns",
+          "success": [
+            200
+          ],
           "query": {
             "limit": "{{limit}}",
             "cursor": "{{cursor}}"
-          },
-          "success": [
-            200
-          ]
+          }
         },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "transactionalCampaigns.get": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
+        "responseFormat": "json",
         "sideEffect": "read",
-        "title": "Get transactional campaign",
-        "description": "Get one transactional campaign in a BigMailer brand.",
+        "timeoutMs": 15000,
+        "title": "List transactional campaigns",
+        "validationMode": "strict-generated"
+      },
+      "transactionalCampaigns.create": {
+        "description": "Create a transactional campaign. html/text and fromAddress follow the official JSON body, not Composio html_content aliases.",
+        "enforceOutputSchema": true,
         "inputSchema": {
           "type": "object",
           "properties": {
             "brandId": {
               "type": "string",
-              "minLength": 1,
-              "description": "Brand ID."
+              "minLength": 1
+            },
+            "name": {
+              "type": "string",
+              "minLength": 1
+            },
+            "subject": {
+              "type": "string"
+            },
+            "fromAddress": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "email": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "name": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            },
+            "recipientName": {
+              "type": "string"
+            },
+            "replyTo": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "email": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "name": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            },
+            "linkParams": {
+              "type": "string"
+            },
+            "preview": {
+              "type": "string"
+            },
+            "autoText": {
+              "type": "boolean"
+            },
+            "html": {
+              "type": "string"
+            },
+            "text": {
+              "type": "string"
+            },
+            "templateId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "trackOpens": {
+              "type": "boolean"
+            },
+            "trackClicks": {
+              "type": "boolean"
+            },
+            "trackTextClicks": {
+              "type": "boolean"
+            },
+            "messageTypeId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "ready": {
+              "type": "boolean"
+            },
+            "listId": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "brandId",
+            "name"
+          ]
+        },
+        "kind": "action",
+        "maxInputBytes": 1048576,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "POST",
+          "path": "/v1/brands/{{brandId}}/transactional-campaigns",
+          "success": [
+            200
+          ],
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "name": "{{name}}",
+            "subject": "{{subject}}",
+            "from": "{{fromAddress}}",
+            "recipient_name": "{{recipientName}}",
+            "reply_to": "{{replyTo}}",
+            "link_params": "{{linkParams}}",
+            "preview": "{{preview}}",
+            "auto_text": "{{autoText}}",
+            "html": "{{html}}",
+            "text": "{{text}}",
+            "template_id": "{{templateId}}",
+            "track_opens": "{{trackOpens}}",
+            "track_clicks": "{{trackClicks}}",
+            "track_text_clicks": "{{trackTextClicks}}",
+            "message_type_id": "{{messageTypeId}}",
+            "ready": "{{ready}}",
+            "list_id": "{{listId}}"
+          }
+        },
+        "responseFormat": "json",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "title": "Create transactional campaign",
+        "validationMode": "strict-generated"
+      },
+      "transactionalCampaigns.get": {
+        "description": "Get one transactional campaign by ID.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "brandId": {
+              "type": "string",
+              "minLength": 1
             },
             "campaignId": {
               "type": "string",
-              "minLength": 1,
-              "description": "Campaign ID."
+              "minLength": 1
             }
           },
           "additionalProperties": false,
@@ -1626,6 +4535,9 @@
             "campaignId"
           ]
         },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
         "outputSchema": {
           "type": "object",
           "required": [
@@ -1645,44 +4557,113 @@
             200
           ]
         },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "transactionalCampaigns.send": {
+        "responseFormat": "json",
+        "sideEffect": "read",
         "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
-        "sideEffect": "write",
-        "title": "Send transactional email",
-        "description": "Send an email as part of a transactional campaign.",
+        "title": "Get transactional campaign",
+        "validationMode": "strict-generated"
+      },
+      "transactionalCampaigns.update": {
+        "description": "Update a transactional campaign. Official updates use POST.",
+        "enforceOutputSchema": true,
         "inputSchema": {
           "type": "object",
           "properties": {
             "brandId": {
               "type": "string",
-              "minLength": 1,
-              "description": "Brand ID."
+              "minLength": 1
             },
             "campaignId": {
               "type": "string",
-              "minLength": 1,
-              "description": "Campaign ID."
+              "minLength": 1
             },
-            "email": {
+            "name": {
               "type": "string",
-              "minLength": 1,
-              "description": "Recipient email address."
+              "minLength": 1
+            },
+            "subject": {
+              "type": "string"
+            },
+            "fromAddress": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "email": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "name": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            },
+            "recipientName": {
+              "type": "string"
+            },
+            "replyTo": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "email": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "name": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            },
+            "linkParams": {
+              "type": "string"
+            },
+            "preview": {
+              "type": "string"
+            },
+            "autoText": {
+              "type": "boolean"
+            },
+            "html": {
+              "type": "string"
+            },
+            "text": {
+              "type": "string"
+            },
+            "templateId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "trackOpens": {
+              "type": "boolean"
+            },
+            "trackClicks": {
+              "type": "boolean"
+            },
+            "trackTextClicks": {
+              "type": "boolean"
+            },
+            "messageTypeId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "ready": {
+              "type": "boolean"
+            },
+            "listId": {
+              "type": "string",
+              "minLength": 1
             }
           },
           "additionalProperties": false,
           "required": [
             "brandId",
-            "campaignId",
-            "email"
+            "campaignId"
           ]
         },
+        "kind": "action",
+        "maxInputBytes": 1048576,
+        "maxResponseBytes": 5242880,
         "outputSchema": {
           "type": "object",
           "required": [
@@ -1697,37 +4678,544 @@
         },
         "request": {
           "method": "POST",
-          "path": "/v1/brands/{{brandId}}/transactional-campaigns/{{campaignId}}/send",
+          "path": "/v1/brands/{{brandId}}/transactional-campaigns/{{campaignId}}",
           "success": [
-            200,
-            201,
-            202
+            200
           ],
           "headers": {
             "Content-Type": "application/json"
           },
           "body": {
-            "email": "{{email}}"
+            "name": "{{name}}",
+            "subject": "{{subject}}",
+            "from": "{{fromAddress}}",
+            "recipient_name": "{{recipientName}}",
+            "reply_to": "{{replyTo}}",
+            "link_params": "{{linkParams}}",
+            "preview": "{{preview}}",
+            "auto_text": "{{autoText}}",
+            "html": "{{html}}",
+            "text": "{{text}}",
+            "template_id": "{{templateId}}",
+            "track_opens": "{{trackOpens}}",
+            "track_clicks": "{{trackClicks}}",
+            "track_text_clicks": "{{trackTextClicks}}",
+            "message_type_id": "{{messageTypeId}}",
+            "ready": "{{ready}}",
+            "list_id": "{{listId}}"
           }
         },
+        "responseFormat": "json",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "title": "Update transactional campaign",
+        "validationMode": "strict-generated"
+      },
+      "users.list": {
+        "description": "List users in the BigMailer account.",
         "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            },
+            "cursor": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/v1/users",
+          "success": [
+            200
+          ],
+          "query": {
+            "limit": "{{limit}}",
+            "cursor": "{{cursor}}"
+          }
+        },
+        "responseFormat": "json",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "title": "List users",
+        "validationMode": "strict-generated"
+      },
+      "users.create": {
+        "description": "Invite a user with a role and optional allowed brands.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "email": {
+              "type": "string",
+              "minLength": 1
+            },
+            "role": {
+              "type": "string",
+              "enum": [
+                "admin",
+                "account_manager",
+                "brand_manager",
+                "campaign_manager",
+                "campaign_viewer",
+                "template_manager"
+              ]
+            },
+            "allowedBrands": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "invitationMessage": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "email",
+            "role"
+          ]
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "POST",
+          "path": "/v1/users",
+          "success": [
+            200
+          ],
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "email": "{{email}}",
+            "role": "{{role}}",
+            "allowed_brands": "{{allowedBrands}}",
+            "invitation_message": "{{invitationMessage}}"
+          }
+        },
+        "responseFormat": "json",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "title": "Create user",
+        "validationMode": "strict-generated"
+      },
+      "users.get": {
+        "description": "Get one user by ID.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "userId": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "userId"
+          ]
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/v1/users/{{userId}}",
+          "success": [
+            200
+          ]
+        },
+        "responseFormat": "json",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "title": "Get user",
+        "validationMode": "strict-generated"
+      },
+      "users.update": {
+        "description": "Update a user. Official updates use POST.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "userId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "email": {
+              "type": "string",
+              "minLength": 1
+            },
+            "role": {
+              "type": "string",
+              "enum": [
+                "admin",
+                "account_manager",
+                "brand_manager",
+                "campaign_manager",
+                "campaign_viewer",
+                "template_manager"
+              ]
+            },
+            "allowedBrands": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "userId"
+          ]
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "POST",
+          "path": "/v1/users/{{userId}}",
+          "success": [
+            200
+          ],
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "email": "{{email}}",
+            "role": "{{role}}",
+            "allowed_brands": "{{allowedBrands}}"
+          }
+        },
+        "responseFormat": "json",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "title": "Update user",
+        "validationMode": "strict-generated"
+      },
+      "users.delete": {
+        "description": "Delete a user from the BigMailer account.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "userId": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "userId"
+          ]
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "DELETE",
+          "path": "/v1/users/{{userId}}",
+          "success": [
+            200
+          ]
+        },
+        "responseFormat": "json",
+        "sideEffect": "destructive",
+        "timeoutMs": 15000,
+        "title": "Delete user",
+        "validationMode": "strict-generated"
+      },
+      "users.me": {
+        "description": "Get the authenticated BigMailer user. Composio GET /me is implemented as GET /v1/users/me.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/v1/users/me",
+          "success": [
+            200
+          ]
+        },
+        "responseFormat": "json",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "title": "Get current user",
+        "validationMode": "strict-generated"
+      },
+      "connections.list": {
+        "description": "List sending connections on the BigMailer account.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            },
+            "cursor": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/v1/connections",
+          "success": [
+            200
+          ],
+          "query": {
+            "limit": "{{limit}}",
+            "cursor": "{{cursor}}"
+          }
+        },
+        "responseFormat": "json",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "title": "List connections",
+        "validationMode": "strict-generated"
+      },
+      "messageTypes.list": {
+        "description": "List message types in a brand. Optional type filters all, account, or user.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "brandId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            },
+            "cursor": {
+              "type": "string",
+              "minLength": 1
+            },
+            "type": {
+              "type": "string",
+              "enum": [
+                "all",
+                "account",
+                "user"
+              ]
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "brandId"
+          ]
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/v1/brands/{{brandId}}/message-types",
+          "success": [
+            200
+          ],
+          "query": {
+            "limit": "{{limit}}",
+            "cursor": "{{cursor}}",
+            "type": "{{type}}"
+          }
+        },
+        "responseFormat": "json",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "title": "List message types",
+        "validationMode": "strict-generated"
+      },
+      "senders.list": {
+        "description": "List verified senders in a BigMailer brand.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "brandId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            },
+            "cursor": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "brandId"
+          ]
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/v1/brands/{{brandId}}/senders",
+          "success": [
+            200
+          ],
+          "query": {
+            "limit": "{{limit}}",
+            "cursor": "{{cursor}}"
+          }
+        },
+        "responseFormat": "json",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "title": "List senders",
+        "validationMode": "strict-generated"
       }
     },
     "provenance": {
       "source": {
-        "url": "https://github.com/oomol-lab/open-connector",
-        "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"
+        "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
+        "url": "https://github.com/oomol-lab/open-connector"
       }
     },
-    "evidence": {
-      "fixture": {
-        "status": "supplied"
-      },
-      "live": {
-        "status": "unverified"
-      }
-    }
+    "runtime": "bun",
+    "version": "0.2.0",
+    "visibility": "public"
   }
 }

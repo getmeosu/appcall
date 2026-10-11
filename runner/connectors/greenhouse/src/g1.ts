@@ -65,38 +65,6 @@ function listMeta(body: unknown, nextCursor: string | null) {
   return { items: Array.isArray(body) ? body : [], nextCursor };
 }
 
-/** Harvest v3 custom field write entry: exactly one of name_key / custom_field_id, plus value. */
-export type GreenhouseCustomFieldInput = Record<string, unknown>;
-
-/**
- * Validate the Harvest v3 `custom_fields` write shape (array of
- * `{ name_key | custom_field_id, value }`) and return it for the wire.
- * Returns undefined when omitted; throws before network on the old object-map shape.
- */
-export function customFieldsWire(value: unknown): GreenhouseCustomFieldInput[] | undefined {
-  if (value == null) return undefined;
-  if (!Array.isArray(value)) {
-    throw new Error("customFields must be an array of { name_key | custom_field_id, value }");
-  }
-  return value.map((entry, index) => {
-    if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
-      throw new Error(`customFields[${index}] must be an object`);
-    }
-    const record = entry as Record<string, unknown>;
-    const hasNameKey = typeof record.name_key === "string" && record.name_key.length > 0;
-    const hasFieldId = typeof record.custom_field_id === "number" && Number.isInteger(record.custom_field_id);
-    if (hasNameKey === hasFieldId) {
-      throw new Error(
-        `customFields[${index}] needs exactly one of name_key (string) or custom_field_id (integer)`,
-      );
-    }
-    if (!("value" in record)) {
-      throw new Error(`customFields[${index}].value is required (use null to clear)`);
-    }
-    return record;
-  });
-}
-
 // ---------------------------------------------------------------------------
 // applications.hire / applications.update
 // ---------------------------------------------------------------------------
@@ -129,7 +97,7 @@ export interface UpdateApplicationInput extends GreenhouseAuthInput {
   coordinatorId?: string | number;
   prospectPoolId?: string | number;
   prospectStageId?: string | number;
-  customFields?: GreenhouseCustomFieldInput[];
+  customFields?: Record<string, unknown>;
 }
 
 export async function executeApplicationsUpdate(input: UpdateApplicationInput) {
@@ -147,8 +115,9 @@ export async function executeApplicationsUpdate(input: UpdateApplicationInput) {
     const v = optionalId(input[camel] as string | number | undefined);
     if (v != null) body[snake] = v;
   }
-  const customFields = customFieldsWire(input.customFields);
-  if (customFields) body.custom_fields = customFields;
+  if (input.customFields && typeof input.customFields === "object") {
+    body.custom_fields = input.customFields;
+  }
   const client = createAuthClient(authClientOpts(input, "applications.update"));
   await client.patchJSON(`/applications/${id}`, body);
   return { application: null };
@@ -301,8 +270,7 @@ export async function executeNotesCreate(
     noteType: string;
     applicationId?: string | number;
     subject?: string;
-    /** Note author (Harvest user id). Not `userId` — that key is the injected OAuth `sub` credential. */
-    authorUserId?: string | number;
+    userId?: string | number;
     emailFrom?: string | string[];
     emailTo?: string | string[];
     emailCc?: string | string[];
@@ -324,8 +292,8 @@ export async function executeNotesCreate(
   };
   const applicationId = optionalId(input.applicationId);
   if (applicationId != null) wire.application_id = applicationId;
-  const authorUserId = optionalId(input.authorUserId);
-  if (authorUserId != null) wire.user_id = authorUserId;
+  const userId = optionalId(input.userId);
+  if (userId != null) wire.user_id = userId;
 
   if (input.noteType === "EMAIL") {
     if (!optionalString(input.subject)) throw new Error("subject is required when noteType is EMAIL");
@@ -391,7 +359,7 @@ export async function executeNotesList(
 
 export async function executeCandidatesApplyTag(
   input: GreenhouseAuthInput & {
-    /** Candidate id (wire candidate_id). Effect keys omitted — no exact observe. */
+    /** Candidate id (Reconcile → candidates.get reads input.id). */
     id: string | number;
     candidateTagId: string | number;
   },
@@ -524,16 +492,17 @@ export async function executeOffersCreate(
   input: GreenhouseAuthInput & {
     applicationId: string | number;
     startsOn?: string;
-    customFields?: GreenhouseCustomFieldInput[];
+    customFields?: Record<string, unknown>;
   },
 ) {
   const wire: Record<string, unknown> = {
     application_id: asId(input.applicationId, "applicationId"),
   };
   if (optionalString(input.startsOn)) wire.starts_on = input.startsOn;
-  const customFields = customFieldsWire(input.customFields);
-  if (customFields) wire.custom_fields = customFields;
+  if (input.customFields && typeof input.customFields === "object") {
+    wire.custom_fields = input.customFields;
+  }
   const client = createAuthClient(authClientOpts(input, "offers.create"));
-  // Pass the 201 body through (top-level id). Creates omit effect keys.
+  // Pass through body so Idempotent can observe via top-level id → offers.get
   return (await client.postJSON("/offers", wire)) as Record<string, unknown>;
 }

@@ -6,21 +6,11 @@ import {
   type OperationBudgetLike,
 } from "./budget";
 import slackManifest from "../../connectors/slack/manifest.json";
-import {
-  sendMessage as sendSlackMessage,
-  updateMessage as slackUpdateMessage, deleteMessage as slackDeleteMessage, postEphemeral as slackPostEphemeral,
-  createConversation as slackCreateConversation, listConversations as slackListConversations, getConversationHistory as slackConversationHistory,
-  getConversationInfo as slackConversationInfo, inviteToConversation as slackInviteToConversation, getConversationMembers as slackConversationMembers,
-  listUsers as slackListUsers, getUserInfo as slackGetUserInfo, lookupUserByEmail as slackLookupUserByEmail,
-  getConversationReplies as slackConversationReplies, joinConversation as slackJoinConversation, leaveConversation as slackLeaveConversation,
-  archiveConversation as slackArchiveConversation, unarchiveConversation as slackUnarchiveConversation,
-  renameConversation as slackRenameConversation, setConversationTopic as slackSetConversationTopic, kickFromConversation as slackKickFromConversation,
-  scheduleMessage as slackScheduleMessage, meMessage as slackMeMessage,
-  getTeamInfo as slackGetTeamInfo, listEmoji as slackListEmoji, listPins as slackListPins, getReactions as slackGetReactions,
-  getFileInfo as slackGetFileInfo, authTest as slackAuthTest,
-  addReaction as slackAddReaction, removeReaction as slackRemoveReaction, addPin as slackAddPin, removePin as slackRemovePin,
-} from "../../connectors/slack/src/actions";
+import { slackCoreActionHandlers } from "../../connectors/slack/src/core_actions";
+import { slackExpandedActionHandlers } from "../../connectors/slack/src/expanded_actions";
 import { healthcheck as slackHealthcheck } from "../../connectors/slack/src/healthcheck";
+import { binaryActions } from "../../connectors/stripe/src/binary";
+import { zendeskActions } from "../../connectors/zendesk/src/actions";
 import { executeMessagesListSync as listSlackMessages } from "../../connectors/slack/src/sync";
 import telegramManifest from "../../connectors/telegram/manifest.json";
 import {
@@ -35,33 +25,6 @@ import {
 import { healthcheck as telegramHealthcheck } from "../../connectors/telegram/src/healthcheck";
 import { executeMessagesListSync as listTelegramMessages } from "../../connectors/telegram/src/sync";
 import notionManifest from "../../connectors/notion/manifest.json";
-import {
-  appendDocumentText as appendNotionDocumentText,
-  createComment as createNotionComment,
-  createDatabase as createNotionDatabase,
-  createDatabaseItem as createNotionDatabaseItem,
-  createDocument as createNotionDocument,
-  deleteBlock as deleteNotionBlock,
-  getCurrentUser as getNotionCurrentUser,
-  getDatabase as getNotionDatabase,
-  getDatabaseItem as getNotionDatabaseItem,
-  getDocument as getNotionDocument,
-  getPageProperty as getNotionPageProperty,
-  getUser as getNotionUser,
-  listComments as listNotionComments,
-  listDatabaseItems as listNotionDatabaseItems,
-  listDocumentBlocks as listNotionDocumentBlocks,
-  restoreDatabaseItem as restoreNotionDatabaseItem,
-  restoreDocument as restoreNotionDocument,
-  retrieveComment as retrieveNotionComment,
-  searchDocuments as searchNotionDocuments,
-  trashDatabaseItem as trashNotionDatabaseItem,
-  trashDocument as trashNotionDocument,
-  updateDatabaseItem as updateNotionDatabaseItem,
-  validateCredentials as validateNotionCredentials,
-} from "../../connectors/notion/src/actions";
-import { healthcheck as notionHealthcheck } from "../../connectors/notion/src/healthcheck";
-import { executeUsersListSync as listNotionUsers } from "../../connectors/notion/src/sync";
 import whatsappManifest from "../../connectors/whatsapp/manifest.json";
 import {
   sendMessage as sendWhatsAppMessage, validateCredentials as validateWhatsAppCredentials,
@@ -70,6 +33,7 @@ import {
   getMessage as waGetMessage, listTemplates as waListTemplates, getMedia as waGetMedia, uploadMedia as waUploadMedia, deleteMedia as waDeleteMedia,
   sendAudio as waSendAudio, sendVideo as waSendVideo, getBusinessProfile as waGetBusinessProfile, updateBusinessProfile as waUpdateBusinessProfile,
   getPhoneNumber as waGetPhoneNumber,
+  sendMedia as waSendMedia, sendMediaById as waSendMediaById, updateFlowJson as waUpdateFlowJson,
 } from "../../connectors/whatsapp/src/actions";
 import { healthcheck as whatsappHealthcheck } from "../../connectors/whatsapp/src/healthcheck";
 import { parseWebhook as whatsappParseWebhook } from "../../connectors/whatsapp/src/webhook";
@@ -832,6 +796,46 @@ import {
   listGraphqlLicenses as ghListGraphqlLicenses,
   listGraphqlSecurityAdvisories as ghListGraphqlSecurityAdvisories,
   listGraphqlSecurityVulnerabilities as ghListGraphqlSecurityVulnerabilities,
+  getProject as ghGetClassicProject,
+  updateProject,
+  deleteProject,
+  listOrgClassicProjects,
+  createOrgProject,
+  listRepoProjects,
+  createRepoProject,
+  listUserClassicProjects,
+  createUserProject,
+  listProjectColumns,
+  createProjectColumn,
+  getProjectColumn,
+  updateProjectColumn,
+  deleteProjectColumn,
+  moveProjectColumn,
+  listProjectCards,
+  createProjectCard,
+  getProjectCard,
+  updateProjectCard,
+  deleteProjectCard,
+  moveProjectCard,
+  listProjectCollaborators,
+  addProjectCollaborator,
+  removeProjectCollaborator,
+  getProjectCollaboratorPermission,
+  listTeamProjects,
+  addTeamProject,
+  removeTeamProject,
+  getTeamProjectPermission,
+  listClassrooms,
+  getClassroom,
+  listClassroomAssignments,
+  getAssignment,
+  listAssignmentGrades,
+  listAcceptedAssignments,
+  listTeamDiscussions,
+  getTeamDiscussion,
+  createTeamDiscussion,
+  updateTeamDiscussion,
+  deleteTeamDiscussion,
 } from "../../connectors/github/src/actions";
 import { healthcheck as githubHealthcheck } from "../../connectors/github/src/healthcheck";
 import { executeIssuesListSync as listGitHubIssues, executePullRequestsListSync as listGitHubPRs, executeCommitsListSync as listGitHubCommits, executeRepositoriesListSync as listGitHubRepos } from "../../connectors/github/src/sync";
@@ -846,6 +850,7 @@ import {
   querySobjects as sfQuery, searchSobjects as sfSearch, describeSobject as sfDescribe,
   getCurrentUser as sfGetCurrentUser,
 } from "../../connectors/salesforce/src/actions";
+import { uploadJobData as sfUploadJobData, getFileContent as sfGetFileContent } from "../../connectors/salesforce/src/irregular";
 import { healthcheck as salesforceHealthcheck } from "../../connectors/salesforce/src/healthcheck";
 import { executeContactsListSync as listSFContacts, executeLeadsListSync as listSFLeads, executeAccountsListSync as listSFAccounts, executeOpportunitiesListSync as listSFOpportunities, executeCasesListSync as listSFCases } from "../../connectors/salesforce/src/sync";
 import hubspotManifest from "../../connectors/hubspot/manifest.json";
@@ -863,6 +868,15 @@ import { healthcheck as hubspotHealthcheck } from "../../connectors/hubspot/src/
 import { executeContactsListSync as listHubSpotContacts, executeCompaniesListSync as listHubSpotCompanies, executeDealsListSync as listHubSpotDeals, executeTicketsListSync as listHubSpotTickets } from "../../connectors/hubspot/src/sync";
 import linkedinManifest from "../../connectors/linkedin/manifest.json";
 import { createPost as createLinkedInPost } from "../../connectors/linkedin/src/actions";
+import {
+  publishPost as publishLinkedInPost,
+  deleteShare as deleteLinkedInShare,
+  batchGetImages as batchGetLinkedInImages,
+  getOrganizationPageStats as getLinkedInPageStats,
+  getVideos as getLinkedInVideos,
+  registerImageUpload as registerLinkedInImageUpload,
+  uploadVideo as uploadLinkedInVideo,
+} from "../../connectors/linkedin/src/depth";
 import { healthcheck as linkedinHealthcheck } from "../../connectors/linkedin/src/healthcheck";
 import { executeProfileGetSync as getLinkedInProfile, executePostsListSync as listLinkedInPosts, executeOrganizationsListSync as listLinkedInOrgs } from "../../connectors/linkedin/src/sync";
 import jiraManifest from "../../connectors/jira/manifest.json";
@@ -1030,31 +1044,7 @@ import {
   executeCandidateTagsDelete as deleteGreenhouseCandidateTag,
   executeRejectionDetailsUpdate as updateGreenhouseRejectionDetail,
 } from "../../connectors/greenhouse/src/g2";
-import {
-  executeJobsCreate as createGreenhouseJob,
-  executeJobsUpdate as updateGreenhouseJob,
-  executeJobPostsList as listGreenhouseJobPosts,
-  executeOpeningsList as listGreenhouseOpenings,
-  executeOpeningsCreate as createGreenhouseOpening,
-  executeOpeningsUpdate as updateGreenhouseOpening,
-  executeJobOwnersList as listGreenhouseJobOwners,
-  executeJobOwnersCreate as createGreenhouseJobOwner,
-  executeJobOwnersDelete as deleteGreenhouseJobOwner,
-  executeJobHiringManagersList as listGreenhouseJobHiringManagers,
-  executeJobHiringManagersCreate as createGreenhouseJobHiringManager,
-  executeJobHiringManagersDelete as deleteGreenhouseJobHiringManager,
-  executeJobNotesList as listGreenhouseJobNotes,
-  executeJobNotesCreate as createGreenhouseJobNote,
-  executeJobNotesUpdate as updateGreenhouseJobNote,
-} from "../../connectors/greenhouse/src/g3"
-import {
-  executeJobNotesDelete as deleteGreenhouseJobNote,
-  executeJobInterviewsList as listGreenhouseJobInterviews,
-  executeDefaultInterviewersList as listGreenhouseDefaultInterviewers,
-  executeInterviewerTagsList as listGreenhouseInterviewerTags,
-  executeReferrersList as listGreenhouseReferrers,
-  executeEmailTemplatesList as listGreenhouseEmailTemplates,
-} from "../../connectors/greenhouse/src/g4"
+import { createGreenhouseG3ActionHandlers } from "../../connectors/greenhouse/src/g3";
 import leverManifest from "../../connectors/lever/manifest.json";
 import {
   executeJobsListSync as listLeverJobs,
@@ -1079,42 +1069,8 @@ import {
   executeUsersGetSync as getLeverUser,
   executeRequisitionsListSync as listLeverRequisitions,
   executeFeedbackGetSync as getLeverFeedback,
-  executeOpportunitiesCreate as createLeverOpportunity,
-  executeOpportunitiesAddTags as addLeverOpportunityTags,
-  executeOpportunitiesRemoveTags as removeLeverOpportunityTags,
-  executeOpportunitiesAddLinks as addLeverOpportunityLinks,
-  executeOpportunitiesRemoveLinks as removeLeverOpportunityLinks,
-  executeOpportunitiesAddSources as addLeverOpportunitySources,
-  executeOpportunitiesRemoveSources as removeLeverOpportunitySources,
-  executeNotesCreate as createLeverNote,
-  executeNotesGet as getLeverNote,
-  executeNotesUpdate as updateLeverNote,
-  executeNotesDelete as deleteLeverNote,
-  executeSourcesList as listLeverSources,
-  executeTagsList as listLeverTags,
-  executeStagesGet as getLeverStage,
-  executeReferralsList as listLeverReferrals,
-  executePanelsList as listLeverPanels,
-  executePanelsGet as getLeverPanel,
-  executePanelsCreate as createLeverPanel,
-  executePanelsUpdate as updateLeverPanel,
-  executePanelsDelete as deleteLeverPanel,
-  executeInterviewsCreate as createLeverInterview,
-  executeInterviewsUpdate as updateLeverInterview,
-  executeInterviewsDelete as deleteLeverInterview,
-  executeRequisitionsGet as getLeverRequisition,
-  executeRequisitionsCreate as createLeverRequisition,
-  executeRequisitionsUpdate as updateLeverRequisition,
-  executeRequisitionsDelete as deleteLeverRequisition,
-  executeResumesList as listLeverResumes,
-  executeFilesList as listLeverFiles,
-  executeFilesGet as getLeverFile,
-  executeFormsList as listLeverForms,
-  executeFormsGet as getLeverForm,
-  executeFormsCreate as createLeverForm,
-  executeFormTemplatesList as listLeverFormTemplates,
-  executeFormTemplatesGet as getLeverFormTemplate,
 } from "../../connectors/lever/src/sync";
+import { createLeverActionHandlers } from "../../connectors/lever/src/actions";
 import ashbyManifest from "../../connectors/ashby/manifest.json";
 import {
   executeJobsListSync as listAshbyJobs,
@@ -1426,6 +1382,7 @@ import {
   getAsyncInsights as metaAdsGetAsyncInsights,
   getReachEstimate as metaAdsGetReachEstimate,
 } from "../../connectors/meta-ads/src/g2";
+import { depthHandlers as metaAdsDepthHandlers } from "../../connectors/meta-ads/src/depth";
 import linkedinAdsManifest from "../../connectors/linkedin-ads/manifest.json";
 import { healthcheck as linkedinAdsHealthcheck } from "../../connectors/linkedin-ads/src/healthcheck";
 import {
@@ -1514,6 +1471,7 @@ import {
   listWebhooks as calComListWebhooks, createWebhook as calComCreateWebhook,
   getWebhook as calComGetWebhook, deleteWebhook as calComDeleteWebhook,
 } from "../../connectors/cal-com/src/actions";
+import { calComExtendedHandlers } from "../../connectors/cal-com/src/extended-actions";
 
 import lushaManifest from "../../connectors/lusha/manifest.json";
 import { healthcheck as lushaHealthcheck } from "../../connectors/lusha/src/healthcheck";
@@ -1565,6 +1523,7 @@ import {
   getUser as zoomGetUser, listRecordings as zoomListRecordings, getRecording as zoomGetRecording,
   deleteRecording as zoomDeleteRecording, getWebinar as zoomGetWebinar,
 } from "../../connectors/zoom/src/actions";
+import { zoomDepthHandlers } from "../../connectors/zoom/src/depth";
 
 import saleshandyManifest from "../../connectors/saleshandy/manifest.json";
 import { healthcheck as saleshandyHealthcheck } from "../../connectors/saleshandy/src/healthcheck";
@@ -1629,6 +1588,13 @@ import {
   getTeamsMeetingByJoinUrl as msGetTeamsByJoinUrl, createCalendarTeamsEvent as msCreateCalendarTeamsEvent,
 } from "../../connectors/microsoft-365/src/actions";
 
+import { uploadFiles as shortcutUploadFiles } from "../../connectors/shortcut/src/actions";
+import { uploadExtension as anchorBrowserUploadExtension, uploadAgentFile as anchorBrowserUploadAgentFile, uploadSessionFile as anchorBrowserUploadSessionFile } from "../../connectors/anchor-browser/src/uploads";
+import { createSuppressionList as bigmailerCreateSuppressionList } from "../../connectors/bigmailer/src/actions";
+import { createBatch as bolnaCreateBatch, createKnowledgebase as bolnaCreateKnowledgebase } from "../../connectors/bolna/src/actions";
+import { uploadAttachment as bugHerdUploadAttachment } from "../../connectors/bug-herd/src/actions";
+import { uploadCampaignMedia as raiselyUploadCampaignMedia } from "../../connectors/raisely/src/actions";
+import { actions as replyIoActions } from "../../connectors/reply-io/src/actions";
 import { uploadInvoicePdf as uploadChaserInvoicePdf } from "../../connectors/chaserhq/src/upload";
 
 import { createField as lapostaCreateField, createMember as lapostaCreateMember, updateMember as lapostaUpdateMember } from "../../connectors/laposta/src/actions";
@@ -1735,7 +1701,6 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
   manifests: [fakeConnector, slackManifest, telegramManifest, whatsappManifest, notionManifest, googleWorkspaceManifest, microsoft365Manifest, githubManifest, salesforceManifest, hubspotManifest, linkedinManifest, jiraManifest, mailchimpManifest, brevoManifest, sendgridManifest, klaviyoManifest, shopifyManifest, woocommerceManifest, quickbooksManifest, greenhouseManifest, leverManifest, ashbyManifest, intercomManifest, workableManifest, smartrecruitersManifest, recruiteeManifest, zohoRecruitManifest, typeformManifest, calendlyManifest, googleAdsManifest, metaAdsManifest, linkedinAdsManifest, tiktokAdsManifest, xeroManifest, zohoBooksManifest, httpRequestManifest, csvManifest, webhookManifest, smtpEmailManifest, automationWebhookManifest, calComManifest, lushaManifest, apolloManifest, apifyManifest, zoomManifest, saleshandyManifest, unipileManifest, rb2bManifest, caldavManifest, resendManifest, googlemeetManifest],
   healthchecks: {
     fake: () => ({ connector: "fake", status: "ok" }),
-    notion: notionHealthcheck,
     slack: slackHealthcheck,
     telegram: telegramHealthcheck,
     whatsapp: whatsappHealthcheck,
@@ -1789,6 +1754,34 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
     fake: {
       "messages.send": (input) => ({ input }),
     },
+    stripe: {
+      ...binaryActions,
+    },
+    zendesk: {
+      ...zendeskActions,
+    },
+    shortcut: {
+      "files.upload": shortcutUploadFiles,
+    },
+    "anchor-browser": {
+      "extensions.upload": anchorBrowserUploadExtension,
+      "sessions.agent.files.upload": anchorBrowserUploadAgentFile,
+      "sessions.uploads.create": anchorBrowserUploadSessionFile,
+    },
+    bigmailer: {
+      "suppressionLists.create": bigmailerCreateSuppressionList,
+    },
+    bolna: {
+      "batches.create": bolnaCreateBatch,
+      "knowledgebases.create": bolnaCreateKnowledgebase,
+    },
+    "bug-herd": {
+      "attachments.upload": bugHerdUploadAttachment,
+    },
+    raisely: {
+      "campaigns.media.upload": raiselyUploadCampaignMedia,
+    },
+    "reply-io": replyIoActions,
     heyzine: heyzineWriteHandlers,
     laposta: {
       "fields.create": lapostaCreateField,
@@ -1798,65 +1791,9 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
     avoma: {
       "meetings.analysis.get": avomaGetMeetingAnalysis,
     },
-    notion: {
-      "credentials.validate": validateNotionCredentials,
-      "comments.create": createNotionComment,
-      "comments.list": listNotionComments,
-      "comments.retrieve": retrieveNotionComment,
-      "documents.blocks.append": appendNotionDocumentText,
-      "documents.blocks.list": listNotionDocumentBlocks,
-      "documents.create": createNotionDocument,
-      "documents.get": getNotionDocument,
-      "documents.restore": restoreNotionDocument,
-      "documents.search": searchNotionDocuments,
-      "documents.trash": trashNotionDocument,
-      "databases.create": createNotionDatabase,
-      "databases.get": getNotionDatabase,
-      "databases.items.create": createNotionDatabaseItem,
-      "databases.items.get": getNotionDatabaseItem,
-      "databases.items.query": listNotionDatabaseItems,
-      "databases.items.restore": restoreNotionDatabaseItem,
-      "databases.items.trash": trashNotionDatabaseItem,
-      "databases.items.update": updateNotionDatabaseItem,
-      "users.me": getNotionCurrentUser,
-      "users.get": getNotionUser,
-      "blocks.delete": deleteNotionBlock,
-      "pages.properties.get": getNotionPageProperty,
-    },
     slack: {
-      "messages.send": sendSlackMessage,
-      "chat.update": slackUpdateMessage,
-      "chat.delete": slackDeleteMessage,
-      "chat.postEphemeral": slackPostEphemeral,
-      "chat.scheduleMessage": slackScheduleMessage,
-      "chat.meMessage": slackMeMessage,
-      "conversations.create": slackCreateConversation,
-      "conversations.list": slackListConversations,
-      "conversations.history": slackConversationHistory,
-      "conversations.info": slackConversationInfo,
-      "conversations.invite": slackInviteToConversation,
-      "conversations.members": slackConversationMembers,
-      "conversations.replies": slackConversationReplies,
-      "conversations.join": slackJoinConversation,
-      "conversations.leave": slackLeaveConversation,
-      "conversations.archive": slackArchiveConversation,
-      "conversations.unarchive": slackUnarchiveConversation,
-      "conversations.rename": slackRenameConversation,
-      "conversations.setTopic": slackSetConversationTopic,
-      "conversations.kick": slackKickFromConversation,
-      "users.list": slackListUsers,
-      "users.info": slackGetUserInfo,
-      "users.lookupByEmail": slackLookupUserByEmail,
-      "team.info": slackGetTeamInfo,
-      "emoji.list": slackListEmoji,
-      "pins.list": slackListPins,
-      "pins.add": slackAddPin,
-      "pins.remove": slackRemovePin,
-      "reactions.get": slackGetReactions,
-      "reactions.add": slackAddReaction,
-      "reactions.remove": slackRemoveReaction,
-      "files.info": slackGetFileInfo,
-      "auth.test": slackAuthTest,
+      ...slackCoreActionHandlers,
+      ...slackExpandedActionHandlers,
     },
     telegram: {
       "messages.send": sendTelegramMessage,
@@ -1902,6 +1839,9 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
       "businessProfile.get": waGetBusinessProfile,
       "businessProfile.update": waUpdateBusinessProfile,
       "phoneNumbers.get": waGetPhoneNumber,
+      "messages.sendMedia": waSendMedia,
+      "messages.sendMediaById": waSendMediaById,
+      "flows.updateJson": waUpdateFlowJson,
     },
     "google-workspace": {
       "messages.send": sendGmailMessage,
@@ -2746,6 +2686,46 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
       "graphql.licenses.list": ghListGraphqlLicenses,
       "graphql.security_advisories.list": ghListGraphqlSecurityAdvisories,
       "graphql.security_vulnerabilities.list": ghListGraphqlSecurityVulnerabilities,
+      "projects.get": ghGetClassicProject,
+      "projects.update": updateProject,
+      "projects.delete": deleteProject,
+      "orgs.projects.list": listOrgClassicProjects,
+      "orgs.projects.create": createOrgProject,
+      "repos.projects.list": listRepoProjects,
+      "repos.projects.create": createRepoProject,
+      "users.projects.list": listUserClassicProjects,
+      "user.projects.create": createUserProject,
+      "projects.columns.list": listProjectColumns,
+      "projects.columns.create": createProjectColumn,
+      "projects.columns.get": getProjectColumn,
+      "projects.columns.update": updateProjectColumn,
+      "projects.columns.delete": deleteProjectColumn,
+      "projects.columns.move": moveProjectColumn,
+      "projects.cards.list": listProjectCards,
+      "projects.cards.create": createProjectCard,
+      "projects.cards.get": getProjectCard,
+      "projects.cards.update": updateProjectCard,
+      "projects.cards.delete": deleteProjectCard,
+      "projects.cards.move": moveProjectCard,
+      "projects.collaborators.list": listProjectCollaborators,
+      "projects.collaborators.add": addProjectCollaborator,
+      "projects.collaborators.remove": removeProjectCollaborator,
+      "projects.collaborators.permission.get": getProjectCollaboratorPermission,
+      "orgs.teams.projects.list": listTeamProjects,
+      "orgs.teams.projects.add": addTeamProject,
+      "orgs.teams.projects.remove": removeTeamProject,
+      "orgs.teams.projects.permission.get": getTeamProjectPermission,
+      "classrooms.list": listClassrooms,
+      "classrooms.get": getClassroom,
+      "classrooms.assignments.list": listClassroomAssignments,
+      "assignments.get": getAssignment,
+      "assignments.grades.list": listAssignmentGrades,
+      "assignments.accepted.list": listAcceptedAssignments,
+      "teams.discussions.list": listTeamDiscussions,
+      "teams.discussions.get": getTeamDiscussion,
+      "teams.discussions.create": createTeamDiscussion,
+      "teams.discussions.update": updateTeamDiscussion,
+      "teams.discussions.delete": deleteTeamDiscussion,
 },
     salesforce: {
       "contacts.create": createContact,
@@ -2771,6 +2751,8 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
       "sobjects.search": sfSearch,
       "sobjects.describe": sfDescribe,
       "users.me": sfGetCurrentUser,
+      "jobs.ingest_upload": sfUploadJobData,
+      "files.version_data": sfGetFileContent,
     },
     hubspot: {
       "contacts.create": createHubSpotContact,
@@ -2802,6 +2784,13 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
     },
     linkedin: {
       "posts.create": createLinkedInPost,
+      "posts.publish": publishLinkedInPost,
+      "posts.share.delete": deleteLinkedInShare,
+      "images.batchGet": batchGetLinkedInImages,
+      "organizations.pageStats.get": getLinkedInPageStats,
+      "videos.get": getLinkedInVideos,
+      "assets.registerUpload": registerLinkedInImageUpload,
+      "videos.upload": uploadLinkedInVideo,
     },
     jira: {
       "issues.create": createJiraIssue,
@@ -3086,6 +3075,7 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
       "insights.async.create": metaAdsCreateAsyncInsights,
       "insights.async.get": metaAdsGetAsyncInsights,
       "reach_estimate.get": metaAdsGetReachEstimate,
+      ...metaAdsDepthHandlers,
     },
     "linkedin-ads": {
       "campaigns.get": linkedinAdsGetCampaign,
@@ -3203,71 +3193,14 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
       "candidate_tags.create": createGreenhouseCandidateTag,
       "candidate_tags.delete": deleteGreenhouseCandidateTag,
       "rejection_details.update": updateGreenhouseRejectionDetail,
-    
-      "jobs.create": createGreenhouseJob,
-      "jobs.update": updateGreenhouseJob,
-      "job_posts.list": listGreenhouseJobPosts,
-      "openings.list": listGreenhouseOpenings,
-      "openings.create": createGreenhouseOpening,
-      "openings.update": updateGreenhouseOpening,
-      "job_owners.list": listGreenhouseJobOwners,
-      "job_owners.create": createGreenhouseJobOwner,
-      "job_owners.delete": deleteGreenhouseJobOwner,
-      "job_hiring_managers.list": listGreenhouseJobHiringManagers,
-      "job_hiring_managers.create": createGreenhouseJobHiringManager,
-      "job_hiring_managers.delete": deleteGreenhouseJobHiringManager,
-      "job_notes.list": listGreenhouseJobNotes,
-      "job_notes.create": createGreenhouseJobNote,
-      "job_notes.update": updateGreenhouseJobNote,
-      "job_notes.delete": deleteGreenhouseJobNote,
-      "job_interviews.list": listGreenhouseJobInterviews,
-      "default_interviewers.list": listGreenhouseDefaultInterviewers,
-      "interviewer_tags.list": listGreenhouseInterviewerTags,
-      "referrers.list": listGreenhouseReferrers,
-      "email_templates.list": listGreenhouseEmailTemplates,
-},
+      ...createGreenhouseG3ActionHandlers(),
+    },
     lever: {
+      ...createLeverActionHandlers(),
+      // Region-aware writes stay on the sync client so eu reaches api.lever.eu.
       "opportunities.update_stage": updateLeverOpportunityStage,
       "opportunities.archive": archiveLeverOpportunity,
       "opportunities.update": updateLeverOpportunity,
-      // G1: hand-written so region=eu reaches api.eu.lever.co.
-      "opportunities.create": createLeverOpportunity,
-      "opportunities.add_tags": addLeverOpportunityTags,
-      "opportunities.remove_tags": removeLeverOpportunityTags,
-      "opportunities.add_links": addLeverOpportunityLinks,
-      "opportunities.remove_links": removeLeverOpportunityLinks,
-      "opportunities.add_sources": addLeverOpportunitySources,
-      "opportunities.remove_sources": removeLeverOpportunitySources,
-      "notes.create": createLeverNote,
-      "notes.get": getLeverNote,
-      "notes.update": updateLeverNote,
-      "notes.delete": deleteLeverNote,
-      "sources.list": listLeverSources,
-      "tags.list": listLeverTags,
-      "stages.get": getLeverStage,
-      "referrals.list": listLeverReferrals,
-      // G2: panels / interviews writes / requisitions / resumes / files
-      "panels.list": listLeverPanels,
-      "panels.get": getLeverPanel,
-      "panels.create": createLeverPanel,
-      "panels.update": updateLeverPanel,
-      "panels.delete": deleteLeverPanel,
-      "interviews.create": createLeverInterview,
-      "interviews.update": updateLeverInterview,
-      "interviews.delete": deleteLeverInterview,
-      "requisitions.get": getLeverRequisition,
-      "requisitions.create": createLeverRequisition,
-      "requisitions.update": updateLeverRequisition,
-      "requisitions.delete": deleteLeverRequisition,
-      "resumes.list": listLeverResumes,
-      "files.list": listLeverFiles,
-      "files.get": getLeverFile,
-      // G3: profile forms + form-template reads
-      "forms.list": listLeverForms,
-      "forms.get": getLeverForm,
-      "forms.create": createLeverForm,
-      "form_templates.list": listLeverFormTemplates,
-      "form_templates.get": getLeverFormTemplate,
     },
     ashby: {
       "candidates.create": createAshbyCandidate,
@@ -3391,6 +3324,7 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
       "webhooks.create": calComCreateWebhook,
       "webhooks.get": calComGetWebhook,
       "webhooks.delete": calComDeleteWebhook,
+      ...calComExtendedHandlers,
     },
     lusha: {
       "person.enrich": lushaEnrichPerson,
@@ -3469,6 +3403,7 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
       "recordings.list": zoomListRecordings,
       "recordings.get": zoomGetRecording,
       "recordings.delete": zoomDeleteRecording,
+      ...zoomDepthHandlers,
     },
     saleshandy: {
       "sequences.list": shListSequences,
@@ -3537,9 +3472,6 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
     statuscake: statuscakeFormHandlers,
   },
   syncs: {
-    notion: {
-      "users.list": listNotionUsers,
-    },
     slack: {
       "messages.list": withLiveMessageSync("slack", listSlackMessages),
     },

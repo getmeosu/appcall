@@ -1,20 +1,20 @@
 # Tapfiliate
 
-Read-only international **Tapfiliate REST API 1.6** recipe. Tapfiliate is the affiliate tracking product at [tapfiliate.com](https://tapfiliate.com/). Find the API key in account settings and store it as `apiKey`. Requests send `X-Api-Key` and `Accept: application/json` to `https://api.tapfiliate.com/1.6`.
+International **Tapfiliate REST API 1.6** recipe. Tapfiliate is the affiliate tracking product at [tapfiliate.com](https://tapfiliate.com/). Find the API key in account settings and store it as `apiKey`. Requests send `X-Api-Key` and `Accept: application/json` to `https://api.tapfiliate.com/1.6`.
 
 ## Operations
 
-- `healthcheck`: `GET /programs/` (cheap authenticated program list used for credential validation).
-- `programs.list`: `GET /programs/` with optional 1-based `page`.
-- `affiliates.list`: `GET /affiliates/` with optional `page`.
-- `affiliates.get`: `GET /affiliates/{affiliateId}/`; `affiliateId` is required.
-- `commissions.list`: `GET /commissions/` with optional `page`.
+Runner operations equal recipe operations (41 total): origin healthcheck plus every Composio TAPFILIATE tool as a real HTTP action.
 
-Successful responses are raw Tapfiliate JSON under AppCall `data`. List endpoints return JSON arrays. Link-header pagination is caller controlled and is not followed. Writes, conversion creation, and Enterprise click listing are omitted.
+- `healthcheck`: `GET /programs/` credential check.
+- Origin list/get contracts are kept: `programs.list`, `affiliates.list`, `affiliates.get` (`affiliateId`), `commissions.list`. Those lists gained official Composio query filters.
+- Remaining Composio tools map onto affiliates, groups, prospects, programs, conversions, customers, balances, and payments.
+
+Successful responses are raw Tapfiliate JSON under AppCall `data`. DELETE 204 operations return `{ data: { ok: true } }`. Link-header pagination is caller controlled and is not followed.
 
 ## Adaptations
 
-Pinned source and official docs agree on `X-Api-Key` and `/1.6` trailing-slash collection paths. Native category is `ads` (source Marketing/Data are not in the Rust CATEGORIES allowlist). The upstream user-agent is not sent.
+Pinned source and official docs agree on `X-Api-Key` and `/1.6` trailing-slash collection paths. Native category is `ads`. The upstream user-agent is not sent. `affiliates.get` keeps origin `affiliateId` (same value as Composio `affiliate_id`). Create-prospect company/address follow official REST objects, not Composio's string fields. `per_page` is forwarded when provided; official docs document 1-based `page` only.
 
 ## License and evidence
 

@@ -4,17 +4,23 @@ import manifest from "../manifest.json";
 describe("mailchimp manifest", () => {
   it("has correct key and version", () => {
     expect(manifest.key).toBe("mailchimp");
-    expect(manifest.version).toBe("0.4.0");
+    expect(manifest.version).toBe("0.5.0");
     expect(manifest.runtime).toBe("bun");
   });
 
-  it("uses oauth2 auth", () => {
+  it("uses oauth2 auth with a required host setup field", () => {
     expect(manifest.auth.type).toBe("oauth2");
+    expect(manifest.auth.scopes).toEqual([]);
+    expect(Object.keys(manifest.auth).sort()).toEqual(["scopes", "setup", "type"]);
     expect(manifest.auth.setup.mode).toBe("oauth2");
+    const fields = manifest.auth.setup.fields as Array<{ key: string; required: boolean; secret: boolean }>;
+    expect(fields.map((field) => field.key)).toEqual(["host"]);
+    expect(fields[0]).toMatchObject({ required: true, secret: false });
   });
 
-  it("allows mailchimp wildcard host", () => {
-    expect(manifest.network.allowedHosts).toContain("*.api.mailchimp.com");
+  it("allows mailchimp wildcard host plus the stored host", () => {
+    expect(manifest.network.allowedHosts).toEqual(["*.api.mailchimp.com", "{{host}}"]);
+    expect(manifest.http.baseUrl).toBe("https://{{host}}/3.0");
   });
 
   it("has all expected operations", () => {
@@ -57,6 +63,15 @@ describe("mailchimp manifest", () => {
     expect(ops).toContain("webhook.profile_update");
     expect(ops).toContain("lists.members.archive");
     expect(ops).toContain("lists.members.tags.update");
+    expect(ops).toContain("segments.list");
+    expect(ops).toContain("segments.get");
+    expect(ops).toContain("segments.create");
+    expect(ops).toContain("segments.update");
+    expect(ops).toContain("segments.delete");
+    expect(ops).toContain("segments.count");
+    expect(ops).toContain("segments.snapshots.create");
+    expect(ops).toContain("segments.snapshots.get");
+    expect(ops).toContain("segments.snapshots.members");
   });
 
   it("depth actions have title, description, and object inputSchema", () => {
@@ -86,6 +101,6 @@ describe("mailchimp manifest", () => {
   });
 
   it("has correct models", () => {
-    expect(manifest.models).toEqual(["contact", "audience", "campaign", "template", "report", "automation", "note"]);
+    expect(manifest.models).toEqual(["contact", "audience", "campaign", "template", "report", "automation", "note", "segment"]);
   });
 });

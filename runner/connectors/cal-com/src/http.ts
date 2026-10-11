@@ -14,6 +14,7 @@ export type CalComClientOptions = {
   fetch?: typeof fetch;
   operation?: string;
   calApiVersion?: string;
+  extraHeaders?: Record<string, string>;
 };
 
 export function createCalComClient(options: CalComClientOptions) {
@@ -34,6 +35,7 @@ export function createCalComClient(options: CalComClientOptions) {
           "Authorization": `Bearer ${options.token}`,
           "Content-Type": "application/json",
           "cal-api-version": versionHeader,
+          ...(options.extraHeaders ?? {}),
           ...(init.headers as Record<string, string>),
         },
       });

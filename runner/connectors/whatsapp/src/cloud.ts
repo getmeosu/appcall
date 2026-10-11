@@ -495,3 +495,195 @@ export function createGetPhoneNumberClient(options: ClientOptions) {
     },
   };
 }
+
+const mediaTypes = ["audio", "document", "image", "sticker", "video"] as const;
+type MediaType = (typeof mediaTypes)[number];
+
+function requireMediaType(value: unknown): MediaType {
+  const mediaType = requireString(value, "mediaType").trim();
+  if (!mediaTypes.includes(mediaType as MediaType)) {
+    throw new Error("mediaType must be one of: audio, document, image, sticker, video");
+  }
+  return mediaType as MediaType;
+}
+
+function mediaObject(mediaType: MediaType, source: Record<string, string>, caption: string, filename: string): Record<string, string> {
+  const media: Record<string, string> = { ...source };
+  if (caption && (mediaType === "image" || mediaType === "video" || mediaType === "document")) {
+    media.caption = caption;
+  }
+  if (filename && mediaType === "document") {
+    media.filename = filename;
+  }
+  return media;
+}
+
+function messageContext(replyToMessageId: string | undefined): Record<string, unknown> | undefined {
+  if (!replyToMessageId) return undefined;
+  return { message_id: replyToMessageId };
+}
+
+export type WhatsAppSendMediaInput = {
+  graphVersion: string;
+  phoneNumberId: string;
+  to: string;
+  mediaType: MediaType;
+  link: string;
+  caption: string;
+  filename: string;
+  replyToMessageId?: string;
+};
+
+export function validateSendMediaInput(input: unknown): WhatsAppSendMediaInput {
+  if (!isRecord(input)) throw new Error("sendMedia input must be an object");
+  const to = requireString(input.to, "to").trim();
+  if (!to) throw new Error("to is required");
+  const link = requireString(input.link, "link").trim();
+  if (!link) throw new Error("link is required");
+  const caption = typeof input.caption === "string" ? input.caption : "";
+  const filename = typeof input.filename === "string" ? input.filename : "";
+  const replyToMessageId = typeof input.replyToMessageId === "string" && input.replyToMessageId.trim()
+    ? input.replyToMessageId.trim()
+    : undefined;
+  return {
+    graphVersion: resolveVersion(input),
+    phoneNumberId: requirePhoneNumberId(input),
+    to,
+    mediaType: requireMediaType(input.mediaType),
+    link,
+    caption,
+    filename,
+    replyToMessageId,
+  };
+}
+
+export function createSendMediaClient(options: ClientOptions) {
+  const accessToken = requireAccessToken(options);
+  const httpClient = makeHttpClient(accessToken, options, "messages.sendMedia");
+  return {
+    async sendMedia(input: unknown): Promise<SendResult> {
+      const payload = validateSendMediaInput(input);
+      const body: Record<string, unknown> = {
+        messaging_product: "whatsapp",
+        recipient_type: "individual",
+        to: payload.to,
+        type: payload.mediaType,
+        [payload.mediaType]: mediaObject(payload.mediaType, { link: payload.link }, payload.caption, payload.filename),
+      };
+      const context = messageContext(payload.replyToMessageId);
+      if (context) body.context = context;
+      const result = await postMessage(
+        httpClient,
+        accessToken,
+        `https://graph.facebook.com/${payload.graphVersion}/${payload.phoneNumberId}/messages`,
+        body,
+        "WhatsApp returned an invalid media send response.",
+      );
+      if (result.ok) result.channelId = payload.phoneNumberId;
+      return result;
+    },
+  };
+}
+
+export type WhatsAppSendMediaByIdInput = {
+  graphVersion: string;
+  phoneNumberId: string;
+  to: string;
+  mediaType: MediaType;
+  mediaId: string;
+  caption: string;
+  filename: string;
+  replyToMessageId?: string;
+};
+
+export function validateSendMediaByIdInput(input: unknown): WhatsAppSendMediaByIdInput {
+  if (!isRecord(input)) throw new Error("sendMediaById input must be an object");
+  const to = requireString(input.to, "to").trim();
+  if (!to) throw new Error("to is required");
+  const mediaId = requireString(input.mediaId, "mediaId").trim();
+  if (!mediaId) throw new Error("mediaId is required");
+  const caption = typeof input.caption === "string" ? input.caption : "";
+  const filename = typeof input.filename === "string" ? input.filename : "";
+  const replyToMessageId = typeof input.replyToMessageId === "string" && input.replyToMessageId.trim()
+    ? input.replyToMessageId.trim()
+    : undefined;
+  return {
+    graphVersion: resolveVersion(input),
+    phoneNumberId: requirePhoneNumberId(input),
+    to,
+    mediaType: requireMediaType(input.mediaType),
+    mediaId,
+    caption,
+    filename,
+    replyToMessageId,
+  };
+}
+
+export function createSendMediaByIdClient(options: ClientOptions) {
+  const accessToken = requireAccessToken(options);
+  const httpClient = makeHttpClient(accessToken, options, "messages.sendMediaById");
+  return {
+    async sendMediaById(input: unknown): Promise<SendResult> {
+      const payload = validateSendMediaByIdInput(input);
+      const body: Record<string, unknown> = {
+        messaging_product: "whatsapp",
+        recipient_type: "individual",
+        to: payload.to,
+        type: payload.mediaType,
+        [payload.mediaType]: mediaObject(payload.mediaType, { id: payload.mediaId }, payload.caption, payload.filename),
+      };
+      const context = messageContext(payload.replyToMessageId);
+      if (context) body.context = context;
+      const result = await postMessage(
+        httpClient,
+        accessToken,
+        `https://graph.facebook.com/${payload.graphVersion}/${payload.phoneNumberId}/messages`,
+        body,
+        "WhatsApp returned an invalid media send response.",
+      );
+      if (result.ok) result.channelId = payload.phoneNumberId;
+      return result;
+    },
+  };
+}
+
+export type WhatsAppUpdateFlowJsonInput = {
+  graphVersion: string;
+  flowId: string;
+  flowJson: string;
+  assetType: string;
+};
+
+export function validateUpdateFlowJsonInput(input: unknown): WhatsAppUpdateFlowJsonInput {
+  if (!isRecord(input)) throw new Error("updateFlowJson input must be an object");
+  const flowId = requireString(input.flowId, "flowId").trim();
+  if (!flowId) throw new Error("flowId is required");
+  const flowJson = requireString(input.flowJson, "flowJson").trim();
+  if (!flowJson) throw new Error("flowJson is required");
+  const assetType = typeof input.assetType === "string" && input.assetType.trim()
+    ? input.assetType.trim()
+    : "FLOW_JSON";
+  return { graphVersion: resolveVersion(input), flowId, flowJson, assetType };
+}
+
+export function createUpdateFlowJsonClient(options: ClientOptions) {
+  const accessToken = requireAccessToken(options);
+  const httpClient = makeHttpClient(accessToken, options, "flows.updateJson");
+  return {
+    async updateFlowJson(input: unknown): Promise<{ ok: true; success: boolean; raw: Record<string, unknown> } | { ok: false; error: ConnectorError }> {
+      const payload = validateUpdateFlowJsonInput(input);
+      const form = new FormData();
+      form.append("name", "flow.json");
+      form.append("asset_type", payload.assetType);
+      form.append("file", new Blob([payload.flowJson], { type: "application/json" }), "flow.json");
+      const result = await graphRequest(
+        httpClient,
+        accessToken,
+        `https://graph.facebook.com/${payload.graphVersion}/${payload.flowId}/assets`,
+        { method: "POST", body: form },
+      );
+      if (!result.ok) return result;
+      return { ok: true, success: result.body.success === true, raw: result.body };
+    },
+  };
+}

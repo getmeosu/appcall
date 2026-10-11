@@ -1,21 +1,22 @@
 # Accredible
 
-Read-only international Accredible Credential API recipe for Accredible (Mountain View, California). Copy an API key from the Accredible dashboard (API Management). The runner sends `Authorization: Token token=<key>` and `Accept: application/json` to `https://api.accredible.com`.
+International Accredible Credential API recipe covering origin healthcheck plus every Composio `ACCREDIBLE_CERTIFICATES_*` HTTP tool (36 tools, 39 operations including origin `healthcheck`, `groups.list`, and `credentials.list`).
+
+## Setup
+
+Copy an API key from the Accredible dashboard (API Management). The runner sends `Authorization: Token token=<key>` and `Accept: application/json` to `https://api.accredible.com`.
 
 ## Operations
 
-- `healthcheck`: `GET /v1/issuer/details` with empty input (pinned credential validator; cheap issuer read).
-- `groups.list`: `GET /v1/issuer/all_groups` with optional `page` and `pageSize` (`page_size`).
-- `groups.get`: `GET /v1/issuer/groups/{groupId}`.
-- `credentials.list`: `GET /v1/all_credentials` with optional `page` and `pageSize` (`page_size`).
-- `credentials.get`: `GET /v1/credentials/{id}`.
+- Origin reads: `healthcheck` and `issuer.get` (`GET /v1/issuer/details`), `groups.list` / `groups.get`, `credentials.list` / `credentials.get`.
+- Credentials: create, update, delete, v2 bulk create, v2 search, generate PDFs, analytics.
+- Groups: create, update, delete, clone, search.
+- Evidence items and references nested under a credential.
+- Collections, departments, designs/templates, attribute keys, skill categories.
+- Embedded badge and certificate designer initialize.
 
-Search POSTs, credential create/delete, EU host `eu.api.accredible.com`, and sandbox `sandbox.api.accredible.com` are omitted. Native returns raw Accredible JSON under `data`.
+Credential and group writes wrap JSON as `{ credential: ... }` / `{ group: ... }` per the official OpenAPI. Collection create uses `{ collection: ... }`; attribute-key create uses `{ attribute_key: ... }`. Search POSTs send documented query objects (v2 credential search supports `field[op]` keys). Mixed group/bulk writes accept HTTP 207. Successful JSON responses are raw provider JSON under AppCall `data`.
 
-## Adaptations
+EU host `eu.api.accredible.com` and sandbox `sandbox.api.accredible.com` are not exposed.
 
-Pinned source and official OpenAPI agree on `Token token=` and the US production host. Native category is `productivity` (source Productivity/Data; Rust CATEGORIES has no `data` bucket). The upstream user-agent and unconditional `Content-Type` are not sent on these GETs.
-
-## License and evidence
-
-Upstream definitions are attributed to [oomol-lab/open-connector](https://github.com/oomol-lab/open-connector) (Apache License 2.0) at `33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a`. Official docs: https://docs.api.accredible.com/. Fixtures are independently derived and do not represent live provider access. Live smoke remains unverified.
+Source attribution: oomol-lab/open-connector at `33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a`. Official docs: https://docs.api.accredible.com/. Live authentication is unverified.

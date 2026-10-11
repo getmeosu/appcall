@@ -9,9 +9,13 @@ describe("salesforce connector manifest", () => {
     expect(manifest.auth.scopes).toContain("refresh_token");
     expect(manifest.auth.scopes).toContain("full");
     expect(manifest.auth.scopes).toContain("api");
+    const hostField = manifest.auth.setup.fields.find((field: { key: string }) => field.key === "instance_host");
+    expect(hostField?.required).toBe(true);
+    expect(manifest.http.auth.field).toBe("accessToken");
   });
 
   test("manifest declares network controls", () => {
+    expect(manifest.network.allowedHosts).toContain("*.salesforce.com");
     expect(manifest.network.allowedHosts).toContain("login.salesforce.com");
     expect(manifest.network.allowedHosts).toContain("test.salesforce.com");
     expect(manifest.network.allowedHosts).toContain("my.salesforce.com");
@@ -75,8 +79,8 @@ describe("salesforce connector manifest", () => {
     }
   });
 
-  test("manifest version is 0.4.0", () => {
-    expect(manifest.version).toBe("0.4.0");
+  test("manifest version is 0.5.0", () => {
+    expect(manifest.version).toBe("0.5.0");
   });
 
   test("manifest declares CRM models", () => {

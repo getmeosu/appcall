@@ -28,6 +28,8 @@ const HANDWRITTEN = new Set([
   "sobjects.describe",
   "users.me",
   "healthcheck",
+  "jobs.ingest_upload",
+  "files.version_data",
 ]);
 
 type DepthCase = {
@@ -44,8 +46,20 @@ const CASES = cases as DepthCase[];
 
 describe("salesforce composio depth", () => {
   test("reaches the Composio Salesforce tool count", () => {
-    expect(manifest.version).toBe("0.4.0");
-    expect(Object.keys(manifest.operations)).toHaveLength(224);
+    expect(manifest.version).toBe("0.5.0");
+    expect(Object.keys(manifest.operations)).toHaveLength(264);
+  });
+
+  test("operation budgets stay inside the runner contract", () => {
+    for (const [key, spec] of Object.entries(manifest.operations)) {
+      const operation = spec as { timeoutMs: number; maxInputBytes: number; maxResponseBytes: number };
+      expect(operation.timeoutMs, key).toBeGreaterThanOrEqual(1);
+      expect(operation.timeoutMs, key).toBeLessThanOrEqual(300000);
+      expect(operation.maxInputBytes, key).toBeGreaterThanOrEqual(1);
+      expect(operation.maxInputBytes, key).toBeLessThanOrEqual(26214400);
+      expect(operation.maxResponseBytes, key).toBeGreaterThanOrEqual(operation.maxInputBytes);
+      expect(operation.maxResponseBytes, key).toBeLessThanOrEqual(52428800);
+    }
   });
 
   test("every action has a request block or a handwritten handler", () => {
@@ -56,6 +70,65 @@ describe("salesforce composio depth", () => {
       const declared = Boolean(request?.method && request?.path);
       expect(declared || HANDWRITTEN.has(key), key).toBe(true);
     }
+  });
+
+  test("host is a required setup field and OAuth uses accessToken", () => {
+    const hostField = (manifest.auth.setup.fields as Array<{ key: string; required?: boolean }>).find((field) => field.key === "instance_host");
+    expect(hostField?.required).toBe(true);
+    expect(manifest.http.auth.field).toBe("accessToken");
+    expect(manifest.http.auth.value).toBe("Bearer {{accessToken}}");
+    expect(manifest.http.baseUrl).toBe("https://{{instance_host}}");
+    expect(manifest.network.allowedHosts).toContain("*.salesforce.com");
+    expect(manifest.network.allowedHosts).toContain("*.my.salesforce.com");
+  });
+
+  test("GET and DELETE stay body-less; JSON Content-Type is only set when a body is present", () => {
+    for (const [key, spec] of Object.entries(manifest.operations)) {
+      const operation = spec as { kind?: string; request?: { method?: string; body?: unknown; headers?: Record<string, string> } };
+      if (operation.kind === "sync" || operation.kind === "webhook" || !operation.request) continue;
+      const method = String(operation.request.method ?? "").toUpperCase();
+      const headers = operation.request.headers ?? {};
+      if (operation.request.body !== undefined) {
+        expect(headers["Content-Type"], key).toBe("application/json");
+      } else {
+        expect(headers["Content-Type"], key).toBeUndefined();
+      }
+      if (method === "GET" || method === "DELETE" || method === "HEAD") {
+        expect(operation.request.body, key).toBeUndefined();
+      }
+    }
+  });
+
+  test("webhooks are inbound reads", () => {
+    for (const [key, spec] of Object.entries(manifest.operations)) {
+      const operation = spec as { kind?: string; sideEffect?: string };
+      if (operation.kind !== "webhook") continue;
+      expect(operation.sideEffect, key).toBe("read");
+    }
+  });
+
+  test("compiles a handler for every request-backed action", () => {
+    const compiled = compileDeclarativeConnector(manifest as never);
+    for (const [key, spec] of Object.entries(manifest.operations)) {
+      const operation = spec as { kind?: string; request?: { method?: string; path?: string } };
+      if (operation.kind !== "action" || !operation.request?.path) continue;
+      expect(typeof compiled.actions[key], key).toBe("function");
+    }
+  });
+
+  test("native recipe auth is type/scopes/setup only and operations match the runner", async () => {
+    const recipe = await Bun.file(new URL("../../recipes/salesforce/recipe.json", import.meta.url)).json() as {
+      auth: Record<string, unknown>;
+      source: { revision: string };
+      selection: { operations: string[] };
+      manifest: { operations: Record<string, unknown>; auth: Record<string, unknown> };
+    };
+    expect(Object.keys(recipe.auth).sort()).toEqual(["scopes", "setup", "type"]);
+    expect(Object.keys(recipe.manifest.auth).sort()).toEqual(["scopes", "setup", "type"]);
+    expect(recipe.auth.type).toBe("oauth2");
+    expect(recipe.source.revision).toBe("33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a");
+    expect([...recipe.selection.operations].sort()).toEqual(Object.keys(manifest.operations).sort());
+    expect(Object.keys(recipe.manifest.operations).sort()).toEqual(Object.keys(manifest.operations).sort());
   });
 
   test("new operations call the documented Salesforce resources", async () => {

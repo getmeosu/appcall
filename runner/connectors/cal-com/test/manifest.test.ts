@@ -5,7 +5,7 @@ describe("cal-com connector manifest", () => {
   test("declares key, runtime, auth, network, operations, and models", () => {
     expect(manifest.key).toBe("cal-com");
     expect(manifest.name).toBe("Cal.com");
-    expect(manifest.version).toBe("0.2.0");
+    expect(manifest.version).toBe("0.3.0");
     expect(manifest.runtime).toBe("bun");
   });
 
@@ -44,33 +44,8 @@ describe("cal-com connector manifest", () => {
 
   test("all action operations have title, description, and non-empty object inputSchema", () => {
     const ops = manifest.operations as Record<string, { kind: string; title?: string; description?: string; inputSchema?: { type: string; required?: unknown[] } }>;
-    const actionKeys = [
-      "healthcheck",
-      "me.get",
-      "event_types.list",
-      "event_types.get",
-      "bookings.list",
-      "bookings.get",
-      "bookings.create",
-      "bookings.cancel",
-      "bookings.reschedule",
-      "bookings.confirm",
-      "bookings.decline",
-      "slots.available",
-      "schedules.list",
-      "event_types.create",
-      "event_types.update",
-      "event_types.delete",
-      "schedules.get",
-      "schedules.create",
-      "schedules.update",
-      "schedules.delete",
-      "availability.get",
-      "webhooks.list",
-      "webhooks.create",
-      "webhooks.get",
-      "webhooks.delete",
-    ];
+    const actionKeys = Object.keys(ops);
+    expect(actionKeys.length).toBeGreaterThan(100);
     for (const key of actionKeys) {
       expect(ops[key]).toBeDefined();
       expect(ops[key].kind).toBe("action");
@@ -89,6 +64,19 @@ describe("cal-com connector manifest", () => {
       expect(op.timeoutMs).toBeGreaterThan(0);
       expect(op.maxInputBytes).toBeGreaterThan(0);
       expect(op.maxResponseBytes).toBeGreaterThan(0);
+    }
+  });
+
+  test("recipe operations equal runner operations", async () => {
+    const recipe = await Bun.file(new URL("../../recipes/cal_com/recipe.json", import.meta.url)).json() as {
+      manifest: { operations: Record<string, { kind?: string; sideEffect?: string }> };
+      selection: { operations: string[] };
+    };
+    const runnerKeys = Object.keys(manifest.operations).sort();
+    expect(Object.keys(recipe.manifest.operations).sort()).toEqual(runnerKeys);
+    expect([...recipe.selection.operations].sort()).toEqual(runnerKeys);
+    for (const [key, operation] of Object.entries(recipe.manifest.operations)) {
+      if (operation.kind === "webhook") expect(operation.sideEffect, key).toBe("read");
     }
   });
 });

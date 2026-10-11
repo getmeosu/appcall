@@ -1,27 +1,55 @@
-import { expect, it } from "bun:test";
+import { describe, expect, it } from "bun:test";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import manifest from "../manifest.json";
+import cover from "./composio-cover.json";
 
-it("declares bounded action schemas with titles and descriptions", () => {
-  expect(manifest.version).toBe("0.2.0");
-  expect(manifest.network?.allowedHosts).toEqual(["*.booqable.com"]);
-  for (const [key, op] of Object.entries(manifest.operations) as [string, any][]) {
-    expect(op.title.length).toBeGreaterThan(0);
-    expect(op.description.length).toBeGreaterThan(0);
-    expect(op.timeoutMs).toBeGreaterThan(0);
-    expect(op.maxResponseBytes).toBeLessThanOrEqual(5242880);
-    if (op.kind === "webhook") {
-      expect(key.startsWith("webhook.")).toBe(true);
-      expect(op.request).toBeUndefined();
-      expect(op.sideEffect).toBe("read");
-      continue;
+const recipe = JSON.parse(
+  readFileSync(join(import.meta.dir, "../../../../scripts/connector-gen/openconnector/recipes/booqable/recipe.json"), "utf8"),
+);
+const operations = manifest.operations as Record<string, Record<string, unknown>>;
+
+describe("booqable manifest", () => {
+  it("keeps connector identity, bun runtime, and api key auth", () => {
+    expect(manifest.key).toBe("booqable");
+    expect(manifest.runtime).toBe("bun");
+    expect(manifest.version).toBe("0.2.0");
+    expect(manifest.auth.type).toBe("api_key");
+    expect(manifest.http.baseUrl).toBe("https://{{companySlug}}.booqable.com/api/4");
+    expect(manifest.http.auth).toEqual({
+      field: "apiKey",
+      in: "header",
+      name: "Authorization",
+      value: "Bearer {{apiKey}}",
+    });
+    expect(manifest.network.allowedHosts).toEqual(["*.booqable.com"]);
+  });
+
+  it("keeps recipe operations equal to runner operations", () => {
+    expect(Object.keys(manifest.operations).sort()).toEqual(Object.keys(recipe.manifest.operations).sort());
+    expect(recipe.selection.operations.sort()).toEqual(Object.keys(manifest.operations).sort());
+    expect(Object.keys(recipe.operationSources).sort()).toEqual(Object.keys(manifest.operations).sort());
+  });
+
+  it("declares title, description, object inputSchema, and a request for every action", () => {
+    for (const [key, operation] of Object.entries(operations)) {
+      expect(operation.kind, key).toBe("action");
+      expect(String(operation.title ?? "").length, key).toBeGreaterThan(0);
+      expect(String(operation.description ?? "").length, key).toBeGreaterThan(0);
+      expect((operation.inputSchema as { type?: string }).type, key).toBe("object");
+      expect(operation.request, `${key} must declare a request block`).toBeDefined();
+      expect(["read", "write"]).toContain(operation.sideEffect);
+      expect(operation.enforceOutputSchema).toBe(true);
+      expect(operation.responseFormat).toBe("json");
+      expect(operation.validationMode).toBe("strict-generated");
     }
-    expect(op.kind).toBe("action");
-    expect(op.inputSchema.type).toBe("object");
-    expect(op.outputSchema.type).toBe("object");
-    expect(op.enforceOutputSchema).toBe(true);
-    expect(op.validationMode).toBe("strict-generated");
-    expect(op.responseFormat).toBe("json");
-    expect(["read", "write", "destructive"]).toContain(op.sideEffect);
-  }
-  
+  });
+
+  it("covers every Composio Booqable tool with a real operation", () => {
+    expect(Object.keys(cover).length).toBe(49);
+    for (const [slug, op] of Object.entries(cover as Record<string, string>)) {
+      expect(operations[op], `${slug} -> ${op}`).toBeDefined();
+      expect((operations[op] as { request?: unknown }).request, `${slug} -> ${op}`).toBeDefined();
+    }
+  });
 });

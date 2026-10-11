@@ -36,6 +36,36 @@ export function createGoogleMeetClient(options: GoogleMeetClientOptions) {
   };
 }
 
+const MEET_BASE = "https://meet.googleapis.com/v2";
+
+export function createMeetApiClient(options: GoogleMeetClientOptions) {
+  const operation = options.operation ?? "spaces.get";
+  const operationSpec = (manifest.operations as Record<string, { maxResponseBytes?: number; timeoutMs?: number }>)[operation];
+  const maxResponseBytes = operationSpec?.maxResponseBytes ?? 1048576;
+  const httpClient = createConnectorHttpClient({
+    allowedHosts: manifest.network.allowedHosts as string[],
+    maxResponseBytes,
+    timeoutMs: operationSpec?.timeoutMs,
+    fetch: options.fetch,
+  });
+  return {
+    async fetchJSON(path: string, init: RequestInit = {}): Promise<{ status: number; headers: Record<string, string>; body: unknown }> {
+      const headers: Record<string, string> = {
+        Authorization: `Bearer ${options.accessToken}`,
+        Accept: "application/json",
+        ...(init.headers as Record<string, string> | undefined),
+      };
+      if (init.body != null && headers["Content-Type"] == null && headers["content-type"] == null) {
+        headers["Content-Type"] = "application/json";
+      }
+      const response = await httpClient.fetchText(`${MEET_BASE}${path}`, { ...init, headers });
+      let body: unknown;
+      try { body = response.body ? JSON.parse(response.body) : null; } catch { body = response.body; }
+      return { status: response.status, headers: response.headers, body };
+    },
+  };
+}
+
 export type GoogleMeetClient = ReturnType<typeof createGoogleMeetClient>;
 
 export function googleErrorDetail(body: unknown, fallback: string): string {

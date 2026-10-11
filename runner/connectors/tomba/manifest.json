@@ -1,17 +1,7 @@
 {
-  "key": "tomba",
-  "name": "Tomba",
-  "version": "0.2.0",
-  "runtime": "bun",
-  "visibility": "public",
-  "categories": [
-    "crm"
-  ],
   "auth": {
-    "type": "api_key",
     "scopes": [],
     "setup": {
-      "mode": "api_key",
       "fields": [
         {
           "key": "apiKey",
@@ -25,74 +15,101 @@
           "required": true,
           "secret": true
         }
-      ]
+      ],
+      "mode": "api_key"
+    },
+    "type": "api_key"
+  },
+  "categories": [
+    "crm"
+  ],
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
     }
   },
-  "network": {
-    "allowedHosts": [
-      "api.tomba.io"
-    ]
-  },
-  "models": [
-    "account",
-    "email-count",
-    "domain-search",
-    "email-finder",
-    "email-verifier",
-    "lead",
-    "lead-list",
-    "company"
-  ],
   "http": {
-    "baseUrl": "https://api.tomba.io/v1",
     "auth": {
       "field": "apiKey",
       "in": "header",
       "name": "X-Tomba-Key",
       "value": "{{apiKey}}"
     },
-    "headers": {
-      "Accept": "application/json",
-      "X-Tomba-Secret": "{{apiSecret}}"
-    },
+    "baseUrl": "https://api.tomba.io/v1",
     "errors": {
-      "rateLimitStatuses": [
-        429
-      ],
-      "retryAfterHeader": "retry-after",
       "defaultRetryAfterSeconds": 30,
       "messagePaths": [
         "errors.message",
         "message",
         "error"
-      ]
+      ],
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after"
+    },
+    "headers": {
+      "Accept": "application/json",
+      "X-Tomba-Secret": "{{apiSecret}}"
     }
+  },
+  "key": "tomba",
+  "models": [
+    "account",
+    "email-count",
+    "domain-search",
+    "email-finder",
+    "email-verifier",
+    "author-finder",
+    "linkedin-finder",
+    "phone-finder",
+    "phone-validator",
+    "email-format",
+    "email-sources",
+    "employee-location",
+    "domain-status",
+    "person-enrichment",
+    "company-enrichment",
+    "combined-enrichment",
+    "lead",
+    "leads-list",
+    "lead-attribute",
+    "api-key",
+    "usage",
+    "bulk-verifier"
+  ],
+  "name": "Tomba",
+  "network": {
+    "allowedHosts": [
+      "api.tomba.io"
+    ]
   },
   "operations": {
     "healthcheck": {
-      "timeoutMs": 5000,
-      "maxInputBytes": 4096,
-      "maxResponseBytes": 65536,
-      "kind": "action",
-      "sideEffect": "read",
-      "title": "Healthcheck",
       "description": "Validate Tomba credentials with GET /me.",
+      "enforceOutputSchema": true,
       "inputSchema": {
         "type": "object",
-        "properties": {},
-        "additionalProperties": false
+        "additionalProperties": false,
+        "properties": {}
       },
+      "kind": "action",
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
       "outputSchema": {
         "type": "object",
         "required": [
           "data"
         ],
+        "additionalProperties": false,
         "properties": {
           "data": {
             "type": "object"
           }
-        },
-        "additionalProperties": false
+        }
       },
       "request": {
         "method": "GET",
@@ -101,297 +118,79 @@
           200
         ]
       },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "emails.count": {
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "kind": "action",
+      "responseFormat": "json",
       "sideEffect": "read",
-      "title": "Count emails",
-      "description": "Count known email addresses for a domain.",
+      "timeoutMs": 5000,
+      "title": "Healthcheck",
+      "validationMode": "strict-generated"
+    },
+    "attributes.list": {
+      "description": "List custom lead attributes in the Tomba workspace via GET /attributes. Maps to TOMBA_ATTRIBUTES_LIST.",
+      "enforceOutputSchema": true,
       "inputSchema": {
         "type": "object",
-        "properties": {
-          "domain": {
-            "type": "string",
-            "minLength": 1
-          }
-        },
-        "required": [
-          "domain"
-        ],
-        "additionalProperties": false
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "GET",
-        "path": "/email-count",
-        "success": [
-          200
-        ],
-        "query": {
-          "domain": "{{domain}}"
-        }
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "domain.search": {
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "kind": "action",
-      "sideEffect": "read",
-      "title": "Search domain emails",
-      "description": "Search email addresses for a company domain.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "domain": {
-            "type": "string",
-            "minLength": 1
-          },
-          "page": {
-            "type": "integer",
-            "minimum": 1
-          }
-        },
-        "required": [
-          "domain"
-        ],
-        "additionalProperties": false
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "GET",
-        "path": "/domain-search",
-        "success": [
-          200
-        ],
-        "query": {
-          "domain": "{{domain}}",
-          "page": "{{page}}"
-        }
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "email.finder": {
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "kind": "action",
-      "sideEffect": "read",
-      "title": "Find email",
-      "description": "Find the most likely professional email for a person at a domain.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "domain": {
-            "type": "string",
-            "minLength": 1
-          },
-          "firstName": {
-            "type": "string",
-            "minLength": 1
-          },
-          "lastName": {
-            "type": "string",
-            "minLength": 1
-          }
-        },
-        "required": [
-          "domain",
-          "firstName",
-          "lastName"
-        ],
-        "additionalProperties": false
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "GET",
-        "path": "/email-finder",
-        "success": [
-          200
-        ],
-        "query": {
-          "domain": "{{domain}}",
-          "first_name": "{{firstName}}",
-          "last_name": "{{lastName}}"
-        }
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "email.verifier": {
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "kind": "action",
-      "sideEffect": "read",
-      "title": "Verify email",
-      "description": "Verify email deliverability with SMTP, MX, disposable, and catch-all checks.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "email": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Email address to verify."
-          }
-        },
         "additionalProperties": false,
+        "properties": {}
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "type": "object",
         "required": [
-          "email"
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/attributes",
+        "success": [
+          200
         ]
       },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "GET",
-        "path": "/email-verifier",
-        "success": [
-          200
-        ],
-        "query": {
-          "email": "{{email}}"
-        }
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "email.sources": {
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "kind": "action",
+      "responseFormat": "json",
       "sideEffect": "read",
-      "title": "Get email sources",
-      "description": "List public web pages where Tomba found an email address.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "email": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Email address whose sources should be returned."
-          }
-        },
-        "additionalProperties": false,
-        "required": [
-          "email"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "GET",
-        "path": "/email-sources",
-        "success": [
-          200
-        ],
-        "query": {
-          "email": "{{email}}"
-        }
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
+      "timeoutMs": 15000,
+      "title": "List lead attributes",
+      "validationMode": "strict-generated"
     },
     "author.finder": {
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "kind": "action",
-      "sideEffect": "read",
-      "title": "Find article author",
-      "description": "Find the professional email behind a public article URL.",
+      "description": "Find an article author's professional contact data from its URL via GET /author-finder. Maps to TOMBA_FIND_AUTHOR.",
+      "enforceOutputSchema": true,
       "inputSchema": {
         "type": "object",
+        "additionalProperties": false,
         "properties": {
           "url": {
             "type": "string",
             "minLength": 1,
-            "description": "Public article URL."
+            "description": "Public article URL whose author should be identified."
           }
         },
-        "additionalProperties": false,
         "required": [
           "url"
         ]
       },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
       "outputSchema": {
         "type": "object",
         "required": [
           "data"
         ],
+        "additionalProperties": false,
         "properties": {
           "data": {
             "type": "object"
           }
-        },
-        "additionalProperties": false
+        }
       },
       "request": {
         "method": "GET",
@@ -403,148 +202,91 @@
           "url": "{{url}}"
         }
       },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "linkedin.finder": {
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "kind": "action",
+      "responseFormat": "json",
       "sideEffect": "read",
-      "title": "Find email from LinkedIn",
-      "description": "Find the most likely professional email from a LinkedIn profile URL.",
+      "timeoutMs": 180000,
+      "title": "Find article author",
+      "validationMode": "strict-generated"
+    },
+    "combined.enrich": {
+      "description": "Enrich a person and their company from one email via GET /combined/find. Maps to TOMBA_ENRICH_PERSON_AND_COMPANY.",
+      "enforceOutputSchema": true,
       "inputSchema": {
         "type": "object",
-        "properties": {
-          "url": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Full LinkedIn profile URL."
-          }
-        },
         "additionalProperties": false,
-        "required": [
-          "url"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "GET",
-        "path": "/linkedin",
-        "success": [
-          200
-        ],
-        "query": {
-          "url": "{{url}}"
-        }
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "phone.finder": {
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "kind": "action",
-      "sideEffect": "read",
-      "title": "Find phone numbers",
-      "description": "Find phone numbers associated with an email, domain, or LinkedIn URL.",
-      "inputSchema": {
-        "type": "object",
         "properties": {
           "email": {
             "type": "string",
             "minLength": 1,
-            "description": "Email address to search."
-          },
-          "domain": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Company domain to search."
-          },
-          "linkedin": {
-            "type": "string",
-            "minLength": 1,
-            "description": "LinkedIn profile URL to search."
+            "description": "Professional email address used to enrich both person and company."
           }
         },
-        "additionalProperties": false
+        "required": [
+          "email"
+        ]
       },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
       "outputSchema": {
         "type": "object",
         "required": [
           "data"
         ],
+        "additionalProperties": false,
         "properties": {
           "data": {
             "type": "object"
           }
-        },
-        "additionalProperties": false
+        }
       },
       "request": {
         "method": "GET",
-        "path": "/phone-finder",
+        "path": "/combined/find",
         "success": [
           200
         ],
         "query": {
-          "email": "{{email}}",
-          "domain": "{{domain}}",
-          "linkedin": "{{linkedin}}"
+          "email": "{{email}}"
         }
       },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 180000,
+      "title": "Enrich person and company",
+      "validationMode": "strict-generated"
     },
     "company.enrich": {
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "kind": "action",
-      "sideEffect": "read",
-      "title": "Enrich company",
-      "description": "Enrich a company from its domain using Tomba company find.",
+      "description": "Enrich one company from its domain via GET /companies/find. Maps to TOMBA_ENRICH_COMPANY.",
+      "enforceOutputSchema": true,
       "inputSchema": {
         "type": "object",
+        "additionalProperties": false,
         "properties": {
           "domain": {
             "type": "string",
             "minLength": 1,
-            "description": "Company domain without a URL path."
+            "description": "Company domain to enrich, without a URL path."
           }
         },
-        "additionalProperties": false,
         "required": [
           "domain"
         ]
       },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
       "outputSchema": {
         "type": "object",
         "required": [
           "data"
         ],
+        "additionalProperties": false,
         "properties": {
           "data": {
             "type": "object"
           }
-        },
-        "additionalProperties": false
+        }
       },
       "request": {
         "method": "GET",
@@ -556,91 +298,154 @@
           "domain": "{{domain}}"
         }
       },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "person.enrich": {
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "kind": "action",
+      "responseFormat": "json",
       "sideEffect": "read",
-      "title": "Enrich person",
-      "description": "Enrich a person from a professional email using Tomba people find.",
+      "timeoutMs": 180000,
+      "title": "Enrich company",
+      "validationMode": "strict-generated"
+    },
+    "domain.search": {
+      "description": "Search a domain or company for professional contacts via GET /domain-search. Maps to TOMBA_SEARCH_DOMAIN_CONTACTS.",
+      "enforceOutputSchema": true,
       "inputSchema": {
         "type": "object",
-        "properties": {
-          "email": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Professional email of the person to enrich."
-          }
-        },
         "additionalProperties": false,
-        "required": [
-          "email"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "GET",
-        "path": "/people/find",
-        "success": [
-          200
-        ],
-        "query": {
-          "email": "{{email}}"
-        }
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "domain.status": {
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "kind": "action",
-      "sideEffect": "read",
-      "title": "Domain status",
-      "description": "Check whether a domain is webmail or disposable.",
-      "inputSchema": {
-        "type": "object",
         "properties": {
           "domain": {
             "type": "string",
             "minLength": 1,
-            "description": "Domain name, e.g. gmail.com."
+            "description": "Company domain to search, such as stripe.com. Required on this operation; official also accepts company."
+          },
+          "page": {
+            "type": "integer",
+            "description": "One-indexed result page.",
+            "minimum": 1
+          },
+          "company": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Company name to search. Official uses this when Tomba knows the company."
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Maximum emails to return. Composio accepts 10, 20, or 50.",
+            "minimum": 10,
+            "maximum": 50,
+            "enum": [
+              10,
+              20,
+              50
+            ]
+          },
+          "country": {
+            "type": "string",
+            "minLength": 2,
+            "description": "Two-letter ISO 3166-1 alpha-2 country code used to filter contacts."
+          },
+          "department": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Department used to filter contacts.",
+            "enum": [
+              "engineering",
+              "sales",
+              "finance",
+              "hr",
+              "it",
+              "marketing",
+              "operations",
+              "management",
+              "executive",
+              "legal",
+              "support",
+              "communication",
+              "software",
+              "security",
+              "pr",
+              "warehouse",
+              "diversity",
+              "administrative",
+              "facilities",
+              "accounting"
+            ]
+          },
+          "enrich_mobile": {
+            "type": "boolean",
+            "description": "Whether to include available mobile phone enrichment for returned contacts."
           }
         },
-        "additionalProperties": false,
         "required": [
           "domain"
         ]
       },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
       "outputSchema": {
         "type": "object",
         "required": [
           "data"
         ],
+        "additionalProperties": false,
         "properties": {
           "data": {
             "type": "object"
           }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/domain-search",
+        "success": [
+          200
+        ],
+        "query": {
+          "domain": "{{domain}}",
+          "page": "{{page}}",
+          "company": "{{company}}",
+          "limit": "{{limit}}",
+          "country": "{{country}}",
+          "department": "{{department}}",
+          "enrich_mobile": "{{enrich_mobile}}"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 180000,
+      "title": "Search domain emails",
+      "validationMode": "strict-generated"
+    },
+    "domain.status": {
+      "description": "Check whether a domain is webmail or disposable via GET /domain-status. Maps to TOMBA_DOMAIN_STATUS.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "domain": {
+            "type": "string",
+            "minLength": 1,
+            "description": "The domain name to check the status for (e.g. gmail.com)."
+          }
         },
-        "additionalProperties": false
+        "required": [
+          "domain"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
       },
       "request": {
         "method": "GET",
@@ -652,43 +457,122 @@
           "domain": "{{domain}}"
         }
       },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "email.format": {
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "kind": "action",
+      "responseFormat": "json",
       "sideEffect": "read",
-      "title": "Get email format",
-      "description": "Return detected professional email patterns for a domain.",
+      "timeoutMs": 15000,
+      "title": "Domain status",
+      "validationMode": "strict-generated"
+    },
+    "email.finder": {
+      "description": "Find a professional email from company and person identifiers via GET /email-finder. Maps to TOMBA_FIND_EMAIL.",
+      "enforceOutputSchema": true,
       "inputSchema": {
         "type": "object",
+        "additionalProperties": false,
         "properties": {
           "domain": {
             "type": "string",
             "minLength": 1,
-            "description": "Domain whose email patterns should be returned."
+            "description": "Company domain, such as stripe.com."
+          },
+          "firstName": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Person's first name. Wired as first_name. Kept from origin."
+          },
+          "lastName": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Person's last name. Wired as last_name. Kept from origin."
+          },
+          "company": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Company name. Official accepts company when domain is omitted."
+          },
+          "full_name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Person's full name. Official uses this when first_name and last_name are omitted."
+          },
+          "enrich_mobile": {
+            "type": "boolean",
+            "description": "Set true to request an associated mobile phone number."
           }
         },
-        "additionalProperties": false,
         "required": [
-          "domain"
+          "domain",
+          "firstName",
+          "lastName"
         ]
       },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
       "outputSchema": {
         "type": "object",
         "required": [
           "data"
         ],
+        "additionalProperties": false,
         "properties": {
           "data": {
             "type": "object"
           }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/email-finder",
+        "success": [
+          200
+        ],
+        "query": {
+          "domain": "{{domain}}",
+          "first_name": "{{firstName}}",
+          "last_name": "{{lastName}}",
+          "company": "{{company}}",
+          "full_name": "{{full_name}}",
+          "enrich_mobile": "{{enrich_mobile}}"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 180000,
+      "title": "Find email",
+      "validationMode": "strict-generated"
+    },
+    "email.format": {
+      "description": "Return detected email patterns for a domain via GET /email-format. Maps to TOMBA_GET_EMAIL_FORMAT.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "domain": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Domain whose detected professional email patterns should be returned."
+          }
         },
-        "additionalProperties": false
+        "required": [
+          "domain"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
       },
       "request": {
         "method": "GET",
@@ -700,152 +584,449 @@
           "domain": "{{domain}}"
         }
       },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "usage.get": {
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "kind": "action",
+      "responseFormat": "json",
       "sideEffect": "read",
-      "title": "Get usage",
-      "description": "Get Tomba account usage statistics and remaining credits.",
+      "timeoutMs": 15000,
+      "title": "Get email format",
+      "validationMode": "strict-generated"
+    },
+    "email.sources": {
+      "description": "Return public web sources where an email address was found via GET /email-sources. Maps to TOMBA_GET_EMAIL_SOURCES.",
+      "enforceOutputSchema": true,
       "inputSchema": {
         "type": "object",
-        "properties": {},
-        "additionalProperties": false
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
+        "additionalProperties": false,
         "properties": {
-          "data": {
-            "type": "object"
+          "email": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Email address whose public web sources should be returned."
           }
         },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "GET",
-        "path": "/usage",
-        "success": [
-          200
+        "required": [
+          "email"
         ]
       },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "leads.list": {
-      "timeoutMs": 15000,
+      "kind": "action",
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
-      "kind": "action",
-      "sideEffect": "read",
-      "title": "List leads",
-      "description": "List stored Tomba leads with page and limit pagination.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "page": {
-            "type": "integer",
-            "description": "Page number, 1-indexed.",
-            "minimum": 1
-          },
-          "limit": {
-            "type": "integer",
-            "description": "Leads per page.",
-            "minimum": 1,
-            "maximum": 100
-          }
-        },
-        "additionalProperties": false
-      },
       "outputSchema": {
         "type": "object",
         "required": [
           "data"
         ],
+        "additionalProperties": false,
         "properties": {
           "data": {
             "type": "object"
           }
-        },
-        "additionalProperties": false
+        }
       },
       "request": {
         "method": "GET",
-        "path": "/leads",
+        "path": "/email-sources",
+        "success": [
+          200,
+          201
+        ],
+        "query": {
+          "email": "{{email}}"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get email sources",
+      "validationMode": "strict-generated"
+    },
+    "email.verifier": {
+      "description": "Verify email deliverability and mailbox signals via GET /email-verifier. Maps to TOMBA_VERIFY_EMAIL.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "email": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Email address to verify."
+          },
+          "enrich_mobile": {
+            "type": "boolean",
+            "description": "Set true to request an associated mobile phone number."
+          }
+        },
+        "required": [
+          "email"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/email-verifier",
         "success": [
           200
         ],
         "query": {
-          "page": "{{page}}",
-          "limit": "{{limit}}"
+          "email": "{{email}}",
+          "enrich_mobile": "{{enrich_mobile}}"
         }
       },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 180000,
+      "title": "Verify email",
+      "validationMode": "strict-generated"
     },
-    "leads.create": {
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "kind": "action",
-      "sideEffect": "write",
-      "title": "Create lead",
-      "description": "Create a lead in Tomba with first name and email.",
+    "emails.count": {
+      "description": "Return contact counts and department breakdown for a domain via GET /email-count. Maps to TOMBA_GET_EMAIL_COUNT.",
+      "enforceOutputSchema": true,
       "inputSchema": {
         "type": "object",
+        "additionalProperties": false,
         "properties": {
-          "firstName": {
+          "domain": {
             "type": "string",
             "minLength": 1,
-            "description": "Lead first name."
-          },
-          "email": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Lead email address."
-          },
-          "lastName": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Lead last name."
-          },
-          "company": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Company name."
-          },
-          "website": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Personal or company website URL."
+            "description": "Domain whose available professional email counts should be returned."
           }
         },
-        "additionalProperties": false,
         "required": [
-          "firstName",
-          "email"
+          "domain"
         ]
       },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
       "outputSchema": {
         "type": "object",
         "required": [
           "data"
         ],
+        "additionalProperties": false,
         "properties": {
           "data": {
             "type": "object"
           }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/email-count",
+        "success": [
+          200
+        ],
+        "query": {
+          "domain": "{{domain}}"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Count emails",
+      "validationMode": "strict-generated"
+    },
+    "emails.verify_bulk": {
+      "description": "Create and launch a temporary Tomba bulk verifier job for up to 1000 emails via POST /bulk/verifier. Maps to TOMBA_VERIFY_EMAILS.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "emails": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "description": "Email addresses to verify in one bulk job (up to 1000).",
+            "minItems": 1
+          },
+          "timeout_seconds": {
+            "type": "integer",
+            "description": "Optional polling window in seconds from Composio. Accepted for input compatibility; this operation creates and launches the job rather than polling locally.",
+            "minimum": 1
+          }
         },
-        "additionalProperties": false
+        "required": [
+          "emails"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 262144,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/bulk/verifier",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "name": "AppCall email verify",
+          "list": "{{emails}}",
+          "launch": true
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 180000,
+      "title": "Verify emails",
+      "validationMode": "strict-generated"
+    },
+    "employees.locations": {
+      "description": "Return employee counts by country for a domain via GET /location. Maps to TOMBA_GET_EMPLOYEE_LOCATIONS.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "domain": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Domain whose employee distribution by country should be returned."
+          }
+        },
+        "required": [
+          "domain"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/location",
+        "success": [
+          200
+        ],
+        "query": {
+          "domain": "{{domain}}"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get employee locations",
+      "validationMode": "strict-generated"
+    },
+    "keys.delete": {
+      "description": "Delete an API key by its numeric ID via DELETE /keys/{key_id}. Maps to TOMBA_KEYS_DELETE.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "key_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Numeric ID of the API key to delete (the id field from keys.list, not the key string)."
+          }
+        },
+        "required": [
+          "key_id"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/keys/{{key_id}}",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "title": "Delete API key",
+      "validationMode": "strict-generated"
+    },
+    "keys.list": {
+      "description": "List API keys in the Tomba workspace via GET /keys. Maps to TOMBA_KEYS_LIST.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/keys",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List API keys",
+      "validationMode": "strict-generated"
+    },
+    "leads.create": {
+      "description": "Create a lead in Tomba's lead database via POST /leads. Maps to TOMBA_LEADS_CREATE.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "first_name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Lead's first name (required by Composio)."
+          },
+          "email": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Lead's email address (required by Composio)."
+          },
+          "last_name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Lead's last name."
+          },
+          "company": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Company or organization the lead works for."
+          },
+          "website": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Lead's personal or company website. Wired as official website_url."
+          },
+          "position": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Lead's job title or position."
+          },
+          "country": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Two-letter ISO 3166-1 alpha-2 country code."
+          },
+          "twitter": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Full Twitter/X profile URL."
+          },
+          "linkedin": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Full LinkedIn profile URL."
+          },
+          "phone": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Lead's phone number. Wired as official phone_number."
+          },
+          "city": {
+            "type": "string",
+            "minLength": 1,
+            "description": "City where the lead is located. Accepted for Composio input; not an official POST /leads field."
+          },
+          "state": {
+            "type": "string",
+            "minLength": 1,
+            "description": "State or province where the lead is located. Accepted for Composio input; not an official POST /leads field."
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "description": "List of tags. Accepted for Composio input; not an official POST /leads field."
+          }
+        },
+        "required": [
+          "first_name",
+          "email"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
       },
       "request": {
         "method": "POST",
@@ -858,53 +1039,213 @@
           "Content-Type": "application/json"
         },
         "body": {
-          "first_name": "{{firstName}}",
+          "first_name": "{{first_name}}",
           "email": "{{email}}",
-          "last_name": "{{lastName}}",
+          "last_name": "{{last_name}}",
           "company": "{{company}}",
-          "website": "{{website}}"
+          "website_url": "{{website}}",
+          "position": "{{position}}",
+          "country": "{{country}}",
+          "twitter": "{{twitter}}",
+          "linkedin": "{{linkedin}}",
+          "phone_number": "{{phone}}"
         }
       },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "lists.list": {
+      "responseFormat": "json",
+      "sideEffect": "write",
       "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "kind": "action",
-      "sideEffect": "read",
-      "title": "List lead lists",
-      "description": "List Tomba lead lists with page and limit pagination.",
+      "title": "Create lead",
+      "validationMode": "strict-generated"
+    },
+    "leads.list": {
+      "description": "List leads with optional pagination via GET /leads. Maps to TOMBA_LEADS_LIST.",
+      "enforceOutputSchema": true,
       "inputSchema": {
         "type": "object",
+        "additionalProperties": false,
         "properties": {
           "page": {
             "type": "integer",
-            "description": "Page number, 1-indexed.",
+            "description": "Page number to retrieve (1-indexed).",
             "minimum": 1
           },
           "limit": {
             "type": "integer",
-            "description": "Items per page.",
+            "description": "Number of leads per page (1-100).",
             "minimum": 1,
             "maximum": 100
           }
-        },
-        "additionalProperties": false
+        }
       },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
       "outputSchema": {
         "type": "object",
         "required": [
           "data"
         ],
+        "additionalProperties": false,
         "properties": {
           "data": {
             "type": "object"
           }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/leads",
+        "success": [
+          200
+        ],
+        "query": {
+          "page": "{{page}}",
+          "limit": "{{limit}}"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List leads",
+      "validationMode": "strict-generated"
+    },
+    "linkedin.finder": {
+      "description": "Find the most likely professional email from a LinkedIn profile URL via GET /linkedin. Maps to TOMBA_FIND_EMAIL_FROM_LINKEDIN.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "url": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Full LinkedIn profile URL."
+          },
+          "full": {
+            "type": "boolean",
+            "description": "Set true to return all emails associated with the LinkedIn profile instead of only the most likely email."
+          },
+          "enrich_mobile": {
+            "type": "boolean",
+            "description": "Set true to request associated mobile phone data."
+          }
         },
-        "additionalProperties": false
+        "required": [
+          "url"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/linkedin",
+        "success": [
+          200
+        ],
+        "query": {
+          "url": "{{url}}",
+          "full": "{{full}}",
+          "enrich_mobile": "{{enrich_mobile}}"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 180000,
+      "title": "Find email from LinkedIn",
+      "validationMode": "strict-generated"
+    },
+    "lists.delete": {
+      "description": "Permanently delete a leads list by ID via DELETE /leads_lists/{id}. Maps to TOMBA_LISTS_DELETE.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique numeric identifier of the leads list to delete."
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/leads_lists/{{id}}",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "title": "Delete leads list",
+      "validationMode": "strict-generated"
+    },
+    "lists.list": {
+      "description": "List lead lists via GET /leads_lists. Maps to TOMBA_LISTS_LIST.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "page": {
+            "type": "integer",
+            "description": "Page number for pagination, must be >= 1. Official currently returns up to 25 lists with no pagination.",
+            "minimum": 1
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Number of items per page, between 1 and 100. Official currently ignores pagination.",
+            "minimum": 1,
+            "maximum": 100
+          }
+        }
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
       },
       "request": {
         "method": "GET",
@@ -917,155 +1258,277 @@
           "limit": "{{limit}}"
         }
       },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "keys.list": {
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "kind": "action",
+      "responseFormat": "json",
       "sideEffect": "read",
-      "title": "List API keys",
-      "description": "List Tomba API keys for the authenticated account.",
+      "timeoutMs": 15000,
+      "title": "List lead lists",
+      "validationMode": "strict-generated"
+    },
+    "lists.update": {
+      "description": "Rename a leads list by ID via PUT /leads_lists/{id}. Maps to TOMBA_LISTS_UPDATE.",
+      "enforceOutputSchema": true,
       "inputSchema": {
         "type": "object",
-        "properties": {},
-        "additionalProperties": false
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
+        "additionalProperties": false,
         "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "GET",
-        "path": "/keys",
-        "success": [
-          200
-        ]
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "employees.locations": {
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "kind": "action",
-      "sideEffect": "read",
-      "title": "Employee locations",
-      "description": "Return employee counts by country for a company domain.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "domain": {
+          "id": {
             "type": "string",
             "minLength": 1,
-            "description": "Domain whose employee distribution should be returned."
+            "description": "Numeric ID of the leads list to update."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 2,
+            "description": "New name for the leads list. Must be unique across lists in the account."
           }
         },
-        "additionalProperties": false,
         "required": [
-          "domain"
+          "id",
+          "name"
         ]
       },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
       "outputSchema": {
         "type": "object",
         "required": [
           "data"
         ],
+        "additionalProperties": false,
         "properties": {
           "data": {
             "type": "object"
           }
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/leads_lists/{{id}}",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
         },
-        "additionalProperties": false
+        "body": {
+          "name": "{{name}}"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Update leads list",
+      "validationMode": "strict-generated"
+    },
+    "person.enrich": {
+      "description": "Enrich one person from an email address via GET /people/find. Maps to TOMBA_ENRICH_PERSON.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "email": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Professional email address of the person to enrich."
+          }
+        },
+        "required": [
+          "email"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
       },
       "request": {
         "method": "GET",
-        "path": "/location",
+        "path": "/people/find",
         "success": [
           200
         ],
         "query": {
-          "domain": "{{domain}}"
+          "email": "{{email}}"
         }
       },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "similar.list": {
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "kind": "action",
+      "responseFormat": "json",
       "sideEffect": "read",
-      "title": "Similar domains",
-      "description": "Find websites similar to a company domain.",
+      "timeoutMs": 180000,
+      "title": "Enrich person",
+      "validationMode": "strict-generated"
+    },
+    "phone.finder": {
+      "description": "Find phone numbers by email, domain, or LinkedIn URL via GET /phone-finder. Maps to TOMBA_FIND_PHONE.",
+      "enforceOutputSchema": true,
       "inputSchema": {
         "type": "object",
+        "additionalProperties": false,
         "properties": {
+          "email": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Email address to search. At least one of email, domain, or linkedin is required by Tomba."
+          },
           "domain": {
             "type": "string",
             "minLength": 1,
-            "description": "Company domain."
+            "description": "Company domain to search."
+          },
+          "linkedin": {
+            "type": "string",
+            "minLength": 1,
+            "description": "LinkedIn profile URL to search."
+          },
+          "full": {
+            "type": "boolean",
+            "description": "Whether to return all associated phone numbers instead of only the primary result."
           }
-        },
-        "additionalProperties": false,
-        "required": [
-          "domain"
-        ]
+        }
       },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
       "outputSchema": {
         "type": "object",
         "required": [
           "data"
         ],
+        "additionalProperties": false,
         "properties": {
           "data": {
             "type": "object"
           }
-        },
-        "additionalProperties": false
+        }
       },
       "request": {
         "method": "GET",
-        "path": "/similar",
+        "path": "/phone-finder",
         "success": [
           200
         ],
         "query": {
-          "domain": "{{domain}}"
+          "email": "{{email}}",
+          "domain": "{{domain}}",
+          "linkedin": "{{linkedin}}",
+          "full": "{{full}}"
         }
       },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 180000,
+      "title": "Find phone numbers",
+      "validationMode": "strict-generated"
+    },
+    "phone.validate": {
+      "description": "Validate and format a phone number via GET /phone-validator. Maps to TOMBA_VALIDATE_PHONE.",
       "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "phone": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Phone number to validate, preferably in international format."
+          },
+          "country_code": {
+            "type": "string",
+            "minLength": 2,
+            "description": "Country code used to interpret a national-format phone number, such as US."
+          }
+        },
+        "required": [
+          "phone"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/phone-validator",
+        "success": [
+          200
+        ],
+        "query": {
+          "phone": "{{phone}}",
+          "country_code": "{{country_code}}"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Validate phone number",
+      "validationMode": "strict-generated"
+    },
+    "usage.get": {
+      "description": "Get API usage statistics via GET /usage. Maps to TOMBA_USAGE_STATS.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/usage",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get usage statistics",
+      "validationMode": "strict-generated"
     }
   },
   "provenance": {
     "source": {
-      "url": "https://github.com/oomol-lab/open-connector",
-      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
+      "url": "https://github.com/oomol-lab/open-connector"
     }
   },
-  "evidence": {
-    "fixture": {
-      "status": "supplied"
-    },
-    "live": {
-      "status": "unverified"
-    }
-  }
+  "runtime": "bun",
+  "version": "0.2.0",
+  "visibility": "public"
 }

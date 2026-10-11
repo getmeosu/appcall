@@ -1,5 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import manifest from "../manifest.json";
+import { ADDED_ACTIONS, ADDED_WEBHOOKS } from "./families.test";
 
 const operations = manifest.operations as Record<string, Record<string, unknown>>;
 const actionOps = Object.fromEntries(
@@ -12,7 +13,7 @@ const webhookOps = Object.fromEntries(
 describe("asana manifest", () => {
   it("declares the connector identity the control plane keys on", () => {
     expect(manifest.key).toBe("asana");
-    expect(manifest.version).toBe("0.2.0");
+    expect(manifest.version).toBe("0.4.0");
     expect(manifest.runtime).toBe("bun");
     expect(manifest.categories).toEqual(["productivity"]);
     expect(manifest.models.length).toBeGreaterThan(0);
@@ -47,37 +48,84 @@ describe("asana manifest", () => {
     expect(manifest.network.allowedHosts).toEqual(["app.asana.com"]);
   });
 
-  it("declares the existing surface plus delete, search, project membership, users, tags, attachments, and webhooks", () => {
+  it("declares the existing surface plus remaining Composio families", () => {
     expect(Object.keys(operations).sort()).toEqual(
       [
         "attachments.create",
+        "attachments.delete",
+        "attachments.get",
+        "attachments.listForObject",
+        "customFields.get",
+        "customFields.listByWorkspace",
         "healthcheck",
+        "memberships.create",
+        "memberships.delete",
+        "memberships.get",
+        "memberships.list",
+        "projects.addFollowers",
+        "projects.addMembers",
         "projects.create",
         "projects.get",
         "projects.list",
+        "projects.listByTeam",
+        "projects.listByWorkspace",
+        "projects.removeFollowers",
+        "projects.removeMembers",
         "sections.addTask",
         "sections.create",
+        "sections.delete",
+        "sections.get",
+        "sections.insert",
         "sections.list",
+        "sections.update",
+        "statusUpdates.createForObject",
+        "statusUpdates.delete",
+        "statusUpdates.get",
+        "statusUpdates.listForObject",
         "stories.create",
         "stories.get",
         "stories.listForTask",
         "tags.create",
+        "tags.delete",
+        "tags.get",
         "tags.list",
+        "tags.listForTask",
+        "tags.update",
+        "tasks.addDependencies",
+        "tasks.addDependents",
         "tasks.addProject",
         "tasks.create",
         "tasks.delete",
         "tasks.get",
+        "tasks.getDependencies",
+        "tasks.getDependents",
         "tasks.listByProject",
+        "tasks.listBySection",
+        "tasks.listByTag",
+        "tasks.listByUserTaskList",
         "tasks.listSubtasks",
+        "tasks.removeDependencies",
+        "tasks.removeDependents",
         "tasks.removeProject",
         "tasks.search",
+        "tasks.setParent",
         "tasks.update",
+        "teams.addUser",
+        "teams.create",
+        "teams.get",
+        "teams.listByWorkspace",
+        "teams.listForUser",
+        "teams.removeUser",
+        "teams.update",
+        "users.get",
         "users.list",
         "users.me",
         "webhook.story.added",
         "webhook.task.added",
         "webhook.task.changed",
         "workspaces.list",
+        ...ADDED_ACTIONS,
+        ...ADDED_WEBHOOKS,
       ].sort(),
     );
   });
@@ -99,9 +147,12 @@ describe("asana manifest", () => {
 
   it("declares webhook ops as kind webhook with no request block", () => {
     expect(Object.keys(webhookOps).sort()).toEqual([
+      "webhook.attachment.added",
       "webhook.story.added",
+      "webhook.tag.added",
       "webhook.task.added",
       "webhook.task.changed",
+      "webhook.task.moved",
     ]);
     for (const [key, operation] of Object.entries(webhookOps)) {
       expect(operation.kind, key).toBe("webhook");

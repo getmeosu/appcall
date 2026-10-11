@@ -10,14 +10,18 @@ const WEBHOOK_OPS = [
   "webhook.reaction_removed",
   "webhook.member_joined_channel",
   "webhook.channel_created",
+  "webhook.channel_message_received",
+  "webhook.direct_message_received",
+  "webhook.bot_message_received",
 ] as const;
 
 describe("slack webhook operations", () => {
   test("declares each trigger as kind webhook", () => {
-    const ops = manifest.operations as Record<string, { kind: string }>;
+    const ops = manifest.operations as Record<string, { kind: string; sideEffect?: string }>;
     for (const key of WEBHOOK_OPS) {
       expect(ops[key]).toBeDefined();
       expect(ops[key].kind).toBe("webhook");
+      expect(ops[key].sideEffect).toBe("read");
     }
   });
 

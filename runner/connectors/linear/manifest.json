@@ -1,7 +1,7 @@
 {
   "key": "linear",
   "name": "Linear",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "runtime": "bun",
   "visibility": "public",
   "categories": [
@@ -1095,6 +1095,75 @@
         }
       }
     },
+    "comments.listAll": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "List Workspace Comments",
+      "description": "List comments visible to the authenticated user with the comments query over POST /graphql. This is the workspace connection, not comments nested on one issue. Optional includeArchived includes archived comments. Pass the previous call's nextCursor as after.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "first": {
+            "type": "integer",
+            "description": "Page size. Provider default 50."
+          },
+          "after": {
+            "type": "string",
+            "description": "Cursor from a previous call's nextCursor."
+          },
+          "before": {
+            "type": "string",
+            "description": "Cursor used with last for backward pagination."
+          },
+          "includeArchived": {
+            "type": "boolean",
+            "description": "When true, include archived comments. Provider default is false."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "comments": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "nextCursor": {
+            "type": "string"
+          },
+          "hasNextPage": {
+            "type": "boolean"
+          }
+        }
+      },
+      "sample": {},
+      "request": {
+        "method": "POST",
+        "path": "/graphql",
+        "body": {
+          "query": "query Comments($first: Int, $after: String, $before: String, $includeArchived: Boolean) { comments(first: $first, after: $after, before: $before, includeArchived: $includeArchived) { nodes { id body url createdAt updatedAt user { id name } issue { id identifier } } pageInfo { hasNextPage endCursor } } }",
+          "variables": {
+            "first": "{{first}}",
+            "after": "{{after}}",
+            "before": "{{before}}",
+            "includeArchived": "{{includeArchived}}"
+          }
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "comments": "{{response.data.comments.nodes}}",
+          "nextCursor": "{{response.data.comments.pageInfo.endCursor}}",
+          "hasNextPage": "{{response.data.comments.pageInfo.hasNextPage}}"
+        }
+      }
+    },
     "comments.update": {
       "kind": "action",
       "timeoutMs": 10000,
@@ -1718,6 +1787,1624 @@
         }
       }
     },
+    "projects.archive": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "sideEffect": "destructive",
+      "title": "Archive Project",
+      "description": "Archive a project with the projectArchive mutation. id is the project UUID. Archived projects leave active views; restore later with projectUnarchive. This cannot be undone from this operation.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Project UUID to archive."
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          }
+        }
+      },
+      "sample": {
+        "id": "project-uuid"
+      },
+      "request": {
+        "method": "POST",
+        "path": "/graphql",
+        "body": {
+          "query": "mutation ProjectArchive($id: String!) { projectArchive(id: $id) { success } }",
+          "variables": {
+            "id": "{{id}}"
+          }
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "success": "{{response.data.projectArchive.success}}"
+        }
+      }
+    },
+    "projectUpdates.archive": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "sideEffect": "destructive",
+      "title": "Archive Project Update",
+      "description": "Archive a project status update with projectUpdateArchive. id is the project update UUID. Archived updates are hidden from the default view and can be restored with projectUpdates.unarchive.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Project update UUID to archive."
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          }
+        }
+      },
+      "sample": {
+        "id": "project-update-uuid"
+      },
+      "request": {
+        "method": "POST",
+        "path": "/graphql",
+        "body": {
+          "query": "mutation ProjectUpdateArchive($id: String!) { projectUpdateArchive(id: $id) { success } }",
+          "variables": {
+            "id": "{{id}}"
+          }
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "success": "{{response.data.projectUpdateArchive.success}}"
+        }
+      }
+    },
+    "comments.react": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "sideEffect": "write",
+      "title": "Add Comment Reaction",
+      "description": "Add an emoji reaction to a comment with reactionCreate. commentId is the comment UUID; emoji is a Unicode emoji or a shortcode such as :thumbsup:.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "commentId": {
+            "type": "string",
+            "description": "Comment UUID to react to."
+          },
+          "emoji": {
+            "type": "string",
+            "description": "Unicode emoji or shortcode (e.g. :thumbsup:)."
+          }
+        },
+        "required": [
+          "commentId",
+          "emoji"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "reaction": {
+            "type": "object"
+          }
+        }
+      },
+      "sample": {
+        "commentId": "comment-uuid",
+        "emoji": "\ud83d\udc4d"
+      },
+      "request": {
+        "method": "POST",
+        "path": "/graphql",
+        "body": {
+          "query": "mutation ReactionCreate($input: ReactionCreateInput!) { reactionCreate(input: $input) { success reaction { id emoji } } }",
+          "variables": {
+            "input": {
+              "commentId": "{{commentId}}",
+              "emoji": "{{emoji}}"
+            }
+          }
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "success": "{{response.data.reactionCreate.success}}",
+          "reaction": {
+            "id": "{{response.data.reactionCreate.reaction.id}}",
+            "emoji": "{{response.data.reactionCreate.reaction.emoji}}"
+          }
+        }
+      }
+    },
+    "issueRelations.create": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "sideEffect": "write",
+      "title": "Create Issue Relation",
+      "description": "Create a relationship between two issues with issueRelationCreate. type is one of blocks, duplicate, or related. Both issueId and relatedIssueId must be issue UUIDs.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "issueId": {
+            "type": "string",
+            "description": "UUID of the primary issue."
+          },
+          "relatedIssueId": {
+            "type": "string",
+            "description": "UUID of the related issue."
+          },
+          "type": {
+            "type": "string",
+            "description": "Relationship type.",
+            "enum": [
+              "blocks",
+              "duplicate",
+              "related"
+            ]
+          }
+        },
+        "required": [
+          "issueId",
+          "relatedIssueId",
+          "type"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "issueRelation": {
+            "type": "object"
+          }
+        }
+      },
+      "sample": {
+        "issueId": "issue-uuid",
+        "relatedIssueId": "related-uuid",
+        "type": "blocks"
+      },
+      "request": {
+        "method": "POST",
+        "path": "/graphql",
+        "body": {
+          "query": "mutation IssueRelationCreate($input: IssueRelationCreateInput!) { issueRelationCreate(input: $input) { success issueRelation { id type } } }",
+          "variables": {
+            "input": {
+              "issueId": "{{issueId}}",
+              "relatedIssueId": "{{relatedIssueId}}",
+              "type": "{{type}}"
+            }
+          }
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "success": "{{response.data.issueRelationCreate.success}}",
+          "issueRelation": {
+            "id": "{{response.data.issueRelationCreate.issueRelation.id}}",
+            "type": "{{response.data.issueRelationCreate.issueRelation.type}}"
+          }
+        }
+      }
+    },
+    "projectMilestones.create": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Create Project Milestone",
+      "description": "Create a project milestone with projectMilestoneCreate. name and projectId are required. Optional: description (markdown), targetDate (YYYY-MM-DD), sortOrder.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Milestone title."
+          },
+          "projectId": {
+            "type": "string",
+            "description": "Project UUID."
+          },
+          "description": {
+            "type": "string",
+            "description": "Markdown description."
+          },
+          "targetDate": {
+            "type": "string",
+            "description": "Target date as YYYY-MM-DD."
+          },
+          "sortOrder": {
+            "type": "number",
+            "description": "Sort order; lower numbers appear first."
+          }
+        },
+        "required": [
+          "name",
+          "projectId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "projectMilestone": {
+            "type": "object"
+          }
+        }
+      },
+      "sample": {
+        "name": "Beta cut",
+        "projectId": "project-uuid"
+      },
+      "request": {
+        "method": "POST",
+        "path": "/graphql",
+        "body": {
+          "query": "mutation ProjectMilestoneCreate($input: ProjectMilestoneCreateInput!) { projectMilestoneCreate(input: $input) { success projectMilestone { id name targetDate sortOrder } } }",
+          "variables": {
+            "input": {
+              "name": "{{name}}",
+              "projectId": "{{projectId}}",
+              "description": "{{description}}",
+              "targetDate": "{{targetDate}}",
+              "sortOrder": "{{sortOrder}}"
+            }
+          }
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "success": "{{response.data.projectMilestoneCreate.success}}",
+          "projectMilestone": {
+            "id": "{{response.data.projectMilestoneCreate.projectMilestone.id}}",
+            "name": "{{response.data.projectMilestoneCreate.projectMilestone.name}}",
+            "targetDate": "{{response.data.projectMilestoneCreate.projectMilestone.targetDate}}",
+            "sortOrder": "{{response.data.projectMilestoneCreate.projectMilestone.sortOrder}}"
+          }
+        }
+      }
+    },
+    "projectUpdates.create": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Create Project Update",
+      "description": "Post a project status update with projectUpdateCreate. projectId and body (markdown) are required. Optional health is onTrack, atRisk, or offTrack. isDiffHidden hides the diff against the previous update.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "projectId": {
+            "type": "string",
+            "description": "Project UUID."
+          },
+          "body": {
+            "type": "string",
+            "description": "Markdown body of the status update."
+          },
+          "health": {
+            "type": "string",
+            "description": "Project health.",
+            "enum": [
+              "onTrack",
+              "atRisk",
+              "offTrack"
+            ]
+          },
+          "isDiffHidden": {
+            "type": "boolean",
+            "description": "When true, hide the diff against the previous update."
+          }
+        },
+        "required": [
+          "projectId",
+          "body"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "projectUpdate": {
+            "type": "object"
+          }
+        }
+      },
+      "sample": {
+        "projectId": "project-uuid",
+        "body": "Shipped the API spec.",
+        "health": "onTrack"
+      },
+      "request": {
+        "method": "POST",
+        "path": "/graphql",
+        "body": {
+          "query": "mutation ProjectUpdateCreate($input: ProjectUpdateCreateInput!) { projectUpdateCreate(input: $input) { success projectUpdate { id body health isDiffHidden url } } }",
+          "variables": {
+            "input": {
+              "projectId": "{{projectId}}",
+              "body": "{{body}}",
+              "health": "{{health}}",
+              "isDiffHidden": "{{isDiffHidden}}"
+            }
+          }
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "success": "{{response.data.projectUpdateCreate.success}}",
+          "projectUpdate": {
+            "id": "{{response.data.projectUpdateCreate.projectUpdate.id}}",
+            "body": "{{response.data.projectUpdateCreate.projectUpdate.body}}",
+            "health": "{{response.data.projectUpdateCreate.projectUpdate.health}}",
+            "isDiffHidden": "{{response.data.projectUpdateCreate.projectUpdate.isDiffHidden}}",
+            "url": "{{response.data.projectUpdateCreate.projectUpdate.url}}"
+          }
+        }
+      }
+    },
+    "teams.create": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Create Team",
+      "description": "Create a team with teamCreate. name and key are required; key becomes the issue identifier prefix (e.g. ENG-123) and cannot be changed later. Optional: description, icon (Linear icon name, not emoji), color, private.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Team name shown in the workspace."
+          },
+          "key": {
+            "type": "string",
+            "description": "2-5 character issue prefix (e.g. ENG). Unique and immutable after create."
+          },
+          "description": {
+            "type": "string",
+            "description": "Markdown description of the team's purpose."
+          },
+          "icon": {
+            "type": "string",
+            "description": "Linear icon name (e.g. Rocket), not an emoji."
+          },
+          "color": {
+            "type": "string",
+            "description": "Hex color, with or without a leading #."
+          },
+          "private": {
+            "type": "boolean",
+            "description": "When true, the team is visible only to members."
+          }
+        },
+        "required": [
+          "name",
+          "key"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "team": {
+            "type": "object"
+          }
+        }
+      },
+      "sample": {
+        "name": "Design",
+        "key": "DES"
+      },
+      "request": {
+        "method": "POST",
+        "path": "/graphql",
+        "body": {
+          "query": "mutation TeamCreate($input: TeamCreateInput!) { teamCreate(input: $input) { success team { id key name displayName } } }",
+          "variables": {
+            "input": {
+              "name": "{{name}}",
+              "key": "{{key}}",
+              "description": "{{description}}",
+              "icon": "{{icon}}",
+              "color": "{{color}}",
+              "private": "{{private}}"
+            }
+          }
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "success": "{{response.data.teamCreate.success}}",
+          "team": {
+            "id": "{{response.data.teamCreate.team.id}}",
+            "key": "{{response.data.teamCreate.team.key}}",
+            "name": "{{response.data.teamCreate.team.name}}",
+            "displayName": "{{response.data.teamCreate.team.displayName}}"
+          }
+        }
+      }
+    },
+    "issues.delete": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "sideEffect": "destructive",
+      "title": "Delete Issue",
+      "description": "Permanently trash an issue with issueDelete. id accepts the issue UUID or human identifier (e.g. ENG-123). Prefer issues.archive to hide an issue without trashing it. This cannot be undone from this operation.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Issue UUID or human identifier (e.g. ENG-123)."
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          }
+        }
+      },
+      "sample": {
+        "id": "ENG-123"
+      },
+      "request": {
+        "method": "POST",
+        "path": "/graphql",
+        "body": {
+          "query": "mutation IssueDelete($id: String!) { issueDelete(id: $id) { success } }",
+          "variables": {
+            "id": "{{id}}"
+          }
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "success": "{{response.data.issueDelete.success}}"
+        }
+      }
+    },
+    "attachments.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Get Attachment",
+      "description": "Fetch an attachment record with the attachment query. id is the attachment UUID returned by issues.get or attachments.create. Returns metadata and the source URL; this does not download bytes from uploads.linear.app.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Attachment UUID."
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "attachment": {
+            "type": "object"
+          }
+        }
+      },
+      "sample": {
+        "id": "attachment-uuid"
+      },
+      "request": {
+        "method": "POST",
+        "path": "/graphql",
+        "body": {
+          "query": "query Attachment($id: String!) { attachment(id: $id) { id title subtitle url sourceType createdAt issue { id identifier title } } }",
+          "variables": {
+            "id": "{{id}}"
+          }
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "attachment": "{{response.data.attachment}}"
+        }
+      }
+    },
+    "comments.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Get Comment",
+      "description": "Fetch a single comment with the comment query. id is the comment UUID. Returns body, author, timestamps, associated issue, and resolvedAt when the thread is resolved.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Comment UUID."
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "comment": {
+            "type": "object"
+          }
+        }
+      },
+      "sample": {
+        "id": "comment-uuid"
+      },
+      "request": {
+        "method": "POST",
+        "path": "/graphql",
+        "body": {
+          "query": "query Comment($id: String!) { comment(id: $id) { id body url createdAt updatedAt resolvedAt user { id name } issue { id identifier } } }",
+          "variables": {
+            "id": "{{id}}"
+          }
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "comment": "{{response.data.comment}}"
+        }
+      }
+    },
+    "users.me": {
+      "kind": "action",
+      "timeoutMs": 8000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "sideEffect": "read",
+      "title": "Get Current User",
+      "description": "Return the authenticated viewer with query Viewer. Use the returned id for assigneeId and other user-scoped inputs. Takes no input.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "active": {
+            "type": "boolean"
+          },
+          "admin": {
+            "type": "boolean"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/graphql",
+        "body": {
+          "query": "query Viewer { viewer { id name displayName email active admin } }",
+          "variables": {}
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "id": "{{response.data.viewer.id}}",
+          "name": "{{response.data.viewer.name}}",
+          "displayName": "{{response.data.viewer.displayName}}",
+          "email": "{{response.data.viewer.email}}",
+          "active": "{{response.data.viewer.active}}",
+          "admin": "{{response.data.viewer.admin}}"
+        }
+      }
+    },
+    "cycles.listByTeam": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "List Cycles By Team",
+      "description": "List cycles for one team via team { cycles }. teamId is the team UUID. Paginate with first/after; pass the previous nextCursor as after.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "teamId": {
+            "type": "string",
+            "description": "Team UUID."
+          },
+          "first": {
+            "type": "integer",
+            "description": "Page size. Provider default 50."
+          },
+          "after": {
+            "type": "string",
+            "description": "Cursor from a previous call's nextCursor."
+          }
+        },
+        "required": [
+          "teamId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "cycles": {
+            "type": "array",
+            "description": "Cycles",
+            "items": {
+              "type": "object"
+            }
+          },
+          "nextCursor": {
+            "type": "string"
+          },
+          "hasNextPage": {
+            "type": "boolean"
+          }
+        }
+      },
+      "sample": {
+        "teamId": "team-uuid"
+      },
+      "request": {
+        "method": "POST",
+        "path": "/graphql",
+        "body": {
+          "query": "query TeamCycles($id: String!, $first: Int, $after: String) { team(id: $id) { cycles(first: $first, after: $after) { nodes { id name number startsAt endsAt } pageInfo { hasNextPage endCursor } } } }",
+          "variables": {
+            "id": "{{teamId}}",
+            "first": "{{first}}",
+            "after": "{{after}}"
+          }
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "cycles": "{{response.data.team.cycles.nodes}}",
+          "nextCursor": "{{response.data.team.cycles.pageInfo.endCursor}}",
+          "hasNextPage": "{{response.data.team.cycles.pageInfo.hasNextPage}}"
+        }
+      }
+    },
+    "teams.issueDefaults": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "sideEffect": "read",
+      "title": "Get Issue Defaults",
+      "description": "Fetch a team's defaultIssueEstimate and defaultIssueState, used to pre-fill new issues. id is the team UUID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Team UUID."
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "team": {
+            "type": "object"
+          }
+        }
+      },
+      "sample": {
+        "id": "team-uuid"
+      },
+      "request": {
+        "method": "POST",
+        "path": "/graphql",
+        "body": {
+          "query": "query IssueDefaults($id: String!) { team(id: $id) { id defaultIssueEstimate defaultIssueState { id name type } } }",
+          "variables": {
+            "id": "{{id}}"
+          }
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "team": "{{response.data.team}}"
+        }
+      }
+    },
+    "projectUpdates.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Get Project Update",
+      "description": "Fetch a project status update with the projectUpdate query. id is the project update UUID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Project update UUID."
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "projectUpdate": {
+            "type": "object"
+          }
+        }
+      },
+      "sample": {
+        "id": "project-update-uuid"
+      },
+      "request": {
+        "method": "POST",
+        "path": "/graphql",
+        "body": {
+          "query": "query ProjectUpdate($id: String!) { projectUpdate(id: $id) { id body health isDiffHidden url createdAt updatedAt project { id name } user { id name } } }",
+          "variables": {
+            "id": "{{id}}"
+          }
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "projectUpdate": "{{response.data.projectUpdate}}"
+        }
+      }
+    },
+    "issues.listByTeam": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "List Issues By Team",
+      "description": "List issues for one team via team { issues }. teamId is the team UUID. Optional includeArchived includes archived issues. Paginate with first/after.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "teamId": {
+            "type": "string",
+            "description": "Team UUID."
+          },
+          "first": {
+            "type": "integer",
+            "description": "Page size. Provider default 50."
+          },
+          "after": {
+            "type": "string",
+            "description": "Cursor from a previous call's nextCursor."
+          },
+          "includeArchived": {
+            "type": "boolean",
+            "description": "When true, include archived issues."
+          }
+        },
+        "required": [
+          "teamId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "issues": {
+            "type": "array",
+            "description": "Issues",
+            "items": {
+              "type": "object"
+            }
+          },
+          "nextCursor": {
+            "type": "string"
+          },
+          "hasNextPage": {
+            "type": "boolean"
+          }
+        }
+      },
+      "sample": {
+        "teamId": "team-uuid"
+      },
+      "request": {
+        "method": "POST",
+        "path": "/graphql",
+        "body": {
+          "query": "query TeamIssues($id: String!, $first: Int, $after: String, $includeArchived: Boolean) { team(id: $id) { issues(first: $first, after: $after, includeArchived: $includeArchived) { nodes { id identifier title url state { name } } pageInfo { hasNextPage endCursor } } } }",
+          "variables": {
+            "id": "{{teamId}}",
+            "first": "{{first}}",
+            "after": "{{after}}",
+            "includeArchived": "{{includeArchived}}"
+          }
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "issues": "{{response.data.team.issues.nodes}}",
+          "nextCursor": "{{response.data.team.issues.pageInfo.endCursor}}",
+          "hasNextPage": "{{response.data.team.issues.pageInfo.hasNextPage}}"
+        }
+      }
+    },
+    "issueDrafts.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "List Issue Drafts",
+      "description": "List the authenticated viewer's unpublished issue drafts via viewer { issueDrafts }, using Relay cursor pagination. Pass the previous call's nextCursor as after. Takes no required input.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "first": {
+            "type": "integer",
+            "description": "Page size. Provider default 50."
+          },
+          "after": {
+            "type": "string",
+            "description": "Cursor from a previous call's nextCursor."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "drafts": {
+            "type": "array",
+            "description": "Drafts",
+            "items": {
+              "type": "object"
+            }
+          },
+          "nextCursor": {
+            "type": "string"
+          },
+          "hasNextPage": {
+            "type": "boolean"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/graphql",
+        "body": {
+          "query": "query IssueDrafts($first: Int, $after: String) { viewer { issueDrafts(first: $first, after: $after) { nodes { id title description priority createdAt updatedAt team { id key } } pageInfo { hasNextPage endCursor } } } }",
+          "variables": {
+            "first": "{{first}}",
+            "after": "{{after}}"
+          }
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "drafts": "{{response.data.viewer.issueDrafts.nodes}}",
+          "nextCursor": "{{response.data.viewer.issueDrafts.pageInfo.endCursor}}",
+          "hasNextPage": "{{response.data.viewer.issueDrafts.pageInfo.hasNextPage}}"
+        }
+      }
+    },
+    "projectUpdates.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "List Project Updates",
+      "description": "List project status updates with the projectUpdates query and Relay cursor pagination. Pass the previous nextCursor as after.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "first": {
+            "type": "integer",
+            "description": "Page size. Provider default 50."
+          },
+          "after": {
+            "type": "string",
+            "description": "Cursor from a previous call's nextCursor."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "projectUpdates": {
+            "type": "array",
+            "description": "Project updates",
+            "items": {
+              "type": "object"
+            }
+          },
+          "nextCursor": {
+            "type": "string"
+          },
+          "hasNextPage": {
+            "type": "boolean"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/graphql",
+        "body": {
+          "query": "query ProjectUpdates($first: Int, $after: String) { projectUpdates(first: $first, after: $after) { nodes { id body health url createdAt project { id name } user { id name } } pageInfo { hasNextPage endCursor } } }",
+          "variables": {
+            "first": "{{first}}",
+            "after": "{{after}}"
+          }
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "projectUpdates": "{{response.data.projectUpdates.nodes}}",
+          "nextCursor": "{{response.data.projectUpdates.pageInfo.endCursor}}",
+          "hasNextPage": "{{response.data.projectUpdates.pageInfo.hasNextPage}}"
+        }
+      }
+    },
+    "issues.removeLabel": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "sideEffect": "write",
+      "title": "Remove Issue Label",
+      "description": "Remove one label from an issue with issueRemoveLabel. id is the issue UUID or human identifier; labelId is the label UUID. Removing a label that is not on the issue succeeds without change.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Issue UUID or human identifier (e.g. ENG-123)."
+          },
+          "labelId": {
+            "type": "string",
+            "description": "Label UUID to remove."
+          }
+        },
+        "required": [
+          "id",
+          "labelId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "issue": {
+            "type": "object"
+          }
+        }
+      },
+      "sample": {
+        "id": "ENG-123",
+        "labelId": "label-uuid"
+      },
+      "request": {
+        "method": "POST",
+        "path": "/graphql",
+        "body": {
+          "query": "mutation IssueRemoveLabel($id: String!, $labelId: String!) { issueRemoveLabel(id: $id, labelId: $labelId) { success issue { id identifier } } }",
+          "variables": {
+            "id": "{{id}}",
+            "labelId": "{{labelId}}"
+          }
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "success": "{{response.data.issueRemoveLabel.success}}",
+          "issue": {
+            "id": "{{response.data.issueRemoveLabel.issue.id}}",
+            "identifier": "{{response.data.issueRemoveLabel.issue.identifier}}"
+          }
+        }
+      }
+    },
+    "reactions.remove": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "sideEffect": "write",
+      "title": "Remove Reaction",
+      "description": "Delete a reaction with reactionDelete. id is the reaction UUID returned by comments.react.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Reaction UUID."
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          }
+        }
+      },
+      "sample": {
+        "id": "reaction-uuid"
+      },
+      "request": {
+        "method": "POST",
+        "path": "/graphql",
+        "body": {
+          "query": "mutation ReactionDelete($id: String!) { reactionDelete(id: $id) { success } }",
+          "variables": {
+            "id": "{{id}}"
+          }
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "success": "{{response.data.reactionDelete.success}}"
+        }
+      }
+    },
+    "comments.resolve": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "sideEffect": "write",
+      "title": "Resolve Comment",
+      "description": "Resolve a comment thread with commentResolve. id is the root comment UUID. Optional resolvingCommentId is the child comment that resolves the thread.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Root comment UUID to resolve."
+          },
+          "resolvingCommentId": {
+            "type": "string",
+            "description": "Optional child comment UUID that resolves the thread."
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "comment": {
+            "type": "object"
+          }
+        }
+      },
+      "sample": {
+        "id": "comment-uuid"
+      },
+      "request": {
+        "method": "POST",
+        "path": "/graphql",
+        "body": {
+          "query": "mutation CommentResolve($id: String!, $resolvingCommentId: String) { commentResolve(id: $id, resolvingCommentId: $resolvingCommentId) { success comment { id resolvedAt } } }",
+          "variables": {
+            "id": "{{id}}",
+            "resolvingCommentId": "{{resolvingCommentId}}"
+          }
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "success": "{{response.data.commentResolve.success}}",
+          "comment": {
+            "id": "{{response.data.commentResolve.comment.id}}",
+            "resolvedAt": "{{response.data.commentResolve.comment.resolvedAt}}"
+          }
+        }
+      }
+    },
+    "graphql.execute": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Run Query or Mutation",
+      "description": "POST an arbitrary GraphQL document to /graphql. query is the full query or mutation string; variables is an optional JSON object whose keys match the document's variable names. Introspect with __type before guessing field names. This operation can mutate workspace data \u2014 confirm the document before executing.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "GraphQL query or mutation document."
+          },
+          "variables": {
+            "type": "object",
+            "description": "Variables object matching the document's $name declarations."
+          }
+        },
+        "required": [
+          "query"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "sample": {
+        "query": "query { viewer { id } }"
+      },
+      "request": {
+        "method": "POST",
+        "path": "/graphql",
+        "body": {
+          "query": "{{query}}",
+          "variables": "{{variables}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response.data}}"
+        }
+      }
+    },
+    "projectUpdates.unarchive": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "sideEffect": "write",
+      "title": "Unarchive Project Update",
+      "description": "Restore an archived project update with projectUpdateUnarchive. id is the project update UUID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Project update UUID to restore."
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          }
+        }
+      },
+      "sample": {
+        "id": "project-update-uuid"
+      },
+      "request": {
+        "method": "POST",
+        "path": "/graphql",
+        "body": {
+          "query": "mutation ProjectUpdateUnarchive($id: String!) { projectUpdateUnarchive(id: $id) { success } }",
+          "variables": {
+            "id": "{{id}}"
+          }
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "success": "{{response.data.projectUpdateUnarchive.success}}"
+        }
+      }
+    },
+    "comments.unresolve": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "sideEffect": "write",
+      "title": "Unresolve Comment",
+      "description": "Reopen a resolved comment thread with commentUnresolve. id is the root comment UUID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Root comment UUID to unresolve."
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "comment": {
+            "type": "object"
+          }
+        }
+      },
+      "sample": {
+        "id": "comment-uuid"
+      },
+      "request": {
+        "method": "POST",
+        "path": "/graphql",
+        "body": {
+          "query": "mutation CommentUnresolve($id: String!) { commentUnresolve(id: $id) { success comment { id resolvedAt } } }",
+          "variables": {
+            "id": "{{id}}"
+          }
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "success": "{{response.data.commentUnresolve.success}}",
+          "comment": {
+            "id": "{{response.data.commentUnresolve.comment.id}}",
+            "resolvedAt": "{{response.data.commentUnresolve.comment.resolvedAt}}"
+          }
+        }
+      }
+    },
+    "projectUpdates.update": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Update Project Update",
+      "description": "Update a project status update with projectUpdateUpdate. id is required; body, health (onTrack/atRisk/offTrack), and isDiffHidden are optional.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Project update UUID."
+          },
+          "body": {
+            "type": "string",
+            "description": "Replacement markdown body."
+          },
+          "health": {
+            "type": "string",
+            "description": "Project health.",
+            "enum": [
+              "onTrack",
+              "atRisk",
+              "offTrack"
+            ]
+          },
+          "isDiffHidden": {
+            "type": "boolean",
+            "description": "When true, hide the diff against the previous update."
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "projectUpdate": {
+            "type": "object"
+          }
+        }
+      },
+      "sample": {
+        "id": "project-update-uuid",
+        "health": "atRisk"
+      },
+      "request": {
+        "method": "POST",
+        "path": "/graphql",
+        "body": {
+          "query": "mutation ProjectUpdateUpdate($id: String!, $input: ProjectUpdateUpdateInput!) { projectUpdateUpdate(id: $id, input: $input) { success projectUpdate { id body health isDiffHidden url } } }",
+          "variables": {
+            "id": "{{id}}",
+            "input": {
+              "body": "{{body}}",
+              "health": "{{health}}",
+              "isDiffHidden": "{{isDiffHidden}}"
+            }
+          }
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "success": "{{response.data.projectUpdateUpdate.success}}",
+          "projectUpdate": {
+            "id": "{{response.data.projectUpdateUpdate.projectUpdate.id}}",
+            "body": "{{response.data.projectUpdateUpdate.projectUpdate.body}}",
+            "health": "{{response.data.projectUpdateUpdate.projectUpdate.health}}",
+            "isDiffHidden": "{{response.data.projectUpdateUpdate.projectUpdate.isDiffHidden}}",
+            "url": "{{response.data.projectUpdateUpdate.projectUpdate.url}}"
+          }
+        }
+      }
+    },
+    "teams.update": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Update Team",
+      "description": "Update a team with teamUpdate. id is the team UUID. Optional fields follow TeamUpdateInput, including name, key, description, icon, color, private, timezone, cycle settings, triage, auto-close, auto-archive, and git workflow state ids. Only provided fields are sent.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Team UUID."
+          },
+          "name": {
+            "type": "string",
+            "description": "New team name."
+          },
+          "key": {
+            "type": "string",
+            "description": "New issue prefix. Uppercase letters, typically 2-5 characters."
+          },
+          "description": {
+            "type": "string",
+            "description": "New description."
+          },
+          "icon": {
+            "type": "string",
+            "description": "Linear icon name, not an emoji."
+          },
+          "color": {
+            "type": "string",
+            "description": "Hex color."
+          },
+          "private": {
+            "type": "boolean",
+            "description": "When true, the team is visible only to members."
+          },
+          "timezone": {
+            "type": "string",
+            "description": "IANA timezone (e.g. America/Los_Angeles)."
+          },
+          "cycleDuration": {
+            "type": "integer",
+            "description": "Cycle length in weeks."
+          },
+          "cycleStartDay": {
+            "type": "integer",
+            "description": "Cycle start weekday. 0 = Monday through 6 = Sunday."
+          },
+          "triageEnabled": {
+            "type": "boolean",
+            "description": "When true, new issues enter triage first."
+          },
+          "autoClosePeriod": {
+            "type": "number",
+            "description": "Months of inactivity before auto-close. 0 disables."
+          },
+          "autoCloseStateId": {
+            "type": "string",
+            "description": "Workflow state UUID used when auto-closing."
+          },
+          "autoArchivePeriod": {
+            "type": "number",
+            "description": "Months before completed issues are auto-archived. 0 disables."
+          },
+          "cycleCooldownTime": {
+            "type": "integer",
+            "description": "Cooldown after each cycle, in weeks."
+          },
+          "cycleLockToActive": {
+            "type": "boolean",
+            "description": "When true, lock issues to the active cycle."
+          },
+          "upcomingCycleCount": {
+            "type": "number",
+            "description": "How many upcoming cycles to create."
+          },
+          "cycleIssueAutoAssignStarted": {
+            "type": "boolean",
+            "description": "Auto-assign started issues to the active cycle."
+          },
+          "cycleIssueAutoAssignCompleted": {
+            "type": "boolean",
+            "description": "Auto-assign completed issues to the active cycle."
+          },
+          "draftWorkflowStateId": {
+            "type": "string",
+            "description": "Workflow state UUID used when a pull request is opened as a draft."
+          },
+          "mergeWorkflowStateId": {
+            "type": "string",
+            "description": "Workflow state UUID used when a pull request merges."
+          },
+          "startWorkflowStateId": {
+            "type": "string",
+            "description": "Workflow state UUID used when a pull request is opened."
+          },
+          "reviewWorkflowStateId": {
+            "type": "string",
+            "description": "Workflow state UUID used when a pull request review is requested."
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "team": {
+            "type": "object"
+          }
+        }
+      },
+      "sample": {
+        "id": "team-uuid",
+        "name": "Platform"
+      },
+      "request": {
+        "method": "POST",
+        "path": "/graphql",
+        "body": {
+          "query": "mutation TeamUpdate($id: String!, $input: TeamUpdateInput!) { teamUpdate(id: $id, input: $input) { success team { id key name displayName } } }",
+          "variables": {
+            "id": "{{id}}",
+            "input": {
+              "name": "{{name}}",
+              "key": "{{key}}",
+              "description": "{{description}}",
+              "icon": "{{icon}}",
+              "color": "{{color}}",
+              "private": "{{private}}",
+              "timezone": "{{timezone}}",
+              "cycleDuration": "{{cycleDuration}}",
+              "cycleStartDay": "{{cycleStartDay}}",
+              "triageEnabled": "{{triageEnabled}}",
+              "autoClosePeriod": "{{autoClosePeriod}}",
+              "autoCloseStateId": "{{autoCloseStateId}}",
+              "autoArchivePeriod": "{{autoArchivePeriod}}",
+              "cycleCooldownTime": "{{cycleCooldownTime}}",
+              "cycleLockToActive": "{{cycleLockToActive}}",
+              "upcomingCycleCount": "{{upcomingCycleCount}}",
+              "cycleIssueAutoAssignStarted": "{{cycleIssueAutoAssignStarted}}",
+              "cycleIssueAutoAssignCompleted": "{{cycleIssueAutoAssignCompleted}}",
+              "draftWorkflowStateId": "{{draftWorkflowStateId}}",
+              "mergeWorkflowStateId": "{{mergeWorkflowStateId}}",
+              "startWorkflowStateId": "{{startWorkflowStateId}}",
+              "reviewWorkflowStateId": "{{reviewWorkflowStateId}}"
+            }
+          }
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "success": "{{response.data.teamUpdate.success}}",
+          "team": {
+            "id": "{{response.data.teamUpdate.team.id}}",
+            "key": "{{response.data.teamUpdate.team.key}}",
+            "name": "{{response.data.teamUpdate.team.name}}",
+            "displayName": "{{response.data.teamUpdate.team.displayName}}"
+          }
+        }
+      }
+    },
     "webhook.Issue.create": {
       "kind": "webhook",
       "timeoutMs": 30000,
@@ -1750,6 +3437,12 @@
     "organization",
     "label",
     "cycle",
-    "attachment"
+    "attachment",
+    "issueRelation",
+    "projectMilestone",
+    "projectUpdate",
+    "reaction",
+    "draft",
+    "issueDraft"
   ]
 }

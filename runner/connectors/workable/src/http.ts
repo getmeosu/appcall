@@ -39,7 +39,7 @@ export function createClient(config: WorkableClientConfig): JobBoardClient {
     allowedHosts: manifest.network.allowedHosts,
     maxResponseBytes: bounds.maxResponseBytes,
     timeoutMs: bounds.timeoutMs,
-    headers: { Authorization: `Bearer ${config.accessToken}`, "Content-Type": "application/json" },
+    headers: { Authorization: `Bearer ${config.accessToken}` },
     fetch: config.fetch,
   });
 }

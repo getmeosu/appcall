@@ -68,28 +68,58 @@
     "providerId": "pinecone",
     "appcallId": "pinecone",
     "disposition": "APPROVED",
-    "edition": "international Pinecone Database control plane",
+    "edition": "international Pinecone Database control and data plane",
     "operations": [
+      "assistants.chat",
+      "assistants.chat.completions",
+      "assistants.context",
+      "assistants.create",
+      "assistants.delete",
+      "assistants.files.delete",
+      "assistants.files.get",
+      "assistants.files.list",
+      "assistants.files.upload",
+      "assistants.get",
+      "assistants.list",
+      "assistants.update",
+      "backups.create",
+      "backups.delete",
+      "backups.get",
+      "backups.list",
+      "collections.list",
       "healthcheck",
+      "imports.cancel",
+      "imports.create",
+      "imports.get",
+      "imports.list",
+      "indexes.backups.list",
+      "indexes.configure",
+      "indexes.create",
+      "indexes.create_for_model",
+      "indexes.create_from_backup",
+      "indexes.delete",
+      "indexes.describe",
       "indexes.get",
       "indexes.list",
-      "indexes.create",
-      "indexes.update",
-      "indexes.delete",
-      "collections.list",
-      "collections.create",
-      "collections.get",
-      "collections.delete",
-      "backups.list",
-      "backups.listForIndex",
-      "backups.create",
-      "backups.get",
-      "backups.delete",
-      "indexes.createFromBackup",
-      "restoreJobs.list",
-      "restoreJobs.get",
-      "embeddings.create",
-      "rerank.create"
+      "indexes.stats",
+      "inference.embed",
+      "inference.rerank",
+      "models.get",
+      "models.list",
+      "namespaces.create",
+      "namespaces.delete",
+      "namespaces.get",
+      "namespaces.list",
+      "namespaces.records.search",
+      "namespaces.records.upsert",
+      "restore_jobs.get",
+      "restore_jobs.list",
+      "vectors.delete",
+      "vectors.fetch",
+      "vectors.list",
+      "vectors.query",
+      "vectors.update",
+      "vectors.upsert"
     ],
     "upstreamSha": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
     "marketFocus": "international",
@@ -142,7 +172,7 @@
       "https://www.pinecone.io/security/",
       "https://security.pinecone.io/"
     ],
-    "searchCoverage": "Official Pinecone Database control-plane list/describe index docs, Api-Key authentication, API versioning, Pinecone Systems, Inc. US identity, and dated incident/control search reviewed on 2026-09-13. The April 2026 Vercel advisory is recorded as a third-party event Pinecone reported it was not affected by. Data-plane index hosts are caller-supplied and omitted.",
+    "searchCoverage": "Official Pinecone Database control-plane list/describe index docs, Api-Key authentication, API versioning, Pinecone Systems, Inc. US identity, and dated incident/control search reviewed on 2026-09-13. The April 2026 Vercel advisory is recorded as a third-party event Pinecone reported it was not affected by. Data-plane index hosts are caller-supplied and admitted only after handwritten https + *.pinecone.io checks.",
     "incidents": [
       {
         "incidentDate": "2026-04-19",
@@ -164,278 +194,810 @@
     "healthcheck": {
       "upstreamActionId": "list_indexes",
       "sourceRefs": [
-        "request-headers"
+        "validate-indexes",
+        "handler-list-indexes",
+        "request-headers",
+        "proxy-auth"
       ],
       "documentationUrls": [
-        "https://docs.pinecone.io/reference/api/2025-04/control-plane/list_indexes"
+        "https://docs.pinecone.io/reference/api/2025-10/control-plane/list_indexes",
+        "https://docs.pinecone.io/reference/api/authentication"
       ],
       "responseContract": "appcall-provider-json-v1",
       "adaptations": [
-        "Credential-only healthcheck maps to GET /indexes."
-      ]
-    },
-    "indexes.get": {
-      "upstreamActionId": "describe_index",
-      "sourceRefs": [
-        "request-headers"
-      ],
-      "documentationUrls": [
-        "https://docs.pinecone.io/reference/api/2025-04/control-plane/describe_index"
-      ],
-      "responseContract": "appcall-provider-json-v1",
-      "adaptations": [
-        "GET /indexes/{name}."
+        "Credential-only healthcheck maps to official GET /indexes on the control plane. Data-plane indexHost stays caller-supplied; handwritten handlers admit only https *.pinecone.io hosts rather than interpolating them as a stored setup baseUrl.",
+        "Pins source API version header 2026-04 (a current stable version; latest stable as of review is 2026-07). Native category is dev-tools rather than AI/data because Rust CATEGORIES has no AI or data bucket."
       ]
     },
     "indexes.list": {
       "upstreamActionId": "list_indexes",
       "sourceRefs": [
+        "action-list-indexes",
+        "handler-list-indexes",
+        "control-base",
         "request-headers"
+      ],
+      "documentationUrls": [
+        "https://docs.pinecone.io/reference/api/2025-10/control-plane/list_indexes"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Returns raw Pinecone JSON under data. Control-plane host is fixed at api.pinecone.io."
+      ]
+    },
+    "indexes.get": {
+      "upstreamActionId": "describe_index",
+      "sourceRefs": [
+        "action-describe-index",
+        "handler-describe-index",
+        "index-host-guard",
+        "request-headers"
+      ],
+      "documentationUrls": [
+        "https://docs.pinecone.io/reference/api/latest/control-plane/describe_index"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "name is URL-encoded in the path. Official header name Api-Key is used; source sends api-key (HTTP header names are case-insensitive)."
+      ]
+    },
+    "indexes.describe": {
+      "upstreamActionId": "describe_index",
+      "sourceRefs": [
+        "control-base",
+        "request-headers",
+        "proxy-auth"
+      ],
+      "documentationUrls": [
+        "https://docs.pinecone.io/reference/api/latest/control-plane/describe_index"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Composio PINECONE_DESCRIBE_INDEX maps to official GET /indexes/{{index_name}}.",
+        "Caller-supplied index/assistant hosts are admitted only after handwritten https + *.pinecone.io validation; compile refuses to interpolate them as baseUrl because they are not stored setup fields."
+      ]
+    },
+    "indexes.create": {
+      "upstreamActionId": "create_index",
+      "sourceRefs": [
+        "control-base",
+        "request-headers",
+        "proxy-auth"
+      ],
+      "documentationUrls": [
+        "https://docs.pinecone.io/reference/api/latest/control-plane/create_index"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Composio PINECONE_CREATE_INDEX maps to official POST /indexes.",
+        "Caller-supplied index/assistant hosts are admitted only after handwritten https + *.pinecone.io validation; compile refuses to interpolate them as baseUrl because they are not stored setup fields."
+      ]
+    },
+    "indexes.create_for_model": {
+      "upstreamActionId": "create_index",
+      "sourceRefs": [
+        "control-base",
+        "request-headers",
+        "proxy-auth"
+      ],
+      "documentationUrls": [
+        "https://docs.pinecone.io/reference/api/latest/control-plane/create_index"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Composio PINECONE_CREATE_INDEX_FOR_MODEL maps to official POST /indexes/create-for-model.",
+        "Caller-supplied index/assistant hosts are admitted only after handwritten https + *.pinecone.io validation; compile refuses to interpolate them as baseUrl because they are not stored setup fields."
+      ]
+    },
+    "indexes.create_from_backup": {
+      "upstreamActionId": "create_index",
+      "sourceRefs": [
+        "control-base",
+        "request-headers",
+        "proxy-auth"
+      ],
+      "documentationUrls": [
+        "https://docs.pinecone.io/reference/api/latest/control-plane/create_index"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Composio PINECONE_CREATE_INDEX_FROM_BACKUP maps to official POST /backups/{{backup_id}}/create-index.",
+        "Caller-supplied index/assistant hosts are admitted only after handwritten https + *.pinecone.io validation; compile refuses to interpolate them as baseUrl because they are not stored setup fields."
+      ]
+    },
+    "indexes.configure": {
+      "upstreamActionId": "configure_index",
+      "sourceRefs": [
+        "control-base",
+        "request-headers",
+        "proxy-auth"
+      ],
+      "documentationUrls": [
+        "https://docs.pinecone.io/reference/api/latest/control-plane/configure_index"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Composio PINECONE_CONFIGURE_INDEX maps to official PATCH /indexes/{{index_name}}.",
+        "Caller-supplied index/assistant hosts are admitted only after handwritten https + *.pinecone.io validation; compile refuses to interpolate them as baseUrl because they are not stored setup fields."
+      ]
+    },
+    "indexes.delete": {
+      "upstreamActionId": "delete_index",
+      "sourceRefs": [
+        "control-base",
+        "request-headers",
+        "proxy-auth"
+      ],
+      "documentationUrls": [
+        "https://docs.pinecone.io/reference/api/latest/control-plane/delete_index"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Composio PINECONE_DELETE_INDEX maps to official DELETE /indexes/{{index_name}}.",
+        "Caller-supplied index/assistant hosts are admitted only after handwritten https + *.pinecone.io validation; compile refuses to interpolate them as baseUrl because they are not stored setup fields."
+      ]
+    },
+    "indexes.stats": {
+      "upstreamActionId": "get_index_stats",
+      "sourceRefs": [
+        "index-host-guard",
+        "request-headers",
+        "proxy-auth"
+      ],
+      "documentationUrls": [
+        "https://docs.pinecone.io/reference/api/latest/data-plane/describe_index_stats"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Composio PINECONE_DESCRIBE_INDEX_STATS maps to official POST /describe_index_stats.",
+        "Caller-supplied index/assistant hosts are admitted only after handwritten https + *.pinecone.io validation; compile refuses to interpolate them as baseUrl because they are not stored setup fields."
+      ]
+    },
+    "indexes.backups.list": {
+      "upstreamActionId": "list_indexes",
+      "sourceRefs": [
+        "control-base",
+        "request-headers",
+        "proxy-auth"
       ],
       "documentationUrls": [
         "https://docs.pinecone.io/reference/api/2025-04/control-plane/list_indexes"
       ],
       "responseContract": "appcall-provider-json-v1",
       "adaptations": [
-        "GET /indexes."
-      ]
-    },
-    "indexes.create": {
-      "upstreamActionId": "create_index",
-      "sourceRefs": [
-        "request-headers"
-      ],
-      "documentationUrls": [
-        "https://docs.pinecone.io/reference/api/2025-04/control-plane/create_index"
-      ],
-      "responseContract": "appcall-provider-json-v1",
-      "adaptations": [
-        "POST /indexes. spec is a caller object."
-      ]
-    },
-    "indexes.update": {
-      "upstreamActionId": "configure_index",
-      "sourceRefs": [
-        "request-headers"
-      ],
-      "documentationUrls": [
-        "https://docs.pinecone.io/reference/api/2025-04/control-plane/configure_index"
-      ],
-      "responseContract": "appcall-provider-json-v1",
-      "adaptations": [
-        "PATCH /indexes/{name}."
-      ]
-    },
-    "indexes.delete": {
-      "upstreamActionId": "delete_index",
-      "sourceRefs": [
-        "request-headers"
-      ],
-      "documentationUrls": [
-        "https://docs.pinecone.io/reference/api/2025-04/control-plane/delete_index"
-      ],
-      "responseContract": "appcall-provider-json-v1",
-      "adaptations": [
-        "DELETE /indexes/{name}. Static deleted envelope."
-      ]
-    },
-    "collections.list": {
-      "upstreamActionId": "list_collections",
-      "sourceRefs": [
-        "request-headers"
-      ],
-      "documentationUrls": [
-        "https://docs.pinecone.io/reference/api/2025-04/control-plane/list_collections"
-      ],
-      "responseContract": "appcall-provider-json-v1",
-      "adaptations": [
-        "GET /collections."
-      ]
-    },
-    "collections.create": {
-      "upstreamActionId": "create_collection",
-      "sourceRefs": [
-        "request-headers"
-      ],
-      "documentationUrls": [
-        "https://docs.pinecone.io/reference/api/2025-04/control-plane/create_collection"
-      ],
-      "responseContract": "appcall-provider-json-v1",
-      "adaptations": [
-        "POST /collections."
-      ]
-    },
-    "collections.get": {
-      "upstreamActionId": "describe_collection",
-      "sourceRefs": [
-        "request-headers"
-      ],
-      "documentationUrls": [
-        "https://docs.pinecone.io/reference/api/2025-04/control-plane/describe_collection"
-      ],
-      "responseContract": "appcall-provider-json-v1",
-      "adaptations": [
-        "GET /collections/{name}."
-      ]
-    },
-    "collections.delete": {
-      "upstreamActionId": "delete_collection",
-      "sourceRefs": [
-        "request-headers"
-      ],
-      "documentationUrls": [
-        "https://docs.pinecone.io/reference/api/2025-04/control-plane/delete_collection"
-      ],
-      "responseContract": "appcall-provider-json-v1",
-      "adaptations": [
-        "DELETE /collections/{name}."
-      ]
-    },
-    "backups.list": {
-      "upstreamActionId": "list_backups",
-      "sourceRefs": [
-        "request-headers"
-      ],
-      "documentationUrls": [
-        "https://docs.pinecone.io/reference/api/2025-04/control-plane/list_project_backups"
-      ],
-      "responseContract": "appcall-provider-json-v1",
-      "adaptations": [
-        "GET /backups."
-      ]
-    },
-    "backups.listForIndex": {
-      "upstreamActionId": "list_index_backups",
-      "sourceRefs": [
-        "request-headers"
-      ],
-      "documentationUrls": [
-        "https://docs.pinecone.io/reference/api/2025-04/control-plane/list_index_backups"
-      ],
-      "responseContract": "appcall-provider-json-v1",
-      "adaptations": [
-        "GET /indexes/{name}/backups."
+        "Composio PINECONE_LIST_INDEX_BACKUPS maps to official GET /indexes/{{index_name}}/backups.",
+        "Caller-supplied index/assistant hosts are admitted only after handwritten https + *.pinecone.io validation; compile refuses to interpolate them as baseUrl because they are not stored setup fields."
       ]
     },
     "backups.create": {
-      "upstreamActionId": "create_backup",
+      "upstreamActionId": "create_index",
       "sourceRefs": [
-        "request-headers"
+        "control-base",
+        "request-headers",
+        "proxy-auth"
       ],
       "documentationUrls": [
-        "https://docs.pinecone.io/reference/api/2025-04/control-plane/create_backup"
+        "https://docs.pinecone.io/reference/api/latest/control-plane/create_index"
       ],
       "responseContract": "appcall-provider-json-v1",
       "adaptations": [
-        "POST /indexes/{name}/backups. backup_name maps to JSON name."
+        "Composio PINECONE_CREATE_BACKUP maps to official POST /indexes/{{index_name}}/backups.",
+        "Caller-supplied index/assistant hosts are admitted only after handwritten https + *.pinecone.io validation; compile refuses to interpolate them as baseUrl because they are not stored setup fields."
+      ]
+    },
+    "backups.list": {
+      "upstreamActionId": "list_indexes",
+      "sourceRefs": [
+        "control-base",
+        "request-headers",
+        "proxy-auth"
+      ],
+      "documentationUrls": [
+        "https://docs.pinecone.io/reference/api/2025-04/control-plane/list_indexes"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Composio PINECONE_LIST_PROJECT_BACKUPS maps to official GET /backups.",
+        "Caller-supplied index/assistant hosts are admitted only after handwritten https + *.pinecone.io validation; compile refuses to interpolate them as baseUrl because they are not stored setup fields."
       ]
     },
     "backups.get": {
-      "upstreamActionId": "describe_backup",
+      "upstreamActionId": "describe_index",
       "sourceRefs": [
-        "request-headers"
+        "control-base",
+        "request-headers",
+        "proxy-auth"
       ],
       "documentationUrls": [
-        "https://docs.pinecone.io/reference/api/2025-04/control-plane/describe_backup"
+        "https://docs.pinecone.io/reference/api/latest/control-plane/describe_index"
       ],
       "responseContract": "appcall-provider-json-v1",
       "adaptations": [
-        "GET /backups/{backupId}."
+        "Composio PINECONE_DESCRIBE_BACKUP maps to official GET /backups/{{backup_id}}.",
+        "Caller-supplied index/assistant hosts are admitted only after handwritten https + *.pinecone.io validation; compile refuses to interpolate them as baseUrl because they are not stored setup fields."
       ]
     },
     "backups.delete": {
-      "upstreamActionId": "delete_backup",
+      "upstreamActionId": "delete_index",
       "sourceRefs": [
-        "request-headers"
+        "control-base",
+        "request-headers",
+        "proxy-auth"
       ],
       "documentationUrls": [
-        "https://docs.pinecone.io/reference/api/2025-04/control-plane/delete_backup"
+        "https://docs.pinecone.io/reference/api/latest/control-plane/delete_index"
       ],
       "responseContract": "appcall-provider-json-v1",
       "adaptations": [
-        "DELETE /backups/{backupId}."
+        "Composio PINECONE_DELETE_BACKUP maps to official DELETE /backups/{{backup_id}}.",
+        "Caller-supplied index/assistant hosts are admitted only after handwritten https + *.pinecone.io validation; compile refuses to interpolate them as baseUrl because they are not stored setup fields."
       ]
     },
-    "indexes.createFromBackup": {
-      "upstreamActionId": "create_index_from_backup",
+    "restore_jobs.list": {
+      "upstreamActionId": "list_indexes",
       "sourceRefs": [
-        "request-headers"
+        "control-base",
+        "request-headers",
+        "proxy-auth"
       ],
       "documentationUrls": [
-        "https://docs.pinecone.io/reference/api/2025-04/control-plane/create_index_from_backup"
+        "https://docs.pinecone.io/reference/api/2025-04/control-plane/list_indexes"
       ],
       "responseContract": "appcall-provider-json-v1",
       "adaptations": [
-        "POST /backups/{backupId}/create-index."
+        "Composio PINECONE_LIST_RESTORE_JOBS maps to official GET /restore-jobs.",
+        "Caller-supplied index/assistant hosts are admitted only after handwritten https + *.pinecone.io validation; compile refuses to interpolate them as baseUrl because they are not stored setup fields."
       ]
     },
-    "restoreJobs.list": {
-      "upstreamActionId": "list_restore_jobs",
+    "restore_jobs.get": {
+      "upstreamActionId": "describe_index",
       "sourceRefs": [
-        "request-headers"
+        "control-base",
+        "request-headers",
+        "proxy-auth"
       ],
       "documentationUrls": [
-        "https://docs.pinecone.io/reference/api/2025-04/control-plane/list_restore_jobs"
+        "https://docs.pinecone.io/reference/api/latest/control-plane/describe_index"
       ],
       "responseContract": "appcall-provider-json-v1",
       "adaptations": [
-        "GET /restore-jobs."
+        "Composio PINECONE_DESCRIBE_RESTORE_JOB maps to official GET /restore-jobs/{{job_id}}.",
+        "Caller-supplied index/assistant hosts are admitted only after handwritten https + *.pinecone.io validation; compile refuses to interpolate them as baseUrl because they are not stored setup fields."
       ]
     },
-    "restoreJobs.get": {
-      "upstreamActionId": "describe_restore_job",
+    "collections.list": {
+      "upstreamActionId": "list_indexes",
       "sourceRefs": [
-        "request-headers"
+        "control-base",
+        "request-headers",
+        "proxy-auth"
       ],
       "documentationUrls": [
-        "https://docs.pinecone.io/reference/api/2025-04/control-plane/describe_restore_job"
+        "https://docs.pinecone.io/reference/api/2025-04/control-plane/list_indexes"
       ],
       "responseContract": "appcall-provider-json-v1",
       "adaptations": [
-        "GET /restore-jobs/{jobId}."
+        "Composio PINECONE_LIST_COLLECTIONS maps to official GET /collections.",
+        "Caller-supplied index/assistant hosts are admitted only after handwritten https + *.pinecone.io validation; compile refuses to interpolate them as baseUrl because they are not stored setup fields."
       ]
     },
-    "embeddings.create": {
-      "upstreamActionId": "embed",
+    "models.list": {
+      "upstreamActionId": "list_indexes",
       "sourceRefs": [
-        "request-headers"
+        "control-base",
+        "request-headers",
+        "proxy-auth"
       ],
       "documentationUrls": [
-        "https://docs.pinecone.io/reference/api/2025-04/inference/generate-embeddings"
+        "https://docs.pinecone.io/reference/api/2025-04/control-plane/list_indexes"
       ],
       "responseContract": "appcall-provider-json-v1",
       "adaptations": [
-        "POST /embed on the control-plane host."
+        "Composio PINECONE_LIST_MODELS maps to official GET /models.",
+        "Caller-supplied index/assistant hosts are admitted only after handwritten https + *.pinecone.io validation; compile refuses to interpolate them as baseUrl because they are not stored setup fields."
       ]
     },
-    "rerank.create": {
-      "upstreamActionId": "rerank",
+    "models.get": {
+      "upstreamActionId": "describe_index",
       "sourceRefs": [
-        "request-headers"
+        "control-base",
+        "request-headers",
+        "proxy-auth"
       ],
       "documentationUrls": [
-        "https://docs.pinecone.io/reference/api/2025-04/inference/rerank"
+        "https://docs.pinecone.io/reference/api/latest/control-plane/describe_index"
       ],
       "responseContract": "appcall-provider-json-v1",
       "adaptations": [
-        "POST /rerank on the control-plane host."
+        "Composio PINECONE_GET_MODEL maps to official GET /models/{{model_name}}.",
+        "Caller-supplied index/assistant hosts are admitted only after handwritten https + *.pinecone.io validation; compile refuses to interpolate them as baseUrl because they are not stored setup fields."
+      ]
+    },
+    "inference.embed": {
+      "upstreamActionId": "create_index",
+      "sourceRefs": [
+        "control-base",
+        "request-headers",
+        "proxy-auth"
+      ],
+      "documentationUrls": [
+        "https://docs.pinecone.io/reference/api/latest/control-plane/create_index"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Composio PINECONE_EMBED maps to official POST /embed.",
+        "Caller-supplied index/assistant hosts are admitted only after handwritten https + *.pinecone.io validation; compile refuses to interpolate them as baseUrl because they are not stored setup fields."
+      ]
+    },
+    "inference.rerank": {
+      "upstreamActionId": "create_index",
+      "sourceRefs": [
+        "control-base",
+        "request-headers",
+        "proxy-auth"
+      ],
+      "documentationUrls": [
+        "https://docs.pinecone.io/reference/api/latest/control-plane/create_index"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Composio PINECONE_RERANK maps to official POST /rerank.",
+        "Caller-supplied index/assistant hosts are admitted only after handwritten https + *.pinecone.io validation; compile refuses to interpolate them as baseUrl because they are not stored setup fields."
+      ]
+    },
+    "assistants.list": {
+      "upstreamActionId": "list_indexes",
+      "sourceRefs": [
+        "control-base",
+        "request-headers",
+        "proxy-auth"
+      ],
+      "documentationUrls": [
+        "https://docs.pinecone.io/reference/api/2025-04/control-plane/list_indexes"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Composio PINECONE_LIST_ASSISTANTS maps to official GET /assistant/assistants.",
+        "Caller-supplied index/assistant hosts are admitted only after handwritten https + *.pinecone.io validation; compile refuses to interpolate them as baseUrl because they are not stored setup fields."
+      ]
+    },
+    "assistants.create": {
+      "upstreamActionId": "create_index",
+      "sourceRefs": [
+        "control-base",
+        "request-headers",
+        "proxy-auth"
+      ],
+      "documentationUrls": [
+        "https://docs.pinecone.io/reference/api/latest/control-plane/create_index"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Composio PINECONE_CREATE_ASSISTANT maps to official POST /assistant/assistants.",
+        "Caller-supplied index/assistant hosts are admitted only after handwritten https + *.pinecone.io validation; compile refuses to interpolate them as baseUrl because they are not stored setup fields."
+      ]
+    },
+    "assistants.get": {
+      "upstreamActionId": "describe_index",
+      "sourceRefs": [
+        "control-base",
+        "request-headers",
+        "proxy-auth"
+      ],
+      "documentationUrls": [
+        "https://docs.pinecone.io/reference/api/latest/control-plane/describe_index"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Composio PINECONE_GET_ASSISTANT maps to official GET /assistant/assistants/{{assistant_name}}.",
+        "Caller-supplied index/assistant hosts are admitted only after handwritten https + *.pinecone.io validation; compile refuses to interpolate them as baseUrl because they are not stored setup fields."
+      ]
+    },
+    "assistants.update": {
+      "upstreamActionId": "configure_index",
+      "sourceRefs": [
+        "control-base",
+        "request-headers",
+        "proxy-auth"
+      ],
+      "documentationUrls": [
+        "https://docs.pinecone.io/reference/api/latest/control-plane/configure_index"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Composio PINECONE_UPDATE_ASSISTANT maps to official PATCH /assistant/assistants/{{assistant_name}}.",
+        "Caller-supplied index/assistant hosts are admitted only after handwritten https + *.pinecone.io validation; compile refuses to interpolate them as baseUrl because they are not stored setup fields."
+      ]
+    },
+    "assistants.delete": {
+      "upstreamActionId": "delete_index",
+      "sourceRefs": [
+        "control-base",
+        "request-headers",
+        "proxy-auth"
+      ],
+      "documentationUrls": [
+        "https://docs.pinecone.io/reference/api/latest/control-plane/delete_index"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Composio PINECONE_DELETE_ASSISTANT maps to official DELETE /assistant/assistants/{{assistant_name}}.",
+        "Caller-supplied index/assistant hosts are admitted only after handwritten https + *.pinecone.io validation; compile refuses to interpolate them as baseUrl because they are not stored setup fields."
+      ]
+    },
+    "assistants.chat": {
+      "upstreamActionId": "query_vectors",
+      "sourceRefs": [
+        "index-host-guard",
+        "request-headers",
+        "proxy-auth"
+      ],
+      "documentationUrls": [
+        "https://docs.pinecone.io/reference/api/latest/data-plane/query_vectors"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Composio PINECONE_CHAT_ASSISTANT maps to official POST /chat/{{assistant_name}}.",
+        "Caller-supplied index/assistant hosts are admitted only after handwritten https + *.pinecone.io validation; compile refuses to interpolate them as baseUrl because they are not stored setup fields."
+      ]
+    },
+    "assistants.chat.completions": {
+      "upstreamActionId": "query_vectors",
+      "sourceRefs": [
+        "index-host-guard",
+        "request-headers",
+        "proxy-auth"
+      ],
+      "documentationUrls": [
+        "https://docs.pinecone.io/reference/api/latest/data-plane/query_vectors"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Composio PINECONE_CHAT_COMPLETION_ASSISTANT maps to official POST /chat/{{assistant_name}}/chat/completions.",
+        "Caller-supplied index/assistant hosts are admitted only after handwritten https + *.pinecone.io validation; compile refuses to interpolate them as baseUrl because they are not stored setup fields."
+      ]
+    },
+    "assistants.context": {
+      "upstreamActionId": "query_vectors",
+      "sourceRefs": [
+        "index-host-guard",
+        "request-headers",
+        "proxy-auth"
+      ],
+      "documentationUrls": [
+        "https://docs.pinecone.io/reference/api/latest/data-plane/query_vectors"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Composio PINECONE_RETRIEVE_CONTEXT_ASSISTANT maps to official POST /chat/{{assistant_name}}/context.",
+        "Caller-supplied index/assistant hosts are admitted only after handwritten https + *.pinecone.io validation; compile refuses to interpolate them as baseUrl because they are not stored setup fields."
+      ]
+    },
+    "assistants.files.list": {
+      "upstreamActionId": "list_vector_ids",
+      "sourceRefs": [
+        "index-host-guard",
+        "request-headers",
+        "proxy-auth"
+      ],
+      "documentationUrls": [
+        "https://docs.pinecone.io/reference/api/latest/data-plane/list_vectors"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Composio PINECONE_LIST_FILES maps to official GET /files/{{assistant_name}}.",
+        "Caller-supplied index/assistant hosts are admitted only after handwritten https + *.pinecone.io validation; compile refuses to interpolate them as baseUrl because they are not stored setup fields."
+      ]
+    },
+    "assistants.files.get": {
+      "upstreamActionId": "describe_index",
+      "sourceRefs": [
+        "index-host-guard",
+        "request-headers",
+        "proxy-auth"
+      ],
+      "documentationUrls": [
+        "https://docs.pinecone.io/reference/api/latest/control-plane/describe_index"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Composio PINECONE_DESCRIBE_FILE maps to official GET /files/{{assistant_name}}/{{assistant_file_id}}.",
+        "Caller-supplied index/assistant hosts are admitted only after handwritten https + *.pinecone.io validation; compile refuses to interpolate them as baseUrl because they are not stored setup fields."
+      ]
+    },
+    "assistants.files.delete": {
+      "upstreamActionId": "delete_vectors",
+      "sourceRefs": [
+        "index-host-guard",
+        "request-headers",
+        "proxy-auth"
+      ],
+      "documentationUrls": [
+        "https://docs.pinecone.io/reference/api/latest/data-plane/delete_vectors"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Composio PINECONE_DELETE_FILE maps to official DELETE /files/{{assistant_name}}/{{assistant_file_id}}.",
+        "Caller-supplied index/assistant hosts are admitted only after handwritten https + *.pinecone.io validation; compile refuses to interpolate them as baseUrl because they are not stored setup fields."
+      ]
+    },
+    "assistants.files.upload": {
+      "upstreamActionId": "upsert_vectors",
+      "sourceRefs": [
+        "index-host-guard",
+        "request-headers",
+        "proxy-auth"
+      ],
+      "documentationUrls": [
+        "https://docs.pinecone.io/reference/api/latest/data-plane/upsert_vectors"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Composio PINECONE_UPLOAD_FILE maps to official POST /files/{{assistant_name}}.",
+        "Caller-supplied index/assistant hosts are admitted only after handwritten https + *.pinecone.io validation; compile refuses to interpolate them as baseUrl because they are not stored setup fields."
+      ]
+    },
+    "namespaces.list": {
+      "upstreamActionId": "list_vector_ids",
+      "sourceRefs": [
+        "index-host-guard",
+        "request-headers",
+        "proxy-auth"
+      ],
+      "documentationUrls": [
+        "https://docs.pinecone.io/reference/api/latest/data-plane/list_vectors"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Composio PINECONE_LIST_NAMESPACES_OPERATION maps to official GET /namespaces.",
+        "Caller-supplied index/assistant hosts are admitted only after handwritten https + *.pinecone.io validation; compile refuses to interpolate them as baseUrl because they are not stored setup fields."
+      ]
+    },
+    "namespaces.create": {
+      "upstreamActionId": "update_vector",
+      "sourceRefs": [
+        "index-host-guard",
+        "request-headers",
+        "proxy-auth"
+      ],
+      "documentationUrls": [
+        "https://docs.pinecone.io/reference/api/latest/data-plane/update_vector"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Composio PINECONE_CREATE_NAMESPACE maps to official POST /namespaces.",
+        "Caller-supplied index/assistant hosts are admitted only after handwritten https + *.pinecone.io validation; compile refuses to interpolate them as baseUrl because they are not stored setup fields."
+      ]
+    },
+    "namespaces.get": {
+      "upstreamActionId": "describe_index",
+      "sourceRefs": [
+        "index-host-guard",
+        "request-headers",
+        "proxy-auth"
+      ],
+      "documentationUrls": [
+        "https://docs.pinecone.io/reference/api/latest/control-plane/describe_index"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Composio PINECONE_DESCRIBE_NAMESPACE maps to official GET /namespaces/{{namespace}}.",
+        "Caller-supplied index/assistant hosts are admitted only after handwritten https + *.pinecone.io validation; compile refuses to interpolate them as baseUrl because they are not stored setup fields."
+      ]
+    },
+    "namespaces.delete": {
+      "upstreamActionId": "delete_vectors",
+      "sourceRefs": [
+        "index-host-guard",
+        "request-headers",
+        "proxy-auth"
+      ],
+      "documentationUrls": [
+        "https://docs.pinecone.io/reference/api/latest/data-plane/delete_vectors"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Composio PINECONE_DELETE_NAMESPACE maps to official DELETE /namespaces/{{namespace}}.",
+        "Caller-supplied index/assistant hosts are admitted only after handwritten https + *.pinecone.io validation; compile refuses to interpolate them as baseUrl because they are not stored setup fields."
+      ]
+    },
+    "namespaces.records.search": {
+      "upstreamActionId": "query_vectors",
+      "sourceRefs": [
+        "index-host-guard",
+        "request-headers",
+        "proxy-auth"
+      ],
+      "documentationUrls": [
+        "https://docs.pinecone.io/reference/api/latest/data-plane/query_vectors"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Composio PINECONE_SEARCH_RECORDS_NAMESPACE maps to official POST /records/namespaces/{{namespace}}/search.",
+        "Caller-supplied index/assistant hosts are admitted only after handwritten https + *.pinecone.io validation; compile refuses to interpolate them as baseUrl because they are not stored setup fields."
+      ]
+    },
+    "namespaces.records.upsert": {
+      "upstreamActionId": "upsert_vectors",
+      "sourceRefs": [
+        "index-host-guard",
+        "request-headers",
+        "proxy-auth"
+      ],
+      "documentationUrls": [
+        "https://docs.pinecone.io/reference/api/latest/data-plane/upsert_vectors"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Composio PINECONE_UPSERT_RECORDS_NAMESPACE maps to official POST /records/namespaces/{{namespace}}/upsert.",
+        "Caller-supplied index/assistant hosts are admitted only after handwritten https + *.pinecone.io validation; compile refuses to interpolate them as baseUrl because they are not stored setup fields."
+      ]
+    },
+    "vectors.upsert": {
+      "upstreamActionId": "upsert_vectors",
+      "sourceRefs": [
+        "index-host-guard",
+        "request-headers",
+        "proxy-auth"
+      ],
+      "documentationUrls": [
+        "https://docs.pinecone.io/reference/api/latest/data-plane/upsert_vectors"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Composio PINECONE_UPSERT_VECTORS maps to official POST /vectors/upsert.",
+        "Caller-supplied index/assistant hosts are admitted only after handwritten https + *.pinecone.io validation; compile refuses to interpolate them as baseUrl because they are not stored setup fields."
+      ]
+    },
+    "vectors.query": {
+      "upstreamActionId": "query_vectors",
+      "sourceRefs": [
+        "index-host-guard",
+        "request-headers",
+        "proxy-auth"
+      ],
+      "documentationUrls": [
+        "https://docs.pinecone.io/reference/api/latest/data-plane/query_vectors"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Composio PINECONE_QUERY_VECTORS maps to official POST /query.",
+        "Caller-supplied index/assistant hosts are admitted only after handwritten https + *.pinecone.io validation; compile refuses to interpolate them as baseUrl because they are not stored setup fields."
+      ]
+    },
+    "vectors.fetch": {
+      "upstreamActionId": "fetch_vectors",
+      "sourceRefs": [
+        "index-host-guard",
+        "request-headers",
+        "proxy-auth"
+      ],
+      "documentationUrls": [
+        "https://docs.pinecone.io/reference/api/latest/data-plane/fetch_vectors"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Composio PINECONE_FETCH_VECTORS maps to official GET /vectors/fetch.",
+        "Caller-supplied index/assistant hosts are admitted only after handwritten https + *.pinecone.io validation; compile refuses to interpolate them as baseUrl because they are not stored setup fields."
+      ]
+    },
+    "vectors.list": {
+      "upstreamActionId": "list_vector_ids",
+      "sourceRefs": [
+        "index-host-guard",
+        "request-headers",
+        "proxy-auth"
+      ],
+      "documentationUrls": [
+        "https://docs.pinecone.io/reference/api/latest/data-plane/list_vectors"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Composio PINECONE_LIST_VECTORS maps to official GET /vectors/list.",
+        "Caller-supplied index/assistant hosts are admitted only after handwritten https + *.pinecone.io validation; compile refuses to interpolate them as baseUrl because they are not stored setup fields."
+      ]
+    },
+    "vectors.update": {
+      "upstreamActionId": "update_vector",
+      "sourceRefs": [
+        "index-host-guard",
+        "request-headers",
+        "proxy-auth"
+      ],
+      "documentationUrls": [
+        "https://docs.pinecone.io/reference/api/latest/data-plane/update_vector"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Composio PINECONE_UPDATE_VECTOR maps to official POST /vectors/update.",
+        "Caller-supplied index/assistant hosts are admitted only after handwritten https + *.pinecone.io validation; compile refuses to interpolate them as baseUrl because they are not stored setup fields."
+      ]
+    },
+    "vectors.delete": {
+      "upstreamActionId": "delete_vectors",
+      "sourceRefs": [
+        "index-host-guard",
+        "request-headers",
+        "proxy-auth"
+      ],
+      "documentationUrls": [
+        "https://docs.pinecone.io/reference/api/latest/data-plane/delete_vectors"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Composio PINECONE_DELETE_VECTORS maps to official POST /vectors/delete.",
+        "Caller-supplied index/assistant hosts are admitted only after handwritten https + *.pinecone.io validation; compile refuses to interpolate them as baseUrl because they are not stored setup fields."
+      ]
+    },
+    "imports.list": {
+      "upstreamActionId": "list_vector_ids",
+      "sourceRefs": [
+        "index-host-guard",
+        "request-headers",
+        "proxy-auth"
+      ],
+      "documentationUrls": [
+        "https://docs.pinecone.io/reference/api/latest/data-plane/list_vectors"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Composio PINECONE_LIST_BULK_IMPORTS maps to official GET /bulk/imports.",
+        "Caller-supplied index/assistant hosts are admitted only after handwritten https + *.pinecone.io validation; compile refuses to interpolate them as baseUrl because they are not stored setup fields."
+      ]
+    },
+    "imports.create": {
+      "upstreamActionId": "upsert_vectors",
+      "sourceRefs": [
+        "index-host-guard",
+        "request-headers",
+        "proxy-auth"
+      ],
+      "documentationUrls": [
+        "https://docs.pinecone.io/reference/api/latest/data-plane/upsert_vectors"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Composio PINECONE_START_BULK_IMPORT maps to official POST /bulk/imports.",
+        "Caller-supplied index/assistant hosts are admitted only after handwritten https + *.pinecone.io validation; compile refuses to interpolate them as baseUrl because they are not stored setup fields."
+      ]
+    },
+    "imports.get": {
+      "upstreamActionId": "describe_index",
+      "sourceRefs": [
+        "index-host-guard",
+        "request-headers",
+        "proxy-auth"
+      ],
+      "documentationUrls": [
+        "https://docs.pinecone.io/reference/api/latest/control-plane/describe_index"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Composio PINECONE_DESCRIBE_BULK_IMPORT maps to official GET /bulk/imports/{{id}}.",
+        "Caller-supplied index/assistant hosts are admitted only after handwritten https + *.pinecone.io validation; compile refuses to interpolate them as baseUrl because they are not stored setup fields."
+      ]
+    },
+    "imports.cancel": {
+      "upstreamActionId": "delete_vectors",
+      "sourceRefs": [
+        "index-host-guard",
+        "request-headers",
+        "proxy-auth"
+      ],
+      "documentationUrls": [
+        "https://docs.pinecone.io/reference/api/latest/data-plane/delete_vectors"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Composio PINECONE_CANCEL_BULK_IMPORT maps to official DELETE /bulk/imports/{{id}}.",
+        "Caller-supplied index/assistant hosts are admitted only after handwritten https + *.pinecone.io validation; compile refuses to interpolate them as baseUrl because they are not stored setup fields."
       ]
     }
   },
   "manifest": {
-    "key": "pinecone",
-    "name": "Pinecone",
-    "version": "0.2.0",
-    "runtime": "bun",
-    "visibility": "public",
-    "categories": [
-      "dev-tools"
-    ],
     "auth": {
-      "type": "api_key",
       "scopes": [],
       "setup": {
-        "mode": "api_key",
         "fields": [
           {
             "key": "apiKey",
@@ -443,44 +1005,66 @@
             "required": true,
             "secret": true
           }
-        ]
+        ],
+        "mode": "api_key"
+      },
+      "type": "api_key"
+    },
+    "categories": [
+      "dev-tools"
+    ],
+    "evidence": {
+      "fixture": {
+        "status": "supplied"
+      },
+      "live": {
+        "status": "unverified"
       }
     },
-    "network": {
-      "allowedHosts": [
-        "api.pinecone.io"
-      ]
-    },
-    "models": [
-      "index",
-      "collection",
-      "backup",
-      "restoreJob"
-    ],
     "http": {
-      "baseUrl": "https://api.pinecone.io",
       "auth": {
         "field": "apiKey",
         "in": "header",
         "name": "Api-Key",
         "value": "{{apiKey}}"
       },
-      "headers": {
-        "Accept": "application/json",
-        "X-Pinecone-Api-Version": "2026-04"
-      },
+      "baseUrl": "https://api.pinecone.io",
       "errors": {
-        "rateLimitStatuses": [
-          429
-        ],
-        "retryAfterHeader": "retry-after",
         "defaultRetryAfterSeconds": 30,
         "messagePaths": [
           "message",
           "error.message",
           "error"
-        ]
+        ],
+        "rateLimitStatuses": [
+          429
+        ],
+        "retryAfterHeader": "retry-after"
+      },
+      "headers": {
+        "Accept": "application/json",
+        "X-Pinecone-Api-Version": "2026-04"
       }
+    },
+    "key": "pinecone",
+    "models": [
+      "index",
+      "vector",
+      "namespace",
+      "collection",
+      "backup",
+      "restore_job",
+      "assistant",
+      "file",
+      "model",
+      "import"
+    ],
+    "name": "Pinecone",
+    "network": {
+      "allowedHosts": [
+        "api.pinecone.io",
+        "*.pinecone.io"
+      ]
     },
     "operations": {
       "healthcheck": {
@@ -599,48 +1183,31 @@
         "title": "List indexes",
         "validationMode": "strict-generated"
       },
-      "indexes.create": {
+      "indexes.describe": {
+        "kind": "action",
+        "sideEffect": "read",
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
         "maxResponseBytes": 5242880,
-        "kind": "action",
-        "sideEffect": "write",
-        "title": "Create index",
-        "description": "Create a Pinecone index.",
+        "title": "Describe index",
+        "description": "Retrieve full Pinecone index configuration including host and integrated embedding settings.",
         "inputSchema": {
           "type": "object",
           "properties": {
-            "name": {
+            "index_name": {
               "type": "string",
               "minLength": 1,
-              "description": "Index name."
+              "description": "The name of the index to describe."
             },
-            "dimension": {
-              "type": "integer",
-              "description": "Vector dimension.",
-              "minimum": 1
-            },
-            "metric": {
+            "api_version": {
               "type": "string",
-              "description": "Distance metric, for example cosine."
-            },
-            "spec": {
-              "type": "object",
-              "description": "Serverless or pod spec."
-            },
-            "deletion_protection": {
-              "type": "string",
-              "description": "enabled or disabled."
-            },
-            "vector_type": {
-              "type": "string",
-              "description": "dense or sparse."
+              "minLength": 1,
+              "description": "Date-based version header for the Pinecone API."
             }
           },
           "additionalProperties": false,
           "required": [
-            "name",
-            "spec"
+            "index_name"
           ]
         },
         "outputSchema": {
@@ -655,9 +1222,94 @@
           },
           "additionalProperties": false
         },
+        "request": {
+          "method": "GET",
+          "path": "/indexes/{{index_name}}",
+          "success": [
+            200
+          ],
+          "headers": {
+            "X-Pinecone-Api-Version": "{{api_version}}"
+          }
+        },
         "enforceOutputSchema": true,
         "validationMode": "strict-generated",
-        "responseFormat": "json",
+        "responseFormat": "json"
+      },
+      "indexes.create": {
+        "kind": "action",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Create index",
+        "description": "Create a Pinecone index with specified configuration.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Index identifier (1-45 chars, lowercase alphanumeric or hyphens)."
+            },
+            "spec": {
+              "type": "object",
+              "description": "Deployment configuration. Provide serverless or pod specification."
+            },
+            "metric": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Similarity measure.",
+              "enum": [
+                "cosine",
+                "euclidean",
+                "dotproduct"
+              ]
+            },
+            "dimension": {
+              "type": "integer",
+              "description": "Vector dimensions (1-20,000). Required for dense vectors.",
+              "minimum": 1,
+              "maximum": 20000
+            },
+            "vector_type": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Vector type.",
+              "enum": [
+                "dense",
+                "sparse"
+              ]
+            },
+            "deletion_protection": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Deletion protection.",
+              "enum": [
+                "enabled",
+                "disabled"
+              ]
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "name",
+            "spec",
+            "metric"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
         "request": {
           "method": "POST",
           "path": "/indexes",
@@ -665,53 +1317,77 @@
             201,
             200
           ],
-          "headers": {
-            "Accept": "application/json",
-            "Content-Type": "application/json",
-            "X-Pinecone-Api-Version": "2026-04"
-          },
           "body": {
             "name": "{{name}}",
-            "dimension": "{{dimension}}",
-            "metric": "{{metric}}",
             "spec": "{{spec}}",
-            "deletion_protection": "{{deletion_protection}}",
-            "vector_type": "{{vector_type}}"
+            "metric": "{{metric}}",
+            "dimension": "{{dimension}}",
+            "vector_type": "{{vector_type}}",
+            "deletion_protection": "{{deletion_protection}}"
+          },
+          "headers": {
+            "Content-Type": "application/json"
           }
-        }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
       },
-      "indexes.update": {
+      "indexes.create_for_model": {
+        "kind": "action",
+        "sideEffect": "write",
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
         "maxResponseBytes": 5242880,
-        "kind": "action",
-        "sideEffect": "write",
-        "title": "Configure index",
-        "description": "Configure a Pinecone index (deletion protection, tags, or spec).",
+        "title": "Create index with embedding model",
+        "description": "Create a Pinecone index with an integrated embedding model for automatic vectorization.",
         "inputSchema": {
           "type": "object",
           "properties": {
             "name": {
               "type": "string",
               "minLength": 1,
-              "description": "Index name."
+              "description": "Index identifier."
             },
-            "deletion_protection": {
+            "cloud": {
               "type": "string",
-              "description": "enabled or disabled."
+              "minLength": 1,
+              "description": "Cloud provider for hosting the index.",
+              "enum": [
+                "gcp",
+                "aws",
+                "azure"
+              ]
             },
-            "spec": {
+            "region": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Deployment region valid for the chosen cloud provider."
+            },
+            "embed": {
               "type": "object",
-              "description": "Updated spec."
+              "description": "Embedding model configuration for automatic vectorization."
             },
             "tags": {
               "type": "object",
-              "description": "Index tags."
+              "description": "Custom metadata labels."
+            },
+            "deletion_protection": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Protection against accidental deletion.",
+              "enum": [
+                "enabled",
+                "disabled"
+              ]
             }
           },
           "additionalProperties": false,
           "required": [
-            "name"
+            "name",
+            "cloud",
+            "region",
+            "embed"
           ]
         },
         "outputSchema": {
@@ -726,95 +1402,659 @@
           },
           "additionalProperties": false
         },
+        "request": {
+          "method": "POST",
+          "path": "/indexes/create-for-model",
+          "success": [
+            201,
+            200
+          ],
+          "body": {
+            "name": "{{name}}",
+            "cloud": "{{cloud}}",
+            "region": "{{region}}",
+            "embed": "{{embed}}",
+            "tags": "{{tags}}",
+            "deletion_protection": "{{deletion_protection}}"
+          },
+          "headers": {
+            "Content-Type": "application/json"
+          }
+        },
         "enforceOutputSchema": true,
         "validationMode": "strict-generated",
-        "responseFormat": "json",
-        "request": {
-          "method": "PATCH",
-          "path": "/indexes/{{name}}",
-          "success": [
-            200,
-            202
-          ],
-          "headers": {
-            "Accept": "application/json",
-            "Content-Type": "application/json",
-            "X-Pinecone-Api-Version": "2026-04"
-          },
-          "body": {
-            "deletion_protection": "{{deletion_protection}}",
-            "spec": "{{spec}}",
-            "tags": "{{tags}}"
-          }
-        }
+        "responseFormat": "json"
       },
-      "indexes.delete": {
+      "indexes.create_from_backup": {
+        "kind": "action",
+        "sideEffect": "write",
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
         "maxResponseBytes": 5242880,
-        "kind": "action",
-        "sideEffect": "destructive",
-        "title": "Delete index",
-        "description": "Delete a Pinecone index by name.",
+        "title": "Create index from backup",
+        "description": "Create an index from a previously saved backup.",
         "inputSchema": {
           "type": "object",
           "properties": {
             "name": {
               "type": "string",
               "minLength": 1,
-              "description": "Index name."
+              "description": "Index name, 1-45 characters."
+            },
+            "backup_id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The ID of the backup to create an index from."
+            },
+            "tags": {
+              "type": "object",
+              "description": "Custom key-value pairs for organization."
+            },
+            "deletion_protection": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Enable or disable deletion safeguards."
             }
           },
           "additionalProperties": false,
           "required": [
-            "name"
+            "name",
+            "backup_id"
           ]
         },
         "outputSchema": {
           "type": "object",
           "required": [
-            "deleted",
-            "name"
+            "data"
           ],
           "properties": {
-            "deleted": {
-              "type": "boolean"
-            },
-            "name": {
-              "type": "string"
+            "data": {
+              "type": "object"
             }
           },
           "additionalProperties": false
         },
+        "request": {
+          "method": "POST",
+          "path": "/backups/{{backup_id}}/create-index",
+          "success": [
+            202,
+            201,
+            200
+          ],
+          "body": {
+            "name": "{{name}}",
+            "tags": "{{tags}}",
+            "deletion_protection": "{{deletion_protection}}"
+          },
+          "headers": {
+            "Content-Type": "application/json"
+          }
+        },
         "enforceOutputSchema": true,
         "validationMode": "strict-generated",
-        "responseFormat": "json",
+        "responseFormat": "json"
+      },
+      "indexes.configure": {
+        "kind": "action",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Configure index",
+        "description": "Configure an existing Pinecone index, including pod type, replicas, deletion protection, and tags.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "index_name": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The name of the index to configure."
+            },
+            "spec": {
+              "type": "object",
+              "description": "Index specification containing pod or serverless configuration."
+            },
+            "tags": {
+              "type": "object",
+              "description": "Custom tags as key-value pairs."
+            },
+            "deletion_protection": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Deletion protection.",
+              "enum": [
+                "enabled",
+                "disabled"
+              ]
+            },
+            "api_version": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Date-based version header for the Pinecone API."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "index_name"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "PATCH",
+          "path": "/indexes/{{index_name}}",
+          "success": [
+            202,
+            200
+          ],
+          "body": {
+            "spec": "{{spec}}",
+            "tags": "{{tags}}",
+            "deletion_protection": "{{deletion_protection}}"
+          },
+          "headers": {
+            "Content-Type": "application/json",
+            "X-Pinecone-Api-Version": "{{api_version}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "indexes.delete": {
+        "kind": "action",
+        "sideEffect": "destructive",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Delete index",
+        "description": "Permanently delete a Pinecone index.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "index_name": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The name of the index to delete."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "index_name"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "accepted"
+          ],
+          "properties": {
+            "accepted": {
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": false
+        },
         "request": {
           "method": "DELETE",
-          "path": "/indexes/{{name}}",
+          "path": "/indexes/{{index_name}}",
           "success": [
             202,
             200,
             204
           ],
-          "headers": {
-            "Accept": "application/json",
-            "X-Pinecone-Api-Version": "2026-04"
-          },
           "result": {
-            "deleted": true,
-            "name": "{{input.name}}"
+            "accepted": true
           }
-        }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
       },
-      "collections.list": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 4096,
-        "maxResponseBytes": 5242880,
+      "indexes.stats": {
         "kind": "action",
         "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Describe index stats",
+        "description": "Get index statistics including vector count per namespace, dimensions, and fullness.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "index_host": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The host URL of the index to get stats for."
+            },
+            "filter": {
+              "type": "object",
+              "description": "Metadata filter expression. Pod-based indexes only."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "index_host"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "POST",
+          "path": "/describe_index_stats",
+          "success": [
+            200,
+            201,
+            202
+          ],
+          "body": {
+            "filter": "{{filter}}"
+          },
+          "headers": {
+            "Content-Type": "application/json"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "indexes.backups.list": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "List index backups",
+        "description": "List all backups for a specific Pinecone index.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "index_name": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Name of the backed up index."
+            },
+            "limit": {
+              "type": "integer",
+              "description": "Results per page (1-100).",
+              "minimum": 1,
+              "maximum": 100
+            },
+            "pagination_token": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Token to retrieve the next page of results."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "index_name"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/indexes/{{index_name}}/backups",
+          "success": [
+            200
+          ],
+          "query": {
+            "limit": "{{limit}}",
+            "paginationToken": "{{pagination_token}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "backups.create": {
+        "kind": "action",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Create backup",
+        "description": "Create a backup of a Pinecone index for disaster recovery and version control.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "index_name": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Name of the index to backup."
+            },
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "description": "User-defined identifier for the backup."
+            },
+            "description": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Contextual information about the backup purpose."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "index_name"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "POST",
+          "path": "/indexes/{{index_name}}/backups",
+          "success": [
+            201,
+            200,
+            202
+          ],
+          "body": {
+            "name": "{{name}}",
+            "description": "{{description}}"
+          },
+          "headers": {
+            "Content-Type": "application/json"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "backups.list": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "List project backups",
+        "description": "List all backups for indexes in a Pinecone project.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "limit": {
+              "type": "integer",
+              "description": "Number of results per page (1-100).",
+              "minimum": 1,
+              "maximum": 100
+            },
+            "paginationToken": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Token for retrieving subsequent result pages."
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/backups",
+          "success": [
+            200
+          ],
+          "query": {
+            "limit": "{{limit}}",
+            "paginationToken": "{{paginationToken}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "backups.get": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Describe backup",
+        "description": "Retrieve detailed information about a specific backup.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "backup_id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The unique identifier of the backup to retrieve."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "backup_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/backups/{{backup_id}}",
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "backups.delete": {
+        "kind": "action",
+        "sideEffect": "destructive",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Delete backup",
+        "description": "Permanently remove a backup from the project.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "backup_id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The ID of the backup to delete."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "backup_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "accepted"
+          ],
+          "properties": {
+            "accepted": {
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "DELETE",
+          "path": "/backups/{{backup_id}}",
+          "success": [
+            202,
+            200,
+            204
+          ],
+          "result": {
+            "accepted": true
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "restore_jobs.list": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "List restore jobs",
+        "description": "List restore jobs for a project with pagination support.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "limit": {
+              "type": "integer",
+              "description": "Number of results to return per page (1-100).",
+              "minimum": 1,
+              "maximum": 100
+            },
+            "paginationToken": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Token for retrieving the next page of results."
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/restore-jobs",
+          "success": [
+            200
+          ],
+          "query": {
+            "limit": "{{limit}}",
+            "paginationToken": "{{paginationToken}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "restore_jobs.get": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Describe restore job",
+        "description": "Get detailed information about a specific restore job.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "job_id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The ID of the restore job to describe."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "job_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/restore-jobs/{{job_id}}",
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "collections.list": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
         "title": "List collections",
-        "description": "List Pinecone collections in the authenticated project.",
+        "description": "List all collections in a Pinecone project (pod-based indexes only).",
         "inputSchema": {
           "type": "object",
           "properties": {},
@@ -832,103 +2072,48 @@
           },
           "additionalProperties": false
         },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
         "request": {
           "method": "GET",
           "path": "/collections",
           "success": [
             200
-          ],
-          "headers": {
-            "Accept": "application/json",
-            "X-Pinecone-Api-Version": "2026-04"
-          }
-        }
-      },
-      "collections.create": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
-        "sideEffect": "write",
-        "title": "Create collection",
-        "description": "Create a Pinecone collection from a source index.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "name": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Collection name."
-            },
-            "source": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Source index name."
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "name",
-            "source"
           ]
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
         },
         "enforceOutputSchema": true,
         "validationMode": "strict-generated",
-        "responseFormat": "json",
-        "request": {
-          "method": "POST",
-          "path": "/collections",
-          "success": [
-            201,
-            200
-          ],
-          "headers": {
-            "Accept": "application/json",
-            "Content-Type": "application/json",
-            "X-Pinecone-Api-Version": "2026-04"
-          },
-          "body": {
-            "name": "{{name}}",
-            "source": "{{source}}"
-          }
-        }
+        "responseFormat": "json"
       },
-      "collections.get": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
+      "models.list": {
         "kind": "action",
         "sideEffect": "read",
-        "title": "Get collection",
-        "description": "Describe one Pinecone collection by name.",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "List available models",
+        "description": "List embedding and reranking models hosted by Pinecone.",
         "inputSchema": {
           "type": "object",
           "properties": {
-            "name": {
+            "type": {
               "type": "string",
               "minLength": 1,
-              "description": "Collection name."
+              "description": "Filter models by type.",
+              "enum": [
+                "embed",
+                "rerank"
+              ]
+            },
+            "vector_type": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Filter embedding models by vector type.",
+              "enum": [
+                "dense",
+                "sparse"
+              ]
             }
           },
-          "additionalProperties": false,
-          "required": [
-            "name"
-          ]
+          "additionalProperties": false
         },
         "outputSchema": {
           "type": "object",
@@ -942,165 +2127,46 @@
           },
           "additionalProperties": false
         },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
         "request": {
           "method": "GET",
-          "path": "/collections/{{name}}",
+          "path": "/models",
           "success": [
             200
           ],
-          "headers": {
-            "Accept": "application/json",
-            "X-Pinecone-Api-Version": "2026-04"
-          }
-        }
-      },
-      "collections.delete": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
-        "sideEffect": "destructive",
-        "title": "Delete collection",
-        "description": "Delete a Pinecone collection by name.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "name": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Collection name."
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "name"
-          ]
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "deleted",
-            "name"
-          ],
-          "properties": {
-            "deleted": {
-              "type": "boolean"
-            },
-            "name": {
-              "type": "string"
-            }
-          },
-          "additionalProperties": false
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
-        "request": {
-          "method": "DELETE",
-          "path": "/collections/{{name}}",
-          "success": [
-            202,
-            200,
-            204
-          ],
-          "headers": {
-            "Accept": "application/json",
-            "X-Pinecone-Api-Version": "2026-04"
-          },
-          "result": {
-            "deleted": true,
-            "name": "{{input.name}}"
-          }
-        }
-      },
-      "backups.list": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
-        "sideEffect": "read",
-        "title": "List backups",
-        "description": "List Pinecone backups in the authenticated project.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "limit": {
-              "type": "integer",
-              "description": "Page size (1-100).",
-              "minimum": 1,
-              "maximum": 100
-            },
-            "paginationToken": {
-              "type": "string",
-              "description": "Pagination token."
-            }
-          },
-          "additionalProperties": false
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
-        "request": {
-          "method": "GET",
-          "path": "/backups",
           "query": {
-            "limit": "{{limit}}",
-            "paginationToken": "{{paginationToken}}"
-          },
-          "success": [
-            200
-          ],
-          "headers": {
-            "Accept": "application/json",
-            "X-Pinecone-Api-Version": "2026-04"
+            "type": "{{type}}",
+            "vector_type": "{{vector_type}}"
           }
-        }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
       },
-      "backups.listForIndex": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
+      "models.get": {
         "kind": "action",
         "sideEffect": "read",
-        "title": "List index backups",
-        "description": "List backups for one Pinecone index.",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Get model information",
+        "description": "Retrieve detailed information about a specific model hosted by Pinecone.",
         "inputSchema": {
           "type": "object",
           "properties": {
-            "name": {
+            "model_name": {
               "type": "string",
               "minLength": 1,
-              "description": "Index name."
+              "description": "The name of the model to look up."
             },
-            "limit": {
-              "type": "integer",
-              "description": "Page size (1-100).",
-              "minimum": 1,
-              "maximum": 100
-            },
-            "paginationToken": {
+            "api_version": {
               "type": "string",
-              "description": "Pagination token."
+              "minLength": 1,
+              "description": "Date-based version header for the Pinecone API."
             }
           },
           "additionalProperties": false,
           "required": [
-            "name"
+            "model_name"
           ]
         },
         "outputSchema": {
@@ -1115,398 +2181,47 @@
           },
           "additionalProperties": false
         },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
         "request": {
           "method": "GET",
-          "path": "/indexes/{{name}}/backups",
-          "query": {
-            "limit": "{{limit}}",
-            "paginationToken": "{{paginationToken}}"
-          },
+          "path": "/models/{{model_name}}",
           "success": [
             200
           ],
           "headers": {
-            "Accept": "application/json",
-            "X-Pinecone-Api-Version": "2026-04"
+            "X-Pinecone-Api-Version": "{{api_version}}"
           }
-        }
-      },
-      "backups.create": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
-        "sideEffect": "write",
-        "title": "Create backup",
-        "description": "Create a backup of a Pinecone index.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "name": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Index name."
-            },
-            "backup_name": {
-              "type": "string",
-              "description": "Backup name."
-            },
-            "description": {
-              "type": "string",
-              "description": "Backup description."
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "name"
-          ]
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
         },
         "enforceOutputSchema": true,
         "validationMode": "strict-generated",
-        "responseFormat": "json",
-        "request": {
-          "method": "POST",
-          "path": "/indexes/{{name}}/backups",
-          "success": [
-            201,
-            200
-          ],
-          "headers": {
-            "Accept": "application/json",
-            "Content-Type": "application/json",
-            "X-Pinecone-Api-Version": "2026-04"
-          },
-          "body": {
-            "name": "{{backup_name}}",
-            "description": "{{description}}"
-          }
-        }
+        "responseFormat": "json"
       },
-      "backups.get": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
+      "inference.embed": {
         "kind": "action",
         "sideEffect": "read",
-        "title": "Get backup",
-        "description": "Describe one Pinecone backup.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "backupId": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Backup id."
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "backupId"
-          ]
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
-        "request": {
-          "method": "GET",
-          "path": "/backups/{{backupId}}",
-          "success": [
-            200
-          ],
-          "headers": {
-            "Accept": "application/json",
-            "X-Pinecone-Api-Version": "2026-04"
-          }
-        }
-      },
-      "backups.delete": {
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
         "maxResponseBytes": 5242880,
-        "kind": "action",
-        "sideEffect": "destructive",
-        "title": "Delete backup",
-        "description": "Delete a Pinecone backup.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "backupId": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Backup id."
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "backupId"
-          ]
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "deleted",
-            "backupId"
-          ],
-          "properties": {
-            "deleted": {
-              "type": "boolean"
-            },
-            "backupId": {
-              "type": "string"
-            }
-          },
-          "additionalProperties": false
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
-        "request": {
-          "method": "DELETE",
-          "path": "/backups/{{backupId}}",
-          "success": [
-            202,
-            200,
-            204
-          ],
-          "headers": {
-            "Accept": "application/json",
-            "X-Pinecone-Api-Version": "2026-04"
-          },
-          "result": {
-            "deleted": true,
-            "backupId": "{{input.backupId}}"
-          }
-        }
-      },
-      "indexes.createFromBackup": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
-        "sideEffect": "write",
-        "title": "Create index from backup",
-        "description": "Restore a Pinecone index from a backup.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "backupId": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Backup id."
-            },
-            "name": {
-              "type": "string",
-              "minLength": 1,
-              "description": "New index name."
-            },
-            "deletion_protection": {
-              "type": "string",
-              "description": "enabled or disabled."
-            },
-            "tags": {
-              "type": "object",
-              "description": "Index tags."
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "backupId",
-            "name"
-          ]
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
-        "request": {
-          "method": "POST",
-          "path": "/backups/{{backupId}}/create-index",
-          "success": [
-            201,
-            202,
-            200
-          ],
-          "headers": {
-            "Accept": "application/json",
-            "Content-Type": "application/json",
-            "X-Pinecone-Api-Version": "2026-04"
-          },
-          "body": {
-            "name": "{{name}}",
-            "deletion_protection": "{{deletion_protection}}",
-            "tags": "{{tags}}"
-          }
-        }
-      },
-      "restoreJobs.list": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
-        "sideEffect": "read",
-        "title": "List restore jobs",
-        "description": "List Pinecone restore jobs in the authenticated project.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "limit": {
-              "type": "integer",
-              "description": "Page size (1-100).",
-              "minimum": 1,
-              "maximum": 100
-            },
-            "paginationToken": {
-              "type": "string",
-              "description": "Pagination token."
-            }
-          },
-          "additionalProperties": false
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
-        "request": {
-          "method": "GET",
-          "path": "/restore-jobs",
-          "query": {
-            "limit": "{{limit}}",
-            "paginationToken": "{{paginationToken}}"
-          },
-          "success": [
-            200
-          ],
-          "headers": {
-            "Accept": "application/json",
-            "X-Pinecone-Api-Version": "2026-04"
-          }
-        }
-      },
-      "restoreJobs.get": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
-        "sideEffect": "read",
-        "title": "Get restore job",
-        "description": "Describe one Pinecone restore job.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "jobId": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Restore job id."
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "jobId"
-          ]
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
-        "request": {
-          "method": "GET",
-          "path": "/restore-jobs/{{jobId}}",
-          "success": [
-            200
-          ],
-          "headers": {
-            "Accept": "application/json",
-            "X-Pinecone-Api-Version": "2026-04"
-          }
-        }
-      },
-      "embeddings.create": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
-        "sideEffect": "write",
-        "title": "Create embeddings",
-        "description": "Generate embeddings with the Pinecone inference API.",
+        "title": "Generate embeddings",
+        "description": "Generate vector embeddings for input text using Pinecone hosted embedding models.",
         "inputSchema": {
           "type": "object",
           "properties": {
             "model": {
               "type": "string",
               "minLength": 1,
-              "description": "Embedding model name."
+              "description": "The embedding model to use (e.g. multilingual-e5-large)."
             },
             "inputs": {
               "type": "array",
-              "minItems": 1,
+              "description": "Input objects to generate embeddings for.",
               "items": {
-                "type": "object"
-              },
-              "description": "Texts to embed."
+                "type": "object",
+                "description": "One input object with a text field."
+              }
             },
             "parameters": {
               "type": "object",
-              "description": "Optional model parameters."
+              "description": "Optional parameters for the embedding model."
             }
           },
           "additionalProperties": false,
@@ -1527,64 +2242,77 @@
           },
           "additionalProperties": false
         },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
         "request": {
           "method": "POST",
           "path": "/embed",
           "success": [
-            200
+            200,
+            201,
+            202
           ],
-          "headers": {
-            "Accept": "application/json",
-            "Content-Type": "application/json",
-            "X-Pinecone-Api-Version": "2026-04"
-          },
           "body": {
             "model": "{{model}}",
             "inputs": "{{inputs}}",
             "parameters": "{{parameters}}"
+          },
+          "headers": {
+            "Content-Type": "application/json"
           }
-        }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
       },
-      "rerank.create": {
+      "inference.rerank": {
+        "kind": "action",
+        "sideEffect": "read",
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
         "maxResponseBytes": 5242880,
-        "kind": "action",
-        "sideEffect": "write",
-        "title": "Rerank",
-        "description": "Rerank documents with the Pinecone inference API.",
+        "title": "Rerank documents",
+        "description": "Rerank documents by semantic relevance to a query using a Pinecone hosted reranking model.",
         "inputSchema": {
           "type": "object",
           "properties": {
             "model": {
               "type": "string",
               "minLength": 1,
-              "description": "Rerank model name."
+              "description": "The reranking model to apply."
             },
             "query": {
               "type": "string",
               "minLength": 1,
-              "description": "Query text."
+              "description": "The search query against which documents are ranked."
             },
             "documents": {
               "type": "array",
-              "minItems": 1,
+              "description": "Document objects requiring reranking.",
               "items": {
-                "type": "object"
-              },
-              "description": "Documents to rerank."
+                "type": "object",
+                "description": "One document."
+              }
             },
             "top_n": {
               "type": "integer",
-              "description": "Number of results to return.",
+              "description": "Number of ranked results to return.",
               "minimum": 1
+            },
+            "parameters": {
+              "type": "object",
+              "description": "Additional model-specific options."
+            },
+            "rank_fields": {
+              "type": "array",
+              "description": "Fields to consider for reranking.",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "description": "One field name."
+              }
             },
             "return_documents": {
               "type": "boolean",
-              "description": "Include document text in the response."
+              "description": "Include documents in the response."
             }
           },
           "additionalProperties": false,
@@ -1606,43 +2334,2054 @@
           },
           "additionalProperties": false
         },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
         "request": {
           "method": "POST",
           "path": "/rerank",
           "success": [
-            200
+            200,
+            201,
+            202
           ],
-          "headers": {
-            "Accept": "application/json",
-            "Content-Type": "application/json",
-            "X-Pinecone-Api-Version": "2026-04"
-          },
           "body": {
             "model": "{{model}}",
             "query": "{{query}}",
             "documents": "{{documents}}",
             "top_n": "{{top_n}}",
+            "parameters": "{{parameters}}",
+            "rank_fields": "{{rank_fields}}",
             "return_documents": "{{return_documents}}"
+          },
+          "headers": {
+            "Content-Type": "application/json"
           }
-        }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "assistants.list": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "List assistants",
+        "description": "List all assistants in a Pinecone project.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "limit": {
+              "type": "integer",
+              "description": "Assistants to return per page (1-100).",
+              "minimum": 1,
+              "maximum": 100
+            },
+            "pagination_token": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Token for the next page of results."
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/assistant/assistants",
+          "success": [
+            200
+          ],
+          "query": {
+            "limit": "{{limit}}",
+            "paginationToken": "{{pagination_token}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "assistants.create": {
+        "kind": "action",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Create assistant",
+        "description": "Create a new Pinecone assistant for RAG applications.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The name of the assistant."
+            },
+            "metadata": {
+              "type": "object",
+              "description": "Optional metadata associated with the assistant."
+            },
+            "instructions": {
+              "type": "string",
+              "minLength": 1,
+              "description": "System-level instructions that guide the assistant."
+            },
+            "api_version": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Date-based version header for the Pinecone API."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "name"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "POST",
+          "path": "/assistant/assistants",
+          "success": [
+            200,
+            201
+          ],
+          "body": {
+            "name": "{{name}}",
+            "metadata": "{{metadata}}",
+            "instructions": "{{instructions}}"
+          },
+          "headers": {
+            "Content-Type": "application/json",
+            "X-Pinecone-Api-Version": "{{api_version}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "assistants.get": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Get assistant status",
+        "description": "Retrieve the status and details of a Pinecone assistant.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "assistant_name": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The name of the assistant to get a status on."
+            },
+            "api_version": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Date-based version header for the Pinecone API."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "assistant_name"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/assistant/assistants/{{assistant_name}}",
+          "success": [
+            200
+          ],
+          "headers": {
+            "X-Pinecone-Api-Version": "{{api_version}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "assistants.update": {
+        "kind": "action",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Update assistant",
+        "description": "Update an assistant's instructions and metadata.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "assistant_name": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The name of the assistant to update."
+            },
+            "metadata": {
+              "type": "object",
+              "description": "Optional metadata associated with the assistant."
+            },
+            "instructions": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Description or directive for the assistant."
+            },
+            "api_version": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Date-based version header for the Pinecone API."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "assistant_name"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "PATCH",
+          "path": "/assistant/assistants/{{assistant_name}}",
+          "success": [
+            200,
+            201,
+            202
+          ],
+          "body": {
+            "metadata": "{{metadata}}",
+            "instructions": "{{instructions}}"
+          },
+          "headers": {
+            "Content-Type": "application/json",
+            "X-Pinecone-Api-Version": "{{api_version}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "assistants.delete": {
+        "kind": "action",
+        "sideEffect": "destructive",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Delete assistant",
+        "description": "Permanently delete a Pinecone assistant.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "assistant_name": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The name of the assistant to delete."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "assistant_name"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "accepted"
+          ],
+          "properties": {
+            "accepted": {
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "DELETE",
+          "path": "/assistant/assistants/{{assistant_name}}",
+          "success": [
+            200,
+            202,
+            204
+          ],
+          "result": {
+            "accepted": true
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "assistants.chat": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 60000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Chat with assistant",
+        "description": "Chat with a Pinecone assistant and get structured responses with citations.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "assistant_host": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The host URL for the assistant data plane."
+            },
+            "assistant_name": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The name of the assistant to chat with."
+            },
+            "messages": {
+              "type": "array",
+              "description": "Conversation messages. Must include at least one user message.",
+              "items": {
+                "type": "object",
+                "description": "One chat message."
+              }
+            },
+            "model": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The large language model to use for answer generation."
+            },
+            "filter": {
+              "type": "object",
+              "description": "Optionally filter which documents can be retrieved."
+            },
+            "stream": {
+              "type": "boolean",
+              "description": "If true, the assistant returns a stream of responses."
+            },
+            "temperature": {
+              "type": "number",
+              "description": "Controls randomness of model output."
+            },
+            "json_response": {
+              "type": "boolean",
+              "description": "If true, instruct the assistant to return JSON."
+            },
+            "context_options": {
+              "type": "object",
+              "description": "Controls the context snippets sent to the LLM."
+            },
+            "include_highlights": {
+              "type": "boolean",
+              "description": "If true, return highlights from referenced documents."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "assistant_host",
+            "assistant_name",
+            "messages"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "POST",
+          "path": "/chat/{{assistant_name}}",
+          "success": [
+            200,
+            201,
+            202
+          ],
+          "body": {
+            "messages": "{{messages}}",
+            "model": "{{model}}",
+            "filter": "{{filter}}",
+            "stream": "{{stream}}",
+            "temperature": "{{temperature}}",
+            "json_response": "{{json_response}}",
+            "context_options": "{{context_options}}",
+            "include_highlights": "{{include_highlights}}"
+          },
+          "headers": {
+            "Content-Type": "application/json"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "assistants.chat.completions": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 60000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Chat with assistant (OpenAI-compatible)",
+        "description": "Chat with a Pinecone assistant through an OpenAI-compatible interface.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "assistant_host": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The host URL of the assistant."
+            },
+            "assistant_name": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The name of the assistant to chat with."
+            },
+            "messages": {
+              "type": "array",
+              "description": "Conversation messages, oldest to newest.",
+              "items": {
+                "type": "object",
+                "description": "One chat message."
+              }
+            },
+            "model": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The large language model to use for answer generation."
+            },
+            "filter": {
+              "type": "object",
+              "description": "Optionally filter which documents can be retrieved."
+            },
+            "stream": {
+              "type": "boolean",
+              "description": "If true, returns a stream of responses."
+            },
+            "temperature": {
+              "type": "number",
+              "description": "Controls the randomness of the model's output."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "assistant_host",
+            "assistant_name",
+            "messages"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "POST",
+          "path": "/chat/{{assistant_name}}/chat/completions",
+          "success": [
+            200,
+            201,
+            202
+          ],
+          "body": {
+            "messages": "{{messages}}",
+            "model": "{{model}}",
+            "filter": "{{filter}}",
+            "stream": "{{stream}}",
+            "temperature": "{{temperature}}"
+          },
+          "headers": {
+            "Content-Type": "application/json"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "assistants.context": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Retrieve assistant context",
+        "description": "Retrieve context snippets from a Pinecone assistant for RAG or agentic workflows.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "assistant_host": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The host URL for the assistant."
+            },
+            "assistant_name": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The name of the assistant to retrieve context from."
+            },
+            "query": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The query to generate context for."
+            },
+            "messages": {
+              "type": "array",
+              "description": "Messages to use for generating context.",
+              "items": {
+                "type": "object",
+                "description": "One chat message."
+              }
+            },
+            "top_k": {
+              "type": "integer",
+              "description": "Maximum number of context snippets to return.",
+              "minimum": 1,
+              "maximum": 64
+            },
+            "filter": {
+              "type": "object",
+              "description": "Metadata filter to constrain which documents can be retrieved."
+            },
+            "multimodal": {
+              "type": "boolean",
+              "description": "Whether to retrieve image-related context snippets."
+            },
+            "snippet_size": {
+              "type": "integer",
+              "description": "Maximum context snippet size in tokens.",
+              "minimum": 512,
+              "maximum": 8192
+            },
+            "include_binary_content": {
+              "type": "boolean",
+              "description": "Include base64 image data when multimodal is true."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "assistant_host",
+            "assistant_name"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "POST",
+          "path": "/chat/{{assistant_name}}/context",
+          "success": [
+            200,
+            201,
+            202
+          ],
+          "body": {
+            "query": "{{query}}",
+            "messages": "{{messages}}",
+            "top_k": "{{top_k}}",
+            "filter": "{{filter}}",
+            "multimodal": "{{multimodal}}",
+            "snippet_size": "{{snippet_size}}",
+            "include_binary_content": "{{include_binary_content}}"
+          },
+          "headers": {
+            "Content-Type": "application/json"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "assistants.files.list": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "List files",
+        "description": "List files uploaded to a Pinecone assistant with optional metadata filtering.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "assistant_name": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The name of the assistant to list files for."
+            },
+            "assistant_host": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The host URL of the assistant."
+            },
+            "limit": {
+              "type": "integer",
+              "description": "Files to return per page (1-100).",
+              "minimum": 1,
+              "maximum": 100
+            },
+            "filter": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Optional JSON-encoded metadata filter for files."
+            },
+            "api_version": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Date-based version header for the Pinecone API."
+            },
+            "pagination_token": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Token for the next page of results."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "assistant_name"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/files/{{assistant_name}}",
+          "success": [
+            200
+          ],
+          "query": {
+            "limit": "{{limit}}",
+            "filter": "{{filter}}",
+            "paginationToken": "{{pagination_token}}"
+          },
+          "headers": {
+            "X-Pinecone-Api-Version": "{{api_version}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "assistants.files.get": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Describe file",
+        "description": "Get the status and metadata of a file uploaded to a Pinecone assistant.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "assistant_host": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The host URL of the assistant."
+            },
+            "assistant_name": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The name of the assistant to which the file was uploaded."
+            },
+            "assistant_file_id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The UUID of the file to describe."
+            },
+            "api_version": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Date-based version header for the Pinecone API."
+            },
+            "include_url": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Set to true to include a temporary signed URL."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "assistant_host",
+            "assistant_name",
+            "assistant_file_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/files/{{assistant_name}}/{{assistant_file_id}}",
+          "success": [
+            200
+          ],
+          "query": {
+            "include_url": "{{include_url}}"
+          },
+          "headers": {
+            "X-Pinecone-Api-Version": "{{api_version}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "assistants.files.delete": {
+        "kind": "action",
+        "sideEffect": "destructive",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Delete file",
+        "description": "Delete an uploaded file from a Pinecone assistant.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "assistant_host": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The host URL of the assistant."
+            },
+            "assistant_name": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The name of the assistant to delete the file from."
+            },
+            "assistant_file_id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The UUID of the file to be deleted."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "assistant_host",
+            "assistant_name",
+            "assistant_file_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "accepted"
+          ],
+          "properties": {
+            "accepted": {
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "DELETE",
+          "path": "/files/{{assistant_name}}/{{assistant_file_id}}",
+          "success": [
+            200,
+            202,
+            204
+          ],
+          "result": {
+            "accepted": true
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "assistants.files.upload": {
+        "kind": "action",
+        "sideEffect": "write",
+        "timeoutMs": 60000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Upload file to assistant",
+        "description": "Upload a file to a Pinecone assistant for processing.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "assistant_name": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The name of the assistant to upload the file to."
+            },
+            "assistant_host": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The host URL of the assistant."
+            },
+            "metadata": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Optional JSON-encoded metadata for the file."
+            },
+            "multimodal": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Opt in to multimodal file processing (PDFs only).",
+              "enum": [
+                "true",
+                "false"
+              ]
+            },
+            "file_name": {
+              "type": "string",
+              "minLength": 1,
+              "description": "File name to send in the multipart upload."
+            },
+            "file_content_base64": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Base64-encoded file contents."
+            },
+            "content_type": {
+              "type": "string",
+              "minLength": 1,
+              "description": "MIME type of the uploaded file."
+            },
+            "file": {
+              "type": "object",
+              "description": "The file to upload."
+            },
+            "file_content": {
+              "type": "object",
+              "description": "Model representing a file with direct content."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "assistant_name"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "POST",
+          "path": "/files/{{assistant_name}}",
+          "success": [
+            200,
+            201
+          ],
+          "query": {
+            "metadata": "{{metadata}}",
+            "multimodal": "{{multimodal}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "namespaces.list": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "List namespaces",
+        "description": "List namespaces in a serverless Pinecone index.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "index_host": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The host URL of the index to list namespaces from."
+            },
+            "limit": {
+              "type": "integer",
+              "description": "Maximum number of namespaces to return per page.",
+              "minimum": 1
+            },
+            "prefix": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Prefix filter for namespace names."
+            },
+            "pagination_token": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Token for continuing a previous listing operation."
+            },
+            "api_version": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Date-based version header for the Pinecone API."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "index_host"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/namespaces",
+          "success": [
+            200
+          ],
+          "query": {
+            "limit": "{{limit}}",
+            "prefix": "{{prefix}}",
+            "paginationToken": "{{pagination_token}}"
+          },
+          "headers": {
+            "X-Pinecone-Api-Version": "{{api_version}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "namespaces.create": {
+        "kind": "action",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Create namespace",
+        "description": "Create a namespace within a serverless Pinecone index.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The name of the namespace to create."
+            },
+            "index_host": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The host URL of the serverless index."
+            },
+            "schema": {
+              "type": "object",
+              "description": "Schema configuration for metadata indexing behavior."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "name",
+            "index_host"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "POST",
+          "path": "/namespaces",
+          "success": [
+            200,
+            201,
+            202
+          ],
+          "body": {
+            "name": "{{name}}",
+            "schema": "{{schema}}"
+          },
+          "headers": {
+            "Content-Type": "application/json"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "namespaces.get": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Describe namespace",
+        "description": "Describe a namespace in a serverless index, including the total number of vectors.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "namespace": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The namespace to describe."
+            },
+            "index_host": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The host URL of the serverless index containing the namespace."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "namespace",
+            "index_host"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/namespaces/{{namespace}}",
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "namespaces.delete": {
+        "kind": "action",
+        "sideEffect": "destructive",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Delete namespace",
+        "description": "Permanently delete a namespace from a serverless index.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "namespace": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The namespace identifier to be deleted."
+            },
+            "index_host": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The host URL of the serverless index containing the namespace."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "namespace",
+            "index_host"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "accepted"
+          ],
+          "properties": {
+            "accepted": {
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "DELETE",
+          "path": "/namespaces/{{namespace}}",
+          "success": [
+            200,
+            202,
+            204
+          ],
+          "result": {
+            "accepted": true
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "namespaces.records.search": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Search records in namespace",
+        "description": "Search records within a Pinecone namespace using text, vector, or ID query.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "query": {
+              "type": "object",
+              "description": "Query configuration including top_k and optional filters, vector, or ID."
+            },
+            "fields": {
+              "type": "array",
+              "description": "Fields to include in results.",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "description": "One field name."
+              }
+            },
+            "rerank": {
+              "type": "object",
+              "description": "Reranking configuration for search results."
+            },
+            "namespace": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The namespace to search within."
+            },
+            "index_host": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The host URL for the Pinecone index."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "query",
+            "namespace",
+            "index_host"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "POST",
+          "path": "/records/namespaces/{{namespace}}/search",
+          "success": [
+            200,
+            201,
+            202
+          ],
+          "body": {
+            "query": "{{query}}",
+            "fields": "{{fields}}",
+            "rerank": "{{rerank}}"
+          },
+          "headers": {
+            "Content-Type": "application/json"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "namespaces.records.upsert": {
+        "kind": "action",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Upsert records to namespace",
+        "description": "Upsert text records into a Pinecone namespace with automatic text-to-vector conversion.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "records": {
+              "type": "array",
+              "description": "Records to upsert. Each must include an _id field.",
+              "items": {
+                "type": "object",
+                "description": "One record."
+              }
+            },
+            "namespace": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The namespace to upsert records into."
+            },
+            "index_host": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The host URL of the index to upsert records into."
+            },
+            "api_version": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Pinecone API version header."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "records",
+            "namespace",
+            "index_host"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "POST",
+          "path": "/records/namespaces/{{namespace}}/upsert",
+          "success": [
+            201,
+            200
+          ],
+          "body": "{{records}}",
+          "headers": {
+            "Content-Type": "application/x-ndjson",
+            "X-Pinecone-Api-Version": "{{api_version}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "vectors.upsert": {
+        "kind": "action",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Upsert vectors",
+        "description": "Upsert vectors into a Pinecone namespace, overwriting existing vector IDs.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "vectors": {
+              "type": "array",
+              "description": "Array of vectors to upsert.",
+              "items": {
+                "type": "object",
+                "description": "One vector record."
+              }
+            },
+            "namespace": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The namespace where you upsert vectors."
+            },
+            "index_host": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The host URL of the index to upsert vectors into."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "vectors",
+            "index_host"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "POST",
+          "path": "/vectors/upsert",
+          "success": [
+            200,
+            201,
+            202
+          ],
+          "body": {
+            "vectors": "{{vectors}}",
+            "namespace": "{{namespace}}"
+          },
+          "headers": {
+            "Content-Type": "application/json"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "vectors.query": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Query vectors",
+        "description": "Perform semantic search within a Pinecone index using a query vector or vector ID.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Vector ID to use as query."
+            },
+            "topK": {
+              "type": "integer",
+              "description": "Number of results to return per query.",
+              "minimum": 1,
+              "maximum": 10000
+            },
+            "filter": {
+              "type": "object",
+              "description": "Metadata filtering criteria to constrain results."
+            },
+            "vector": {
+              "type": "array",
+              "description": "Query vector values matching index dimensionality.",
+              "items": {
+                "type": "number",
+                "description": "One dimension."
+              }
+            },
+            "indexHost": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The host URL of the Pinecone index to query."
+            },
+            "index_host": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Alias of indexHost."
+            },
+            "namespace": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The namespace to search."
+            },
+            "sparseVector": {
+              "type": "object",
+              "description": "Sparse vector representation."
+            },
+            "includeValues": {
+              "type": "boolean",
+              "description": "Whether to include vector data in the response."
+            },
+            "includeMetadata": {
+              "type": "boolean",
+              "description": "Whether to include metadata in the response."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "topK",
+            "indexHost"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "POST",
+          "path": "/query",
+          "success": [
+            200,
+            201,
+            202
+          ],
+          "body": {
+            "id": "{{id}}",
+            "topK": "{{topK}}",
+            "filter": "{{filter}}",
+            "vector": "{{vector}}",
+            "namespace": "{{namespace}}",
+            "sparseVector": "{{sparseVector}}",
+            "includeValues": "{{includeValues}}",
+            "includeMetadata": "{{includeMetadata}}"
+          },
+          "headers": {
+            "Content-Type": "application/json"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "vectors.fetch": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Fetch vectors",
+        "description": "Fetch vectors by ID from a Pinecone index namespace.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "ids": {
+              "type": "array",
+              "description": "The vector IDs to fetch.",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "description": "One vector ID."
+              }
+            },
+            "namespace": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The namespace to fetch vectors from."
+            },
+            "index_host": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The host URL of the Pinecone index to fetch vectors from."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "ids",
+            "index_host"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/vectors/fetch",
+          "success": [
+            200
+          ],
+          "query": {
+            "ids": "{{ids}}",
+            "namespace": "{{namespace}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "vectors.list": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "List vectors",
+        "description": "List vector IDs in a Pinecone serverless index namespace.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "limit": {
+              "type": "integer",
+              "description": "Maximum number of vector IDs to return per page.",
+              "minimum": 1,
+              "maximum": 1000
+            },
+            "prefix": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Filter vector IDs by prefix."
+            },
+            "namespace": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The namespace to list vectors from."
+            },
+            "index_host": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The host URL of the Pinecone index to list vectors from."
+            },
+            "paginationToken": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Pagination token to continue a previous listing operation."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "index_host"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/vectors/list",
+          "success": [
+            200
+          ],
+          "query": {
+            "limit": "{{limit}}",
+            "prefix": "{{prefix}}",
+            "namespace": "{{namespace}}",
+            "paginationToken": "{{paginationToken}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "vectors.update": {
+        "kind": "action",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Update vector",
+        "description": "Update a vector in Pinecone by ID, overwriting values and/or metadata.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Vector unique identifier."
+            },
+            "dryRun": {
+              "type": "boolean",
+              "description": "If true, count matching records without applying the update."
+            },
+            "filter": {
+              "type": "object",
+              "description": "Metadata filter expression for bulk updates."
+            },
+            "values": {
+              "type": "array",
+              "description": "Vector data to update.",
+              "items": {
+                "type": "number",
+                "description": "One dimension."
+              }
+            },
+            "indexHost": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The host URL of the index to update vectors in."
+            },
+            "index_host": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Alias of indexHost."
+            },
+            "namespace": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The namespace containing the vector to update."
+            },
+            "setMetadata": {
+              "type": "object",
+              "description": "Metadata to set for the vector."
+            },
+            "sparseValues": {
+              "type": "object",
+              "description": "Sparse vector representation."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "id",
+            "indexHost"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "POST",
+          "path": "/vectors/update",
+          "success": [
+            200,
+            201,
+            202
+          ],
+          "body": {
+            "id": "{{id}}",
+            "dryRun": "{{dryRun}}",
+            "filter": "{{filter}}",
+            "values": "{{values}}",
+            "namespace": "{{namespace}}",
+            "setMetadata": "{{setMetadata}}",
+            "sparseValues": "{{sparseValues}}"
+          },
+          "headers": {
+            "Content-Type": "application/json"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "vectors.delete": {
+        "kind": "action",
+        "sideEffect": "destructive",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Delete vectors",
+        "description": "Delete vectors by ID, metadata filter, or entire namespace.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "ids": {
+              "type": "array",
+              "description": "List of vector IDs to delete.",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "description": "One vector ID."
+              }
+            },
+            "filter": {
+              "type": "object",
+              "description": "Metadata filter to select vectors for deletion."
+            },
+            "namespace": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The namespace to delete vectors from."
+            },
+            "delete_all": {
+              "type": "boolean",
+              "description": "If true, deletes all vectors in the namespace."
+            },
+            "index_host": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The host URL of the index to delete vectors from."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "index_host"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "POST",
+          "path": "/vectors/delete",
+          "success": [
+            200,
+            201,
+            202
+          ],
+          "body": {
+            "ids": "{{ids}}",
+            "filter": "{{filter}}",
+            "namespace": "{{namespace}}",
+            "deleteAll": "{{delete_all}}"
+          },
+          "headers": {
+            "Content-Type": "application/json"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "imports.list": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "List bulk imports",
+        "description": "List recent and ongoing bulk import operations in a Pinecone index.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "limit": {
+              "type": "integer",
+              "description": "Max number of operations to return per page (1-100).",
+              "minimum": 1,
+              "maximum": 100
+            },
+            "index_host": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The host URL of the index to list bulk imports for."
+            },
+            "paginationToken": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Pagination token to continue a previous listing operation."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "index_host"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/bulk/imports",
+          "success": [
+            200
+          ],
+          "query": {
+            "limit": "{{limit}}",
+            "paginationToken": "{{paginationToken}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "imports.create": {
+        "kind": "action",
+        "sideEffect": "write",
+        "timeoutMs": 30000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Start bulk import",
+        "description": "Start an asynchronous bulk import of vectors from object storage into a Pinecone index.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "uri": {
+              "type": "string",
+              "minLength": 1,
+              "description": "URI of the bucket/container and import directory."
+            },
+            "errorMode": {
+              "type": "object",
+              "description": "Error handling mode for the bulk import."
+            },
+            "indexHost": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The host URL of the Pinecone index to import into."
+            },
+            "index_host": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Alias of indexHost."
+            },
+            "integrationId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Storage integration identifier used to access the data."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "uri",
+            "indexHost"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "POST",
+          "path": "/bulk/imports",
+          "success": [
+            200,
+            201,
+            202
+          ],
+          "body": {
+            "uri": "{{uri}}",
+            "errorMode": "{{errorMode}}",
+            "integrationId": "{{integrationId}}"
+          },
+          "headers": {
+            "Content-Type": "application/json"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "imports.get": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Describe bulk import",
+        "description": "Describe a specific bulk import operation.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Unique identifier for the import operation to describe."
+            },
+            "index_host": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The host URL of the Pinecone index where the bulk import is being performed."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "id",
+            "index_host"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/bulk/imports/{{id}}",
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "imports.cancel": {
+        "kind": "action",
+        "sideEffect": "destructive",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Cancel bulk import",
+        "description": "Cancel a bulk import operation that is not yet finished.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Unique identifier of the import operation to cancel."
+            },
+            "index_host": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The host URL of the index where the bulk import is running."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "id",
+            "index_host"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "DELETE",
+          "path": "/bulk/imports/{{id}}",
+          "success": [
+            200,
+            202,
+            204
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
       }
     },
     "provenance": {
       "source": {
-        "url": "https://github.com/oomol-lab/open-connector",
-        "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"
+        "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
+        "url": "https://github.com/oomol-lab/open-connector"
       }
     },
-    "evidence": {
-      "fixture": {
-        "status": "supplied"
-      },
-      "live": {
-        "status": "unverified"
-      }
-    }
+    "runtime": "bun",
+    "version": "0.2.0",
+    "visibility": "public"
   }
 }

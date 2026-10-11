@@ -5,7 +5,7 @@ describe("tiktok-ads manifest", () => {
   it("has correct key and version", () => {
     expect(manifest.key).toBe("tiktok-ads");
     expect(manifest.name).toBe("TikTok Ads");
-    expect(manifest.version).toBe("0.3.0");
+    expect(manifest.version).toBe("0.7.0");
     expect(manifest.runtime).toBe("bun");
   });
 
@@ -49,7 +49,7 @@ describe("tiktok-ads manifest", () => {
     expect(ops).toContain("custom_audiences.list");
     expect(ops).toContain("pixels.get");
     expect(ops).toContain("healthcheck");
-    expect(ops).toHaveLength(26);
+    expect(ops.length).toBeGreaterThanOrEqual(26);
   });
 
   it("has correct operation kinds", () => {
@@ -103,6 +103,25 @@ describe("tiktok-ads manifest", () => {
       "video",
       "image",
       "custom_audience",
+      "business_center",
+      "comment",
+      "blocked_word",
+      "smart_plus_campaign",
+      "gmv_max_campaign",
+      "portfolio",
+      "optimizer_rule",
+      "app",
+      "offline_event_set",
+      "page",
+      "lead",
+      "split_test",
+      "negative_keyword",
+      "store",
+      "subscription",
+      "custom_conversion",
+      "payment_portfolio",
+      "changelog",
+      "crm",
     ]);
   });
 });

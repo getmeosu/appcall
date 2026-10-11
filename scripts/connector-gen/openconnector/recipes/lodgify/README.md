@@ -1,22 +1,16 @@
 # Lodgify
 
-Read-only Lodgify Public API v2 recipe. Copy the API key from Settings → Public API and store it as `apiKey`. Requests send `X-ApiKey` and `Accept: application/json` to `https://api.lodgify.com`.
+Lodgify Public API v1/v2 recipe covering the origin healthcheck plus documented Composio `LODGIFY_*` HTTP tools (26 of 30; channel inventory APIs have no public JSON). Copy the API key from Settings → Public API and store it as `apiKey`. Requests send `X-ApiKey` and `Accept: application/json` to `https://api.lodgify.com`.
 
 ## Operations
 
-- `healthcheck`: `GET /v2/properties?page=1&size=1&includeCount=true` (cheap authenticated read; matches pinned credential validation).
-- `properties.list`: `GET /v2/properties` with optional `page`, `size` (1–50), and `includeCount`.
-- `properties.get`: `GET /v2/properties/{propertyId}`.
-- `rooms.list`: `GET /v2/properties/{propertyId}/rooms`.
-- `bookings.list`: `GET /v2/reservations/bookings` with optional `page`, `size`, and `stayFilter` (`Upcoming`, `Current`, `Historic`, `All`).
-- `bookings.get`: `GET /v2/reservations/bookings/{bookingId}`.
+- Origin reads: `healthcheck` (`GET /v2/properties?page=1&size=1&includeCount=true`), `properties.list` / `properties.get`, `rooms.list`, `bookings.list` / `bookings.get`.
+- Enquiries: create, call-me-back, decline, delete, recover, reopen.
+- Inbox: `reservations.list` (`GET /v1/reservation`, distinct from v2 `bookings.list`), unread count, batch delete, mark replied / not replied.
+- Availability: v2 property and room-type calendars (Composio `periodStart`/`periodEnd` map to official `start`/`end`), v1 availability list, set units.
+- Reference: countries, currencies, deleted properties, external bookings, messaging threads.
+- Webhooks: list, subscribe, unsubscribe (actions; subscribe is write, unsubscribe is destructive).
 
-Successful responses are raw provider JSON under AppCall `data`. Quote calculation and availability-range reads are omitted, as are booking writes.
+Empty 200 writes return `{success: true}`. Create enquiry / call-me-back and unread count return raw integer JSON under `data`. Official property list `size` remains 1–50. Channel list/connection/mapping/reservation tools are omitted (no documented public JSON).
 
-## Adaptations
-
-Pinned source and official docs agree on `X-ApiKey` and `/v2/properties`. Native category is `scheduling` (source Productivity is on the allowlist; scheduling better matches vacation-rental bookings). Rooms and bookings paths follow pinned source (`/v2/properties/{id}/rooms` and `/v2/reservations/bookings`). Official property list documents `size` max 50.
-
-## License and evidence
-
-Upstream definitions are attributed to [oomol-lab/open-connector](https://github.com/oomol-lab/open-connector) (Apache-2.0) at `33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a`. Fixtures are independently derived from official docs plus pinned source and are fixture-only; live smoke is unverified.
+Source attribution: oomol-lab/open-connector at `33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a`. Official docs: https://docs.lodgify.com/docs/getting-started-1. Live authentication is unverified.

@@ -1,15 +1,21 @@
 {
   "key": "jira",
   "name": "Jira Cloud",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "runtime": "bun",
-  "categories": ["dev-tools"],
+  "categories": [
+    "dev-tools"
+  ],
   "auth": {
     "type": "oauth2",
     "scopes": [
       "read:jira-work",
       "write:jira-work",
-      "read:jira-user"
+      "read:jira-user",
+      "manage:jira-project",
+      "manage:jira-configuration",
+      "manage:jira-webhook",
+      "read:servicedesk-request"
     ],
     "setup": {
       "mode": "oauth2",
@@ -21,6 +27,28 @@
       "api.atlassian.com",
       "auth.atlassian.com"
     ]
+  },
+  "http": {
+    "baseUrl": "https://api.atlassian.com",
+    "auth": {
+      "field": "accessToken",
+      "in": "header",
+      "name": "Authorization",
+      "value": "Bearer {{accessToken}}"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after",
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "errorMessages.0",
+        "errors.0",
+        "message",
+        "error"
+      ]
+    }
   },
   "operations": {
     "issues.search": {
@@ -105,6 +133,36 @@
             "description": "The created issue, normalized."
           }
         }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/ex/jira/{{cloudId}}/rest/api/3/issue",
+        "success": [
+          201,
+          200
+        ],
+        "body": {
+          "fields": {
+            "project": {
+              "key": "{{projectKey}}"
+            },
+            "summary": "{{summary}}",
+            "description": "{{description}}",
+            "issuetype": {
+              "name": "{{issueType}}"
+            },
+            "priority": {
+              "name": "{{priority}}"
+            },
+            "assignee": {
+              "accountId": "{{assigneeId}}"
+            },
+            "labels": "{{labels}}"
+          }
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
       }
     },
     "issues.get": {
@@ -122,19 +180,36 @@
             "description": "The issue key (e.g. \"PROJ-123\") or numeric ID of the issue to retrieve."
           }
         },
-        "required": ["issueKey"]
+        "required": [
+          "issueKey"
+        ]
       },
       "outputSchema": {
         "type": "object",
         "properties": {
-          "connector": { "type": "string" },
-          "action": { "type": "string" },
-          "source": { "type": "string" },
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
           "issue": {
             "type": "object",
             "description": "The retrieved issue, normalized."
           }
         }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/ex/jira/{{cloudId}}/rest/api/3/issue/{{issueKey}}",
+        "success": [
+          200,
+          201,
+          204
+        ]
       }
     },
     "issues.update": {
@@ -169,7 +244,9 @@
           },
           "labels": {
             "type": "array",
-            "items": { "type": "string" },
+            "items": {
+              "type": "string"
+            },
             "description": "New set of labels for the issue (replaces existing labels)."
           },
           "dueDate": {
@@ -177,15 +254,52 @@
             "description": "Due date in YYYY-MM-DD format."
           }
         },
-        "required": ["issueKey"]
+        "required": [
+          "issueKey"
+        ]
       },
       "outputSchema": {
         "type": "object",
         "properties": {
-          "connector": { "type": "string" },
-          "action": { "type": "string" },
-          "source": { "type": "string" },
-          "updated": { "type": "boolean", "description": "True if the update was accepted." }
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "updated": {
+            "type": "boolean",
+            "description": "True if the update was accepted."
+          }
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/ex/jira/{{cloudId}}/rest/api/3/issue/{{issueKey}}",
+        "success": [
+          200,
+          201,
+          204
+        ],
+        "body": {
+          "fields": {
+            "summary": "{{summary}}",
+            "description": "{{description}}",
+            "priority": {
+              "name": "{{priority}}"
+            },
+            "assignee": {
+              "accountId": "{{assigneeId}}"
+            },
+            "labels": "{{labels}}",
+            "duedate": "{{dueDate}}"
+          }
+        },
+        "headers": {
+          "Content-Type": "application/json"
         }
       }
     },
@@ -208,15 +322,37 @@
             "description": "Whether to delete all subtasks of this issue. Defaults to false."
           }
         },
-        "required": ["issueKey"]
+        "required": [
+          "issueKey"
+        ]
       },
       "outputSchema": {
         "type": "object",
         "properties": {
-          "connector": { "type": "string" },
-          "action": { "type": "string" },
-          "source": { "type": "string" },
-          "deleted": { "type": "boolean", "description": "True if the issue was deleted." }
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "deleted": {
+            "type": "boolean",
+            "description": "True if the issue was deleted."
+          }
+        }
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/ex/jira/{{cloudId}}/rest/api/3/issue/{{issueKey}}",
+        "success": [
+          204,
+          200
+        ],
+        "query": {
+          "deleteSubtasks": "{{deleteSubtasks}}"
         }
       }
     },
@@ -244,26 +380,63 @@
           },
           "fields": {
             "type": "array",
-            "items": { "type": "string" },
+            "items": {
+              "type": "string"
+            },
             "description": "List of field keys to include in results. Defaults to all fields."
           }
         },
-        "required": ["jql"]
+        "required": [
+          "jql"
+        ]
       },
       "outputSchema": {
         "type": "object",
         "properties": {
-          "connector": { "type": "string" },
-          "action": { "type": "string" },
-          "source": { "type": "string" },
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
           "issues": {
             "type": "array",
-            "items": { "type": "object" },
+            "items": {
+              "type": "object"
+            },
             "description": "List of matching issues, normalized."
           },
-          "total": { "type": "number", "description": "Total number of matching issues." },
-          "startAt": { "type": "number" },
-          "maxResults": { "type": "number" }
+          "total": {
+            "type": "number",
+            "description": "Total number of matching issues."
+          },
+          "startAt": {
+            "type": "number"
+          },
+          "maxResults": {
+            "type": "number"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/ex/jira/{{cloudId}}/rest/api/3/search",
+        "success": [
+          200,
+          201,
+          204
+        ],
+        "body": {
+          "jql": "{{jql}}",
+          "maxResults": "{{maxResults}}",
+          "startAt": "{{startAt}}",
+          "fields": "{{fields}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
         }
       }
     },
@@ -286,18 +459,41 @@
             "description": "Plain-text body of the comment."
           }
         },
-        "required": ["issueKey", "body"]
+        "required": [
+          "issueKey",
+          "body"
+        ]
       },
       "outputSchema": {
         "type": "object",
         "properties": {
-          "connector": { "type": "string" },
-          "action": { "type": "string" },
-          "source": { "type": "string" },
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
           "comment": {
             "type": "object",
             "description": "The created comment, normalized."
           }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/ex/jira/{{cloudId}}/rest/api/3/issue/{{issueKey}}/comment",
+        "success": [
+          201,
+          200
+        ],
+        "body": {
+          "body": "{{body}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
         }
       }
     },
@@ -324,20 +520,46 @@
             "description": "Maximum number of comments to return. Defaults to 50."
           }
         },
-        "required": ["issueKey"]
+        "required": [
+          "issueKey"
+        ]
       },
       "outputSchema": {
         "type": "object",
         "properties": {
-          "connector": { "type": "string" },
-          "action": { "type": "string" },
-          "source": { "type": "string" },
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
           "comments": {
             "type": "array",
-            "items": { "type": "object" },
+            "items": {
+              "type": "object"
+            },
             "description": "List of comments, normalized."
           },
-          "total": { "type": "number", "description": "Total number of comments." }
+          "total": {
+            "type": "number",
+            "description": "Total number of comments."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/ex/jira/{{cloudId}}/rest/api/3/issue/{{issueKey}}/comment",
+        "success": [
+          200,
+          201,
+          204
+        ],
+        "query": {
+          "startAt": "{{startAt}}",
+          "maxResults": "{{maxResults}}"
         }
       }
     },
@@ -356,27 +578,46 @@
             "description": "The issue key (e.g. \"PROJ-123\") or ID to list transitions for."
           }
         },
-        "required": ["issueKey"]
+        "required": [
+          "issueKey"
+        ]
       },
       "outputSchema": {
         "type": "object",
         "properties": {
-          "connector": { "type": "string" },
-          "action": { "type": "string" },
-          "source": { "type": "string" },
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
           "transitions": {
             "type": "array",
-            "items": { "type": "object" },
+            "items": {
+              "type": "object"
+            },
             "description": "Available transitions for the issue."
           }
         }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/ex/jira/{{cloudId}}/rest/api/3/issue/{{issueKey}}/transitions",
+        "success": [
+          200,
+          201,
+          204
+        ]
       }
     },
     "issues.transitions.do": {
       "kind": "action",
       "timeoutMs": 15000,
       "maxInputBytes": 262144,
-      "maxResponseBytes": 65536,
+      "maxResponseBytes": 1048576,
       "title": "Transition Issue",
       "description": "Move a Jira Cloud issue to a new status by performing a workflow transition via POST /rest/api/3/issue/{key}/transitions.",
       "inputSchema": {
@@ -395,15 +636,43 @@
             "description": "Optional plain-text comment to add when performing the transition."
           }
         },
-        "required": ["issueKey", "transitionId"]
+        "required": [
+          "issueKey",
+          "transitionId"
+        ]
       },
       "outputSchema": {
         "type": "object",
         "properties": {
-          "connector": { "type": "string" },
-          "action": { "type": "string" },
-          "source": { "type": "string" },
-          "transitioned": { "type": "boolean", "description": "True if the transition was performed." }
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "transitioned": {
+            "type": "boolean",
+            "description": "True if the transition was performed."
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/ex/jira/{{cloudId}}/rest/api/3/issue/{{issueKey}}/transitions",
+        "success": [
+          204,
+          200
+        ],
+        "body": {
+          "transition": {
+            "id": "{{transitionId}}"
+          }
+        },
+        "headers": {
+          "Content-Type": "application/json"
         }
       }
     },
@@ -426,15 +695,40 @@
             "description": "Atlassian account ID of the user to assign the issue to. Pass null or omit to unassign."
           }
         },
-        "required": ["issueKey"]
+        "required": [
+          "issueKey"
+        ]
       },
       "outputSchema": {
         "type": "object",
         "properties": {
-          "connector": { "type": "string" },
-          "action": { "type": "string" },
-          "source": { "type": "string" },
-          "assigned": { "type": "boolean", "description": "True if the assignment was updated." }
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "assigned": {
+            "type": "boolean",
+            "description": "True if the assignment was updated."
+          }
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/ex/jira/{{cloudId}}/rest/api/3/issue/{{issueKey}}/assignee",
+        "success": [
+          204,
+          200
+        ],
+        "body": {
+          "accountId": "{{accountId}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
         }
       }
     },
@@ -453,19 +747,36 @@
             "description": "The project key (e.g. \"PROJ\") or numeric ID of the project to retrieve."
           }
         },
-        "required": ["projectKey"]
+        "required": [
+          "projectKey"
+        ]
       },
       "outputSchema": {
         "type": "object",
         "properties": {
-          "connector": { "type": "string" },
-          "action": { "type": "string" },
-          "source": { "type": "string" },
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
           "project": {
             "type": "object",
             "description": "The retrieved project, normalized."
           }
         }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/ex/jira/{{cloudId}}/rest/api/3/project/{{projectKey}}",
+        "success": [
+          200,
+          201,
+          204
+        ]
       }
     },
     "users.get": {
@@ -483,18 +794,38 @@
             "description": "The Atlassian account ID of the user to retrieve."
           }
         },
-        "required": ["accountId"]
+        "required": [
+          "accountId"
+        ]
       },
       "outputSchema": {
         "type": "object",
         "properties": {
-          "connector": { "type": "string" },
-          "action": { "type": "string" },
-          "source": { "type": "string" },
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
           "user": {
             "type": "object",
             "description": "The retrieved user, normalized."
           }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/ex/jira/{{cloudId}}/rest/api/3/user",
+        "success": [
+          200,
+          201,
+          204
+        ],
+        "query": {
+          "accountId": "{{accountId}}"
         }
       }
     },
@@ -509,20 +840,58 @@
       "inputSchema": {
         "type": "object",
         "properties": {
-          "issueKey": { "type": "string", "description": "The issue key (e.g. \"PROJ-123\") or numeric ID." },
-          "startAt": { "type": "number", "description": "Index of the first changelog item to return. Defaults to 0." },
-          "maxResults": { "type": "number", "description": "Maximum number of changelog items to return. Defaults to 50." }
+          "issueKey": {
+            "type": "string",
+            "description": "The issue key (e.g. \"PROJ-123\") or numeric ID."
+          },
+          "startAt": {
+            "type": "number",
+            "description": "Index of the first changelog item to return. Defaults to 0."
+          },
+          "maxResults": {
+            "type": "number",
+            "description": "Maximum number of changelog items to return. Defaults to 50."
+          }
         },
-        "required": ["issueKey"]
+        "required": [
+          "issueKey"
+        ]
       },
       "outputSchema": {
         "type": "object",
         "properties": {
-          "connector": { "type": "string" },
-          "action": { "type": "string" },
-          "source": { "type": "string" },
-          "values": { "type": "array", "items": { "type": "object" }, "description": "Changelog entries." },
-          "total": { "type": "number" }
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "values": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            },
+            "description": "Changelog entries."
+          },
+          "total": {
+            "type": "number"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/ex/jira/{{cloudId}}/rest/api/3/issue/{{issueKey}}/changelog",
+        "success": [
+          200,
+          201,
+          204
+        ],
+        "query": {
+          "startAt": "{{startAt}}",
+          "maxResults": "{{maxResults}}"
         }
       }
     },
@@ -536,18 +905,49 @@
       "inputSchema": {
         "type": "object",
         "properties": {
-          "issueKey": { "type": "string", "description": "The issue key (e.g. \"PROJ-123\") or numeric ID." },
-          "accountId": { "type": "string", "description": "Atlassian account ID of the user to add as a watcher." }
+          "issueKey": {
+            "type": "string",
+            "description": "The issue key (e.g. \"PROJ-123\") or numeric ID."
+          },
+          "accountId": {
+            "type": "string",
+            "description": "Atlassian account ID of the user to add as a watcher."
+          }
         },
-        "required": ["issueKey", "accountId"]
+        "required": [
+          "issueKey",
+          "accountId"
+        ]
       },
       "outputSchema": {
         "type": "object",
         "properties": {
-          "connector": { "type": "string" },
-          "action": { "type": "string" },
-          "source": { "type": "string" },
-          "added": { "type": "boolean", "description": "True if the watcher was added." }
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "added": {
+            "type": "boolean",
+            "description": "True if the watcher was added."
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/ex/jira/{{cloudId}}/rest/api/3/issue/{{issueKey}}/watchers",
+        "success": [
+          204,
+          201,
+          200
+        ],
+        "body": "{{accountId}}",
+        "headers": {
+          "Content-Type": "application/json"
         }
       }
     },
@@ -561,20 +961,66 @@
       "inputSchema": {
         "type": "object",
         "properties": {
-          "inwardIssueKey": { "type": "string", "description": "Issue key that is the inward side of the link (e.g. is blocked by)." },
-          "outwardIssueKey": { "type": "string", "description": "Issue key that is the outward side of the link (e.g. blocks)." },
-          "type": { "type": "string", "description": "Link type name, e.g. \"Blocks\", \"Relates\", \"Duplicate\"." },
-          "comment": { "type": "string", "description": "Optional plain-text comment to attach to the link." }
+          "inwardIssueKey": {
+            "type": "string",
+            "description": "Issue key that is the inward side of the link (e.g. is blocked by)."
+          },
+          "outwardIssueKey": {
+            "type": "string",
+            "description": "Issue key that is the outward side of the link (e.g. blocks)."
+          },
+          "type": {
+            "type": "string",
+            "description": "Link type name, e.g. \"Blocks\", \"Relates\", \"Duplicate\"."
+          },
+          "comment": {
+            "type": "string",
+            "description": "Optional plain-text comment to attach to the link."
+          }
         },
-        "required": ["inwardIssueKey", "outwardIssueKey", "type"]
+        "required": [
+          "inwardIssueKey",
+          "outwardIssueKey",
+          "type"
+        ]
       },
       "outputSchema": {
         "type": "object",
         "properties": {
-          "connector": { "type": "string" },
-          "action": { "type": "string" },
-          "source": { "type": "string" },
-          "created": { "type": "boolean" }
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "created": {
+            "type": "boolean"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/ex/jira/{{cloudId}}/rest/api/3/issueLink",
+        "success": [
+          201,
+          200
+        ],
+        "body": {
+          "type": {
+            "name": "{{type}}"
+          },
+          "inwardIssue": {
+            "key": "{{inwardIssueKey}}"
+          },
+          "outwardIssue": {
+            "key": "{{outwardIssueKey}}"
+          }
+        },
+        "headers": {
+          "Content-Type": "application/json"
         }
       }
     },
@@ -588,20 +1034,60 @@
       "inputSchema": {
         "type": "object",
         "properties": {
-          "issueKey": { "type": "string", "description": "The issue key (e.g. \"PROJ-123\") or numeric ID." },
-          "timeSpent": { "type": "string", "description": "Time spent, e.g. \"1h 30m\" or \"2d\"." },
-          "started": { "type": "string", "description": "When the work started, in Jira datetime format." },
-          "comment": { "type": "string", "description": "Optional plain-text worklog comment." }
+          "issueKey": {
+            "type": "string",
+            "description": "The issue key (e.g. \"PROJ-123\") or numeric ID."
+          },
+          "timeSpent": {
+            "type": "string",
+            "description": "Time spent, e.g. \"1h 30m\" or \"2d\"."
+          },
+          "started": {
+            "type": "string",
+            "description": "When the work started, in Jira datetime format."
+          },
+          "comment": {
+            "type": "string",
+            "description": "Optional plain-text worklog comment."
+          }
         },
-        "required": ["issueKey", "timeSpent"]
+        "required": [
+          "issueKey",
+          "timeSpent"
+        ]
       },
       "outputSchema": {
         "type": "object",
         "properties": {
-          "connector": { "type": "string" },
-          "action": { "type": "string" },
-          "source": { "type": "string" },
-          "worklog": { "type": "object", "description": "The created worklog." }
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "worklog": {
+            "type": "object",
+            "description": "The created worklog."
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/ex/jira/{{cloudId}}/rest/api/3/issue/{{issueKey}}/worklog",
+        "success": [
+          201,
+          200
+        ],
+        "body": {
+          "timeSpent": "{{timeSpent}}",
+          "started": "{{started}}",
+          "comment": "{{comment}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
         }
       }
     },
@@ -620,11 +1106,29 @@
       "outputSchema": {
         "type": "object",
         "properties": {
-          "connector": { "type": "string" },
-          "action": { "type": "string" },
-          "source": { "type": "string" },
-          "user": { "type": "object", "description": "The current Jira user, normalized." }
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "user": {
+            "type": "object",
+            "description": "The current Jira user, normalized."
+          }
         }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/ex/jira/{{cloudId}}/rest/api/3/myself",
+        "success": [
+          200,
+          201,
+          204
+        ]
       }
     },
     "fields.list": {
@@ -642,30 +1146,138 @@
       "outputSchema": {
         "type": "object",
         "properties": {
-          "connector": { "type": "string" },
-          "action": { "type": "string" },
-          "source": { "type": "string" },
-          "fields": { "type": "array", "items": { "type": "object" }, "description": "Jira field definitions." }
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "fields": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            },
+            "description": "Jira field definitions."
+          }
         }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/ex/jira/{{cloudId}}/rest/api/3/field",
+        "success": [
+          200,
+          201,
+          204
+        ]
       }
     },
     "webhook.jira.issue_created": {
       "kind": "webhook",
+      "sideEffect": "read",
       "timeoutMs": 30000,
       "maxInputBytes": 1048576,
-      "maxResponseBytes": 1048576
+      "maxResponseBytes": 1048576,
+      "title": "Issue Created",
+      "description": "Fires when a Jira issue is created.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "webhookEvent": {
+            "type": "string",
+            "description": "Jira webhookEvent string."
+          },
+          "issue": {
+            "type": "object",
+            "description": "Issue payload when present."
+          },
+          "comment": {
+            "type": "object",
+            "description": "Comment payload when present."
+          },
+          "sprint": {
+            "type": "object",
+            "description": "Sprint payload when present."
+          },
+          "version": {
+            "type": "object",
+            "description": "Version payload when present."
+          }
+        },
+        "additionalProperties": true
+      }
     },
     "webhook.jira.issue_updated": {
       "kind": "webhook",
+      "sideEffect": "read",
       "timeoutMs": 30000,
       "maxInputBytes": 1048576,
-      "maxResponseBytes": 1048576
+      "maxResponseBytes": 1048576,
+      "title": "Issue Updated",
+      "description": "Fires when a Jira issue is updated.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "webhookEvent": {
+            "type": "string",
+            "description": "Jira webhookEvent string."
+          },
+          "issue": {
+            "type": "object",
+            "description": "Issue payload when present."
+          },
+          "comment": {
+            "type": "object",
+            "description": "Comment payload when present."
+          },
+          "sprint": {
+            "type": "object",
+            "description": "Sprint payload when present."
+          },
+          "version": {
+            "type": "object",
+            "description": "Version payload when present."
+          }
+        },
+        "additionalProperties": true
+      }
     },
     "webhook.comment_created": {
       "kind": "webhook",
+      "sideEffect": "read",
       "timeoutMs": 30000,
       "maxInputBytes": 1048576,
-      "maxResponseBytes": 1048576
+      "maxResponseBytes": 1048576,
+      "title": "Comment Created",
+      "description": "Fires when an issue comment is created.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "webhookEvent": {
+            "type": "string",
+            "description": "Jira webhookEvent string."
+          },
+          "issue": {
+            "type": "object",
+            "description": "Issue payload when present."
+          },
+          "comment": {
+            "type": "object",
+            "description": "Comment payload when present."
+          },
+          "sprint": {
+            "type": "object",
+            "description": "Sprint payload when present."
+          },
+          "version": {
+            "type": "object",
+            "description": "Version payload when present."
+          }
+        },
+        "additionalProperties": true
+      }
     },
     "healthcheck": {
       "kind": "action",
@@ -686,6 +1298,6117 @@
             "type": "string",
             "description": "Connector health status, e.g. \"ok\" or \"error\"."
           }
+        }
+      }
+    },
+    "webhook.jira.issue_deleted": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Issue Deleted",
+      "description": "Fires when a Jira issue is deleted.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "webhookEvent": {
+            "type": "string",
+            "description": "Jira webhookEvent string."
+          },
+          "issue": {
+            "type": "object",
+            "description": "Issue payload when present."
+          },
+          "comment": {
+            "type": "object",
+            "description": "Comment payload when present."
+          },
+          "sprint": {
+            "type": "object",
+            "description": "Sprint payload when present."
+          },
+          "version": {
+            "type": "object",
+            "description": "Version payload when present."
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "webhook.comment_updated": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Comment Updated",
+      "description": "Fires when an issue comment is updated.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "webhookEvent": {
+            "type": "string",
+            "description": "Jira webhookEvent string."
+          },
+          "issue": {
+            "type": "object",
+            "description": "Issue payload when present."
+          },
+          "comment": {
+            "type": "object",
+            "description": "Comment payload when present."
+          },
+          "sprint": {
+            "type": "object",
+            "description": "Sprint payload when present."
+          },
+          "version": {
+            "type": "object",
+            "description": "Version payload when present."
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "webhook.comment_deleted": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Comment Deleted",
+      "description": "Fires when an issue comment is deleted.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "webhookEvent": {
+            "type": "string",
+            "description": "Jira webhookEvent string."
+          },
+          "issue": {
+            "type": "object",
+            "description": "Issue payload when present."
+          },
+          "comment": {
+            "type": "object",
+            "description": "Comment payload when present."
+          },
+          "sprint": {
+            "type": "object",
+            "description": "Sprint payload when present."
+          },
+          "version": {
+            "type": "object",
+            "description": "Version payload when present."
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "webhook.sprint_created": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Sprint Created",
+      "description": "Fires when a sprint is created.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "webhookEvent": {
+            "type": "string",
+            "description": "Jira webhookEvent string."
+          },
+          "issue": {
+            "type": "object",
+            "description": "Issue payload when present."
+          },
+          "comment": {
+            "type": "object",
+            "description": "Comment payload when present."
+          },
+          "sprint": {
+            "type": "object",
+            "description": "Sprint payload when present."
+          },
+          "version": {
+            "type": "object",
+            "description": "Version payload when present."
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "webhook.sprint_updated": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Sprint Updated",
+      "description": "Fires when a sprint is updated.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "webhookEvent": {
+            "type": "string",
+            "description": "Jira webhookEvent string."
+          },
+          "issue": {
+            "type": "object",
+            "description": "Issue payload when present."
+          },
+          "comment": {
+            "type": "object",
+            "description": "Comment payload when present."
+          },
+          "sprint": {
+            "type": "object",
+            "description": "Sprint payload when present."
+          },
+          "version": {
+            "type": "object",
+            "description": "Version payload when present."
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "webhook.sprint_started": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Sprint Started",
+      "description": "Fires when a sprint is started.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "webhookEvent": {
+            "type": "string",
+            "description": "Jira webhookEvent string."
+          },
+          "issue": {
+            "type": "object",
+            "description": "Issue payload when present."
+          },
+          "comment": {
+            "type": "object",
+            "description": "Comment payload when present."
+          },
+          "sprint": {
+            "type": "object",
+            "description": "Sprint payload when present."
+          },
+          "version": {
+            "type": "object",
+            "description": "Version payload when present."
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "webhook.sprint_closed": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Sprint Closed",
+      "description": "Fires when a sprint is closed.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "webhookEvent": {
+            "type": "string",
+            "description": "Jira webhookEvent string."
+          },
+          "issue": {
+            "type": "object",
+            "description": "Issue payload when present."
+          },
+          "comment": {
+            "type": "object",
+            "description": "Comment payload when present."
+          },
+          "sprint": {
+            "type": "object",
+            "description": "Sprint payload when present."
+          },
+          "version": {
+            "type": "object",
+            "description": "Version payload when present."
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "webhook.version_created": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Version Created",
+      "description": "Fires when a project version is created.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "webhookEvent": {
+            "type": "string",
+            "description": "Jira webhookEvent string."
+          },
+          "issue": {
+            "type": "object",
+            "description": "Issue payload when present."
+          },
+          "comment": {
+            "type": "object",
+            "description": "Comment payload when present."
+          },
+          "sprint": {
+            "type": "object",
+            "description": "Sprint payload when present."
+          },
+          "version": {
+            "type": "object",
+            "description": "Version payload when present."
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "webhook.version_updated": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Version Updated",
+      "description": "Fires when a project version is updated.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "webhookEvent": {
+            "type": "string",
+            "description": "Jira webhookEvent string."
+          },
+          "issue": {
+            "type": "object",
+            "description": "Issue payload when present."
+          },
+          "comment": {
+            "type": "object",
+            "description": "Comment payload when present."
+          },
+          "sprint": {
+            "type": "object",
+            "description": "Sprint payload when present."
+          },
+          "version": {
+            "type": "object",
+            "description": "Version payload when present."
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "webhook.version_deleted": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Version Deleted",
+      "description": "Fires when a project version is deleted.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "webhookEvent": {
+            "type": "string",
+            "description": "Jira webhookEvent string."
+          },
+          "issue": {
+            "type": "object",
+            "description": "Issue payload when present."
+          },
+          "comment": {
+            "type": "object",
+            "description": "Comment payload when present."
+          },
+          "sprint": {
+            "type": "object",
+            "description": "Sprint payload when present."
+          },
+          "version": {
+            "type": "object",
+            "description": "Version payload when present."
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "webhook.version_released": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Version Released",
+      "description": "Fires when a project version is released.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "webhookEvent": {
+            "type": "string",
+            "description": "Jira webhookEvent string."
+          },
+          "issue": {
+            "type": "object",
+            "description": "Issue payload when present."
+          },
+          "comment": {
+            "type": "object",
+            "description": "Comment payload when present."
+          },
+          "sprint": {
+            "type": "object",
+            "description": "Sprint payload when present."
+          },
+          "version": {
+            "type": "object",
+            "description": "Version payload when present."
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "webhook.version_unreleased": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Version Unreleased",
+      "description": "Fires when a project version is unreleased.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "webhookEvent": {
+            "type": "string",
+            "description": "Jira webhookEvent string."
+          },
+          "issue": {
+            "type": "object",
+            "description": "Issue payload when present."
+          },
+          "comment": {
+            "type": "object",
+            "description": "Comment payload when present."
+          },
+          "sprint": {
+            "type": "object",
+            "description": "Sprint payload when present."
+          },
+          "version": {
+            "type": "object",
+            "description": "Version payload when present."
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "webhook.version_moved": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Version Moved",
+      "description": "Fires when a project version is moved.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "webhookEvent": {
+            "type": "string",
+            "description": "Jira webhookEvent string."
+          },
+          "issue": {
+            "type": "object",
+            "description": "Issue payload when present."
+          },
+          "comment": {
+            "type": "object",
+            "description": "Comment payload when present."
+          },
+          "sprint": {
+            "type": "object",
+            "description": "Sprint payload when present."
+          },
+          "version": {
+            "type": "object",
+            "description": "Version payload when present."
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "webhook.version_merged": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Version Merged",
+      "description": "Fires when a project version is merged.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "webhookEvent": {
+            "type": "string",
+            "description": "Jira webhookEvent string."
+          },
+          "issue": {
+            "type": "object",
+            "description": "Issue payload when present."
+          },
+          "comment": {
+            "type": "object",
+            "description": "Comment payload when present."
+          },
+          "sprint": {
+            "type": "object",
+            "description": "Sprint payload when present."
+          },
+          "version": {
+            "type": "object",
+            "description": "Version payload when present."
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "attachments.add": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 262144,
+      "maxResponseBytes": 1048576,
+      "title": "Add Attachment",
+      "description": "Upload and attach a file to a Jira issue via POST /rest/api/3/issue/{issueIdOrKey}/attachments.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "issue_key": {
+            "type": "string",
+            "description": "Issue ID or key to attach the file to."
+          },
+          "file_to_upload": {
+            "type": "object",
+            "description": "File payload with name and content or bytes."
+          }
+        },
+        "required": [
+          "issue_key",
+          "file_to_upload"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {},
+          "status": {
+            "type": "number"
+          }
+        }
+      },
+      "sideEffect": "write",
+      "request": {
+        "method": "POST",
+        "path": "/ex/jira/{{cloudId}}/rest/api/3/issue/{{issue_key}}/attachments",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "headers": {
+          "X-Atlassian-Token": "no-check"
+        }
+      }
+    },
+    "projects.roles.actors.add": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Add Users to Project Role",
+      "description": "Add users or groups to a project role via POST /rest/api/3/project/{projectIdOrKey}/role/{id}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "project_id_or_key": {
+            "type": "string",
+            "description": "Project ID or key."
+          },
+          "role_id": {
+            "type": "number",
+            "description": "Project role ID."
+          },
+          "user_account_ids": {
+            "type": "array",
+            "description": "Atlassian account IDs to add.",
+            "items": {
+              "type": "string"
+            }
+          },
+          "group_ids": {
+            "type": "array",
+            "description": "Group IDs to add. Mutually exclusive with group_names.",
+            "items": {
+              "type": "string"
+            }
+          },
+          "group_names": {
+            "type": "array",
+            "description": "Group names to add. Mutually exclusive with group_ids.",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "project_id_or_key",
+          "role_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {},
+          "status": {
+            "type": "number"
+          }
+        }
+      },
+      "sideEffect": "write",
+      "request": {
+        "method": "POST",
+        "path": "/ex/jira/{{cloudId}}/rest/api/3/project/{{project_id_or_key}}/role/{{role_id}}",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "body": {
+          "user": "{{user_account_ids}}",
+          "groupId": "{{group_ids}}",
+          "group": "{{group_names}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    "groups.users.add": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Add User to Group",
+      "description": "Add a user to a Jira group via POST /rest/api/3/group/user.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "account_id": {
+            "type": "string",
+            "description": "Atlassian account ID of the user."
+          },
+          "group_name": {
+            "type": "string",
+            "description": "Group name. Provide group_name or group_id."
+          },
+          "group_id": {
+            "type": "string",
+            "description": "Group ID. Provide group_name or group_id."
+          }
+        },
+        "required": [
+          "account_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {},
+          "status": {
+            "type": "number"
+          }
+        }
+      },
+      "sideEffect": "write",
+      "request": {
+        "method": "POST",
+        "path": "/ex/jira/{{cloudId}}/rest/api/3/group/user",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "query": {
+          "groupId": "{{group_id}}",
+          "groupname": "{{group_name}}"
+        },
+        "body": {
+          "accountId": "{{account_id}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    "expressions.analyse": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Analyse Jira Expression",
+      "description": "Analyse Jira expressions for syntax, type, or complexity via POST /rest/api/3/expression/analyse.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "expressions": {
+            "type": "array",
+            "description": "Jira expressions to analyse.",
+            "items": {
+              "type": "string"
+            }
+          },
+          "check": {
+            "type": "string",
+            "description": "Check type: syntax, type, or complexity."
+          },
+          "context_variables": {
+            "type": "object",
+            "description": "Context variable types for the analyser."
+          }
+        },
+        "required": [
+          "expressions"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {},
+          "status": {
+            "type": "number"
+          }
+        }
+      },
+      "sideEffect": "read",
+      "request": {
+        "method": "POST",
+        "path": "/ex/jira/{{cloudId}}/rest/api/3/expression/analyse",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "body": {
+          "expressions": "{{expressions}}",
+          "check": "{{check}}",
+          "context": "{{context_variables}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    "issues.bulk_create": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 262144,
+      "maxResponseBytes": 1048576,
+      "title": "Bulk Create Issues",
+      "description": "Create up to 50 Jira issues in one call via POST /rest/api/3/issue/bulk.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "issues": {
+            "type": "array",
+            "description": "Issue definitions using the same fields as create issue.",
+            "items": {
+              "type": "object"
+            }
+          }
+        },
+        "required": [
+          "issues"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {},
+          "status": {
+            "type": "number"
+          }
+        }
+      },
+      "sideEffect": "write",
+      "request": {
+        "method": "POST",
+        "path": "/ex/jira/{{cloudId}}/rest/api/3/issue/bulk",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "body": {
+          "issueUpdates": "{{issues}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    "permissions.check": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Check User Permissions",
+      "description": "Check global and project permissions via POST /rest/api/3/permissions/check.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "account_id": {
+            "type": "string",
+            "description": "Account ID to check. Defaults to the caller."
+          },
+          "global_permissions": {
+            "type": "array",
+            "description": "Global permission keys to evaluate.",
+            "items": {
+              "type": "string"
+            }
+          },
+          "project_permissions": {
+            "type": "array",
+            "description": "Project permission checks.",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {},
+          "status": {
+            "type": "number"
+          }
+        }
+      },
+      "sideEffect": "read",
+      "request": {
+        "method": "POST",
+        "path": "/ex/jira/{{cloudId}}/rest/api/3/permissions/check",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "body": {
+          "accountId": "{{account_id}}",
+          "globalPermissions": "{{global_permissions}}",
+          "projectPermissions": "{{project_permissions}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    "boards.create": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Create Board",
+      "description": "Create a Jira Software board via POST /rest/agile/1.0/board.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Board name."
+          },
+          "type": {
+            "type": "string",
+            "description": "Board type: kanban, scrum, or agility."
+          },
+          "filterId": {
+            "type": "number",
+            "description": "Filter ID that feeds the board."
+          },
+          "location": {
+            "type": "object",
+            "description": "Board location (project or user)."
+          }
+        },
+        "required": [
+          "name",
+          "type"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {},
+          "status": {
+            "type": "number"
+          }
+        }
+      },
+      "sideEffect": "write",
+      "request": {
+        "method": "POST",
+        "path": "/ex/jira/{{cloudId}}/rest/agile/1.0/board",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "body": {
+          "name": "{{name}}",
+          "type": "{{type}}",
+          "filterId": "{{filterId}}",
+          "location": "{{location}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    "groups.create": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Create Group",
+      "description": "Create a Jira group via POST /rest/api/3/group.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Unique group name."
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {},
+          "status": {
+            "type": "number"
+          }
+        }
+      },
+      "sideEffect": "write",
+      "request": {
+        "method": "POST",
+        "path": "/ex/jira/{{cloudId}}/rest/api/3/group",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "body": {
+          "name": "{{name}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    "jql.autocompletedata.create": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get JQL Autocomplete Data",
+      "description": "Retrieve JQL autocomplete reference data via POST /rest/api/3/jql/autocompletedata.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "project_ids": {
+            "type": "array",
+            "description": "Project IDs used to filter visible fields.",
+            "items": {
+              "type": "number"
+            }
+          },
+          "include_collapsed_fields": {
+            "type": "boolean",
+            "description": "Include collapsed fields with duplicate names."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {},
+          "status": {
+            "type": "number"
+          }
+        }
+      },
+      "sideEffect": "read",
+      "request": {
+        "method": "POST",
+        "path": "/ex/jira/{{cloudId}}/rest/api/3/jql/autocompletedata",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "body": {
+          "projectIds": "{{project_ids}}",
+          "includeCollapsedFields": "{{include_collapsed_fields}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    "projects.create": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Create Project",
+      "description": "Create a Jira project via POST /rest/api/3/project.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "description": "Unique project key (uppercase letters)."
+          },
+          "name": {
+            "type": "string",
+            "description": "Human-readable project name."
+          },
+          "lead_account_id": {
+            "type": "string",
+            "description": "Atlassian account ID of the project lead."
+          },
+          "project_type_key": {
+            "type": "string",
+            "description": "business, software, or service_desk."
+          },
+          "project_template_key": {
+            "type": "string",
+            "description": "Template key compatible with project_type_key."
+          },
+          "url": {
+            "type": "string",
+            "description": "Optional project URL."
+          },
+          "description": {
+            "type": "string",
+            "description": "Project description."
+          },
+          "assignee_type": {
+            "type": "string",
+            "description": "PROJECT_LEAD or UNASSIGNED."
+          },
+          "avatar_id": {
+            "type": "number",
+            "description": "Existing avatar ID."
+          },
+          "category_id": {
+            "type": "number",
+            "description": "Project category ID."
+          },
+          "permission_scheme": {
+            "type": "number",
+            "description": "Permission scheme ID."
+          },
+          "notification_scheme": {
+            "type": "number",
+            "description": "Notification scheme ID."
+          },
+          "issue_security_scheme": {
+            "type": "number",
+            "description": "Issue security scheme ID."
+          },
+          "additional_properties": {
+            "type": "object",
+            "description": "Extra Jira project fields (camelCase)."
+          }
+        },
+        "required": [
+          "key",
+          "name",
+          "lead_account_id",
+          "project_type_key",
+          "project_template_key"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {},
+          "status": {
+            "type": "number"
+          }
+        }
+      },
+      "sideEffect": "write",
+      "request": {
+        "method": "POST",
+        "path": "/ex/jira/{{cloudId}}/rest/api/3/project",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "body": {
+          "key": "{{key}}",
+          "name": "{{name}}",
+          "leadAccountId": "{{lead_account_id}}",
+          "projectTypeKey": "{{project_type_key}}",
+          "projectTemplateKey": "{{project_template_key}}",
+          "url": "{{url}}",
+          "description": "{{description}}",
+          "assigneeType": "{{assignee_type}}",
+          "avatarId": "{{avatar_id}}",
+          "categoryId": "{{category_id}}",
+          "permissionScheme": "{{permission_scheme}}",
+          "notificationScheme": "{{notification_scheme}}",
+          "issueSecurityScheme": "{{issue_security_scheme}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    "sprints.create": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Create Sprint",
+      "description": "Create a sprint on a board via POST /rest/agile/1.0/sprint.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Sprint name."
+          },
+          "origin_board_id": {
+            "type": "number",
+            "description": "Board that owns the sprint."
+          },
+          "goal": {
+            "type": "string",
+            "description": "Sprint goal."
+          },
+          "start_date": {
+            "type": "string",
+            "description": "ISO-8601 start datetime."
+          },
+          "end_date": {
+            "type": "string",
+            "description": "ISO-8601 end datetime."
+          },
+          "additional_properties": {
+            "type": "object",
+            "description": "Extra sprint fields."
+          }
+        },
+        "required": [
+          "name",
+          "origin_board_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {},
+          "status": {
+            "type": "number"
+          }
+        }
+      },
+      "sideEffect": "write",
+      "request": {
+        "method": "POST",
+        "path": "/ex/jira/{{cloudId}}/rest/agile/1.0/sprint",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "body": {
+          "name": "{{name}}",
+          "originBoardId": "{{origin_board_id}}",
+          "goal": "{{goal}}",
+          "startDate": "{{start_date}}",
+          "endDate": "{{end_date}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    "versions.create": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Create Version",
+      "description": "Create a project version via POST /rest/api/3/version.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Version name."
+          },
+          "project_id": {
+            "type": "string",
+            "description": "Numeric project ID."
+          },
+          "description": {
+            "type": "string",
+            "description": "Version description."
+          },
+          "archived": {
+            "type": "boolean",
+            "description": "Whether the version is archived."
+          },
+          "released": {
+            "type": "boolean",
+            "description": "Whether the version is released."
+          },
+          "start_date": {
+            "type": "string",
+            "description": "Start date YYYY-MM-DD."
+          },
+          "release_date": {
+            "type": "string",
+            "description": "Release date YYYY-MM-DD."
+          },
+          "additional_properties": {
+            "type": "object",
+            "description": "Extra version fields."
+          }
+        },
+        "required": [
+          "name",
+          "project_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {},
+          "status": {
+            "type": "number"
+          }
+        }
+      },
+      "sideEffect": "write",
+      "request": {
+        "method": "POST",
+        "path": "/ex/jira/{{cloudId}}/rest/api/3/version",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "body": {
+          "name": "{{name}}",
+          "projectId": "{{project_id}}",
+          "description": "{{description}}",
+          "archived": "{{archived}}",
+          "released": "{{released}}",
+          "startDate": "{{start_date}}",
+          "releaseDate": "{{release_date}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    "attachments.delete": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Delete Attachment",
+      "description": "Delete an issue attachment via DELETE /rest/api/3/attachment/{id}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "attachment_id": {
+            "type": "string",
+            "description": "Attachment ID to delete."
+          }
+        },
+        "required": [
+          "attachment_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {},
+          "status": {
+            "type": "number"
+          }
+        }
+      },
+      "sideEffect": "write",
+      "request": {
+        "method": "DELETE",
+        "path": "/ex/jira/{{cloudId}}/rest/api/3/attachment/{{attachment_id}}",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ]
+      }
+    },
+    "issues.comments.delete": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Delete Comment",
+      "description": "Delete an issue comment via DELETE /rest/api/3/issue/{issueIdOrKey}/comment/{id}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "issueIdOrKey": {
+            "type": "string",
+            "description": "Issue ID or key."
+          },
+          "id": {
+            "type": "string",
+            "description": "Comment ID."
+          }
+        },
+        "required": [
+          "issueIdOrKey",
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {},
+          "status": {
+            "type": "number"
+          }
+        }
+      },
+      "sideEffect": "write",
+      "request": {
+        "method": "DELETE",
+        "path": "/ex/jira/{{cloudId}}/rest/api/3/issue/{{issueIdOrKey}}/comment/{{id}}",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ]
+      }
+    },
+    "versions.delete": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Delete Version",
+      "description": "Delete a project version via DELETE /rest/api/3/version/{id}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "version_id": {
+            "type": "string",
+            "description": "Version ID to delete."
+          },
+          "move_fix_issues_to": {
+            "type": "string",
+            "description": "Version ID that should receive fix-version issues."
+          },
+          "move_affected_issues_to": {
+            "type": "string",
+            "description": "Version ID that should receive affected-version issues."
+          }
+        },
+        "required": [
+          "version_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {},
+          "status": {
+            "type": "number"
+          }
+        }
+      },
+      "sideEffect": "write",
+      "request": {
+        "method": "DELETE",
+        "path": "/ex/jira/{{cloudId}}/rest/api/3/version/{{version_id}}",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "query": {
+          "moveFixIssuesTo": "{{move_fix_issues_to}}",
+          "moveAffectedIssuesTo": "{{move_affected_issues_to}}"
+        }
+      }
+    },
+    "worklogs.delete": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Delete Worklog",
+      "description": "Delete a worklog via DELETE /rest/api/3/issue/{issueIdOrKey}/worklog/{id}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "issue_id_or_key": {
+            "type": "string",
+            "description": "Issue ID or key."
+          },
+          "worklog_id": {
+            "type": "string",
+            "description": "Worklog ID."
+          },
+          "adjust_estimate": {
+            "type": "string",
+            "description": "new, leave, manual, or auto."
+          },
+          "new_estimate": {
+            "type": "string",
+            "description": "New remaining estimate when adjust_estimate is new."
+          },
+          "increase_by": {
+            "type": "string",
+            "description": "Amount to increase remaining estimate when adjust_estimate is manual."
+          },
+          "notify_users": {
+            "type": "boolean",
+            "description": "Whether to notify watchers."
+          },
+          "override_editable_flag": {
+            "type": "boolean",
+            "description": "Allow update when the issue is not editable."
+          }
+        },
+        "required": [
+          "issue_id_or_key",
+          "worklog_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {},
+          "status": {
+            "type": "number"
+          }
+        }
+      },
+      "sideEffect": "write",
+      "request": {
+        "method": "DELETE",
+        "path": "/ex/jira/{{cloudId}}/rest/api/3/issue/{{issue_id_or_key}}/worklog/{{worklog_id}}",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "query": {
+          "adjustEstimate": "{{adjust_estimate}}",
+          "newEstimate": "{{new_estimate}}",
+          "increaseBy": "{{increase_by}}",
+          "notifyUsers": "{{notify_users}}",
+          "overrideEditableFlag": "{{override_editable_flag}}"
+        }
+      }
+    },
+    "expressions.evaluate": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Evaluate Jira Expression",
+      "description": "Evaluate a Jira expression via POST /rest/api/3/expression/eval.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "expression": {
+            "type": "string",
+            "description": "Jira expression to evaluate."
+          },
+          "expand": {
+            "type": "string",
+            "description": "Response expand options, e.g. meta."
+          },
+          "context": {
+            "type": "object",
+            "description": "Evaluation context (issue, project, etc.)."
+          }
+        },
+        "required": [
+          "expression"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {},
+          "status": {
+            "type": "number"
+          }
+        }
+      },
+      "sideEffect": "read",
+      "request": {
+        "method": "POST",
+        "path": "/ex/jira/{{cloudId}}/rest/api/3/expression/eval",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "query": {
+          "expand": "{{expand}}"
+        },
+        "body": {
+          "expression": "{{expression}}",
+          "context": "{{context}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    "issues.bulk_fetch": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Bulk Fetch Issues",
+      "description": "Fetch many issues by ID or key via POST /rest/api/3/issue/bulkfetch.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "issueIdsOrKeys": {
+            "type": "array",
+            "description": "Issue IDs or keys to fetch.",
+            "items": {
+              "type": "string"
+            }
+          },
+          "expand": {
+            "type": "string",
+            "description": "Entities to expand."
+          },
+          "fields": {
+            "type": "array",
+            "description": "Fields to return.",
+            "items": {
+              "type": "string"
+            }
+          },
+          "properties": {
+            "type": "array",
+            "description": "Issue property keys to return.",
+            "items": {
+              "type": "string"
+            }
+          },
+          "fieldsByKeys": {
+            "type": "boolean",
+            "description": "Treat fields as keys rather than IDs."
+          }
+        },
+        "required": [
+          "issueIdsOrKeys"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {},
+          "status": {
+            "type": "number"
+          }
+        }
+      },
+      "sideEffect": "read",
+      "request": {
+        "method": "POST",
+        "path": "/ex/jira/{{cloudId}}/rest/api/3/issue/bulkfetch",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "body": {
+          "issueIdsOrKeys": "{{issueIdsOrKeys}}",
+          "expand": "{{expand}}",
+          "fields": "{{fields}}",
+          "properties": "{{properties}}",
+          "fieldsByKeys": "{{fieldsByKeys}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    "users.search": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Find Users",
+      "description": "Find users via GET /rest/api/3/user/search.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "Display name or email query string."
+          },
+          "active": {
+            "type": "boolean",
+            "description": "Restrict to active users when supported."
+          },
+          "start_at": {
+            "type": "number",
+            "description": "Page offset."
+          },
+          "account_id": {
+            "type": "string",
+            "description": "Filter to a single account ID."
+          },
+          "max_results": {
+            "type": "number",
+            "description": "Page size."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {},
+          "status": {
+            "type": "number"
+          }
+        }
+      },
+      "sideEffect": "read",
+      "request": {
+        "method": "GET",
+        "path": "/ex/jira/{{cloudId}}/rest/api/3/user/search",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "query": {
+          "query": "{{query}}",
+          "username": "{{username}}",
+          "accountId": "{{account_id}}",
+          "startAt": "{{start_at}}",
+          "maxResults": "{{max_results}}",
+          "property": "{{property}}"
+        }
+      }
+    },
+    "users.search.query": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Find Users 2",
+      "description": "Deprecated user search via GET /rest/api/3/user/search (query, username, accountId).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "User query string."
+          },
+          "startAt": {
+            "type": "number",
+            "description": "Page offset."
+          },
+          "property": {
+            "type": "string",
+            "description": "User property to include."
+          },
+          "username": {
+            "type": "string",
+            "description": "Deprecated username filter."
+          },
+          "accountId": {
+            "type": "string",
+            "description": "Atlassian account ID."
+          },
+          "maxResults": {
+            "type": "number",
+            "description": "Page size."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {},
+          "status": {
+            "type": "number"
+          }
+        }
+      },
+      "sideEffect": "read",
+      "request": {
+        "method": "GET",
+        "path": "/ex/jira/{{cloudId}}/rest/api/3/user/search",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "query": {
+          "query": "{{query}}",
+          "startAt": "{{startAt}}",
+          "property": "{{property}}",
+          "username": "{{username}}",
+          "accountId": "{{accountId}}",
+          "maxResults": "{{maxResults}}"
+        }
+      }
+    },
+    "users.picker": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Find Users For Picker",
+      "description": "Find users for a picker via GET /rest/api/3/user/picker.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "Picker query string."
+          },
+          "avatarSize": {
+            "type": "string",
+            "description": "Avatar size to return."
+          },
+          "maxResults": {
+            "type": "number",
+            "description": "Maximum users to return."
+          },
+          "showAvatar": {
+            "type": "boolean",
+            "description": "Include avatar URLs."
+          },
+          "excludeAccountIds": {
+            "type": "array",
+            "description": "Account IDs to exclude.",
+            "items": {
+              "type": "string"
+            }
+          },
+          "excludeConnectUsers": {
+            "type": "boolean",
+            "description": "Exclude Connect app users."
+          }
+        },
+        "required": [
+          "query"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {},
+          "status": {
+            "type": "number"
+          }
+        }
+      },
+      "sideEffect": "read",
+      "request": {
+        "method": "GET",
+        "path": "/ex/jira/{{cloudId}}/rest/api/3/user/picker",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "query": {
+          "query": "{{query}}",
+          "maxResults": "{{maxResults}}",
+          "showAvatar": "{{showAvatar}}",
+          "excludeConnectUsers": "{{excludeConnectUsers}}",
+          "excludeAccountIds": "{{excludeAccountIds}}",
+          "avatarSize": "{{avatarSize}}"
+        }
+      }
+    },
+    "groups.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get All Groups",
+      "description": "List groups via GET /rest/api/3/group/bulk.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "start_at": {
+            "type": "number",
+            "description": "Page offset."
+          },
+          "max_results": {
+            "type": "number",
+            "description": "Page size."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {},
+          "status": {
+            "type": "number"
+          }
+        }
+      },
+      "sideEffect": "read",
+      "request": {
+        "method": "GET",
+        "path": "/ex/jira/{{cloudId}}/rest/api/3/group/bulk",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "query": {
+          "startAt": "{{start_at}}",
+          "maxResults": "{{max_results}}"
+        }
+      }
+    },
+    "issuetypeschemes.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get All Issue Type Schemes",
+      "description": "List issue type schemes via GET /rest/api/3/issuetypescheme.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "array",
+            "description": "Scheme IDs to include.",
+            "items": {
+              "type": "string"
+            }
+          },
+          "start_at": {
+            "type": "number",
+            "description": "Page offset."
+          },
+          "max_results": {
+            "type": "number",
+            "description": "Page size."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {},
+          "status": {
+            "type": "number"
+          }
+        }
+      },
+      "sideEffect": "read",
+      "request": {
+        "method": "GET",
+        "path": "/ex/jira/{{cloudId}}/rest/api/3/issuetypescheme",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "query": {
+          "id": "{{id}}",
+          "startAt": "{{start_at}}",
+          "maxResults": "{{max_results}}"
+        }
+      }
+    },
+    "projects.search": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get all projects",
+      "description": "Search projects via GET /rest/api/3/project/search.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Deprecated name filter; prefer query."
+          },
+          "query": {
+            "type": "string",
+            "description": "Filter by project name or key."
+          },
+          "action": {
+            "type": "string",
+            "description": "Permission used to filter visible projects."
+          },
+          "expand": {
+            "type": "string",
+            "description": "Entities to expand."
+          },
+          "status": {
+            "type": "string",
+            "description": "Project status filter."
+          },
+          "orderBy": {
+            "type": "string",
+            "description": "Sort order."
+          },
+          "startAt": {
+            "type": "number",
+            "description": "Page offset."
+          },
+          "categoryId": {
+            "type": "number",
+            "description": "Project category ID."
+          },
+          "maxResults": {
+            "type": "number",
+            "description": "Page size."
+          },
+          "properties": {
+            "type": "array",
+            "description": "Project properties to include.",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {},
+          "status": {
+            "type": "number"
+          }
+        }
+      },
+      "sideEffect": "read",
+      "request": {
+        "method": "GET",
+        "path": "/ex/jira/{{cloudId}}/rest/api/3/project/search",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "query": {
+          "query": "{{query}}",
+          "action": "{{action}}",
+          "expand": "{{expand}}",
+          "status": "{{status}}",
+          "orderBy": "{{orderBy}}",
+          "startAt": "{{startAt}}",
+          "categoryId": "{{categoryId}}",
+          "maxResults": "{{maxResults}}",
+          "properties": "{{properties}}"
+        }
+      }
+    },
+    "statuses.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get Issue Statuses",
+      "description": "List all issue statuses via GET /rest/api/3/status.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {},
+          "status": {
+            "type": "number"
+          }
+        }
+      },
+      "sideEffect": "read",
+      "request": {
+        "method": "GET",
+        "path": "/ex/jira/{{cloudId}}/rest/api/3/status",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ]
+      }
+    },
+    "users.search.all": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get All Users",
+      "description": "List users via GET /rest/api/3/users/search.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "start_at": {
+            "type": "number",
+            "description": "Page offset."
+          },
+          "max_results": {
+            "type": "number",
+            "description": "Page size."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {},
+          "status": {
+            "type": "number"
+          }
+        }
+      },
+      "sideEffect": "read",
+      "request": {
+        "method": "GET",
+        "path": "/ex/jira/{{cloudId}}/rest/api/3/users/search",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "query": {
+          "startAt": "{{start_at}}",
+          "maxResults": "{{max_results}}"
+        }
+      }
+    },
+    "attachments.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get Attachment",
+      "description": "Download attachment content via GET /rest/api/3/attachment/content/{id}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "attachment_id": {
+            "type": "string",
+            "description": "Attachment ID."
+          },
+          "file_name": {
+            "type": "string",
+            "description": "Suggested filename for the downloaded bytes."
+          }
+        },
+        "required": [
+          "attachment_id",
+          "file_name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {},
+          "status": {
+            "type": "number"
+          }
+        }
+      },
+      "sideEffect": "read",
+      "request": {
+        "method": "GET",
+        "path": "/ex/jira/{{cloudId}}/rest/api/3/attachment/content/{{attachment_id}}",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ]
+      }
+    },
+    "attachments.meta": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get Attachment Meta",
+      "description": "Get attachment settings via GET /rest/api/3/attachment/meta.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {},
+          "status": {
+            "type": "number"
+          }
+        }
+      },
+      "sideEffect": "read",
+      "request": {
+        "method": "GET",
+        "path": "/ex/jira/{{cloudId}}/rest/api/3/attachment/meta",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ]
+      }
+    },
+    "issues.comments.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get Comment",
+      "description": "Get one issue comment via GET /rest/api/3/issue/{issueIdOrKey}/comment/{id}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "issue_id_or_key": {
+            "type": "string",
+            "description": "Issue ID or key."
+          },
+          "comment_id": {
+            "type": "string",
+            "description": "Comment ID."
+          },
+          "expand": {
+            "type": "string",
+            "description": "Entities to expand, e.g. renderedBody."
+          }
+        },
+        "required": [
+          "issue_id_or_key",
+          "comment_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {},
+          "status": {
+            "type": "number"
+          }
+        }
+      },
+      "sideEffect": "read",
+      "request": {
+        "method": "GET",
+        "path": "/ex/jira/{{cloudId}}/rest/api/3/issue/{{issue_id_or_key}}/comment/{{comment_id}}",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "query": {
+          "expand": "{{expand}}"
+        }
+      }
+    },
+    "components.search": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get Component",
+      "description": "List project components via GET /rest/api/3/project/{projectIdOrKey}/component, or get one component by ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "Component name filter or component ID when no project is given."
+          },
+          "orderBy": {
+            "type": "string",
+            "description": "Sort order."
+          },
+          "startAt": {
+            "type": "number",
+            "description": "Page offset."
+          },
+          "maxResults": {
+            "type": "number",
+            "description": "Page size."
+          },
+          "projectIdsOrKeys": {
+            "type": "array",
+            "description": "Project IDs or keys; the first value is used.",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {},
+          "status": {
+            "type": "number"
+          }
+        }
+      },
+      "sideEffect": "read",
+      "request": {
+        "method": "GET",
+        "path": "/ex/jira/{{cloudId}}/rest/api/3/project/{{projectIdsOrKeys}}/component",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "query": {
+          "query": "{{query}}",
+          "orderBy": "{{orderBy}}",
+          "startAt": "{{startAt}}",
+          "maxResults": "{{maxResults}}"
+        }
+      }
+    },
+    "issues.createmeta.fields": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get Create Field Metadata for Issue Type",
+      "description": "Get create-field metadata via GET /rest/api/3/issue/createmeta/{projectIdOrKey}/issuetypes/{issueTypeId}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "projectIdOrKey": {
+            "type": "string",
+            "description": "Project ID or key."
+          },
+          "issueTypeId": {
+            "type": "string",
+            "description": "Issue type ID."
+          },
+          "startAt": {
+            "type": "number",
+            "description": "Page offset."
+          },
+          "maxResults": {
+            "type": "number",
+            "description": "Page size."
+          }
+        },
+        "required": [
+          "projectIdOrKey",
+          "issueTypeId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {},
+          "status": {
+            "type": "number"
+          }
+        }
+      },
+      "sideEffect": "read",
+      "request": {
+        "method": "GET",
+        "path": "/ex/jira/{{cloudId}}/rest/api/3/issue/createmeta/{{projectIdOrKey}}/issuetypes/{{issueTypeId}}",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "query": {
+          "startAt": "{{startAt}}",
+          "maxResults": "{{maxResults}}"
+        }
+      }
+    },
+    "dashboards.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get Dashboards",
+      "description": "List dashboards via GET /rest/api/3/dashboard.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "filter": {
+            "type": "string",
+            "description": "my or favourite dashboard filter."
+          },
+          "startAt": {
+            "type": "number",
+            "description": "Page offset."
+          },
+          "maxResults": {
+            "type": "number",
+            "description": "Page size."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {},
+          "status": {
+            "type": "number"
+          }
+        }
+      },
+      "sideEffect": "read",
+      "request": {
+        "method": "GET",
+        "path": "/ex/jira/{{cloudId}}/rest/api/3/dashboard",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "query": {
+          "filter": "{{filter}}",
+          "startAt": "{{startAt}}",
+          "maxResults": "{{maxResults}}"
+        }
+      }
+    },
+    "filters.favourite": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get Favorite Filters",
+      "description": "List favourite filters via GET /rest/api/3/filter/favourite.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "expand": {
+            "type": "string",
+            "description": "Entities to expand."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {},
+          "status": {
+            "type": "number"
+          }
+        }
+      },
+      "sideEffect": "read",
+      "request": {
+        "method": "GET",
+        "path": "/ex/jira/{{cloudId}}/rest/api/3/filter/favourite",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "query": {
+          "expand": "{{expand}}"
+        }
+      }
+    },
+    "fields.search": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get custom fields paginated",
+      "description": "Search fields via GET /rest/api/3/field/search.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "array",
+            "description": "Field IDs to include.",
+            "items": {
+              "type": "string"
+            }
+          },
+          "type": {
+            "type": "string",
+            "description": "Field type filter, e.g. custom."
+          },
+          "query": {
+            "type": "string",
+            "description": "Name query."
+          },
+          "expand": {
+            "type": "string",
+            "description": "Entities to expand."
+          },
+          "orderBy": {
+            "type": "string",
+            "description": "Sort order."
+          },
+          "startAt": {
+            "type": "number",
+            "description": "Page offset."
+          },
+          "maxResults": {
+            "type": "number",
+            "description": "Page size."
+          },
+          "projectIds": {
+            "type": "array",
+            "description": "Restrict to these project IDs.",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {},
+          "status": {
+            "type": "number"
+          }
+        }
+      },
+      "sideEffect": "read",
+      "request": {
+        "method": "GET",
+        "path": "/ex/jira/{{cloudId}}/rest/api/3/field/search",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "query": {
+          "id": "{{id}}",
+          "type": "{{type}}",
+          "query": "{{query}}",
+          "expand": "{{expand}}",
+          "orderBy": "{{orderBy}}",
+          "startAt": "{{startAt}}",
+          "maxResults": "{{maxResults}}",
+          "projectIds": "{{projectIds}}"
+        }
+      }
+    },
+    "filters.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get Filter",
+      "description": "Get a filter via GET /rest/api/3/filter/{id}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Filter ID."
+          },
+          "expand": {
+            "type": "string",
+            "description": "Entities to expand."
+          },
+          "overrideSharePermissions": {
+            "type": "boolean",
+            "description": "Include share permissions the caller cannot see."
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {},
+          "status": {
+            "type": "number"
+          }
+        }
+      },
+      "sideEffect": "read",
+      "request": {
+        "method": "GET",
+        "path": "/ex/jira/{{cloudId}}/rest/api/3/filter/{{id}}",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "query": {
+          "expand": "{{expand}}",
+          "overrideSharePermissions": "{{overrideSharePermissions}}"
+        }
+      }
+    },
+    "groups.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get Group",
+      "description": "Get a group via GET /rest/api/3/group.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "group_name": {
+            "type": "string",
+            "description": "Group name. Provide group_name or group_id."
+          },
+          "group_id": {
+            "type": "string",
+            "description": "Group ID."
+          },
+          "expand": {
+            "type": "string",
+            "description": "Entities to expand, e.g. users."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {},
+          "status": {
+            "type": "number"
+          }
+        }
+      },
+      "sideEffect": "read",
+      "request": {
+        "method": "GET",
+        "path": "/ex/jira/{{cloudId}}/rest/api/3/group",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "query": {
+          "groupname": "{{group_name}}",
+          "groupId": "{{group_id}}",
+          "expand": "{{expand}}"
+        }
+      }
+    },
+    "servicedesk.info": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get Service Management Info",
+      "description": "Get Jira Service Management info via GET /rest/servicedeskapi/info.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {},
+          "status": {
+            "type": "number"
+          }
+        }
+      },
+      "sideEffect": "read",
+      "request": {
+        "method": "GET",
+        "path": "/ex/jira/{{cloudId}}/rest/servicedeskapi/info",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "headers": {
+          "X-ExperimentalApi": "opt-in"
+        }
+      }
+    },
+    "issues.createmeta": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get Create Issue Metadata (Deprecated)",
+      "description": "Get create metadata via GET /rest/api/3/issue/createmeta.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "expand": {
+            "type": "string",
+            "description": "Entities to expand, e.g. projects.issuetypes.fields."
+          },
+          "projectIds": {
+            "type": "array",
+            "description": "Project IDs.",
+            "items": {
+              "type": "string"
+            }
+          },
+          "projectKeys": {
+            "type": "array",
+            "description": "Project keys.",
+            "items": {
+              "type": "string"
+            }
+          },
+          "issuetypeIds": {
+            "type": "array",
+            "description": "Issue type IDs.",
+            "items": {
+              "type": "string"
+            }
+          },
+          "issuetypeNames": {
+            "type": "array",
+            "description": "Issue type names.",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {},
+          "status": {
+            "type": "number"
+          }
+        }
+      },
+      "sideEffect": "read",
+      "request": {
+        "method": "GET",
+        "path": "/ex/jira/{{cloudId}}/rest/api/3/issue/createmeta",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "query": {
+          "expand": "{{expand}}",
+          "projectIds": "{{projectIds}}",
+          "projectKeys": "{{projectKeys}}",
+          "issuetypeIds": "{{issuetypeIds}}",
+          "issuetypeNames": "{{issuetypeNames}}"
+        }
+      }
+    },
+    "issues.editmeta": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get Issue Edit Meta",
+      "description": "Get edit metadata via GET /rest/api/3/issue/{issueIdOrKey}/editmeta.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "issue_id_or_key": {
+            "type": "string",
+            "description": "Issue ID or key."
+          },
+          "override_editable_flag": {
+            "type": "boolean",
+            "description": "Include fields even when the issue is not editable."
+          },
+          "override_screen_security": {
+            "type": "boolean",
+            "description": "Include hidden screen fields (admin)."
+          }
+        },
+        "required": [
+          "issue_id_or_key"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {},
+          "status": {
+            "type": "number"
+          }
+        }
+      },
+      "sideEffect": "read",
+      "request": {
+        "method": "GET",
+        "path": "/ex/jira/{{cloudId}}/rest/api/3/issue/{{issue_id_or_key}}/editmeta",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "query": {
+          "overrideEditableFlag": "{{override_editable_flag}}",
+          "overrideScreenSecurity": "{{override_screen_security}}"
+        }
+      }
+    },
+    "issuelinktypes.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get Issue Link Types",
+      "description": "List issue link types via GET /rest/api/3/issueLinkType.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {},
+          "status": {
+            "type": "number"
+          }
+        }
+      },
+      "sideEffect": "read",
+      "request": {
+        "method": "GET",
+        "path": "/ex/jira/{{cloudId}}/rest/api/3/issueLinkType",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ]
+      }
+    },
+    "issues.picker": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get issue picker",
+      "description": "Get issue picker suggestions via GET /rest/api/3/issue/picker.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "Picker query."
+          },
+          "currentJQL": {
+            "type": "string",
+            "description": "JQL used to auto-complete."
+          },
+          "showSubTasks": {
+            "type": "boolean",
+            "description": "Include sub-tasks."
+          },
+          "currentIssueKey": {
+            "type": "string",
+            "description": "Issue currently being edited."
+          },
+          "currentProjectId": {
+            "type": "string",
+            "description": "Current project ID."
+          },
+          "showSubTaskParent": {
+            "type": "boolean",
+            "description": "Include parent of sub-tasks."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {},
+          "status": {
+            "type": "number"
+          }
+        }
+      },
+      "sideEffect": "read",
+      "request": {
+        "method": "GET",
+        "path": "/ex/jira/{{cloudId}}/rest/api/3/issue/picker",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "query": {
+          "query": "{{query}}",
+          "currentJQL": "{{currentJQL}}",
+          "showSubTasks": "{{showSubTasks}}",
+          "currentIssueKey": "{{currentIssueKey}}",
+          "currentProjectId": "{{currentProjectId}}",
+          "showSubTaskParent": "{{showSubTaskParent}}"
+        }
+      }
+    },
+    "issues.properties.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get Issue Property",
+      "description": "Get an issue entity property via GET /rest/api/3/issue/{issueIdOrKey}/properties/{propertyKey}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "issue_id_or_key": {
+            "type": "string",
+            "description": "Issue ID or key."
+          },
+          "property_key": {
+            "type": "string",
+            "description": "Entity property key."
+          }
+        },
+        "required": [
+          "issue_id_or_key",
+          "property_key"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {},
+          "status": {
+            "type": "number"
+          }
+        }
+      },
+      "sideEffect": "read",
+      "request": {
+        "method": "GET",
+        "path": "/ex/jira/{{cloudId}}/rest/api/3/issue/{{issue_id_or_key}}/properties/{{property_key}}",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ]
+      }
+    },
+    "resolutions.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get Issue Resolutions",
+      "description": "List resolutions via GET /rest/api/3/resolution.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {},
+          "status": {
+            "type": "number"
+          }
+        }
+      },
+      "sideEffect": "read",
+      "request": {
+        "method": "GET",
+        "path": "/ex/jira/{{cloudId}}/rest/api/3/resolution",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ]
+      }
+    },
+    "issuetypes.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get issue types",
+      "description": "List issue types via GET /rest/api/3/issuetype.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {},
+          "status": {
+            "type": "number"
+          }
+        }
+      },
+      "sideEffect": "read",
+      "request": {
+        "method": "GET",
+        "path": "/ex/jira/{{cloudId}}/rest/api/3/issuetype",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ]
+      }
+    },
+    "issues.watchers.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get Issue Watchers",
+      "description": "List watchers via GET /rest/api/3/issue/{issueIdOrKey}/watchers.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "issue_id_or_key": {
+            "type": "string",
+            "description": "Issue ID or key."
+          }
+        },
+        "required": [
+          "issue_id_or_key"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {},
+          "status": {
+            "type": "number"
+          }
+        }
+      },
+      "sideEffect": "read",
+      "request": {
+        "method": "GET",
+        "path": "/ex/jira/{{cloudId}}/rest/api/3/issue/{{issue_id_or_key}}/watchers",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ]
+      }
+    },
+    "worklogs.list.deprecated": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get Issue Worklogs (Deprecated)",
+      "description": "List issue worklogs via GET /rest/api/3/issue/{issueIdOrKey}/worklog.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "issue_id_or_key": {
+            "type": "string",
+            "description": "Issue ID or key."
+          },
+          "start_at": {
+            "type": "number",
+            "description": "Page offset."
+          },
+          "max_results": {
+            "type": "number",
+            "description": "Page size."
+          },
+          "started_after": {
+            "type": "number",
+            "description": "Only worklogs started after this epoch ms."
+          },
+          "started_before": {
+            "type": "number",
+            "description": "Only worklogs started before this epoch ms."
+          }
+        },
+        "required": [
+          "issue_id_or_key"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {},
+          "status": {
+            "type": "number"
+          }
+        }
+      },
+      "sideEffect": "read",
+      "request": {
+        "method": "GET",
+        "path": "/ex/jira/{{cloudId}}/rest/api/3/issue/{{issue_id_or_key}}/worklog",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "query": {
+          "startAt": "{{start_at}}",
+          "maxResults": "{{max_results}}",
+          "startedAfter": "{{started_after}}",
+          "startedBefore": "{{started_before}}"
+        }
+      }
+    },
+    "jql.autocompletedata.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get JQL autocomplete reference data",
+      "description": "Get JQL autocomplete data via GET /rest/api/3/jql/autocompletedata.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {},
+          "status": {
+            "type": "number"
+          }
+        }
+      },
+      "sideEffect": "read",
+      "request": {
+        "method": "GET",
+        "path": "/ex/jira/{{cloudId}}/rest/api/3/jql/autocompletedata",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ]
+      }
+    },
+    "jql.autocompletedata.suggestions": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get JQL autocomplete suggestions",
+      "description": "Get JQL field suggestions via GET /rest/api/3/jql/autocompletedata/suggestions.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "fieldName": {
+            "type": "string",
+            "description": "JQL field name."
+          },
+          "fieldValue": {
+            "type": "string",
+            "description": "Partial field value."
+          },
+          "predicateName": {
+            "type": "string",
+            "description": "Predicate name."
+          },
+          "predicateValue": {
+            "type": "string",
+            "description": "Partial predicate value."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {},
+          "status": {
+            "type": "number"
+          }
+        }
+      },
+      "sideEffect": "read",
+      "request": {
+        "method": "GET",
+        "path": "/ex/jira/{{cloudId}}/rest/api/3/jql/autocompletedata/suggestions",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "query": {
+          "fieldName": "{{fieldName}}",
+          "fieldValue": "{{fieldValue}}",
+          "predicateName": "{{predicateName}}",
+          "predicateValue": "{{predicateValue}}"
+        }
+      }
+    },
+    "permissions.my": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get My Permissions",
+      "description": "Get the caller's permissions via GET /rest/api/3/mypermissions.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "permissions": {
+            "type": "string",
+            "description": "Comma-separated permission keys."
+          },
+          "issueId": {
+            "type": "string",
+            "description": "Issue ID context."
+          },
+          "issueKey": {
+            "type": "string",
+            "description": "Issue key context."
+          },
+          "commentId": {
+            "type": "string",
+            "description": "Comment ID context."
+          },
+          "projectId": {
+            "type": "string",
+            "description": "Project ID context."
+          },
+          "projectKey": {
+            "type": "string",
+            "description": "Project key context."
+          },
+          "projectUuid": {
+            "type": "string",
+            "description": "Project UUID context."
+          },
+          "projectConfigurationUuid": {
+            "type": "string",
+            "description": "Project configuration UUID."
+          }
+        },
+        "required": [
+          "permissions"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {},
+          "status": {
+            "type": "number"
+          }
+        }
+      },
+      "sideEffect": "read",
+      "request": {
+        "method": "GET",
+        "path": "/ex/jira/{{cloudId}}/rest/api/3/mypermissions",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "query": {
+          "permissions": "{{permissions}}",
+          "issueId": "{{issueId}}",
+          "issueKey": "{{issueKey}}",
+          "commentId": "{{commentId}}",
+          "projectId": "{{projectId}}",
+          "projectKey": "{{projectKey}}",
+          "projectUuid": "{{projectUuid}}",
+          "projectConfigurationUuid": "{{projectConfigurationUuid}}"
+        }
+      }
+    },
+    "myself.locale.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get User Locale Preference",
+      "description": "Get the caller's locale via GET /rest/api/3/mypreferences/locale.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {},
+          "status": {
+            "type": "number"
+          }
+        }
+      },
+      "sideEffect": "read",
+      "request": {
+        "method": "GET",
+        "path": "/ex/jira/{{cloudId}}/rest/api/3/mypreferences/locale",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ]
+      }
+    },
+    "permissions.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get Permissions",
+      "description": "List all permissions via GET /rest/api/3/permissions.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {},
+          "status": {
+            "type": "number"
+          }
+        }
+      },
+      "sideEffect": "read",
+      "request": {
+        "method": "GET",
+        "path": "/ex/jira/{{cloudId}}/rest/api/3/permissions",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ]
+      }
+    },
+    "permissions.projects": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get Permitted Projects",
+      "description": "List projects the caller can access with given permissions via POST /rest/api/3/permissions/project.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "permissions": {
+            "type": "array",
+            "description": "Permission keys to match.",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "permissions"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {},
+          "status": {
+            "type": "number"
+          }
+        }
+      },
+      "sideEffect": "read",
+      "request": {
+        "method": "POST",
+        "path": "/ex/jira/{{cloudId}}/rest/api/3/permissions/project",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "body": {
+          "permissions": "{{permissions}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    "projects.roles.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get Project Roles",
+      "description": "List project roles via GET /rest/api/3/project/{projectIdOrKey}/role.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "project_id_or_key": {
+            "type": "string",
+            "description": "Project ID or key."
+          }
+        },
+        "required": [
+          "project_id_or_key"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {},
+          "status": {
+            "type": "number"
+          }
+        }
+      },
+      "sideEffect": "read",
+      "request": {
+        "method": "GET",
+        "path": "/ex/jira/{{cloudId}}/rest/api/3/project/{{project_id_or_key}}/role",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ]
+      }
+    },
+    "projects.templates.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get Project Templates",
+      "description": "List project templates via GET /rest/api/3/project/templates.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "project_type_key": {
+            "type": "string",
+            "description": "Filter templates by project type."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {},
+          "status": {
+            "type": "number"
+          }
+        }
+      },
+      "sideEffect": "read",
+      "request": {
+        "method": "GET",
+        "path": "/ex/jira/{{cloudId}}/rest/api/3/project/templates",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "query": {
+          "projectTypeKey": "{{project_type_key}}"
+        }
+      }
+    },
+    "projects.types.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get Project Type",
+      "description": "Get a project type via GET /rest/api/3/project/type/{projectTypeKey}, or list types when the key is omitted.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "project_type_key": {
+            "type": "string",
+            "description": "Project type key: business, software, or service_desk."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {},
+          "status": {
+            "type": "number"
+          }
+        }
+      },
+      "sideEffect": "read",
+      "request": {
+        "method": "GET",
+        "path": "/ex/jira/{{cloudId}}/rest/api/3/project/type/{{project_type_key}}",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ]
+      }
+    },
+    "projects.versions.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get Project Versions",
+      "description": "List project versions via GET /rest/api/3/project/{projectIdOrKey}/versions.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "project_id_or_key": {
+            "type": "string",
+            "description": "Project ID or key."
+          },
+          "expand": {
+            "type": "string",
+            "description": "Entities to expand."
+          }
+        },
+        "required": [
+          "project_id_or_key"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {},
+          "status": {
+            "type": "number"
+          }
+        }
+      },
+      "sideEffect": "read",
+      "request": {
+        "method": "GET",
+        "path": "/ex/jira/{{cloudId}}/rest/api/3/project/{{project_id_or_key}}/versions",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "query": {
+          "expand": "{{expand}}"
+        }
+      }
+    },
+    "projects.recent": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get Recent Projects",
+      "description": "List recently viewed projects via GET /rest/api/3/project/recent.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "expand": {
+            "type": "string",
+            "description": "Entities to expand."
+          },
+          "properties": {
+            "type": "array",
+            "description": "Project properties to include.",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {},
+          "status": {
+            "type": "number"
+          }
+        }
+      },
+      "sideEffect": "read",
+      "request": {
+        "method": "GET",
+        "path": "/ex/jira/{{cloudId}}/rest/api/3/project/recent",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "query": {
+          "expand": "{{expand}}",
+          "properties": "{{properties}}"
+        }
+      }
+    },
+    "issues.remotelinks.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get Issue Remote Links",
+      "description": "List remote issue links via GET /rest/api/3/issue/{issueIdOrKey}/remotelink.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "issue_id_or_key": {
+            "type": "string",
+            "description": "Issue ID or key."
+          },
+          "global_id": {
+            "type": "string",
+            "description": "Filter by remote link global ID."
+          }
+        },
+        "required": [
+          "issue_id_or_key"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {},
+          "status": {
+            "type": "number"
+          }
+        }
+      },
+      "sideEffect": "read",
+      "request": {
+        "method": "GET",
+        "path": "/ex/jira/{{cloudId}}/rest/api/3/issue/{{issue_id_or_key}}/remotelink",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "query": {
+          "globalId": "{{global_id}}"
+        }
+      }
+    },
+    "serverinfo.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get Server Info",
+      "description": "Get Jira Cloud site info via GET /rest/api/3/serverInfo.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {},
+          "status": {
+            "type": "number"
+          }
+        }
+      },
+      "sideEffect": "read",
+      "request": {
+        "method": "GET",
+        "path": "/ex/jira/{{cloudId}}/rest/api/3/serverInfo",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ]
+      }
+    },
+    "servicedesk.requesttype.fields": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get Service Desk Request Type Fields",
+      "description": "Get request type fields via GET /rest/servicedeskapi/servicedesk/{serviceDeskId}/requesttype/{requestTypeId}/field.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "serviceDeskId": {
+            "type": "string",
+            "description": "Service desk ID."
+          },
+          "requestTypeId": {
+            "type": "string",
+            "description": "Request type ID."
+          }
+        },
+        "required": [
+          "serviceDeskId",
+          "requestTypeId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {},
+          "status": {
+            "type": "number"
+          }
+        }
+      },
+      "sideEffect": "read",
+      "request": {
+        "method": "GET",
+        "path": "/ex/jira/{{cloudId}}/rest/servicedeskapi/servicedesk/{{serviceDeskId}}/requesttype/{{requestTypeId}}/field",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "headers": {
+          "X-ExperimentalApi": "opt-in"
+        }
+      }
+    },
+    "sprints.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get Sprint",
+      "description": "Get a sprint via GET /rest/agile/1.0/sprint/{sprintId}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "sprint_id": {
+            "type": "number",
+            "description": "Sprint ID."
+          }
+        },
+        "required": [
+          "sprint_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {},
+          "status": {
+            "type": "number"
+          }
+        }
+      },
+      "sideEffect": "read",
+      "request": {
+        "method": "GET",
+        "path": "/ex/jira/{{cloudId}}/rest/agile/1.0/sprint/{{sprint_id}}",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ]
+      }
+    },
+    "avatars.system": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get System Avatars",
+      "description": "List system avatars via GET /rest/api/3/avatar/{type}/system.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "description": "Avatar type: project, user, or issuetype."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {},
+          "status": {
+            "type": "number"
+          }
+        }
+      },
+      "sideEffect": "read",
+      "request": {
+        "method": "GET",
+        "path": "/ex/jira/{{cloudId}}/rest/api/3/avatar/{{type}}/system",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ]
+      }
+    },
+    "avatars.owner": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get Universal Avatar Type Owner",
+      "description": "List avatars for an owner via GET /rest/api/3/universal_avatar/type/{type}/owner/{entityId}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "entityId": {
+            "type": "string",
+            "description": "Avatar owner entity ID."
+          },
+          "type": {
+            "type": "string",
+            "description": "Avatar type, default project."
+          }
+        },
+        "required": [
+          "entityId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {},
+          "status": {
+            "type": "number"
+          }
+        }
+      },
+      "sideEffect": "read",
+      "request": {
+        "method": "GET",
+        "path": "/ex/jira/{{cloudId}}/rest/api/3/universal_avatar/type/{{type}}/owner/{{entityId}}",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ]
+      }
+    },
+    "avatars.view.type": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get Universal Avatar View Type",
+      "description": "Get the default avatar view via GET /rest/api/3/universal_avatar/view/type/{type}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "description": "Avatar type."
+          },
+          "size": {
+            "type": "string",
+            "description": "Avatar size."
+          },
+          "format": {
+            "type": "string",
+            "description": "png or svg."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {},
+          "status": {
+            "type": "number"
+          }
+        }
+      },
+      "sideEffect": "read",
+      "request": {
+        "method": "GET",
+        "path": "/ex/jira/{{cloudId}}/rest/api/3/universal_avatar/view/type/{{type}}",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "query": {
+          "size": "{{size}}",
+          "format": "{{format}}"
+        }
+      }
+    },
+    "users.groups.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get User Groups",
+      "description": "List a user's groups via GET /rest/api/3/user/groups.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "account_id": {
+            "type": "string",
+            "description": "Atlassian account ID."
+          }
+        },
+        "required": [
+          "account_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {},
+          "status": {
+            "type": "number"
+          }
+        }
+      },
+      "sideEffect": "read",
+      "request": {
+        "method": "GET",
+        "path": "/ex/jira/{{cloudId}}/rest/api/3/user/groups",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "query": {
+          "accountId": "{{account_id}}"
+        }
+      }
+    },
+    "avatars.view.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get Avatar Image",
+      "description": "Get an avatar image via GET /rest/api/3/universal_avatar/view/type/{type}/avatar/{id}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Avatar ID."
+          },
+          "type": {
+            "type": "string",
+            "description": "Avatar type."
+          },
+          "size": {
+            "type": "string",
+            "description": "Avatar size."
+          },
+          "format": {
+            "type": "string",
+            "description": "png or svg."
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {},
+          "status": {
+            "type": "number"
+          }
+        }
+      },
+      "sideEffect": "read",
+      "request": {
+        "method": "GET",
+        "path": "/ex/jira/{{cloudId}}/rest/api/3/universal_avatar/view/type/{{type}}/avatar/{{id}}",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "query": {
+          "size": "{{size}}",
+          "format": "{{format}}"
+        }
+      }
+    },
+    "issues.votes.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get Issue Votes",
+      "description": "Get issue votes via GET /rest/api/3/issue/{issueIdOrKey}/votes.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "issue_id_or_key": {
+            "type": "string",
+            "description": "Issue ID or key."
+          }
+        },
+        "required": [
+          "issue_id_or_key"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {},
+          "status": {
+            "type": "number"
+          }
+        }
+      },
+      "sideEffect": "read",
+      "request": {
+        "method": "GET",
+        "path": "/ex/jira/{{cloudId}}/rest/api/3/issue/{{issue_id_or_key}}/votes",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ]
+      }
+    },
+    "worklogs.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get Worklogs",
+      "description": "List issue worklogs via GET /rest/api/3/issue/{issueIdOrKey}/worklog.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "issue_id_or_key": {
+            "type": "string",
+            "description": "Issue ID or key."
+          },
+          "expand": {
+            "type": "string",
+            "description": "Expand properties on worklogs."
+          },
+          "start_at": {
+            "type": "number",
+            "description": "Page offset."
+          },
+          "max_results": {
+            "type": "number",
+            "description": "Page size."
+          },
+          "started_after": {
+            "type": "number",
+            "description": "Only worklogs started after this epoch ms."
+          },
+          "started_before": {
+            "type": "number",
+            "description": "Only worklogs started before this epoch ms."
+          }
+        },
+        "required": [
+          "issue_id_or_key"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {},
+          "status": {
+            "type": "number"
+          }
+        }
+      },
+      "sideEffect": "read",
+      "request": {
+        "method": "GET",
+        "path": "/ex/jira/{{cloudId}}/rest/api/3/issue/{{issue_id_or_key}}/worklog",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "query": {
+          "expand": "{{expand}}",
+          "startAt": "{{start_at}}",
+          "maxResults": "{{max_results}}",
+          "startedAfter": "{{started_after}}",
+          "startedBefore": "{{started_before}}"
+        }
+      }
+    },
+    "projects.list.all": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List All Projects (Deprecated)",
+      "description": "List all projects via GET /rest/api/3/project.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "expand": {
+            "type": "string",
+            "description": "Entities to expand."
+          },
+          "recent": {
+            "type": "number",
+            "description": "Number of recently viewed projects to return first."
+          },
+          "properties": {
+            "type": "array",
+            "description": "Project properties to include.",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {},
+          "status": {
+            "type": "number"
+          }
+        }
+      },
+      "sideEffect": "read",
+      "request": {
+        "method": "GET",
+        "path": "/ex/jira/{{cloudId}}/rest/api/3/project",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "query": {
+          "expand": "{{expand}}",
+          "recent": "{{recent}}",
+          "properties": "{{properties}}"
+        }
+      }
+    },
+    "boards.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "List Boards",
+      "description": "List boards via GET /rest/agile/1.0/board.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Filter by board name."
+          },
+          "type": {
+            "type": "string",
+            "description": "scrum, kanban, or simple."
+          },
+          "order_by": {
+            "type": "string",
+            "description": "Sort order."
+          },
+          "start_at": {
+            "type": "number",
+            "description": "Page offset."
+          },
+          "max_results": {
+            "type": "number",
+            "description": "Page size."
+          },
+          "include_private": {
+            "type": "boolean",
+            "description": "Include private boards."
+          },
+          "project_key_or_id": {
+            "type": "string",
+            "description": "Restrict to a project."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {},
+          "status": {
+            "type": "number"
+          }
+        }
+      },
+      "sideEffect": "read",
+      "request": {
+        "method": "GET",
+        "path": "/ex/jira/{{cloudId}}/rest/agile/1.0/board",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "query": {
+          "name": "{{name}}",
+          "type": "{{type}}",
+          "startAt": "{{start_at}}",
+          "maxResults": "{{max_results}}",
+          "projectKeyOrId": "{{project_key_or_id}}",
+          "orderBy": "{{order_by}}",
+          "includePrivate": "{{include_private}}"
+        }
+      }
+    },
+    "comments.list.ids": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "List Comments by IDs",
+      "description": "Load comments by ID via POST /rest/api/3/comment/list.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "ids": {
+            "type": "array",
+            "description": "Comment IDs.",
+            "items": {
+              "type": "number"
+            }
+          },
+          "expand": {
+            "type": "string",
+            "description": "Entities to expand."
+          }
+        },
+        "required": [
+          "ids"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {},
+          "status": {
+            "type": "number"
+          }
+        }
+      },
+      "sideEffect": "read",
+      "request": {
+        "method": "POST",
+        "path": "/ex/jira/{{cloudId}}/rest/api/3/comment/list",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "query": {
+          "expand": "{{expand}}"
+        },
+        "body": {
+          "ids": "{{ids}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    "filters.search": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "List Jira Filters",
+      "description": "Search filters via GET /rest/api/3/filter/search.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "array",
+            "description": "Filter IDs.",
+            "items": {
+              "type": "string"
+            }
+          },
+          "owner": {
+            "type": "string",
+            "description": "Deprecated owner username."
+          },
+          "expand": {
+            "type": "string",
+            "description": "Entities to expand."
+          },
+          "groupId": {
+            "type": "string",
+            "description": "Shared with this group ID."
+          },
+          "orderBy": {
+            "type": "string",
+            "description": "Sort order."
+          },
+          "startAt": {
+            "type": "number",
+            "description": "Page offset."
+          },
+          "accountId": {
+            "type": "string",
+            "description": "Owner account ID."
+          },
+          "groupname": {
+            "type": "string",
+            "description": "Shared with this group name."
+          },
+          "projectId": {
+            "type": "number",
+            "description": "Shared with this project ID."
+          },
+          "filterName": {
+            "type": "string",
+            "description": "Partial filter name."
+          },
+          "maxResults": {
+            "type": "number",
+            "description": "Page size."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {},
+          "status": {
+            "type": "number"
+          }
+        }
+      },
+      "sideEffect": "read",
+      "request": {
+        "method": "GET",
+        "path": "/ex/jira/{{cloudId}}/rest/api/3/filter/search",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "query": {
+          "id": "{{id}}",
+          "filterName": "{{filterName}}",
+          "accountId": "{{accountId}}",
+          "owner": "{{owner}}",
+          "groupname": "{{groupname}}",
+          "groupId": "{{groupId}}",
+          "projectId": "{{projectId}}",
+          "orderBy": "{{orderBy}}",
+          "startAt": "{{startAt}}",
+          "maxResults": "{{maxResults}}",
+          "expand": "{{expand}}"
+        }
+      }
+    },
+    "groups.picker": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "List Groups (Picker)",
+      "description": "Find groups via GET /rest/api/3/groups/picker.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "Group name query."
+          },
+          "exclude": {
+            "type": "array",
+            "description": "Group names to exclude.",
+            "items": {
+              "type": "string"
+            }
+          },
+          "exclude_id": {
+            "type": "array",
+            "description": "Group IDs to exclude.",
+            "items": {
+              "type": "string"
+            }
+          },
+          "max_results": {
+            "type": "number",
+            "description": "Page size."
+          },
+          "case_insensitive": {
+            "type": "boolean",
+            "description": "Case-insensitive match."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {},
+          "status": {
+            "type": "number"
+          }
+        }
+      },
+      "sideEffect": "read",
+      "request": {
+        "method": "GET",
+        "path": "/ex/jira/{{cloudId}}/rest/api/3/groups/picker",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "query": {
+          "query": "{{query}}",
+          "exclude": "{{exclude}}",
+          "excludeId": "{{exclude_id}}",
+          "maxResults": "{{max_results}}",
+          "caseInsensitive": "{{case_insensitive}}"
+        }
+      }
+    },
+    "projects.types.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "List Project Types",
+      "description": "List project types via GET /rest/api/3/project/type.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {},
+          "status": {
+            "type": "number"
+          }
+        }
+      },
+      "sideEffect": "read",
+      "request": {
+        "method": "GET",
+        "path": "/ex/jira/{{cloudId}}/rest/api/3/project/type",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ]
+      }
+    },
+    "sprints.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "List Sprints",
+      "description": "List board sprints via GET /rest/agile/1.0/board/{boardId}/sprint.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "board_id": {
+            "type": "number",
+            "description": "Board ID."
+          },
+          "state": {
+            "type": "string",
+            "description": "Comma-separated sprint states: future,active,closed."
+          },
+          "start_at": {
+            "type": "number",
+            "description": "Page offset."
+          },
+          "max_results": {
+            "type": "number",
+            "description": "Page size."
+          }
+        },
+        "required": [
+          "board_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {},
+          "status": {
+            "type": "number"
+          }
+        }
+      },
+      "sideEffect": "read",
+      "request": {
+        "method": "GET",
+        "path": "/ex/jira/{{cloudId}}/rest/agile/1.0/board/{{board_id}}/sprint",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "query": {
+          "state": "{{state}}",
+          "startAt": "{{start_at}}",
+          "maxResults": "{{max_results}}"
+        }
+      }
+    },
+    "sprints.issues.move": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Move Issues to Sprint",
+      "description": "Move issues into a sprint via POST /rest/agile/1.0/sprint/{sprintId}/issue.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "sprint_id": {
+            "type": "number",
+            "description": "Destination sprint ID."
+          },
+          "issues": {
+            "type": "array",
+            "description": "Issue keys or IDs to move.",
+            "items": {
+              "type": "string"
+            }
+          },
+          "rank_after_issue": {
+            "type": "string",
+            "description": "Rank after this issue."
+          },
+          "rank_before_issue": {
+            "type": "string",
+            "description": "Rank before this issue."
+          },
+          "rank_custom_field_id": {
+            "type": "number",
+            "description": "Rank custom field ID."
+          }
+        },
+        "required": [
+          "sprint_id",
+          "issues"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {},
+          "status": {
+            "type": "number"
+          }
+        }
+      },
+      "sideEffect": "write",
+      "request": {
+        "method": "POST",
+        "path": "/ex/jira/{{cloudId}}/rest/agile/1.0/sprint/{{sprint_id}}/issue",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "body": {
+          "issues": "{{issues}}",
+          "rankBeforeIssue": "{{rank_before_issue}}",
+          "rankAfterIssue": "{{rank_after_issue}}",
+          "rankCustomFieldId": "{{rank_custom_field_id}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    "jql.parse": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Parse JQL Queries",
+      "description": "Parse JQL via POST /rest/api/3/jql/parse.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "queries": {
+            "type": "array",
+            "description": "JQL strings to parse.",
+            "items": {
+              "type": "string"
+            }
+          },
+          "validation": {
+            "type": "string",
+            "description": "strict, warn, or none."
+          }
+        },
+        "required": [
+          "queries"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {},
+          "status": {
+            "type": "number"
+          }
+        }
+      },
+      "sideEffect": "read",
+      "request": {
+        "method": "POST",
+        "path": "/ex/jira/{{cloudId}}/rest/api/3/jql/parse",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "body": {
+          "queries": "{{queries}}",
+          "validation": "{{validation}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    "groups.users.remove": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Remove User from Group",
+      "description": "Remove a user from a group via DELETE /rest/api/3/group/user.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "account_id": {
+            "type": "string",
+            "description": "Atlassian account ID."
+          },
+          "group_id": {
+            "type": "string",
+            "description": "Group ID."
+          },
+          "group_name": {
+            "type": "string",
+            "description": "Group name."
+          }
+        },
+        "required": [
+          "account_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {},
+          "status": {
+            "type": "number"
+          }
+        }
+      },
+      "sideEffect": "write",
+      "request": {
+        "method": "DELETE",
+        "path": "/ex/jira/{{cloudId}}/rest/api/3/group/user",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "query": {
+          "accountId": "{{account_id}}",
+          "groupId": "{{group_id}}",
+          "groupname": "{{group_name}}"
+        }
+      }
+    },
+    "projects.roles.actors.remove": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Remove User from Project Role",
+      "description": "Remove a user or group from a project role via DELETE /rest/api/3/project/{projectIdOrKey}/role/{id}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "project_id_or_key": {
+            "type": "string",
+            "description": "Project ID or key."
+          },
+          "role_id": {
+            "type": "number",
+            "description": "Role ID."
+          },
+          "user_account_id": {
+            "type": "string",
+            "description": "Account ID to remove."
+          },
+          "group_name": {
+            "type": "string",
+            "description": "Group name to remove."
+          }
+        },
+        "required": [
+          "project_id_or_key",
+          "role_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {},
+          "status": {
+            "type": "number"
+          }
+        }
+      },
+      "sideEffect": "write",
+      "request": {
+        "method": "DELETE",
+        "path": "/ex/jira/{{cloudId}}/rest/api/3/project/{{project_id_or_key}}/role/{{role_id}}",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "query": {
+          "user": "{{user_account_id}}",
+          "group": "{{group_name}}"
+        }
+      }
+    },
+    "issues.watchers.remove": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Remove Watcher from Issue",
+      "description": "Remove a watcher via DELETE /rest/api/3/issue/{issueIdOrKey}/watchers.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "issue_id_or_key": {
+            "type": "string",
+            "description": "Issue ID or key."
+          },
+          "account_id": {
+            "type": "string",
+            "description": "Account ID to remove from watchers."
+          }
+        },
+        "required": [
+          "issue_id_or_key",
+          "account_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {},
+          "status": {
+            "type": "number"
+          }
+        }
+      },
+      "sideEffect": "write",
+      "request": {
+        "method": "DELETE",
+        "path": "/ex/jira/{{cloudId}}/rest/api/3/issue/{{issue_id_or_key}}/watchers",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "query": {
+          "accountId": "{{account_id}}"
+        }
+      }
+    },
+    "issues.search.count": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Search Approximate Count",
+      "description": "Approximate issue count via POST /rest/api/3/search/approximate-count.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "jql": {
+            "type": "string",
+            "description": "Bounded JQL query."
+          }
+        },
+        "required": [
+          "jql"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {},
+          "status": {
+            "type": "number"
+          }
+        }
+      },
+      "sideEffect": "read",
+      "request": {
+        "method": "POST",
+        "path": "/ex/jira/{{cloudId}}/rest/api/3/search/approximate-count",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "body": {
+          "jql": "{{jql}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    "dashboards.search": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Search Dashboards",
+      "description": "Search dashboards via GET /rest/api/3/dashboard/search.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Deprecated owner username."
+          },
+          "expand": {
+            "type": "string",
+            "description": "Entities to expand."
+          },
+          "status": {
+            "type": "string",
+            "description": "active, archived, or deleted."
+          },
+          "groupId": {
+            "type": "string",
+            "description": "Shared with this group ID."
+          },
+          "orderBy": {
+            "type": "string",
+            "description": "Sort order."
+          },
+          "startAt": {
+            "type": "number",
+            "description": "Page offset."
+          },
+          "accountId": {
+            "type": "string",
+            "description": "Owner account ID."
+          },
+          "groupname": {
+            "type": "string",
+            "description": "Shared with this group name."
+          },
+          "projectId": {
+            "type": "number",
+            "description": "Shared with this project ID."
+          },
+          "maxResults": {
+            "type": "number",
+            "description": "Page size."
+          },
+          "dashboardName": {
+            "type": "string",
+            "description": "Partial dashboard name."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {},
+          "status": {
+            "type": "number"
+          }
+        }
+      },
+      "sideEffect": "read",
+      "request": {
+        "method": "GET",
+        "path": "/ex/jira/{{cloudId}}/rest/api/3/dashboard/search",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "query": {
+          "dashboardName": "{{dashboardName}}",
+          "accountId": "{{accountId}}",
+          "owner": "{{owner}}",
+          "groupname": "{{groupname}}",
+          "groupId": "{{groupId}}",
+          "projectId": "{{projectId}}",
+          "orderBy": "{{orderBy}}",
+          "startAt": "{{startAt}}",
+          "maxResults": "{{maxResults}}",
+          "status": "{{status}}",
+          "expand": "{{expand}}"
+        }
+      }
+    },
+    "issues.search.jql.get": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Search Issues Using JQL (GET)",
+      "description": "Enhanced JQL search via GET /rest/api/3/search/jql.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "jql": {
+            "type": "string",
+            "description": "Bounded JQL. Required unless next_page_token is a full token."
+          },
+          "expand": {
+            "type": "string",
+            "description": "Entities to expand."
+          },
+          "fields": {
+            "type": "array",
+            "description": "Fields to return.",
+            "items": {
+              "type": "string"
+            }
+          },
+          "fail_fast": {
+            "type": "boolean",
+            "description": "Fail early on field errors."
+          },
+          "properties": {
+            "type": "array",
+            "description": "Issue property keys.",
+            "items": {
+              "type": "string"
+            }
+          },
+          "max_results": {
+            "type": "number",
+            "description": "Page size."
+          },
+          "fields_by_keys": {
+            "type": "boolean",
+            "description": "Treat fields as keys."
+          },
+          "next_page_token": {
+            "type": "string",
+            "description": "Pagination token from a previous search."
+          },
+          "reconcile_issues": {
+            "type": "array",
+            "description": "Issue IDs to reconcile.",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {},
+          "status": {
+            "type": "number"
+          }
+        }
+      },
+      "sideEffect": "read",
+      "request": {
+        "method": "GET",
+        "path": "/ex/jira/{{cloudId}}/rest/api/3/search/jql",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "query": {
+          "jql": "{{jql}}",
+          "nextPageToken": "{{next_page_token}}",
+          "maxResults": "{{max_results}}",
+          "fields": "{{fields}}",
+          "expand": "{{expand}}",
+          "properties": "{{properties}}",
+          "fieldsByKeys": "{{fields_by_keys}}",
+          "failFast": "{{fail_fast}}",
+          "reconcileIssues": "{{reconcile_issues}}"
+        }
+      }
+    },
+    "issues.search.jql.post": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 262144,
+      "maxResponseBytes": 5242880,
+      "title": "Search Issues Using JQL Enhanced (POST)",
+      "description": "Enhanced JQL search via POST /rest/api/3/search/jql.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "jql": {
+            "type": "string",
+            "description": "Bounded JQL query."
+          },
+          "expand": {
+            "type": "string",
+            "description": "Entities to expand."
+          },
+          "fields": {
+            "type": "array",
+            "description": "Fields to return.",
+            "items": {
+              "type": "string"
+            }
+          },
+          "maxResults": {
+            "type": "number",
+            "description": "Page size."
+          },
+          "properties": {
+            "type": "array",
+            "description": "Issue property keys.",
+            "items": {
+              "type": "string"
+            }
+          },
+          "fieldsByKeys": {
+            "type": "boolean",
+            "description": "Treat fields as keys."
+          },
+          "nextPageToken": {
+            "type": "string",
+            "description": "Pagination token."
+          },
+          "reconcileIssues": {
+            "type": "array",
+            "description": "Issue IDs to reconcile.",
+            "items": {
+              "type": "number"
+            }
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {},
+          "status": {
+            "type": "number"
+          }
+        }
+      },
+      "sideEffect": "read",
+      "request": {
+        "method": "POST",
+        "path": "/ex/jira/{{cloudId}}/rest/api/3/search/jql",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "body": {
+          "jql": "{{jql}}",
+          "expand": "{{expand}}",
+          "fields": "{{fields}}",
+          "maxResults": "{{maxResults}}",
+          "properties": "{{properties}}",
+          "fieldsByKeys": "{{fieldsByKeys}}",
+          "nextPageToken": "{{nextPageToken}}",
+          "reconcileIssues": "{{reconcileIssues}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    "issues.search.action": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 262144,
+      "maxResponseBytes": 5242880,
+      "title": "Search issues",
+      "description": "Search issues with structured filters or raw JQL via POST /rest/api/3/search/jql.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "jql": {
+            "type": "string",
+            "description": "Raw JQL. Takes precedence over structured filters."
+          },
+          "fields": {
+            "type": "array",
+            "description": "Fields to return.",
+            "items": {
+              "type": "string"
+            }
+          },
+          "labels": {
+            "type": "array",
+            "description": "Labels that must all match.",
+            "items": {
+              "type": "string"
+            }
+          },
+          "assignee": {
+            "type": "string",
+            "description": "Account ID, email, display name, or unassigned."
+          },
+          "max_results": {
+            "type": "number",
+            "description": "Page size (capped by Jira)."
+          },
+          "project_key": {
+            "type": "string",
+            "description": "Project key filter."
+          },
+          "text_search": {
+            "type": "string",
+            "description": "summary/description text search."
+          },
+          "created_after": {
+            "type": "string",
+            "description": "Created after YYYY-MM-DD or relative date."
+          },
+          "updated_after": {
+            "type": "string",
+            "description": "Updated after YYYY-MM-DD or relative date."
+          },
+          "created_before": {
+            "type": "string",
+            "description": "Created before YYYY-MM-DD."
+          },
+          "updated_before": {
+            "type": "string",
+            "description": "Updated before YYYY-MM-DD."
+          },
+          "next_page_token": {
+            "type": "string",
+            "description": "Pagination token."
+          },
+          "sprint_id_or_name": {
+            "type": "string",
+            "description": "Sprint ID or name."
+          },
+          "status_id_or_name": {
+            "type": "string",
+            "description": "Status ID or name."
+          },
+          "preserved_order_by": {
+            "type": "string",
+            "description": "ORDER BY clause appended to generated JQL."
+          },
+          "priority_id_or_name": {
+            "type": "string",
+            "description": "Priority ID or name."
+          },
+          "issue_type_id_or_name": {
+            "type": "string",
+            "description": "Issue type ID or name."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {},
+          "status": {
+            "type": "number"
+          }
+        }
+      },
+      "sideEffect": "read",
+      "request": {
+        "method": "POST",
+        "path": "/ex/jira/{{cloudId}}/rest/api/3/search/jql",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "body": {
+          "jql": "{{jql}}",
+          "maxResults": "{{max_results}}",
+          "nextPageToken": "{{next_page_token}}",
+          "fields": "{{fields}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    "issues.notify": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Send Notification for Issue",
+      "description": "Email a notification via POST /rest/api/3/issue/{issueIdOrKey}/notify.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "issue_id_or_key": {
+            "type": "string",
+            "description": "Issue ID or key."
+          },
+          "to": {
+            "type": "object",
+            "description": "NotificationRecipients object."
+          },
+          "subject": {
+            "type": "string",
+            "description": "Email subject."
+          },
+          "text_body": {
+            "type": "string",
+            "description": "Plain-text body."
+          },
+          "html_body": {
+            "type": "string",
+            "description": "HTML body."
+          },
+          "restrict": {
+            "type": "object",
+            "description": "Recipient restriction groups/permissions."
+          }
+        },
+        "required": [
+          "issue_id_or_key",
+          "to",
+          "subject",
+          "text_body"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {},
+          "status": {
+            "type": "number"
+          }
+        }
+      },
+      "sideEffect": "write",
+      "request": {
+        "method": "POST",
+        "path": "/ex/jira/{{cloudId}}/rest/api/3/issue/{{issue_id_or_key}}/notify",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "body": {
+          "subject": "{{subject}}",
+          "textBody": "{{text_body}}",
+          "htmlBody": "{{html_body}}",
+          "to": "{{to}}",
+          "restrict": "{{restrict}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    "issues.comments.update": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 262144,
+      "maxResponseBytes": 1048576,
+      "title": "Update Comment",
+      "description": "Update a comment via PUT /rest/api/3/issue/{issueIdOrKey}/comment/{id}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "issue_id_or_key": {
+            "type": "string",
+            "description": "Issue ID or key."
+          },
+          "comment_id": {
+            "type": "string",
+            "description": "Comment ID."
+          },
+          "comment_text": {
+            "type": "string",
+            "description": "Updated comment text or ADF."
+          },
+          "notify_users": {
+            "type": "boolean",
+            "description": "Whether to notify watchers."
+          },
+          "visibility_type": {
+            "type": "string",
+            "description": "group or role."
+          },
+          "visibility_value": {
+            "type": "string",
+            "description": "Group or role name."
+          },
+          "additional_properties": {
+            "type": "object",
+            "description": "Extra comment fields such as properties."
+          }
+        },
+        "required": [
+          "issue_id_or_key",
+          "comment_id",
+          "comment_text"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "data": {},
+          "status": {
+            "type": "number"
+          }
+        }
+      },
+      "sideEffect": "write",
+      "request": {
+        "method": "PUT",
+        "path": "/ex/jira/{{cloudId}}/rest/api/3/issue/{{issue_id_or_key}}/comment/{{comment_id}}",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "query": {
+          "notifyUsers": "{{notify_users}}"
+        },
+        "body": {
+          "body": "{{comment_text}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
         }
       }
     }

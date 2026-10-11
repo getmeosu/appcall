@@ -28,10 +28,24 @@
     ]
   },
   "models": [
+    "company",
+    "component",
+    "custom_field",
     "entity",
-    "note",
+    "feature",
+    "initiative",
+    "jira_integration",
+    "key_result",
     "member",
-    "team"
+    "note",
+    "objective",
+    "plugin_integration",
+    "product",
+    "release",
+    "release_group",
+    "team",
+    "user",
+    "webhook"
   ],
   "http": {
     "baseUrl": "https://api.productboard.com/v2",
@@ -52,6 +66,9 @@
         "error",
         "errors"
       ]
+    },
+    "headers": {
+      "Accept": "application/json"
     }
   },
   "operations": {
@@ -115,7 +132,7 @@
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
       "title": "List Entities",
-      "description": "List Productboard entities with bounded filters and cursor pagination.",
+      "description": "List Productboard entities with type, name, owner, status, parent, archived, and source filters.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -133,6 +150,74 @@
           "name": {
             "type": "string",
             "minLength": 1
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "product",
+              "component",
+              "feature",
+              "subfeature",
+              "initiative",
+              "objective",
+              "keyResult",
+              "release",
+              "releaseGroup",
+              "user",
+              "company",
+              "competitor",
+              "task"
+            ],
+            "description": "Single entity type filter (Composio type)."
+          },
+          "fields": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "description": "Fields to return. Use all or field IDs."
+          },
+          "archived": {
+            "type": "boolean",
+            "description": "Filter by archived status."
+          },
+          "ownerId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by owner UUID."
+          },
+          "ownerEmail": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by owner email.",
+            "format": "email"
+          },
+          "statusId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by status UUID."
+          },
+          "statusName": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by status name."
+          },
+          "parentId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by parent entity UUID."
+          },
+          "metadataSourceSystem": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by metadata.source.system."
+          },
+          "metadataSourceRecordId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by metadata.source.recordId."
           }
         },
         "additionalProperties": false
@@ -168,8 +253,15 @@
         "path": "/entities",
         "query": {
           "pageCursor": "{{pageCursor}}",
-          "type[]": "{{types}}",
-          "name": "{{name}}"
+          "name": "{{name}}",
+          "archived": "{{archived}}",
+          "owner[id]": "{{ownerId}}",
+          "owner[email]": "{{ownerEmail}}",
+          "status[id]": "{{statusId}}",
+          "status[name]": "{{statusName}}",
+          "parent[id]": "{{parentId}}",
+          "metadata[source][system]": "{{metadataSourceSystem}}",
+          "metadata[source][recordId]": "{{metadataSourceRecordId}}"
         },
         "success": [
           200
@@ -178,7 +270,33 @@
           "entities": "{{response.data}}",
           "nextPageCursor": "{{response.links.next}}",
           "nextPageUrl": "{{response.links.next}}"
-        }
+        },
+        "parameters": [
+          {
+            "wireName": "type[]",
+            "inputName": "types",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "allowReserved": false
+          },
+          {
+            "wireName": "type[]",
+            "inputName": "type",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "allowReserved": false
+          },
+          {
+            "wireName": "fields[]",
+            "inputName": "fields",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "allowReserved": false
+          }
+        ]
       },
       "enforceOutputSchema": true
     },
@@ -189,13 +307,22 @@
       "maxInputBytes": 8192,
       "maxResponseBytes": 1048576,
       "title": "Get Entity",
-      "description": "Get a Productboard entity by ID.",
+      "description": "Get a Productboard entity by ID with optional field selection.",
       "inputSchema": {
         "type": "object",
         "properties": {
           "id": {
             "type": "string",
             "minLength": 1
+          },
+          "fields": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "description": "Fields to return."
           }
         },
         "required": [
@@ -222,7 +349,18 @@
         ],
         "result": {
           "entity": "{{response.data}}"
-        }
+        },
+        "query": {},
+        "parameters": [
+          {
+            "wireName": "fields[]",
+            "inputName": "fields",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "allowReserved": false
+          }
+        ]
       },
       "enforceOutputSchema": true
     },
@@ -233,7 +371,7 @@
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
       "title": "List Notes",
-      "description": "List Productboard notes with cursor pagination.",
+      "description": "List Productboard notes with archived/processed, owner, creator, source, and date filters.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -246,6 +384,84 @@
           },
           "processed": {
             "type": "boolean"
+          },
+          "types": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "enum": [
+                "textNote",
+                "conversationNote",
+                "opportunityNote",
+                "simple",
+                "conversation",
+                "opportunity"
+              ]
+            },
+            "description": "Note types to include."
+          },
+          "fields": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "description": "Fields to return."
+          },
+          "ownerId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by owner UUID."
+          },
+          "ownerEmail": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by owner email.",
+            "format": "email"
+          },
+          "creatorId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by creator UUID."
+          },
+          "creatorEmail": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by creator email.",
+            "format": "email"
+          },
+          "metadataSourceSystem": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by metadata.source.system."
+          },
+          "metadataSourceRecordId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by metadata.source.recordId."
+          },
+          "createdFrom": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Created on or after this ISO-8601 timestamp."
+          },
+          "createdTo": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Created on or before this ISO-8601 timestamp."
+          },
+          "updatedFrom": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Updated on or after this ISO-8601 timestamp."
+          },
+          "updatedTo": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Updated on or before this ISO-8601 timestamp."
           }
         },
         "additionalProperties": false
@@ -282,7 +498,17 @@
         "query": {
           "pageCursor": "{{pageCursor}}",
           "archived": "{{archived}}",
-          "processed": "{{processed}}"
+          "processed": "{{processed}}",
+          "owner[id]": "{{ownerId}}",
+          "owner[email]": "{{ownerEmail}}",
+          "creator[id]": "{{creatorId}}",
+          "creator[email]": "{{creatorEmail}}",
+          "metadata[source][system]": "{{metadataSourceSystem}}",
+          "metadata[source][recordId]": "{{metadataSourceRecordId}}",
+          "createdFrom": "{{createdFrom}}",
+          "createdTo": "{{createdTo}}",
+          "updatedFrom": "{{updatedFrom}}",
+          "updatedTo": "{{updatedTo}}"
         },
         "success": [
           200
@@ -291,7 +517,25 @@
           "notes": "{{response.data}}",
           "nextPageCursor": "{{response.links.next}}",
           "nextPageUrl": "{{response.links.next}}"
-        }
+        },
+        "parameters": [
+          {
+            "wireName": "type[]",
+            "inputName": "types",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "allowReserved": false
+          },
+          {
+            "wireName": "fields[]",
+            "inputName": "fields",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "allowReserved": false
+          }
+        ]
       },
       "enforceOutputSchema": true
     },
@@ -302,13 +546,22 @@
       "maxInputBytes": 8192,
       "maxResponseBytes": 1048576,
       "title": "Get Note",
-      "description": "Get a Productboard note by ID.",
+      "description": "Get a Productboard note by ID with optional field selection.",
       "inputSchema": {
         "type": "object",
         "properties": {
           "id": {
             "type": "string",
             "minLength": 1
+          },
+          "fields": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "description": "Fields to return."
           }
         },
         "required": [
@@ -335,7 +588,18 @@
         ],
         "result": {
           "note": "{{response.data}}"
-        }
+        },
+        "query": {},
+        "parameters": [
+          {
+            "wireName": "fields[]",
+            "inputName": "fields",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "allowReserved": false
+          }
+        ]
       },
       "enforceOutputSchema": true
     },
@@ -449,43 +713,4866 @@
       },
       "enforceOutputSchema": true
     },
-    "entities.create": {
+    "notes.followers.add": {
       "kind": "action",
       "sideEffect": "write",
       "timeoutMs": 10000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 1048576,
-      "title": "Create Entity",
-      "description": "Create a Productboard entity of the given type.",
+      "title": "Add Note Followers",
+      "description": "Add a workspace member as a follower of a Productboard note. Productboard accepts one follower email per POST /notes/{noteId}/followers call; the first emails[] value is sent.",
       "inputSchema": {
         "type": "object",
+        "additionalProperties": false,
         "properties": {
-          "type": {
+          "noteId": {
             "type": "string",
             "minLength": 1,
-            "description": "Entity type such as feature, component, or product."
+            "description": "UUID of the note to follow."
           },
-          "name": {
-            "type": "string",
-            "minLength": 1
-          },
-          "description": {
-            "type": "string"
+          "emails": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "description": "Workspace member emails to add as followers."
           }
         },
-        "additionalProperties": false,
         "required": [
-          "type",
+          "noteId",
+          "emails"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/notes/{{noteId}}/followers",
+        "baseUrl": "https://api.productboard.com",
+        "body": {
+          "data": {
+            "email": "{{emails.0}}"
+          }
+        },
+        "headers": {
+          "Accept": "application/json",
+          "X-Version": "1",
+          "Content-Type": "application/json"
+        },
+        "success": [
+          200,
+          201,
+          204
+        ],
+        "result": {
+          "data": "{{response.data}}"
+        }
+      },
+      "enforceOutputSchema": false
+    },
+    "notes.tags.add": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Add Note Tag",
+      "description": "Add a tag to a Productboard note. Missing tags are created.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "noteId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "UUID of the note to tag."
+          },
+          "tagName": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Tag name to add. Created if it does not exist."
+          }
+        },
+        "required": [
+          "noteId",
+          "tagName"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/notes/{{noteId}}/tags",
+        "baseUrl": "https://api.productboard.com",
+        "body": {
+          "data": {
+            "name": "{{tagName}}"
+          }
+        },
+        "headers": {
+          "Accept": "application/json",
+          "X-Version": "1",
+          "Content-Type": "application/json"
+        },
+        "success": [
+          200,
+          201
+        ],
+        "result": {
+          "data": "{{response.data}}"
+        }
+      },
+      "enforceOutputSchema": true
+    },
+    "notes.links.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Create Note Link",
+      "description": "Link a note to a product, component, feature, or subfeature.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "noteId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "UUID of the note to link."
+          },
+          "entityId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "UUID of the linked hierarchy entity."
+          }
+        },
+        "required": [
+          "noteId",
+          "entityId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/notes/{{noteId}}/links",
+        "baseUrl": "https://api.productboard.com",
+        "body": {
+          "data": {
+            "id": "{{entityId}}"
+          }
+        },
+        "headers": {
+          "Accept": "application/json",
+          "X-Version": "1",
+          "Content-Type": "application/json"
+        },
+        "success": [
+          200,
+          201
+        ],
+        "result": {
+          "data": "{{response.data}}"
+        }
+      },
+      "enforceOutputSchema": true
+    },
+    "notes.links.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "List Note Links",
+      "description": "List hierarchy entities linked to a Productboard note.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "noteId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "UUID of the note."
+          }
+        },
+        "required": [
+          "noteId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "links": {
+            "type": [
+              "object",
+              "null"
+            ]
+          },
+          "nextPageCursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "nextPageUrl": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/notes/{{noteId}}/links",
+        "baseUrl": "https://api.productboard.com",
+        "headers": {
+          "Accept": "application/json",
+          "X-Version": "1"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response.data}}",
+          "links": "{{response.links}}",
+          "nextPageCursor": "{{response.pageCursor}}",
+          "nextPageUrl": "{{response.links.next}}"
+        }
+      },
+      "enforceOutputSchema": true
+    },
+    "notes.tags.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "List Note Tags",
+      "description": "List tags on a Productboard note.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "noteId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "UUID of the note."
+          }
+        },
+        "required": [
+          "noteId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "links": {
+            "type": [
+              "object",
+              "null"
+            ]
+          },
+          "nextPageCursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "nextPageUrl": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/notes/{{noteId}}/tags",
+        "baseUrl": "https://api.productboard.com",
+        "headers": {
+          "Accept": "application/json",
+          "X-Version": "1"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response.data}}",
+          "links": "{{response.links}}",
+          "nextPageCursor": "{{response.pageCursor}}",
+          "nextPageUrl": "{{response.links.next}}"
+        }
+      },
+      "enforceOutputSchema": true
+    },
+    "notes.tags.delete": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Delete Note Tag",
+      "description": "Remove a tag from a Productboard note.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "noteId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "UUID of the note."
+          },
+          "tagName": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Tag name to remove."
+          }
+        },
+        "required": [
+          "noteId",
+          "tagName"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "ok",
+          "status"
+        ],
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          },
+          "status": {
+            "type": "integer"
+          }
+        }
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/notes/{{noteId}}/tags/{{tagName}}",
+        "baseUrl": "https://api.productboard.com",
+        "headers": {
+          "Accept": "application/json",
+          "X-Version": "1"
+        },
+        "success": [
+          204,
+          200
+        ],
+        "result": {
+          "ok": true,
+          "status": "{{status}}"
+        }
+      },
+      "enforceOutputSchema": true
+    },
+    "notes.followers.remove": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Remove Note Follower",
+      "description": "Remove a follower from a Productboard note by email.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "noteId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "UUID of the note."
+          },
+          "email": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Follower email to remove.",
+            "format": "email"
+          }
+        },
+        "required": [
+          "noteId",
+          "email"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "ok",
+          "status"
+        ],
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          },
+          "status": {
+            "type": "integer"
+          }
+        }
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/notes/{{noteId}}/followers/{{email}}",
+        "baseUrl": "https://api.productboard.com",
+        "headers": {
+          "Accept": "application/json",
+          "X-Version": "1"
+        },
+        "success": [
+          204,
+          200
+        ],
+        "result": {
+          "ok": true,
+          "status": "{{status}}"
+        }
+      },
+      "enforceOutputSchema": true
+    },
+    "companies.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Create Company",
+      "description": "Create a company record in Productboard.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Primary company name."
+          },
+          "domain": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Internet domain, for example example.com."
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Free-text company description."
+          },
+          "source": {
+            "type": "object",
+            "description": "External origin metadata.",
+            "additionalProperties": true
+          }
+        },
+        "required": [
           "name"
         ]
       },
       "outputSchema": {
         "type": "object",
         "required": [
-          "entity"
+          "data"
         ],
         "properties": {
-          "entity": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/companies",
+        "baseUrl": "https://api.productboard.com",
+        "body": {
+          "data": {
+            "name": "{{name}}",
+            "domain": "{{domain}}",
+            "description": "{{description}}",
+            "source": "{{source}}"
+          }
+        },
+        "headers": {
+          "Accept": "application/json",
+          "X-Version": "1",
+          "Content-Type": "application/json"
+        },
+        "success": [
+          200,
+          201
+        ],
+        "result": {
+          "data": "{{response.data}}"
+        }
+      },
+      "enforceOutputSchema": true
+    },
+    "companies.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "List Companies",
+      "description": "List companies with name, note, and feature filters.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "term": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter companies by name search term."
+          },
+          "hasNotes": {
+            "type": "string",
+            "enum": [
+              "true",
+              "false"
+            ],
+            "description": "Filter companies with or without notes."
+          },
+          "featureId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter companies associated with this feature."
+          },
+          "pageLimit": {
+            "type": "integer",
+            "description": "Page size. Default 100.",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "pageOffset": {
+            "type": "integer",
+            "description": "Offset for the next page.",
+            "minimum": 0
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "links": {
+            "type": [
+              "object",
+              "null"
+            ]
+          },
+          "nextPageCursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "nextPageUrl": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/companies",
+        "baseUrl": "https://api.productboard.com",
+        "headers": {
+          "Accept": "application/json",
+          "X-Version": "1"
+        },
+        "query": {
+          "term": "{{term}}",
+          "hasNotes": "{{hasNotes}}",
+          "featureId": "{{featureId}}",
+          "pageLimit": "{{pageLimit}}",
+          "pageOffset": "{{pageOffset}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response.data}}",
+          "links": "{{response.links}}",
+          "nextPageCursor": "{{response.pageCursor}}",
+          "nextPageUrl": "{{response.links.next}}"
+        }
+      },
+      "enforceOutputSchema": true
+    },
+    "companies.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Retrieve Company",
+      "description": "Get a company by ID.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Company UUID."
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/companies/{{id}}",
+        "baseUrl": "https://api.productboard.com",
+        "headers": {
+          "Accept": "application/json",
+          "X-Version": "1"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response.data}}"
+        }
+      },
+      "enforceOutputSchema": true
+    },
+    "companies.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Update Company",
+      "description": "Update company name, domain, description, or source metadata.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Company UUID."
+          },
+          "data": {
+            "type": "object",
+            "description": "Company fields to update.",
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "id",
+          "data"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/companies/{{id}}",
+        "baseUrl": "https://api.productboard.com",
+        "body": {
+          "data": "{{data}}"
+        },
+        "headers": {
+          "Accept": "application/json",
+          "X-Version": "1",
+          "Content-Type": "application/json"
+        },
+        "success": [
+          200,
+          201
+        ],
+        "result": {
+          "data": "{{response.data}}"
+        }
+      },
+      "enforceOutputSchema": true
+    },
+    "companies.delete": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Delete Company",
+      "description": "Delete a company by ID.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Company UUID."
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "ok",
+          "status"
+        ],
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          },
+          "status": {
+            "type": "integer"
+          }
+        }
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/companies/{{id}}",
+        "baseUrl": "https://api.productboard.com",
+        "headers": {
+          "Accept": "application/json",
+          "X-Version": "1"
+        },
+        "success": [
+          204,
+          200
+        ],
+        "result": {
+          "ok": true,
+          "status": "{{status}}"
+        }
+      },
+      "enforceOutputSchema": true
+    },
+    "company-fields.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Create Company Custom Field",
+      "description": "Create a company custom field from a Productboard field-definition body.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "body": {
+            "type": "object",
+            "description": "JSON body containing the custom field definition.",
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "body"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/company-fields",
+        "baseUrl": "https://api.productboard.com",
+        "body": "{{body}}",
+        "headers": {
+          "Accept": "application/json",
+          "X-Version": "1",
+          "Content-Type": "application/json"
+        },
+        "success": [
+          200,
+          201
+        ],
+        "result": {
+          "data": "{{response.data}}"
+        }
+      },
+      "enforceOutputSchema": false
+    },
+    "company-fields.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "List Company Custom Fields",
+      "description": "List company custom field definitions.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "links": {
+            "type": [
+              "object",
+              "null"
+            ]
+          },
+          "nextPageCursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "nextPageUrl": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/company-fields",
+        "baseUrl": "https://api.productboard.com",
+        "headers": {
+          "Accept": "application/json",
+          "X-Version": "1"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response.data}}",
+          "links": "{{response.links}}",
+          "nextPageCursor": "{{response.pageCursor}}",
+          "nextPageUrl": "{{response.links.next}}"
+        }
+      },
+      "enforceOutputSchema": true
+    },
+    "company-fields.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Retrieve Company Field",
+      "description": "Get a company custom field definition by ID.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Company custom field UUID."
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/company-fields/{{id}}",
+        "baseUrl": "https://api.productboard.com",
+        "headers": {
+          "Accept": "application/json",
+          "X-Version": "1"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response.data}}"
+        }
+      },
+      "enforceOutputSchema": true
+    },
+    "company-fields.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Update Company Custom Field",
+      "description": "Rename a company custom field.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Company custom field UUID."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "New field name."
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/company-fields/{{id}}",
+        "baseUrl": "https://api.productboard.com",
+        "body": {
+          "data": {
+            "name": "{{name}}"
+          }
+        },
+        "headers": {
+          "Accept": "application/json",
+          "X-Version": "1",
+          "Content-Type": "application/json"
+        },
+        "success": [
+          200,
+          201
+        ],
+        "result": {
+          "data": "{{response.data}}"
+        }
+      },
+      "enforceOutputSchema": true
+    },
+    "company-fields.delete": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Delete Company Field",
+      "description": "Delete a company custom field definition.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Company custom field UUID."
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "ok",
+          "status"
+        ],
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          },
+          "status": {
+            "type": "integer"
+          }
+        }
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/company-fields/{{id}}",
+        "baseUrl": "https://api.productboard.com",
+        "headers": {
+          "Accept": "application/json",
+          "X-Version": "1"
+        },
+        "success": [
+          204,
+          200
+        ],
+        "result": {
+          "ok": true,
+          "status": "{{status}}"
+        }
+      },
+      "enforceOutputSchema": true
+    },
+    "companies.field-values.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Retrieve Company Field Value",
+      "description": "Get a company custom field value.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "companyId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Company UUID."
+          },
+          "companyCustomFieldId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Company custom field UUID."
+          }
+        },
+        "required": [
+          "companyId",
+          "companyCustomFieldId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/companies/{{companyId}}/custom-fields/{{companyCustomFieldId}}/value",
+        "baseUrl": "https://api.productboard.com",
+        "headers": {
+          "Accept": "application/json",
+          "X-Version": "1"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response.data}}"
+        }
+      },
+      "enforceOutputSchema": true
+    },
+    "companies.field-values.set": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Set Company Field Value",
+      "description": "Set or replace a company custom field value.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "companyId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Company UUID."
+          },
+          "companyCustomFieldId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Company custom field UUID."
+          },
+          "value": {
+            "description": "Value matching the field type.",
+            "type": [
+              "string",
+              "number",
+              "boolean",
+              "object",
+              "array",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "companyId",
+          "companyCustomFieldId",
+          "value"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/companies/{{companyId}}/custom-fields/{{companyCustomFieldId}}/value",
+        "baseUrl": "https://api.productboard.com",
+        "body": {
+          "data": {
+            "value": "{{value}}"
+          }
+        },
+        "headers": {
+          "Accept": "application/json",
+          "X-Version": "1",
+          "Content-Type": "application/json"
+        },
+        "success": [
+          200,
+          201
+        ],
+        "result": {
+          "data": "{{response.data}}"
+        }
+      },
+      "enforceOutputSchema": true
+    },
+    "users.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Create User",
+      "description": "Create a Productboard customer user.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "User email, name, and externalId fields.",
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/users",
+        "baseUrl": "https://api.productboard.com",
+        "body": {
+          "data": "{{data}}"
+        },
+        "headers": {
+          "Accept": "application/json",
+          "X-Version": "1",
+          "Content-Type": "application/json"
+        },
+        "success": [
+          200,
+          201
+        ],
+        "result": {
+          "data": "{{response.data}}"
+        }
+      },
+      "enforceOutputSchema": true
+    },
+    "users.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "List Users",
+      "description": "List customer users. Pass pageCursor from links.next; caller-supplied full URLs are not fetched.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "pageCursor": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Cursor from a previous links.next response."
+          },
+          "pageLimit": {
+            "type": "integer",
+            "description": "Page size. Default 100.",
+            "minimum": 1,
+            "maximum": 100
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "links": {
+            "type": [
+              "object",
+              "null"
+            ]
+          },
+          "nextPageCursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "nextPageUrl": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/users",
+        "baseUrl": "https://api.productboard.com",
+        "headers": {
+          "Accept": "application/json",
+          "X-Version": "1"
+        },
+        "query": {
+          "pageCursor": "{{pageCursor}}",
+          "pageLimit": "{{pageLimit}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response.data}}",
+          "links": "{{response.links}}",
+          "nextPageCursor": "{{response.pageCursor}}",
+          "nextPageUrl": "{{response.links.next}}"
+        }
+      },
+      "enforceOutputSchema": true
+    },
+    "users.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Retrieve User",
+      "description": "Get a customer user by ID.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "User UUID."
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/users/{{id}}",
+        "baseUrl": "https://api.productboard.com",
+        "headers": {
+          "Accept": "application/json",
+          "X-Version": "1"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response.data}}"
+        }
+      },
+      "enforceOutputSchema": true
+    },
+    "users.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Update User",
+      "description": "Update a customer user's name, email, or external ID.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "User UUID."
+          },
+          "data": {
+            "type": "object",
+            "description": "User fields to update.",
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "id",
+          "data"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/users/{{id}}",
+        "baseUrl": "https://api.productboard.com",
+        "body": {
+          "data": "{{data}}"
+        },
+        "headers": {
+          "Accept": "application/json",
+          "X-Version": "1",
+          "Content-Type": "application/json"
+        },
+        "success": [
+          200,
+          201
+        ],
+        "result": {
+          "data": "{{response.data}}"
+        }
+      },
+      "enforceOutputSchema": true
+    },
+    "users.delete": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Delete User",
+      "description": "Delete a customer user by ID.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "User UUID."
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "ok",
+          "status"
+        ],
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          },
+          "status": {
+            "type": "integer"
+          }
+        }
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/users/{{id}}",
+        "baseUrl": "https://api.productboard.com",
+        "headers": {
+          "Accept": "application/json",
+          "X-Version": "1"
+        },
+        "success": [
+          204,
+          200
+        ],
+        "result": {
+          "ok": true,
+          "status": "{{status}}"
+        }
+      },
+      "enforceOutputSchema": true
+    },
+    "components.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Create Component",
+      "description": "Create a component under a product or component.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "Component details including name and parent.",
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/components",
+        "baseUrl": "https://api.productboard.com",
+        "body": {
+          "data": "{{data}}"
+        },
+        "headers": {
+          "Accept": "application/json",
+          "X-Version": "1",
+          "Content-Type": "application/json"
+        },
+        "success": [
+          200,
+          201
+        ],
+        "result": {
+          "data": "{{response.data}}"
+        }
+      },
+      "enforceOutputSchema": true
+    },
+    "components.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get Component",
+      "description": "Retrieve a component by ID.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Component UUID."
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/components/{{id}}",
+        "baseUrl": "https://api.productboard.com",
+        "headers": {
+          "Accept": "application/json",
+          "X-Version": "1"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response.data}}"
+        }
+      },
+      "enforceOutputSchema": true
+    },
+    "components.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Update Component",
+      "description": "Update a component's name, description, owner, or parent.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Component UUID."
+          },
+          "data": {
+            "type": "object",
+            "description": "Component fields to update.",
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "id",
+          "data"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/components/{{id}}",
+        "baseUrl": "https://api.productboard.com",
+        "body": {
+          "data": "{{data}}"
+        },
+        "headers": {
+          "Accept": "application/json",
+          "X-Version": "1",
+          "Content-Type": "application/json"
+        },
+        "success": [
+          200,
+          201
+        ],
+        "result": {
+          "data": "{{response.data}}"
+        }
+      },
+      "enforceOutputSchema": true
+    },
+    "features.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Create Feature",
+      "description": "Create a feature or subfeature.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "Feature payload including name, type, and parent.",
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/features",
+        "baseUrl": "https://api.productboard.com",
+        "body": {
+          "data": "{{data}}"
+        },
+        "headers": {
+          "Accept": "application/json",
+          "X-Version": "1",
+          "Content-Type": "application/json"
+        },
+        "success": [
+          200,
+          201
+        ],
+        "result": {
+          "data": "{{response.data}}"
+        }
+      },
+      "enforceOutputSchema": true
+    },
+    "features.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Retrieve Feature",
+      "description": "Get a feature or subfeature by ID.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Feature UUID."
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/features/{{id}}",
+        "baseUrl": "https://api.productboard.com",
+        "headers": {
+          "Accept": "application/json",
+          "X-Version": "1"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response.data}}"
+        }
+      },
+      "enforceOutputSchema": true
+    },
+    "features.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Update Feature",
+      "description": "Partially update a feature (PATCH).",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Feature UUID."
+          },
+          "data": {
+            "type": "object",
+            "description": "Feature fields to update.",
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "id",
+          "data"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/features/{{id}}",
+        "baseUrl": "https://api.productboard.com",
+        "body": {
+          "data": "{{data}}"
+        },
+        "headers": {
+          "Accept": "application/json",
+          "X-Version": "1",
+          "Content-Type": "application/json"
+        },
+        "success": [
+          200,
+          201
+        ],
+        "result": {
+          "data": "{{response.data}}"
+        }
+      },
+      "enforceOutputSchema": true
+    },
+    "features.set": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Set Feature",
+      "description": "Replace feature fields (PUT) including name, description, status, parent, timeframe, or archived.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Feature UUID."
+          },
+          "data": {
+            "type": "object",
+            "description": "Feature fields to set.",
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "id",
+          "data"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/features/{{id}}",
+        "baseUrl": "https://api.productboard.com",
+        "body": {
+          "data": "{{data}}"
+        },
+        "headers": {
+          "Accept": "application/json",
+          "X-Version": "1",
+          "Content-Type": "application/json"
+        },
+        "success": [
+          200,
+          201
+        ],
+        "result": {
+          "data": "{{response.data}}"
+        }
+      },
+      "enforceOutputSchema": true
+    },
+    "features.delete": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Delete Feature",
+      "description": "Delete a feature. Delete subfeatures first.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Feature UUID."
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "ok",
+          "status"
+        ],
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          },
+          "status": {
+            "type": "integer"
+          }
+        }
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/features/{{id}}",
+        "baseUrl": "https://api.productboard.com",
+        "headers": {
+          "Accept": "application/json",
+          "X-Version": "1"
+        },
+        "success": [
+          204,
+          200
+        ],
+        "result": {
+          "ok": true,
+          "status": "{{status}}"
+        }
+      },
+      "enforceOutputSchema": true
+    },
+    "features.objectives.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Create Feature-Objective Link",
+      "description": "Link a top-level feature to an objective.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Top-level feature UUID."
+          },
+          "objectiveId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Objective UUID."
+          }
+        },
+        "required": [
+          "id",
+          "objectiveId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/features/{{id}}/objectives",
+        "baseUrl": "https://api.productboard.com",
+        "body": {
+          "data": {
+            "id": "{{objectiveId}}"
+          }
+        },
+        "headers": {
+          "Accept": "application/json",
+          "X-Version": "1",
+          "Content-Type": "application/json"
+        },
+        "success": [
+          200,
+          201
+        ],
+        "result": {
+          "data": "{{response.data}}"
+        }
+      },
+      "enforceOutputSchema": true
+    },
+    "features.objectives.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "List Feature Objectives",
+      "description": "List objectives linked to a top-level feature.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Top-level feature UUID."
+          },
+          "pageCursor": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Cursor from a previous links.next response."
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "links": {
+            "type": [
+              "object",
+              "null"
+            ]
+          },
+          "nextPageCursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "nextPageUrl": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/features/{{id}}/objectives",
+        "baseUrl": "https://api.productboard.com",
+        "headers": {
+          "Accept": "application/json",
+          "X-Version": "1"
+        },
+        "query": {
+          "pageCursor": "{{pageCursor}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response.data}}",
+          "links": "{{response.links}}",
+          "nextPageCursor": "{{response.pageCursor}}",
+          "nextPageUrl": "{{response.links.next}}"
+        }
+      },
+      "enforceOutputSchema": true
+    },
+    "features.objectives.delete": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Delete Feature Objective Link",
+      "description": "Unlink an objective from a feature.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Feature UUID."
+          },
+          "objectiveId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Objective UUID."
+          }
+        },
+        "required": [
+          "id",
+          "objectiveId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "ok",
+          "status"
+        ],
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          },
+          "status": {
+            "type": "integer"
+          }
+        }
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/features/{{id}}/objectives/{{objectiveId}}",
+        "baseUrl": "https://api.productboard.com",
+        "headers": {
+          "Accept": "application/json",
+          "X-Version": "1"
+        },
+        "success": [
+          204,
+          200
+        ],
+        "result": {
+          "ok": true,
+          "status": "{{status}}"
+        }
+      },
+      "enforceOutputSchema": true
+    },
+    "features.initiatives.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "List Feature Initiatives",
+      "description": "List initiatives linked to a feature.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Feature UUID."
+          },
+          "pageCursor": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Cursor from a previous links.next response."
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "links": {
+            "type": [
+              "object",
+              "null"
+            ]
+          },
+          "nextPageCursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "nextPageUrl": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/features/{{id}}/initiatives",
+        "baseUrl": "https://api.productboard.com",
+        "headers": {
+          "Accept": "application/json",
+          "X-Version": "1"
+        },
+        "query": {
+          "pageCursor": "{{pageCursor}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response.data}}",
+          "links": "{{response.links}}",
+          "nextPageCursor": "{{response.pageCursor}}",
+          "nextPageUrl": "{{response.links.next}}"
+        }
+      },
+      "enforceOutputSchema": true
+    },
+    "products.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Retrieve Product",
+      "description": "Get a product by ID.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Product UUID."
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/products/{{id}}",
+        "baseUrl": "https://api.productboard.com",
+        "headers": {
+          "Accept": "application/json",
+          "X-Version": "1"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response.data}}"
+        }
+      },
+      "enforceOutputSchema": true
+    },
+    "products.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Update Product",
+      "description": "Partially update a product (PATCH).",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Product UUID."
+          },
+          "data": {
+            "type": "object",
+            "description": "Product fields to update.",
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "id",
+          "data"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/products/{{id}}",
+        "baseUrl": "https://api.productboard.com",
+        "body": {
+          "data": "{{data}}"
+        },
+        "headers": {
+          "Accept": "application/json",
+          "X-Version": "1",
+          "Content-Type": "application/json"
+        },
+        "success": [
+          200,
+          201
+        ],
+        "result": {
+          "data": "{{response.data}}"
+        }
+      },
+      "enforceOutputSchema": true
+    },
+    "products.set": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Set Product",
+      "description": "Replace a product with PUT semantics.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Product UUID."
+          },
+          "data": {
+            "type": "object",
+            "description": "Product fields to set.",
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "id",
+          "data"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/products/{{id}}",
+        "baseUrl": "https://api.productboard.com",
+        "body": {
+          "data": "{{data}}"
+        },
+        "headers": {
+          "Accept": "application/json",
+          "X-Version": "1",
+          "Content-Type": "application/json"
+        },
+        "success": [
+          200,
+          201
+        ],
+        "result": {
+          "data": "{{response.data}}"
+        }
+      },
+      "enforceOutputSchema": true
+    },
+    "objectives.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Create Objective",
+      "description": "Create a strategic objective.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "Objective details including name and optional owner, parent, status, timeframe.",
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/objectives",
+        "baseUrl": "https://api.productboard.com",
+        "body": {
+          "data": "{{data}}"
+        },
+        "headers": {
+          "Accept": "application/json",
+          "X-Version": "1",
+          "Content-Type": "application/json"
+        },
+        "success": [
+          200,
+          201
+        ],
+        "result": {
+          "data": "{{response.data}}"
+        }
+      },
+      "enforceOutputSchema": true
+    },
+    "objectives.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get Objective",
+      "description": "Get an objective by ID.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Objective UUID."
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/objectives/{{id}}",
+        "baseUrl": "https://api.productboard.com",
+        "headers": {
+          "Accept": "application/json",
+          "X-Version": "1"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response.data}}"
+        }
+      },
+      "enforceOutputSchema": true
+    },
+    "objectives.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Update Objective",
+      "description": "Update objective name, description, owner, status, timeframe, or archive state.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Objective UUID."
+          },
+          "data": {
+            "type": "object",
+            "description": "Objective fields to update.",
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "id",
+          "data"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/objectives/{{id}}",
+        "baseUrl": "https://api.productboard.com",
+        "body": {
+          "data": "{{data}}"
+        },
+        "headers": {
+          "Accept": "application/json",
+          "X-Version": "1",
+          "Content-Type": "application/json"
+        },
+        "success": [
+          200,
+          201
+        ],
+        "result": {
+          "data": "{{response.data}}"
+        }
+      },
+      "enforceOutputSchema": true
+    },
+    "objectives.delete": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Delete Objective",
+      "description": "Delete an objective by ID.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Objective UUID."
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "ok",
+          "status"
+        ],
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          },
+          "status": {
+            "type": "integer"
+          }
+        }
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/objectives/{{id}}",
+        "baseUrl": "https://api.productboard.com",
+        "headers": {
+          "Accept": "application/json",
+          "X-Version": "1"
+        },
+        "success": [
+          204,
+          200
+        ],
+        "result": {
+          "ok": true,
+          "status": "{{status}}"
+        }
+      },
+      "enforceOutputSchema": true
+    },
+    "objectives.features.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Create Objective-Feature Link",
+      "description": "Link a feature to an objective.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Objective UUID."
+          },
+          "featureId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Feature UUID."
+          }
+        },
+        "required": [
+          "id",
+          "featureId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/objectives/{{id}}/links/features",
+        "baseUrl": "https://api.productboard.com",
+        "body": {
+          "data": {
+            "id": "{{featureId}}"
+          }
+        },
+        "headers": {
+          "Accept": "application/json",
+          "X-Version": "1",
+          "Content-Type": "application/json"
+        },
+        "success": [
+          200,
+          201
+        ],
+        "result": {
+          "data": "{{response.data}}"
+        }
+      },
+      "enforceOutputSchema": true
+    },
+    "objectives.features.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "List Objective Linked Features",
+      "description": "List features linked to an objective.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Objective UUID."
+          },
+          "pageCursor": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Cursor from a previous links.next response."
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "links": {
+            "type": [
+              "object",
+              "null"
+            ]
+          },
+          "nextPageCursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "nextPageUrl": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/objectives/{{id}}/links/features",
+        "baseUrl": "https://api.productboard.com",
+        "headers": {
+          "Accept": "application/json",
+          "X-Version": "1"
+        },
+        "query": {
+          "pageCursor": "{{pageCursor}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response.data}}",
+          "links": "{{response.links}}",
+          "nextPageCursor": "{{response.pageCursor}}",
+          "nextPageUrl": "{{response.links.next}}"
+        }
+      },
+      "enforceOutputSchema": true
+    },
+    "objectives.features.delete": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Delete Objective-Feature Link",
+      "description": "Unlink a feature from an objective.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Objective UUID."
+          },
+          "feature_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Feature UUID."
+          }
+        },
+        "required": [
+          "id",
+          "feature_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "ok",
+          "status"
+        ],
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          },
+          "status": {
+            "type": "integer"
+          }
+        }
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/objectives/{{id}}/links/features/{{feature_id}}",
+        "baseUrl": "https://api.productboard.com",
+        "headers": {
+          "Accept": "application/json",
+          "X-Version": "1"
+        },
+        "success": [
+          204,
+          200
+        ],
+        "result": {
+          "ok": true,
+          "status": "{{status}}"
+        }
+      },
+      "enforceOutputSchema": true
+    },
+    "objectives.initiatives.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "List Objective Linked Initiatives",
+      "description": "List initiatives linked to an objective.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Objective UUID."
+          },
+          "pageCursor": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Cursor from a previous links.next response."
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "links": {
+            "type": [
+              "object",
+              "null"
+            ]
+          },
+          "nextPageCursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "nextPageUrl": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/objectives/{{id}}/links/initiatives",
+        "baseUrl": "https://api.productboard.com",
+        "headers": {
+          "Accept": "application/json",
+          "X-Version": "1"
+        },
+        "query": {
+          "pageCursor": "{{pageCursor}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response.data}}",
+          "links": "{{response.links}}",
+          "nextPageCursor": "{{response.pageCursor}}",
+          "nextPageUrl": "{{response.links.next}}"
+        }
+      },
+      "enforceOutputSchema": true
+    },
+    "releases.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Create Release",
+      "description": "Create a release in a release group.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "Release name, description, and release group.",
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/releases",
+        "baseUrl": "https://api.productboard.com",
+        "body": {
+          "data": "{{data}}"
+        },
+        "headers": {
+          "Accept": "application/json",
+          "X-Version": "1",
+          "Content-Type": "application/json"
+        },
+        "success": [
+          200,
+          201
+        ],
+        "result": {
+          "data": "{{response.data}}"
+        }
+      },
+      "enforceOutputSchema": true
+    },
+    "releases.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "List Releases",
+      "description": "List releases, optionally filtered by release group.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "releaseGroup": {
+            "type": "object",
+            "description": "Release group filter.",
+            "additionalProperties": false,
+            "required": [
+              "id"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Resource UUID."
+              }
+            }
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "links": {
+            "type": [
+              "object",
+              "null"
+            ]
+          },
+          "nextPageCursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "nextPageUrl": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/releases",
+        "baseUrl": "https://api.productboard.com",
+        "headers": {
+          "Accept": "application/json",
+          "X-Version": "1"
+        },
+        "query": {
+          "releaseGroup.id": "{{releaseGroup.id}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response.data}}",
+          "links": "{{response.links}}",
+          "nextPageCursor": "{{response.pageCursor}}",
+          "nextPageUrl": "{{response.links.next}}"
+        }
+      },
+      "enforceOutputSchema": true
+    },
+    "releases.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get Release",
+      "description": "Get a release by ID.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Release UUID."
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/releases/{{id}}",
+        "baseUrl": "https://api.productboard.com",
+        "headers": {
+          "Accept": "application/json",
+          "X-Version": "1"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response.data}}"
+        }
+      },
+      "enforceOutputSchema": true
+    },
+    "releases.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Update Release",
+      "description": "Update release name, description, state, timeframe, archive flag, or group.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Release UUID."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "New release name."
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "upcoming",
+              "in-progress",
+              "completed"
+            ],
+            "description": "Release state."
+          },
+          "archived": {
+            "type": "boolean",
+            "description": "Archive flag."
+          },
+          "timeframe": {
+            "type": "object",
+            "description": "Release timeframe.",
+            "additionalProperties": true
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "description": "HTML description."
+          },
+          "releaseGroup": {
+            "type": "object",
+            "description": "Release group reference.",
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/releases/{{id}}",
+        "baseUrl": "https://api.productboard.com",
+        "body": {
+          "data": {
+            "name": "{{name}}",
+            "state": "{{state}}",
+            "archived": "{{archived}}",
+            "timeframe": "{{timeframe}}",
+            "description": "{{description}}",
+            "releaseGroup": "{{releaseGroup}}"
+          }
+        },
+        "headers": {
+          "Accept": "application/json",
+          "X-Version": "1",
+          "Content-Type": "application/json"
+        },
+        "success": [
+          200,
+          201
+        ],
+        "result": {
+          "data": "{{response.data}}"
+        }
+      },
+      "enforceOutputSchema": true
+    },
+    "releases.delete": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Delete Release",
+      "description": "Delete a release by ID.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Release UUID."
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "ok",
+          "status"
+        ],
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          },
+          "status": {
+            "type": "integer"
+          }
+        }
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/releases/{{id}}",
+        "baseUrl": "https://api.productboard.com",
+        "headers": {
+          "Accept": "application/json",
+          "X-Version": "1"
+        },
+        "success": [
+          204,
+          200
+        ],
+        "result": {
+          "ok": true,
+          "status": "{{status}}"
+        }
+      },
+      "enforceOutputSchema": true
+    },
+    "release-groups.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "List Release Groups",
+      "description": "List release groups.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "pageLimit": {
+            "type": "integer",
+            "description": "Page size. Default 100.",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "pageCursor": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Cursor from a previous links.next response."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "links": {
+            "type": [
+              "object",
+              "null"
+            ]
+          },
+          "nextPageCursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "nextPageUrl": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/release-groups",
+        "baseUrl": "https://api.productboard.com",
+        "headers": {
+          "Accept": "application/json",
+          "X-Version": "1"
+        },
+        "query": {
+          "pageLimit": "{{pageLimit}}",
+          "pageCursor": "{{pageCursor}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response.data}}",
+          "links": "{{response.links}}",
+          "nextPageCursor": "{{response.pageCursor}}",
+          "nextPageUrl": "{{response.links.next}}"
+        }
+      },
+      "enforceOutputSchema": true
+    },
+    "release-groups.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get Release Group",
+      "description": "Get a release group by ID.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Release group UUID."
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/release-groups/{{id}}",
+        "baseUrl": "https://api.productboard.com",
+        "headers": {
+          "Accept": "application/json",
+          "X-Version": "1"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response.data}}"
+        }
+      },
+      "enforceOutputSchema": true
+    },
+    "initiatives.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "List Initiatives",
+      "description": "List initiatives with archived, owner, and status filters.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "archived": {
+            "type": "boolean",
+            "description": "Filter by archived status."
+          },
+          "pageLimit": {
+            "type": "integer",
+            "description": "Page size. Default 100.",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "pageCursor": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Cursor from a previous links.next response."
+          },
+          "status": {
+            "type": "object",
+            "description": "Status filter with id and/or name.",
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Status UUID."
+              },
+              "name": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Status name."
+              }
+            }
+          },
+          "owner": {
+            "type": "object",
+            "description": "Owner filter.",
+            "additionalProperties": false,
+            "properties": {
+              "email": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Owner email.",
+                "format": "email"
+              }
+            }
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "links": {
+            "type": [
+              "object",
+              "null"
+            ]
+          },
+          "nextPageCursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "nextPageUrl": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/initiatives",
+        "baseUrl": "https://api.productboard.com",
+        "headers": {
+          "Accept": "application/json",
+          "X-Version": "1"
+        },
+        "query": {
+          "archived": "{{archived}}",
+          "pageLimit": "{{pageLimit}}",
+          "pageCursor": "{{pageCursor}}",
+          "status.id": "{{status.id}}",
+          "status.name": "{{status.name}}",
+          "owner.email": "{{owner.email}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response.data}}",
+          "links": "{{response.links}}",
+          "nextPageCursor": "{{response.pageCursor}}",
+          "nextPageUrl": "{{response.links.next}}"
+        }
+      },
+      "enforceOutputSchema": true
+    },
+    "initiatives.delete": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Delete Initiative",
+      "description": "Delete an initiative by ID.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Initiative UUID."
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "ok",
+          "status"
+        ],
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          },
+          "status": {
+            "type": "integer"
+          }
+        }
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/initiatives/{{id}}",
+        "baseUrl": "https://api.productboard.com",
+        "headers": {
+          "Accept": "application/json",
+          "X-Version": "1"
+        },
+        "success": [
+          204,
+          200
+        ],
+        "result": {
+          "ok": true,
+          "status": "{{status}}"
+        }
+      },
+      "enforceOutputSchema": true
+    },
+    "key-results.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "List Key Results",
+      "description": "List key results with parent, owner, status, and archived filters.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "archived": {
+            "type": "boolean",
+            "description": "Filter by archived state."
+          },
+          "pageLimit": {
+            "type": "integer",
+            "description": "Page size. Default 100.",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "pageCursor": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Cursor from a previous links.next response."
+          },
+          "parent": {
+            "type": "object",
+            "description": "Parent objective filter.",
+            "additionalProperties": false,
+            "required": [
+              "id"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Resource UUID."
+              }
+            }
+          },
+          "status": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Status UUID."
+              },
+              "name": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Status name."
+              }
+            }
+          },
+          "owner": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "email": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Owner email.",
+                "format": "email"
+              }
+            }
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "links": {
+            "type": [
+              "object",
+              "null"
+            ]
+          },
+          "nextPageCursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "nextPageUrl": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/key-results",
+        "baseUrl": "https://api.productboard.com",
+        "headers": {
+          "Accept": "application/json",
+          "X-Version": "1"
+        },
+        "query": {
+          "archived": "{{archived}}",
+          "pageLimit": "{{pageLimit}}",
+          "pageCursor": "{{pageCursor}}",
+          "parent.id": "{{parent.id}}",
+          "status.id": "{{status.id}}",
+          "status.name": "{{status.name}}",
+          "owner.email": "{{owner.email}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response.data}}",
+          "links": "{{response.links}}",
+          "nextPageCursor": "{{response.pageCursor}}",
+          "nextPageUrl": "{{response.links.next}}"
+        }
+      },
+      "enforceOutputSchema": true
+    },
+    "key-results.delete": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Delete Key Result",
+      "description": "Delete a key result by ID.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Key result UUID."
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "ok",
+          "status"
+        ],
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          },
+          "status": {
+            "type": "integer"
+          }
+        }
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/key-results/{{id}}",
+        "baseUrl": "https://api.productboard.com",
+        "headers": {
+          "Accept": "application/json",
+          "X-Version": "1"
+        },
+        "success": [
+          204,
+          200
+        ],
+        "result": {
+          "ok": true,
+          "status": "{{status}}"
+        }
+      },
+      "enforceOutputSchema": true
+    },
+    "feature-statuses.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "List Feature Statuses",
+      "description": "List feature statuses. Use pageCursor from links.next; full next-page URLs are not fetched.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "pageCursor": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Cursor from a previous links.next response."
+          },
+          "pageLimit": {
+            "type": "integer",
+            "description": "Page size. Default 100.",
+            "minimum": 1,
+            "maximum": 100
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "links": {
+            "type": [
+              "object",
+              "null"
+            ]
+          },
+          "nextPageCursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "nextPageUrl": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/feature-statuses",
+        "baseUrl": "https://api.productboard.com",
+        "headers": {
+          "Accept": "application/json",
+          "X-Version": "1"
+        },
+        "query": {
+          "pageCursor": "{{pageCursor}}",
+          "pageLimit": "{{pageLimit}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response.data}}",
+          "links": "{{response.links}}",
+          "nextPageCursor": "{{response.pageCursor}}",
+          "nextPageUrl": "{{response.links.next}}"
+        }
+      },
+      "enforceOutputSchema": true
+    },
+    "feature-release-assignments.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "List Feature Release Assignments",
+      "description": "List feature-to-release assignments with optional feature, release, and timeframe filters.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "pageLimit": {
+            "type": "integer",
+            "description": "Page size. Default 100.",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "pageCursor": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Cursor from a previous links.next response."
+          },
+          "feature": {
+            "type": "object",
+            "description": "Feature filter.",
+            "additionalProperties": false,
+            "required": [
+              "id"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Resource UUID."
+              }
+            }
+          },
+          "release": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Release UUID."
+              },
+              "state": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Release state such as planned, active, or closed."
+              },
+              "timeframe": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "endDate": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "from": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "End date on or after YYYY-MM-DD."
+                      },
+                      "to": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "End date on or before YYYY-MM-DD."
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "links": {
+            "type": [
+              "object",
+              "null"
+            ]
+          },
+          "nextPageCursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "nextPageUrl": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/feature-release-assignments",
+        "baseUrl": "https://api.productboard.com",
+        "headers": {
+          "Accept": "application/json",
+          "X-Version": "1"
+        },
+        "query": {
+          "pageLimit": "{{pageLimit}}",
+          "pageCursor": "{{pageCursor}}",
+          "feature.id": "{{feature.id}}",
+          "release.id": "{{release.id}}",
+          "release.state": "{{release.state}}",
+          "release.timeframe.endDate.from": "{{release.timeframe.endDate.from}}",
+          "release.timeframe.endDate.to": "{{release.timeframe.endDate.to}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response.data}}",
+          "links": "{{response.links}}",
+          "nextPageCursor": "{{response.pageCursor}}",
+          "nextPageUrl": "{{response.links.next}}"
+        }
+      },
+      "enforceOutputSchema": true
+    },
+    "feature-release-assignments.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get Feature Release Assignment",
+      "description": "Get the assignment between one feature and one release.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "feature": {
+            "type": "object",
+            "description": "Feature.",
+            "additionalProperties": false,
+            "required": [
+              "id"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Resource UUID."
+              }
+            }
+          },
+          "release": {
+            "type": "object",
+            "description": "Release.",
+            "additionalProperties": false,
+            "required": [
+              "id"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Resource UUID."
+              }
+            }
+          }
+        },
+        "required": [
+          "feature",
+          "release"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/feature-release-assignments",
+        "baseUrl": "https://api.productboard.com",
+        "headers": {
+          "Accept": "application/json",
+          "X-Version": "1"
+        },
+        "query": {
+          "feature.id": "{{feature.id}}",
+          "release.id": "{{release.id}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response.data}}"
+        }
+      },
+      "enforceOutputSchema": false
+    },
+    "feature-release-assignments.set": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Set Feature Release Assignment",
+      "description": "Assign a feature to a release (assigned=true) or remove it (assigned=false).",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "assigned": {
+            "type": "boolean",
+            "description": "True assigns the feature; false removes it."
+          },
+          "feature": {
+            "type": "object",
+            "description": "Feature.",
+            "additionalProperties": false,
+            "required": [
+              "id"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Resource UUID."
+              }
+            }
+          },
+          "release": {
+            "type": "object",
+            "description": "Release.",
+            "additionalProperties": false,
+            "required": [
+              "id"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Resource UUID."
+              }
+            }
+          }
+        },
+        "required": [
+          "assigned",
+          "feature",
+          "release"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/feature-release-assignments",
+        "baseUrl": "https://api.productboard.com",
+        "body": {
+          "data": {
+            "assigned": "{{assigned}}",
+            "feature": {
+              "id": "{{feature.id}}"
+            },
+            "release": {
+              "id": "{{release.id}}"
+            }
+          }
+        },
+        "headers": {
+          "Accept": "application/json",
+          "X-Version": "1",
+          "Content-Type": "application/json"
+        },
+        "success": [
+          200,
+          201
+        ],
+        "result": {
+          "data": "{{response.data}}"
+        }
+      },
+      "enforceOutputSchema": true
+    },
+    "hierarchy-custom-fields.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "List Custom Fields",
+      "description": "List hierarchy-entity custom field definitions filtered by type.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "type": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "enum": [
+                "text",
+                "custom-description",
+                "number",
+                "dropdown",
+                "multi-dropdown",
+                "member"
+              ]
+            },
+            "description": "Custom field types to include."
+          },
+          "pageLimit": {
+            "type": "integer",
+            "description": "Page size. Default 100.",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "pageCursor": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Cursor from a previous links.next response."
+          }
+        },
+        "required": [
+          "type"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "links": {
+            "type": [
+              "object",
+              "null"
+            ]
+          },
+          "nextPageCursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "nextPageUrl": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/hierarchy-entities/custom-fields",
+        "baseUrl": "https://api.productboard.com",
+        "headers": {
+          "Accept": "application/json",
+          "X-Version": "1"
+        },
+        "query": {
+          "pageLimit": "{{pageLimit}}",
+          "pageCursor": "{{pageCursor}}"
+        },
+        "parameters": [
+          {
+            "wireName": "type",
+            "inputName": "type",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "allowReserved": false
+          }
+        ],
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response.data}}",
+          "links": "{{response.links}}",
+          "nextPageCursor": "{{response.pageCursor}}",
+          "nextPageUrl": "{{response.links.next}}"
+        }
+      },
+      "enforceOutputSchema": true
+    },
+    "hierarchy-custom-fields.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get Hierarchy Entity Custom Field",
+      "description": "Get a hierarchy custom field definition by ID.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Custom field UUID."
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/hierarchy-entities/custom-fields/{{id}}",
+        "baseUrl": "https://api.productboard.com",
+        "headers": {
+          "Accept": "application/json",
+          "X-Version": "1"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response.data}}"
+        }
+      },
+      "enforceOutputSchema": true
+    },
+    "custom-field-values.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "List Custom Field Values",
+      "description": "List non-empty custom field values for hierarchy entities.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "type": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "enum": [
+                "text",
+                "custom-description",
+                "number",
+                "dropdown",
+                "multi-dropdown",
+                "member"
+              ]
+            },
+            "description": "Custom field types to include."
+          },
+          "pageLimit": {
+            "type": "integer",
+            "description": "Page size. Default 100.",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "pageCursor": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Cursor from a previous links.next response."
+          },
+          "customField": {
+            "type": "object",
+            "description": "Custom field filter.",
+            "additionalProperties": false,
+            "required": [
+              "id"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Resource UUID."
+              }
+            }
+          },
+          "hierarchyEntity": {
+            "type": "object",
+            "description": "Hierarchy entity filter.",
+            "additionalProperties": false,
+            "required": [
+              "id"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Resource UUID."
+              }
+            }
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "links": {
+            "type": [
+              "object",
+              "null"
+            ]
+          },
+          "nextPageCursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "nextPageUrl": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/hierarchy-entities/custom-fields-values",
+        "baseUrl": "https://api.productboard.com",
+        "headers": {
+          "Accept": "application/json",
+          "X-Version": "1"
+        },
+        "query": {
+          "pageLimit": "{{pageLimit}}",
+          "pageCursor": "{{pageCursor}}",
+          "customField.id": "{{customField.id}}",
+          "hierarchyEntity.id": "{{hierarchyEntity.id}}"
+        },
+        "parameters": [
+          {
+            "wireName": "type",
+            "inputName": "type",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "allowReserved": false
+          }
+        ],
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response.data}}",
+          "links": "{{response.links}}",
+          "nextPageCursor": "{{response.pageCursor}}",
+          "nextPageUrl": "{{response.links.next}}"
+        }
+      },
+      "enforceOutputSchema": true
+    },
+    "custom-field-values.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get Custom Field Value",
+      "description": "Get one custom field value for a hierarchy entity.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "customField": {
+            "type": "object",
+            "description": "Custom field.",
+            "additionalProperties": false,
+            "required": [
+              "id"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Resource UUID."
+              }
+            }
+          },
+          "hierarchyEntity": {
+            "type": "object",
+            "description": "Product, component, or feature.",
+            "additionalProperties": false,
+            "required": [
+              "id"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Resource UUID."
+              }
+            }
+          }
+        },
+        "required": [
+          "customField",
+          "hierarchyEntity"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/hierarchy-entities/custom-fields-values",
+        "baseUrl": "https://api.productboard.com",
+        "headers": {
+          "Accept": "application/json",
+          "X-Version": "1"
+        },
+        "query": {
+          "customField.id": "{{customField.id}}",
+          "hierarchyEntity.id": "{{hierarchyEntity.id}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response.data}}"
+        }
+      },
+      "enforceOutputSchema": false
+    },
+    "custom-field-values.set": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Set Custom Field Value",
+      "description": "Set a custom field value on a hierarchy entity.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "value": {
+            "description": "Value matching the field type.",
+            "type": [
+              "string",
+              "number",
+              "boolean",
+              "object",
+              "array",
+              "null"
+            ]
+          },
+          "customField": {
+            "type": "object",
+            "description": "Custom field.",
+            "additionalProperties": false,
+            "required": [
+              "id"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Resource UUID."
+              }
+            }
+          },
+          "hierarchyEntity": {
+            "type": "object",
+            "description": "Product, component, or feature.",
+            "additionalProperties": false,
+            "required": [
+              "id"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Resource UUID."
+              }
+            }
+          }
+        },
+        "required": [
+          "value",
+          "customField",
+          "hierarchyEntity"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/hierarchy-entities/custom-fields-values",
+        "baseUrl": "https://api.productboard.com",
+        "body": {
+          "data": {
+            "value": "{{value}}",
+            "customField": {
+              "id": "{{customField.id}}"
+            },
+            "hierarchyEntity": {
+              "id": "{{hierarchyEntity.id}}"
+            }
+          }
+        },
+        "headers": {
+          "Accept": "application/json",
+          "X-Version": "1",
+          "Content-Type": "application/json"
+        },
+        "success": [
+          200,
+          201
+        ],
+        "result": {
+          "data": "{{response.data}}"
+        }
+      },
+      "enforceOutputSchema": true
+    },
+    "custom-field-values.delete": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Delete Custom Field Value",
+      "description": "Clear a custom field value from a hierarchy entity.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "customField": {
+            "type": "object",
+            "description": "Custom field.",
+            "additionalProperties": false,
+            "required": [
+              "id"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Resource UUID."
+              }
+            }
+          },
+          "hierarchyEntity": {
+            "type": "object",
+            "description": "Product, component, or feature.",
+            "additionalProperties": false,
+            "required": [
+              "id"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Resource UUID."
+              }
+            }
+          }
+        },
+        "required": [
+          "customField",
+          "hierarchyEntity"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "ok",
+          "status"
+        ],
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          },
+          "status": {
+            "type": "integer"
+          }
+        }
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/hierarchy-entities/custom-fields-values",
+        "baseUrl": "https://api.productboard.com",
+        "headers": {
+          "Accept": "application/json",
+          "X-Version": "1"
+        },
+        "query": {
+          "customField.id": "{{customField.id}}",
+          "hierarchyEntity.id": "{{hierarchyEntity.id}}"
+        },
+        "success": [
+          204,
+          200
+        ],
+        "result": {
+          "ok": true,
+          "status": "{{status}}"
+        }
+      },
+      "enforceOutputSchema": true
+    },
+    "feedback-form-configurations.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "List Feedback Form Configurations",
+      "description": "List feedback form configurations with offset pagination.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "pageLimit": {
+            "type": "integer",
+            "description": "Page size. Default 100.",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "pageOffset": {
+            "type": "integer",
+            "description": "Offset for the next page.",
+            "minimum": 0
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "links": {
+            "type": [
+              "object",
+              "null"
+            ]
+          },
+          "nextPageCursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "nextPageUrl": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/feedback-form-configurations",
+        "baseUrl": "https://api.productboard.com",
+        "headers": {
+          "Accept": "application/json",
+          "X-Version": "1"
+        },
+        "query": {
+          "pageLimit": "{{pageLimit}}",
+          "pageOffset": "{{pageOffset}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response.data}}",
+          "links": "{{response.links}}",
+          "nextPageCursor": "{{response.pageCursor}}",
+          "nextPageUrl": "{{response.links.next}}"
+        }
+      },
+      "enforceOutputSchema": true
+    },
+    "entities.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Create Entity (v2)",
+      "description": "Create a product, component, feature, subfeature, initiative, objective, key result, release, or release group.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "Entity type, fields, and relationships.",
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
             "type": "object"
           }
         }
@@ -493,28 +5580,22 @@
       "request": {
         "method": "POST",
         "path": "/entities",
-        "success": [
-          201
-        ],
         "body": {
-          "data": {
-            "type": "{{type}}",
-            "fields": {
-              "name": "{{name}}",
-              "description": "{{description}}"
-            }
-          }
+          "data": "{{data}}"
         },
         "headers": {
+          "Accept": "application/json",
           "Content-Type": "application/json"
         },
+        "success": [
+          201,
+          200
+        ],
         "result": {
-          "entity": "{{response.data}}"
+          "data": "{{response.data}}"
         }
       },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
+      "enforceOutputSchema": true
     },
     "entities.update": {
       "kind": "action",
@@ -522,35 +5603,35 @@
       "timeoutMs": 10000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 1048576,
-      "title": "Update Entity",
-      "description": "Update fields on a Productboard entity.",
+      "title": "Update Entity (v2)",
+      "description": "Update entity fields or apply patch operations.",
       "inputSchema": {
         "type": "object",
+        "additionalProperties": false,
         "properties": {
           "id": {
             "type": "string",
-            "minLength": 1
+            "minLength": 1,
+            "description": "Entity UUID."
           },
-          "name": {
-            "type": "string",
-            "minLength": 1
-          },
-          "description": {
-            "type": "string"
+          "data": {
+            "type": "object",
+            "description": "fields or patch operations.",
+            "additionalProperties": true
           }
         },
-        "additionalProperties": false,
         "required": [
-          "id"
+          "id",
+          "data"
         ]
       },
       "outputSchema": {
         "type": "object",
         "required": [
-          "entity"
+          "data"
         ],
         "properties": {
-          "entity": {
+          "data": {
             "type": "object"
           }
         }
@@ -558,45 +5639,41 @@
       "request": {
         "method": "PATCH",
         "path": "/entities/{{id}}",
-        "success": [
-          200
-        ],
         "body": {
-          "data": {
-            "fields": {
-              "name": "{{name}}",
-              "description": "{{description}}"
-            }
-          }
+          "data": "{{data}}"
         },
         "headers": {
+          "Accept": "application/json",
           "Content-Type": "application/json"
         },
+        "success": [
+          200,
+          201
+        ],
         "result": {
-          "entity": "{{response.data}}"
+          "data": "{{response.data}}"
         }
       },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
+      "enforceOutputSchema": true
     },
     "entities.delete": {
       "kind": "action",
-      "sideEffect": "destructive",
+      "sideEffect": "write",
       "timeoutMs": 10000,
-      "maxInputBytes": 8192,
-      "maxResponseBytes": 65536,
-      "title": "Delete Entity",
-      "description": "Delete a Productboard entity by id.",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Delete Entity (v2)",
+      "description": "Permanently delete a PM entity. Returns 204.",
       "inputSchema": {
         "type": "object",
+        "additionalProperties": false,
         "properties": {
           "id": {
             "type": "string",
-            "minLength": 1
+            "minLength": 1,
+            "description": "Entity UUID."
           }
         },
-        "additionalProperties": false,
         "required": [
           "id"
         ]
@@ -604,603 +5681,161 @@
       "outputSchema": {
         "type": "object",
         "required": [
-          "ok"
+          "ok",
+          "status"
         ],
         "properties": {
           "ok": {
             "type": "boolean"
+          },
+          "status": {
+            "type": "integer"
           }
-        },
-        "additionalProperties": false
+        }
       },
       "request": {
         "method": "DELETE",
         "path": "/entities/{{id}}",
-        "success": [
-          204
-        ],
-        "result": {
-          "ok": true
-        }
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "notes.create": {
-      "kind": "action",
-      "sideEffect": "write",
-      "timeoutMs": 10000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 1048576,
-      "title": "Create Note",
-      "description": "Create a Productboard note.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "type": {
-            "type": "string",
-            "enum": [
-              "textNote",
-              "conversationNote",
-              "simple",
-              "conversation"
-            ],
-            "description": "Note type."
-          },
-          "name": {
-            "type": "string",
-            "minLength": 1
-          },
-          "content": {
-            "type": "string",
-            "description": "Note body for text notes."
-          }
-        },
-        "additionalProperties": false,
-        "required": [
-          "type",
-          "name"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "note"
-        ],
-        "properties": {
-          "note": {
-            "type": "object"
-          }
-        }
-      },
-      "request": {
-        "method": "POST",
-        "path": "/notes",
-        "success": [
-          201
-        ],
-        "body": {
-          "data": {
-            "type": "{{type}}",
-            "fields": {
-              "name": "{{name}}",
-              "content": "{{content}}"
-            }
-          }
-        },
         "headers": {
-          "Content-Type": "application/json"
+          "Accept": "application/json"
         },
-        "result": {
-          "note": "{{response.data}}"
-        }
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "notes.update": {
-      "kind": "action",
-      "sideEffect": "write",
-      "timeoutMs": 10000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 1048576,
-      "title": "Update Note",
-      "description": "Update fields on a Productboard note.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "minLength": 1
-          },
-          "name": {
-            "type": "string",
-            "minLength": 1
-          },
-          "content": {
-            "type": "string"
-          }
-        },
-        "additionalProperties": false,
-        "required": [
-          "id"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "note"
-        ],
-        "properties": {
-          "note": {
-            "type": "object"
-          }
-        }
-      },
-      "request": {
-        "method": "PATCH",
-        "path": "/notes/{{id}}",
         "success": [
+          204,
           200
         ],
-        "body": {
-          "data": {
-            "fields": {
-              "name": "{{name}}",
-              "content": "{{content}}"
-            }
-          }
-        },
-        "headers": {
-          "Content-Type": "application/json"
-        },
         "result": {
-          "note": "{{response.data}}"
+          "ok": true,
+          "status": "{{status}}"
         }
       },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
+      "enforceOutputSchema": true
     },
-    "notes.delete": {
+    "entities.search": {
       "kind": "action",
-      "sideEffect": "destructive",
-      "timeoutMs": 10000,
-      "maxInputBytes": 8192,
-      "maxResponseBytes": 65536,
-      "title": "Delete Note",
-      "description": "Delete a Productboard note by id.",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Search Entities (v2)",
+      "description": "Search entities by type, name, status, owner, parent, or custom fields.",
       "inputSchema": {
         "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "minLength": 1
-          }
-        },
         "additionalProperties": false,
-        "required": [
-          "id"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "ok"
-        ],
         "properties": {
-          "ok": {
-            "type": "boolean"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "DELETE",
-        "path": "/notes/{{id}}",
-        "success": [
-          204
-        ],
-        "result": {
-          "ok": true
-        }
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "teams.list": {
-      "kind": "action",
-      "sideEffect": "read",
-      "timeoutMs": 10000,
-      "maxInputBytes": 16384,
-      "maxResponseBytes": 5242880,
-      "title": "List Teams",
-      "description": "List Productboard workspace teams.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
+          "data": {
+            "type": "object",
+            "description": "Search criteria.",
+            "additionalProperties": true
+          },
           "pageCursor": {
-            "type": "string",
-            "minLength": 1
-          }
-        },
-        "additionalProperties": false
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "teams"
-        ],
-        "properties": {
-          "teams": {
-            "type": "array",
-            "items": {
-              "type": "object"
-            }
-          },
-          "nextPageCursor": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "nextPageUrl": {
-            "type": [
-              "string",
-              "null"
-            ]
-          }
-        }
-      },
-      "request": {
-        "method": "GET",
-        "path": "/teams",
-        "success": [
-          200
-        ],
-        "query": {
-          "pageCursor": "{{pageCursor}}"
-        },
-        "result": {
-          "teams": "{{response.data}}",
-          "nextPageCursor": "{{response.links.next}}",
-          "nextPageUrl": "{{response.links.next}}"
-        }
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "teams.get": {
-      "kind": "action",
-      "sideEffect": "read",
-      "timeoutMs": 10000,
-      "maxInputBytes": 8192,
-      "maxResponseBytes": 1048576,
-      "title": "Get Team",
-      "description": "Get a Productboard team by id.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "minLength": 1
-          }
-        },
-        "additionalProperties": false,
-        "required": [
-          "id"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "team"
-        ],
-        "properties": {
-          "team": {
-            "type": "object"
-          }
-        }
-      },
-      "request": {
-        "method": "GET",
-        "path": "/teams/{{id}}",
-        "success": [
-          200
-        ],
-        "result": {
-          "team": "{{response.data}}"
-        }
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "teams.create": {
-      "kind": "action",
-      "sideEffect": "write",
-      "timeoutMs": 10000,
-      "maxInputBytes": 16384,
-      "maxResponseBytes": 1048576,
-      "title": "Create Team",
-      "description": "Create a Productboard team.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "name": {
-            "type": "string",
-            "minLength": 1
-          },
-          "handle": {
             "type": "string",
             "minLength": 1,
-            "description": "Unique @mention handle."
+            "description": "Cursor from a previous links.next response."
           }
         },
-        "additionalProperties": false,
         "required": [
-          "name",
-          "handle"
+          "data"
         ]
       },
       "outputSchema": {
         "type": "object",
         "required": [
-          "team"
+          "data"
         ],
         "properties": {
-          "team": {
-            "type": "object"
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "links": {
+            "type": [
+              "object",
+              "null"
+            ]
+          },
+          "nextPageCursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "nextPageUrl": {
+            "type": [
+              "string",
+              "null"
+            ]
           }
         }
       },
       "request": {
         "method": "POST",
-        "path": "/teams",
-        "success": [
-          201
-        ],
+        "path": "/entities/search",
         "body": {
-          "data": {
-            "name": "{{name}}",
-            "handle": "{{handle}}"
-          }
+          "data": "{{data}}"
         },
         "headers": {
+          "Accept": "application/json",
           "Content-Type": "application/json"
         },
-        "result": {
-          "team": "{{response.data}}"
-        }
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "notes.relationships.list": {
-      "kind": "action",
-      "sideEffect": "read",
-      "timeoutMs": 10000,
-      "maxInputBytes": 16384,
-      "maxResponseBytes": 5242880,
-      "title": "List Note Relationships",
-      "description": "List relationships for a Productboard note.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "minLength": 1
-          },
-          "pageCursor": {
-            "type": "string",
-            "minLength": 1
-          }
-        },
-        "additionalProperties": false,
-        "required": [
-          "id"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "relationships"
-        ],
-        "properties": {
-          "relationships": {
-            "type": "array",
-            "items": {
-              "type": "object"
-            }
-          },
-          "nextPageCursor": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "nextPageUrl": {
-            "type": [
-              "string",
-              "null"
-            ]
-          }
-        }
-      },
-      "request": {
-        "method": "GET",
-        "path": "/notes/{{id}}/relationships",
-        "success": [
-          200
-        ],
         "query": {
           "pageCursor": "{{pageCursor}}"
         },
-        "result": {
-          "relationships": "{{response.data}}",
-          "nextPageCursor": "{{response.links.next}}",
-          "nextPageUrl": "{{response.links.next}}"
-        }
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "entities.relationships.list": {
-      "kind": "action",
-      "sideEffect": "read",
-      "timeoutMs": 10000,
-      "maxInputBytes": 16384,
-      "maxResponseBytes": 5242880,
-      "title": "List Entity Relationships",
-      "description": "List relationships for a Productboard entity.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "minLength": 1
-          },
-          "pageCursor": {
-            "type": "string",
-            "minLength": 1
-          }
-        },
-        "additionalProperties": false,
-        "required": [
-          "id"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "relationships"
-        ],
-        "properties": {
-          "relationships": {
-            "type": "array",
-            "items": {
-              "type": "object"
-            }
-          },
-          "nextPageCursor": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "nextPageUrl": {
-            "type": [
-              "string",
-              "null"
-            ]
-          }
-        }
-      },
-      "request": {
-        "method": "GET",
-        "path": "/entities/{{id}}/relationships",
         "success": [
           200
         ],
-        "query": {
-          "pageCursor": "{{pageCursor}}"
-        },
         "result": {
-          "relationships": "{{response.data}}",
-          "nextPageCursor": "{{response.links.next}}",
+          "data": "{{response.data}}",
+          "links": "{{response.links}}",
+          "nextPageCursor": "{{response.pageCursor}}",
           "nextPageUrl": "{{response.links.next}}"
         }
       },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "notes.configurations.list": {
-      "kind": "action",
-      "sideEffect": "read",
-      "timeoutMs": 10000,
-      "maxInputBytes": 16384,
-      "maxResponseBytes": 5242880,
-      "title": "List Note Configurations",
-      "description": "List Productboard note type configurations.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "pageCursor": {
-            "type": "string",
-            "minLength": 1
-          }
-        },
-        "additionalProperties": false
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "configurations"
-        ],
-        "properties": {
-          "configurations": {
-            "type": "array",
-            "items": {
-              "type": "object"
-            }
-          },
-          "nextPageCursor": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "nextPageUrl": {
-            "type": [
-              "string",
-              "null"
-            ]
-          }
-        }
-      },
-      "request": {
-        "method": "GET",
-        "path": "/notes/configurations",
-        "success": [
-          200
-        ],
-        "query": {
-          "pageCursor": "{{pageCursor}}"
-        },
-        "result": {
-          "configurations": "{{response.data}}",
-          "nextPageCursor": "{{response.links.next}}",
-          "nextPageUrl": "{{response.links.next}}"
-        }
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
+      "enforceOutputSchema": true
     },
     "entities.configurations.list": {
       "kind": "action",
       "sideEffect": "read",
       "timeoutMs": 10000,
-      "maxInputBytes": 16384,
-      "maxResponseBytes": 5242880,
-      "title": "List Entity Configurations",
-      "description": "List Productboard entity type configurations.",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "List Entity Configurations (v2)",
+      "description": "List configuration metadata for entity types.",
       "inputSchema": {
         "type": "object",
+        "additionalProperties": false,
         "properties": {
           "pageCursor": {
             "type": "string",
-            "minLength": 1
+            "minLength": 1,
+            "description": "Cursor from a previous links.next response."
+          },
+          "types": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "enum": [
+                "product",
+                "component",
+                "feature",
+                "subfeature",
+                "initiative",
+                "objective",
+                "keyResult",
+                "release",
+                "releaseGroup",
+                "user",
+                "company",
+                "competitor",
+                "task"
+              ]
+            },
+            "description": "Optional entity types."
           }
-        },
-        "additionalProperties": false
+        }
       },
       "outputSchema": {
         "type": "object",
@@ -1213,6 +5848,12 @@
             "items": {
               "type": "object"
             }
+          },
+          "links": {
+            "type": [
+              "object",
+              "null"
+            ]
           },
           "nextPageCursor": {
             "type": [
@@ -1231,21 +5872,1526 @@
       "request": {
         "method": "GET",
         "path": "/entities/configurations",
-        "success": [
-          200
-        ],
+        "headers": {
+          "Accept": "application/json"
+        },
         "query": {
           "pageCursor": "{{pageCursor}}"
         },
+        "parameters": [
+          {
+            "wireName": "type[]",
+            "inputName": "types",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "allowReserved": false
+          }
+        ],
+        "success": [
+          200
+        ],
         "result": {
           "configurations": "{{response.data}}",
-          "nextPageCursor": "{{response.links.next}}",
+          "links": "{{response.links}}",
+          "nextPageCursor": "{{response.pageCursor}}",
           "nextPageUrl": "{{response.links.next}}"
         }
       },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
+      "enforceOutputSchema": true
+    },
+    "entities.configurations.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get Entity Configuration (v2)",
+      "description": "Get configuration for one entity type.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "product",
+              "component",
+              "feature",
+              "subfeature",
+              "initiative",
+              "objective",
+              "keyResult",
+              "release",
+              "releaseGroup",
+              "user",
+              "company",
+              "competitor",
+              "task"
+            ],
+            "description": "Entity type."
+          }
+        },
+        "required": [
+          "type"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "configuration"
+        ],
+        "properties": {
+          "configuration": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/entities/configurations/{{type}}",
+        "headers": {
+          "Accept": "application/json"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "configuration": "{{response.data}}"
+        }
+      },
+      "enforceOutputSchema": true
+    },
+    "entities.relationships.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "List Entity Relationships (v2)",
+      "description": "List parent, child, link, or dependency relationships for an entity.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Source entity UUID."
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "parent",
+              "child",
+              "link",
+              "isBlockedBy",
+              "isBlocking"
+            ],
+            "description": "Relationship type filter."
+          },
+          "targetId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Target entity UUID filter."
+          },
+          "pageCursor": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Cursor from a previous links.next response."
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "links": {
+            "type": [
+              "object",
+              "null"
+            ]
+          },
+          "nextPageCursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "nextPageUrl": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/entities/{{id}}/relationships",
+        "headers": {
+          "Accept": "application/json"
+        },
+        "query": {
+          "type": "{{type}}",
+          "target[id]": "{{targetId}}",
+          "pageCursor": "{{pageCursor}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response.data}}",
+          "links": "{{response.links}}",
+          "nextPageCursor": "{{response.pageCursor}}",
+          "nextPageUrl": "{{response.links.next}}"
+        }
+      },
+      "enforceOutputSchema": true
+    },
+    "entities.relationships.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Create Entity Relationship (v2)",
+      "description": "Create a parent, child, link, or dependency relationship.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Source entity UUID."
+          },
+          "data": {
+            "type": "object",
+            "description": "Relationship type and target.",
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "id",
+          "data"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/entities/{{id}}/relationships",
+        "body": {
+          "data": "{{data}}"
+        },
+        "headers": {
+          "Accept": "application/json",
+          "Content-Type": "application/json"
+        },
+        "success": [
+          201,
+          200
+        ],
+        "result": {
+          "data": "{{response.data}}"
+        }
+      },
+      "enforceOutputSchema": true
+    },
+    "entities.relationships.setParent": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Set Entity Parent Relationship (v2)",
+      "description": "Replace the parent of an entity.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Entity UUID."
+          },
+          "data": {
+            "type": "object",
+            "description": "Target parent reference.",
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "id",
+          "data"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/entities/{{id}}/relationships/parent",
+        "body": {
+          "data": "{{data}}"
+        },
+        "headers": {
+          "Accept": "application/json",
+          "Content-Type": "application/json"
+        },
+        "success": [
+          200,
+          201
+        ],
+        "result": {
+          "data": "{{response.data}}"
+        }
+      },
+      "enforceOutputSchema": true
+    },
+    "entities.relationships.delete": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Delete Entity Relationship (v2)",
+      "description": "Delete a relationship between two entities.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Source entity UUID."
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "parent",
+              "child",
+              "link",
+              "isBlockedBy",
+              "isBlocking"
+            ],
+            "description": "Relationship type."
+          },
+          "targetId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Target entity UUID."
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "targetId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "ok",
+          "status"
+        ],
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          },
+          "status": {
+            "type": "integer"
+          }
+        }
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/entities/{{id}}/relationships/{{type}}/{{targetId}}",
+        "headers": {
+          "Accept": "application/json"
+        },
+        "success": [
+          204,
+          200
+        ],
+        "result": {
+          "ok": true,
+          "status": "{{status}}"
+        }
+      },
+      "enforceOutputSchema": true
+    },
+    "notes.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Create Note (v2)",
+      "description": "Create a text or conversation note, optionally related to a customer or company.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "Note type, fields, and optional relationships.",
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/notes",
+        "body": {
+          "data": "{{data}}"
+        },
+        "headers": {
+          "Accept": "application/json",
+          "Content-Type": "application/json"
+        },
+        "success": [
+          201,
+          200
+        ],
+        "result": {
+          "data": "{{response.data}}"
+        }
+      },
+      "enforceOutputSchema": true
+    },
+    "notes.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Update Note (v2)",
+      "description": "Update note fields or apply patch operations. Do not send fields and patch together.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Note UUID."
+          },
+          "fields": {
+            "type": "object",
+            "description": "Direct field updates.",
+            "additionalProperties": true
+          },
+          "patch": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            },
+            "description": "Patch operations (set/clear/addItems/removeItems)."
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/notes/{{id}}",
+        "body": {
+          "data": {
+            "fields": "{{fields}}",
+            "patch": "{{patch}}"
+          }
+        },
+        "headers": {
+          "Accept": "application/json",
+          "Content-Type": "application/json"
+        },
+        "success": [
+          200,
+          201
+        ],
+        "result": {
+          "data": "{{response.data}}"
+        }
+      },
+      "enforceOutputSchema": true
+    },
+    "notes.delete": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Delete Note (v2)",
+      "description": "Permanently delete a note. Returns 204.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Note UUID."
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "ok",
+          "status"
+        ],
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          },
+          "status": {
+            "type": "integer"
+          }
+        }
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/notes/{{id}}",
+        "headers": {
+          "Accept": "application/json"
+        },
+        "success": [
+          204,
+          200
+        ],
+        "result": {
+          "ok": true,
+          "status": "{{status}}"
+        }
+      },
+      "enforceOutputSchema": true
+    },
+    "notes.configurations.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "List Note Configurations (v2)",
+      "description": "List note type configurations.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "type": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "enum": [
+                "textNote",
+                "conversationNote",
+                "opportunityNote",
+                "simple",
+                "conversation",
+                "opportunity",
+                "feature",
+                "initiative"
+              ]
+            },
+            "description": "Optional note types."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "configurations"
+        ],
+        "properties": {
+          "configurations": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "links": {
+            "type": [
+              "object",
+              "null"
+            ]
+          },
+          "nextPageCursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "nextPageUrl": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/notes/configurations",
+        "headers": {
+          "Accept": "application/json"
+        },
+        "parameters": [
+          {
+            "wireName": "type[]",
+            "inputName": "type",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "allowReserved": false
+          }
+        ],
+        "success": [
+          200
+        ],
+        "result": {
+          "configurations": "{{response.data}}",
+          "links": "{{response.links}}",
+          "nextPageCursor": "{{response.pageCursor}}",
+          "nextPageUrl": "{{response.links.next}}"
+        }
+      },
+      "enforceOutputSchema": true
+    },
+    "notes.configurations.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get Note Configuration (v2)",
+      "description": "Get configuration for one note type. Legacy aliases simple/conversation/opportunity are accepted.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "textNote",
+              "conversationNote",
+              "opportunityNote",
+              "simple",
+              "conversation",
+              "opportunity"
+            ],
+            "description": "Note type."
+          }
+        },
+        "required": [
+          "type"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "configuration"
+        ],
+        "properties": {
+          "configuration": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/notes/configurations/{{type}}",
+        "headers": {
+          "Accept": "application/json"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "configuration": "{{response.data}}"
+        }
+      },
+      "enforceOutputSchema": true
+    },
+    "notes.relationships.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "List Note Relationships (v2)",
+      "description": "List customer and product-link relationships for a note.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Note UUID."
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Maximum relationships per page.",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "pageCursor": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Cursor from a previous links.next response."
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "links": {
+            "type": [
+              "object",
+              "null"
+            ]
+          },
+          "nextPageCursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "nextPageUrl": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/notes/{{id}}/relationships",
+        "headers": {
+          "Accept": "application/json"
+        },
+        "query": {
+          "limit": "{{limit}}",
+          "pageCursor": "{{pageCursor}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response.data}}",
+          "links": "{{response.links}}",
+          "nextPageCursor": "{{response.pageCursor}}",
+          "nextPageUrl": "{{response.links.next}}"
+        }
+      },
+      "enforceOutputSchema": true
+    },
+    "notes.relationships.setCustomer": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Set Note Customer Relationship (v2)",
+      "description": "Set or replace the customer (user or company) on a note.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Note UUID."
+          },
+          "data": {
+            "type": "object",
+            "description": "Target customer entity.",
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "id",
+          "data"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/notes/{{id}}/relationships/customer",
+        "body": {
+          "data": "{{data}}"
+        },
+        "headers": {
+          "Accept": "application/json",
+          "Content-Type": "application/json"
+        },
+        "success": [
+          200,
+          201
+        ],
+        "result": {
+          "data": "{{response.data}}"
+        }
+      },
+      "enforceOutputSchema": true
+    },
+    "notes.relationships.delete": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Delete Note Relationship (v2)",
+      "description": "Delete a customer or link relationship from a note.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Note UUID."
+          },
+          "targetType": {
+            "type": "string",
+            "enum": [
+              "customer",
+              "link"
+            ],
+            "description": "Relationship type to delete."
+          },
+          "targetId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Target entity UUID."
+          }
+        },
+        "required": [
+          "id",
+          "targetType",
+          "targetId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "ok",
+          "status"
+        ],
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          },
+          "status": {
+            "type": "integer"
+          }
+        }
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/notes/{{id}}/relationships/{{targetType}}/{{targetId}}",
+        "headers": {
+          "Accept": "application/json"
+        },
+        "success": [
+          204,
+          200
+        ],
+        "result": {
+          "ok": true,
+          "status": "{{status}}"
+        }
+      },
+      "enforceOutputSchema": true
+    },
+    "webhooks.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Create Webhook Subscription",
+      "description": "Register a public HTTPS endpoint for Productboard webhook notifications.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "url": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Public HTTPS notification URL.",
+            "format": "uri"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Human-readable subscription name."
+          },
+          "events": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "additionalProperties": true
+            },
+            "description": "Events to subscribe to, each with eventType."
+          },
+          "notification_headers": {
+            "type": "object",
+            "description": "Headers Productboard will send with callbacks.",
+            "additionalProperties": true
+          },
+          "notification_version": {
+            "type": "integer",
+            "description": "Notification payload version.",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "url",
+          "name",
+          "events",
+          "notification_version"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/webhooks",
+        "body": {
+          "data": {
+            "fields": {
+              "name": "{{name}}",
+              "events": "{{events}}",
+              "notification": {
+                "url": "{{url}}",
+                "version": "{{notification_version}}",
+                "headers": "{{notification_headers}}"
+              }
+            }
+          }
+        },
+        "headers": {
+          "Accept": "application/json",
+          "Content-Type": "application/json"
+        },
+        "success": [
+          201,
+          200
+        ],
+        "result": {
+          "data": "{{response.data}}"
+        }
+      },
+      "enforceOutputSchema": true
+    },
+    "webhooks.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "List Webhook Subscriptions",
+      "description": "List webhook subscriptions.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "pageCursor": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Cursor from a previous links.next response."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "links": {
+            "type": [
+              "object",
+              "null"
+            ]
+          },
+          "nextPageCursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "nextPageUrl": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/webhooks",
+        "headers": {
+          "Accept": "application/json"
+        },
+        "query": {
+          "pageCursor": "{{pageCursor}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response.data}}",
+          "links": "{{response.links}}",
+          "nextPageCursor": "{{response.pageCursor}}",
+          "nextPageUrl": "{{response.links.next}}"
+        }
+      },
+      "enforceOutputSchema": true
+    },
+    "webhooks.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get Webhook Subscription",
+      "description": "Get a webhook subscription by ID.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Webhook subscription UUID."
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/webhooks/{{id}}",
+        "headers": {
+          "Accept": "application/json"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response.data}}"
+        }
+      },
+      "enforceOutputSchema": true
+    },
+    "webhooks.delete": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Delete Webhook Subscription",
+      "description": "Delete a webhook subscription.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Webhook subscription UUID."
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "ok",
+          "status"
+        ],
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          },
+          "status": {
+            "type": "integer"
+          }
+        }
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/webhooks/{{id}}",
+        "headers": {
+          "Accept": "application/json"
+        },
+        "success": [
+          204,
+          200
+        ],
+        "result": {
+          "ok": true,
+          "status": "{{status}}"
+        }
+      },
+      "enforceOutputSchema": true
+    },
+    "analytics.member-activities.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "List Analytics Member Activities (v2)",
+      "description": "List member activity analytics with optional date filters.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "description": "Maximum records to return.",
+            "minimum": 1,
+            "maximum": 1000
+          },
+          "dateFrom": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Start date YYYY-MM-DD."
+          },
+          "dateTo": {
+            "type": "string",
+            "minLength": 1,
+            "description": "End date YYYY-MM-DD."
+          },
+          "pageCursor": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Cursor from a previous links.next response."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "links": {
+            "type": [
+              "object",
+              "null"
+            ]
+          },
+          "nextPageCursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "nextPageUrl": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/analytics/member-activities",
+        "headers": {
+          "Accept": "application/json"
+        },
+        "query": {
+          "limit": "{{limit}}",
+          "dateFrom": "{{dateFrom}}",
+          "dateTo": "{{dateTo}}",
+          "pageCursor": "{{pageCursor}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response.data}}",
+          "links": "{{response.links}}",
+          "nextPageCursor": "{{response.pageCursor}}",
+          "nextPageUrl": "{{response.links.next}}"
+        }
+      },
+      "enforceOutputSchema": true
+    },
+    "jira-integrations.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "List Jira Integrations",
+      "description": "List Jira integrations. Use pageCursor from links.next; full page URLs are not fetched.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "pageCursor": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Cursor from a previous links.next response."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "links": {
+            "type": [
+              "object",
+              "null"
+            ]
+          },
+          "nextPageCursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "nextPageUrl": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/jira-integrations",
+        "headers": {
+          "Accept": "application/json"
+        },
+        "query": {
+          "pageCursor": "{{pageCursor}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response.data}}",
+          "links": "{{response.links}}",
+          "nextPageCursor": "{{response.pageCursor}}",
+          "nextPageUrl": "{{response.links.next}}"
+        }
+      },
+      "enforceOutputSchema": true
+    },
+    "plugin-integrations.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "List Plugin Integrations",
+      "description": "List plugin integrations. Use pageCursor from links.next; full page URLs are not fetched.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "pageCursor": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Cursor from a previous links.next response."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "links": {
+            "type": [
+              "object",
+              "null"
+            ]
+          },
+          "nextPageCursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "nextPageUrl": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/plugin-integrations",
+        "headers": {
+          "Accept": "application/json"
+        },
+        "query": {
+          "pageCursor": "{{pageCursor}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response.data}}",
+          "links": "{{response.links}}",
+          "nextPageCursor": "{{response.pageCursor}}",
+          "nextPageUrl": "{{response.links.next}}"
+        }
+      },
+      "enforceOutputSchema": true
+    },
+    "scim.users.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "List SCIM Users",
+      "description": "List workspace users through SCIM 2.0. Requires a SCIM token.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "count": {
+            "type": "integer",
+            "description": "Page size.",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "filter": {
+            "type": "string",
+            "minLength": 1,
+            "description": "SCIM filter expression."
+          },
+          "sortBy": {
+            "type": "string",
+            "enum": [
+              "id",
+              "externalId",
+              "userName",
+              "displayName",
+              "title",
+              "active"
+            ],
+            "description": "Sort attribute."
+          },
+          "sortOrder": {
+            "type": "string",
+            "enum": [
+              "ascending",
+              "descending"
+            ],
+            "description": "Sort order."
+          },
+          "startIndex": {
+            "type": "integer",
+            "description": "1-based start index.",
+            "minimum": 1
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "totalResults": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "startIndex": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "itemsPerPage": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/Users",
+        "baseUrl": "https://api.productboard.com/scim/v2",
+        "headers": {
+          "Accept": "application/json"
+        },
+        "query": {
+          "count": "{{count}}",
+          "filter": "{{filter}}",
+          "sortBy": "{{sortBy}}",
+          "sortOrder": "{{sortOrder}}",
+          "startIndex": "{{startIndex}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response.Resources}}",
+          "totalResults": "{{response.totalResults}}",
+          "startIndex": "{{response.startIndex}}",
+          "itemsPerPage": "{{response.itemsPerPage}}"
+        }
+      },
+      "enforceOutputSchema": false
     }
   },
   "provenance": {

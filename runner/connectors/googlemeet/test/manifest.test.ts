@@ -5,7 +5,7 @@ describe("googlemeet connector manifest", () => {
   test("declares external_bearer auth and core operations", () => {
     expect(manifest.key).toBe("googlemeet");
     expect(manifest.runtime).toBe("bun");
-    expect(manifest.version).toBe("0.2.0");
+    expect(manifest.version).toBe("0.3.0");
     expect(manifest.auth.type).toBe("external_bearer");
     expect(manifest.auth.setup.mode).toBe("external_bearer");
     expect(manifest.network.allowedHosts).toContain("www.googleapis.com");
@@ -24,7 +24,8 @@ describe("googlemeet connector manifest", () => {
     expect(manifest.operations["meetings.create"].sample).toBeDefined();
   });
 
-  test("operation count is 6 including healthcheck", () => {
-    expect(Object.keys(manifest.operations)).toHaveLength(6);
+  test("operation count includes calendar actions and Meet REST tools", () => {
+    expect(Object.keys(manifest.operations)).toHaveLength(21);
+    expect(manifest.network.allowedHosts).toContain("meet.googleapis.com");
   });
 });

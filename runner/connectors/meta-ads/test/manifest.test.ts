@@ -4,7 +4,7 @@ import manifest from "../manifest.json";
 describe("meta-ads manifest", () => {
   it("has correct key and version", () => {
     expect(manifest.key).toBe("meta-ads");
-    expect(manifest.version).toBe("0.3.0");
+    expect(manifest.version).toBe("0.4.0");
     expect(manifest.runtime).toBe("bun");
   });
 
@@ -28,9 +28,9 @@ describe("meta-ads manifest", () => {
     expect(ops).toContain("ad_accounts.list");
   });
 
-  it("has G1+G2 action operations and totals 35", () => {
+  it("has G1+G2 action operations and totals 89", () => {
     const ops = Object.keys(manifest.operations);
-    expect(ops).toHaveLength(35);
+    expect(ops).toHaveLength(89);
     for (const id of [
       "campaigns.get",
       "campaigns.create",

@@ -60,6 +60,56 @@ describe("apollo connector manifest", () => {
     "sequences.add_contacts",
     "email_accounts.list",
     "users.search",
+    "accounts.search",
+    "accounts.get",
+    "contacts.get",
+    "contacts.update_stage",
+    "deals.list",
+    "deals.get",
+    "deals.create",
+    "deals.update",
+    "tasks.search",
+    "tasks.get",
+    "tasks.create",
+    "tasks.update",
+    "sequences.activate",
+    "sequences.deactivate",
+    "sequences.archive",
+    "accounts.update_stage",
+    "tasks.complete",
+    "accounts.bulk_create",
+    "contacts.bulk_create",
+    "calls.create",
+    "custom_fields.create",
+    "emails.create_draft",
+    "sequences.create",
+    "conversations.export",
+    "conversations.get",
+    "conversations.get_export",
+    "emails.get_activities",
+    "emails.get_content",
+    "labels.list",
+    "deals.list_stages",
+    "organizations.get",
+    "custom_fields.list",
+    "account_stages.list",
+    "contact_stages.list",
+    "fields.list",
+    "notes.list",
+    "analytics.query",
+    "calls.search",
+    "conversations.search",
+    "news.search",
+    "emails.search",
+    "emails.send_now",
+    "accounts.update_owners",
+    "calls.update",
+    "contacts.update_owners",
+    "contacts.bulk_update",
+    "sequences.update_contact_status",
+    "sequences.update",
+    "usage.api_stats",
+    "usage.credit_stats",
   ];
 
   test("includes all expected action operations", () => {
@@ -80,6 +130,12 @@ describe("apollo connector manifest", () => {
     expect(peopleSearch.description).toContain("do not include email addresses or phone numbers");
     expect(peopleSearch.description).toContain("people.match");
     expect(peopleSearch.outputSchema?.properties).toHaveProperty("total_entries");
+  });
+
+  test("phone reveal webhook is classified as read-only", () => {
+    const ops = manifest.operations as Record<string, { kind: string; sideEffect?: string }>;
+    expect(ops["webhook.phone_revealed"].kind).toBe("webhook");
+    expect(ops["webhook.phone_revealed"].sideEffect).toBe("read");
   });
 
   test("all action operations have title and description", () => {

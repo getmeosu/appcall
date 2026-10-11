@@ -1,25 +1,25 @@
 # Canny
 
-**HOLD.** Read-only international **Canny REST API v1** recipe is authored but not approved. Create a secret API key in Canny company settings and store it as `apiKey`. Requests `POST` JSON with `apiKey` in the body and `Content-Type: application/json` to `https://canny.io/api`.
+International **Canny REST API v1/v2** recipe covering origin healthcheck plus every Composio `CANNY_*` HTTP tool (25 tools, 27 operations; healthcheck is an authenticated `POST /v1/boards/list` probe and is not a Composio slug; `posts.get` is kept from origin and is not a Composio slug).
+
+Create a secret API key in Canny company settings and store it as `apiKey`. Requests `POST` JSON with `apiKey` in the body and `Content-Type: application/json` to `https://canny.io/api`.
 
 ## Operations
 
-- `healthcheck`: `POST /v1/boards/list` with empty input (cheap authenticated board list; pinned credential validator).
-- `boards.list`: `POST /v1/boards/list`.
-- `boards.get`: `POST /v1/boards/retrieve` with required `boardID` sent as body `id`.
-- `posts.list`: `POST /v1/posts/list` with optional `boardID`, `limit`, `skip`.
-- `posts.get`: `POST /v1/posts/retrieve` with required `postID` sent as body `id`.
+- Auth: `healthcheck` (`POST /v1/boards/list`).
+- Boards: `boards.list`, `boards.get`.
+- Posts: `posts.list`, `posts.get`, `posts.create`, `posts.update`, `posts.delete`, `posts.add_tag`, `posts.change_status`.
+- Comments: `comments.list`, `comments.create`, `comments.delete`.
+- Users: `users.list`, `users.get`, `users.create_or_update`, `users.delete`.
+- Votes: `votes.list`, `votes.create`, `votes.delete`.
+- Tags: `tags.list`, `tags.get`, `tags.create`.
+- Categories: `categories.list`.
+- Companies: `companies.list`.
+- Opportunities: `opportunities.list`.
+- Changelog: `entries.create`.
 
-Successful responses would be raw provider JSON under AppCall `data`. User/comment writes are omitted.
+Origin list/get operations keep their curated result mappings (`boards`, `board`, `posts`/`hasMore`, `post`). New operations return raw Canny JSON under AppCall `data`, except endpoints that respond with the literal `success` string (`votes.create`, `posts.update`, deletes), which map to `{success: true}`. `votes.list` maps Composio `voterID` to official `userID`. Optional body fields are omitted when unset. The upstream user-agent is not sent.
 
-## Adaptations
+Research HOLD from 2026-09-13 is unchanged: 21bitcoin disclosed a 2026-08-28 Canny incident; Canny public RCA was not found at review time.
 
-Official text and pinned source send JSON; official curl snippets use `-d` form fields. Native JSON body matches pinned source. Native input `boardID`/`postID` map to official body `id`. Native category is `productivity` (source Data is not in the Rust CATEGORIES allowlist). Returns raw Canny JSON under `data` (`appcall-provider-json-v1`) rather than the original curated `preserve-existing` result mapping. The upstream user-agent is not sent.
-
-## HOLD reason
-
-21bitcoin disclosed on 2026-09-02 that Canny was targeted on 2026-08-28 and an Intercom integration access key was stolen. Canny has not published a public RCA as of 2026-09-13. This is a current unresolved credible issue and is not treated as waived historical coverage.
-
-## License and evidence
-
-Upstream definitions are attributed to [oomol-lab/open-connector](https://github.com/oomol-lab/open-connector) (Apache-2.0) at `33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a`. Fixtures are independently derived from official docs plus pinned source and are fixture-only; live smoke is unverified.
+Source attribution: oomol-lab/open-connector at `33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a` (Apache License 2.0). Official docs: https://developers.canny.io/api-reference. Fixtures are independently derived and do not represent live provider access. Live smoke remains unverified.

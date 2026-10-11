@@ -12,4 +12,4 @@ International Intercom recipe using the US API host `api.intercom.io` and an API
 
 Runner depth lives under `runner/connectors/intercom/src/` (http/objects/sync) with inject-fetch tests. Source attribution: Oomol Open Connector, pinned revision `33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a`.
 
-Live smoke: supply an Intercom API token and call `healthcheck`, then one list operation (and optionally a conversation get). Live evidence remains unverified. Outclass note: Composio exposes ~133 Intercom ops; this cut is scaffold + first P0 conversations slice only.
+Live smoke: supply an Intercom API token and call `healthcheck`, then one list operation (and optionally a conversation get). Live evidence remains unverified. Deepened past Composio INTERCOM (133 tools) with remaining official 2.13 REST: conversation snooze/update/delete/convert/redact, messages, news item CRUD, newsfeeds, visitors update/convert, custom object instance writes, phone switch, contact tickets, and help center section get/update/delete. Recipe operations equal runner operations.

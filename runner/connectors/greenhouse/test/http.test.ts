@@ -127,4 +127,44 @@ describe("Greenhouse OAuth Bearer auth", () => {
     });
     expect(cursor).toBe("abc123");
   });
+
+  it("putJSON sends PUT and deleteJSON can include a JSON body", async () => {
+    const calls: Array<{ url: string; method: string; body: string | null }> = [];
+    const fetchImpl: typeof fetch = async (input, init) => {
+      const url = String(input);
+      if (url.includes("auth.greenhouse.io/token")) {
+        return jsonResponse(200, { access_token: accessToken, token_type: "Bearer", expires_in: 3600 });
+      }
+      calls.push({ url, method: String(init?.method ?? "GET").toUpperCase(), body: init?.body ? String(init.body) : null });
+      return jsonResponse(200, { ok: true });
+    };
+    const client = createAuthClient({ clientId, clientSecret, fetch: fetchImpl });
+    await client.putJSON("/approver_groups/1/replace_approver", { add_user_id: 2, remove_user_id: 3 });
+    await client.deleteJSON("/custom_field_options/bulk", { data: [1, 2] });
+    expect(calls[0]!.method).toBe("PUT");
+    expect(calls[0]!.url).toContain("/v3/approver_groups/1/replace_approver");
+    expect(JSON.parse(calls[0]!.body!)).toEqual({ add_user_id: 2, remove_user_id: 3 });
+    expect(calls[1]!.method).toBe("DELETE");
+    expect(JSON.parse(calls[1]!.body!)).toEqual({ data: [1, 2] });
+  });
+
+  it("introspectToken POSTs the access token to auth.greenhouse.io/introspect", async () => {
+    const calls: string[] = [];
+    const fetchImpl: typeof fetch = async (input, init) => {
+      const url = String(input);
+      calls.push(`${String(init?.method ?? "GET").toUpperCase()} ${url}`);
+      if (url.includes("auth.greenhouse.io/token")) {
+        return jsonResponse(200, { access_token: accessToken, token_type: "Bearer", expires_in: 3600 });
+      }
+      if (url.includes("auth.greenhouse.io/introspect")) {
+        expect(String(init?.body)).toContain("token=");
+        return jsonResponse(200, { active: true, sub: "1049756" });
+      }
+      return jsonResponse(200, []);
+    };
+    const client = createAuthClient({ clientId, clientSecret, fetch: fetchImpl });
+    const intro = await client.introspectToken();
+    expect(intro.sub).toBe("1049756");
+    expect(calls.some((c) => c.includes("INTROSPECT") || c.includes("/introspect"))).toBe(true);
+  });
 });

@@ -11,14 +11,29 @@ export function parseResendRateLimit(status: number, headers: Record<string, str
 
 export type ResendClientOptions = { apiKey: string; fetch?: typeof fetch; operation?: string };
 
+export function encodeResendPathIdentifier(value: string, field: string): string {
+  if (!value || value === "." || value === ".." || /[\/\\\u0000-\u001f\u007f-\u009f]/u.test(value)) {
+    throw new Error(`${field} must be a safe path identifier`);
+  }
+  return encodeURIComponent(value);
+}
+
 export function createResendClient(options: ResendClientOptions) {
   const operation = options.operation ?? "emails.send";
   const maxResponseBytes = (manifest.operations as Record<string, { maxResponseBytes?: number }>)[operation]?.maxResponseBytes ?? 65536;
   const httpClient = createConnectorHttpClient({ allowedHosts: manifest.network.allowedHosts as string[], maxResponseBytes, fetch: options.fetch });
   return {
     async fetchJSON(path: string, init: RequestInit = {}): Promise<{ status: number; headers: Record<string, string>; body: unknown }> {
+      const headers: Record<string, string> = {
+        Authorization: `Bearer ${options.apiKey}`,
+        ...(init.headers as Record<string, string> | undefined),
+      };
+      if (init.body != null && headers["Content-Type"] == null && headers["content-type"] == null) {
+        headers["Content-Type"] = "application/json";
+      }
       const response = await httpClient.fetchText(`https://api.resend.com${path}`, {
-        ...init, headers: { Authorization: `Bearer ${options.apiKey}`, "Content-Type": "application/json", ...(init.headers as Record<string, string>) },
+        ...init,
+        headers,
       });
       let body: unknown;
       try { body = JSON.parse(response.body); } catch { body = response.body; }

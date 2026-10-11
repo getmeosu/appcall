@@ -12,8 +12,11 @@ International Alpaca Trading API v2 recipe. Copy the API key ID and secret from 
 - `clock.get` / `calendar.list`: US market clock and calendar.
 - `account.activities.list` / `account.config.get` / `account.portfolio.history`: account activity, configuration, and equity history.
 - `option_contracts.list` / `option_contracts.get`: option contract catalog on the trading host.
+- Watchlist add/remove/update/delete, close-all positions, account configuration updates, and activity-type reads on the trading host.
+- Market-data host `data.alpaca.markets`: stock/crypto/options bars, quotes, trades, snapshots, auctions, news, screeners, and meta.
+- Broker host `broker-api.alpaca.markets`: account-scoped watchlists/positions/orders, CIP upload, and rebalancing subscriptions.
 
-Market-data host `data.alpaca.markets` and OAuth remain omitted. Native returns raw JSON under `data`. Native category is `banking-data`.
+Market-data host `data.alpaca.markets` and broker host `broker-api.alpaca.markets` are allowlisted for Composio parity. OAuth remains omitted. Native returns raw JSON under `data`. Native category is `banking-data`.
 
 ## Adaptations
 

@@ -60,7 +60,25 @@ describe("createApifyClient", () => {
     await client.fetchJSON("/acts?my=1");
     expect(requests).toHaveLength(1);
     expect(requests[0].headers.get("Authorization")).toBe("Bearer apify_api_secret");
+    expect(requests[0].headers.get("Content-Type")).toBeNull();
     expect(requests[0].url).toBe("https://api.apify.com/v2/acts?my=1");
+  });
+
+  test("sets JSON Content-Type only when a body is sent", async () => {
+    const requests: Request[] = [];
+    const client = createApifyClient({
+      apiKey: "apify_api_secret",
+      fetch: async (input, init) => {
+        requests.push(new Request(input, init));
+        return new Response(JSON.stringify({ data: {} }), { status: 200 });
+      },
+    });
+    await client.fetchJSON("/datasets", { method: "POST", body: JSON.stringify({ name: "leads" }) });
+    await client.fetchJSON("/datasets/ds1", { method: "DELETE" });
+    expect(requests).toHaveLength(2);
+    expect(requests[0].headers.get("Content-Type")).toBe("application/json");
+    expect(requests[1].method).toBe("DELETE");
+    expect(requests[1].headers.get("Content-Type")).toBeNull();
   });
 
   test("does not follow redirects", async () => {

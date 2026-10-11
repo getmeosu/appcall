@@ -90,30 +90,35 @@
     "edition": "international Callingly REST API",
     "operations": [
       "healthcheck",
-      "teams.list",
-      "teams.get",
-      "teams.create",
-      "teams.update",
-      "teams.agents.list",
-      "leads.list",
       "leads.get",
-      "leads.update",
-      "leads.delete",
-      "calls.list",
-      "calls.get",
-      "calls.create",
-      "sms.create",
-      "clients.list",
-      "clients.create",
-      "agents.list",
+      "leads.list",
+      "teams.get",
+      "teams.list",
       "agents.create",
-      "agents.update",
+      "agents.delete",
+      "agents.list",
       "agents.schedule.get",
-      "webhooks.list",
+      "agents.schedule.update",
+      "agents.update",
+      "calls.create",
+      "calls.get",
+      "calls.list",
+      "clients.activate",
+      "clients.create",
+      "clients.delete",
+      "clients.list",
+      "leads.delete",
+      "leads.update",
+      "teams.agents.list",
+      "teams.agents.remove",
+      "teams.agents.update",
+      "teams.agents.update_settings",
+      "teams.create",
+      "webhooks.create",
+      "webhooks.delete",
       "webhooks.get",
-      "webhook.call_completed",
-      "webhook.lead_created",
-      "webhook.lead_updated"
+      "webhooks.list",
+      "webhooks.update"
     ],
     "upstreamSha": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
     "marketFocus": "international",
@@ -238,7 +243,8 @@
       ],
       "responseContract": "appcall-provider-json-v1",
       "adaptations": [
-        "Returns raw Callingly JSON under data. Official list-leads is a JSON array. Optional start, end, phone_number, and accountId (as account_id) use official/source query names."
+        "Returns raw Callingly JSON under data. Official list-leads is a JSON array. Optional start, end, phone_number, and accountId (as account_id) use official/source query names.",
+        "Optional page and limit query parameters from CALLINGLY_LIST_LEADS are omitted when unset."
       ]
     },
     "leads.get": {
@@ -256,283 +262,436 @@
         "leadId is a required positive integer path segment on GET /v1/leads/{id}."
       ]
     },
-    "teams.create": {
-      "upstreamActionId": "create_team",
+    "agents.create": {
+      "upstreamActionId": "agents.create",
       "sourceRefs": [
-        "request-auth"
+        "request-auth",
+        "api-base"
       ],
       "documentationUrls": [
-        "https://help.callingly.com/article/38-callingly-api-documentation"
+        "https://help.callingly.com/article/38-callingly-api-documentation",
+        "https://docs.composio.dev/toolkits/callingly"
       ],
       "responseContract": "appcall-provider-json-v1",
       "adaptations": [
-        "POST /v1/teams creates a team; preserves raw Callingly JSON under data."
+        "POST /v1/agents.",
+        "Returns raw Callingly JSON under data unless the DELETE body is undocumented, in which case the envelope is {success: true}.",
+        "The upstream user-agent is not sent."
       ]
     },
-    "teams.update": {
-      "upstreamActionId": "update_team",
+    "agents.delete": {
+      "upstreamActionId": "agents.delete",
       "sourceRefs": [
-        "request-auth"
+        "request-auth",
+        "api-base"
       ],
       "documentationUrls": [
-        "https://help.callingly.com/article/38-callingly-api-documentation"
+        "https://help.callingly.com/article/38-callingly-api-documentation",
+        "https://docs.composio.dev/toolkits/callingly"
       ],
       "responseContract": "appcall-provider-json-v1",
       "adaptations": [
-        "PUT /v1/teams/{id} updates a team."
-      ]
-    },
-    "teams.agents.list": {
-      "upstreamActionId": "list_team_users",
-      "sourceRefs": [
-        "request-auth"
-      ],
-      "documentationUrls": [
-        "https://help.callingly.com/article/38-callingly-api-documentation"
-      ],
-      "responseContract": "appcall-provider-json-v1",
-      "adaptations": [
-        "GET /v1/teams/{id}/agents lists assigned agents."
-      ]
-    },
-    "leads.update": {
-      "upstreamActionId": "update_lead",
-      "sourceRefs": [
-        "request-auth"
-      ],
-      "documentationUrls": [
-        "https://help.callingly.com/article/38-callingly-api-documentation"
-      ],
-      "responseContract": "appcall-provider-json-v1",
-      "adaptations": [
-        "PUT /v1/leads/{id} updates a lead."
-      ]
-    },
-    "leads.delete": {
-      "upstreamActionId": "delete_lead",
-      "sourceRefs": [
-        "request-auth"
-      ],
-      "documentationUrls": [
-        "https://help.callingly.com/article/38-callingly-api-documentation"
-      ],
-      "responseContract": "appcall-provider-json-v1",
-      "adaptations": [
-        "DELETE /v1/leads/{id} deletes a lead; empty bodies map to deleted=true."
-      ]
-    },
-    "calls.list": {
-      "upstreamActionId": "list_calls",
-      "sourceRefs": [
-        "request-auth"
-      ],
-      "documentationUrls": [
-        "https://help.callingly.com/article/38-callingly-api-documentation"
-      ],
-      "responseContract": "appcall-provider-json-v1",
-      "adaptations": [
-        "GET /v1/calls lists calls with optional start/end/team_id/limit/page."
-      ]
-    },
-    "calls.get": {
-      "upstreamActionId": "get_call",
-      "sourceRefs": [
-        "action-get-call",
-        "handler-get-call",
-        "request-auth"
-      ],
-      "documentationUrls": [
-        "https://help.callingly.com/article/38-callingly-api-documentation"
-      ],
-      "responseContract": "appcall-provider-json-v1",
-      "adaptations": [
-        "GET /v1/calls/{id} returns one call."
-      ]
-    },
-    "calls.create": {
-      "upstreamActionId": "create_call",
-      "sourceRefs": [
-        "request-auth"
-      ],
-      "documentationUrls": [
-        "https://help.callingly.com/article/38-callingly-api-documentation"
-      ],
-      "responseContract": "appcall-provider-json-v1",
-      "adaptations": [
-        "POST /v1/calls creates an outbound call for a lead."
-      ]
-    },
-    "sms.create": {
-      "upstreamActionId": "create_sms",
-      "sourceRefs": [
-        "request-auth"
-      ],
-      "documentationUrls": [
-        "https://help.callingly.com/article/38-callingly-api-documentation"
-      ],
-      "responseContract": "appcall-provider-json-v1",
-      "adaptations": [
-        "POST /v1/sms sends an SMS."
-      ]
-    },
-    "clients.list": {
-      "upstreamActionId": "list_clients",
-      "sourceRefs": [
-        "request-auth"
-      ],
-      "documentationUrls": [
-        "https://help.callingly.com/article/38-callingly-api-documentation"
-      ],
-      "responseContract": "appcall-provider-json-v1",
-      "adaptations": [
-        "GET /v1/clients lists agency clients."
-      ]
-    },
-    "clients.create": {
-      "upstreamActionId": "create_client",
-      "sourceRefs": [
-        "request-auth"
-      ],
-      "documentationUrls": [
-        "https://help.callingly.com/article/38-callingly-api-documentation"
-      ],
-      "responseContract": "appcall-provider-json-v1",
-      "adaptations": [
-        "POST /v1/clients creates an agency client."
+        "DELETE /v1/agents/{{id}}.",
+        "Returns raw Callingly JSON under data unless the DELETE body is undocumented, in which case the envelope is {success: true}.",
+        "The upstream user-agent is not sent."
       ]
     },
     "agents.list": {
-      "upstreamActionId": "list_users",
+      "upstreamActionId": "agents.list",
       "sourceRefs": [
-        "request-auth"
+        "request-auth",
+        "api-base"
       ],
       "documentationUrls": [
-        "https://help.callingly.com/article/38-callingly-api-documentation"
+        "https://help.callingly.com/article/38-callingly-api-documentation",
+        "https://docs.composio.dev/toolkits/callingly"
       ],
       "responseContract": "appcall-provider-json-v1",
       "adaptations": [
-        "GET /v1/agents lists agents."
-      ]
-    },
-    "agents.create": {
-      "upstreamActionId": "create_agent",
-      "sourceRefs": [
-        "request-auth"
-      ],
-      "documentationUrls": [
-        "https://help.callingly.com/article/38-callingly-api-documentation"
-      ],
-      "responseContract": "appcall-provider-json-v1",
-      "adaptations": [
-        "POST /v1/agents creates an agent."
-      ]
-    },
-    "agents.update": {
-      "upstreamActionId": "update_agent",
-      "sourceRefs": [
-        "request-auth"
-      ],
-      "documentationUrls": [
-        "https://help.callingly.com/article/38-callingly-api-documentation"
-      ],
-      "responseContract": "appcall-provider-json-v1",
-      "adaptations": [
-        "PUT /v1/agents/{id} updates an agent."
+        "GET /v1/agents.",
+        "Returns raw Callingly JSON under data unless the DELETE body is undocumented, in which case the envelope is {success: true}.",
+        "The upstream user-agent is not sent."
       ]
     },
     "agents.schedule.get": {
-      "upstreamActionId": "get_agent_schedule",
+      "upstreamActionId": "agents.schedule.get",
       "sourceRefs": [
-        "request-auth"
+        "request-auth",
+        "api-base"
       ],
       "documentationUrls": [
-        "https://help.callingly.com/article/38-callingly-api-documentation"
+        "https://help.callingly.com/article/38-callingly-api-documentation",
+        "https://docs.composio.dev/toolkits/callingly"
       ],
       "responseContract": "appcall-provider-json-v1",
       "adaptations": [
-        "GET /v1/agents/{id}/schedule returns weekly availability."
+        "GET /v1/agents/{{id}}/schedule.",
+        "Returns raw Callingly JSON under data unless the DELETE body is undocumented, in which case the envelope is {success: true}.",
+        "The upstream user-agent is not sent."
       ]
     },
-    "webhooks.list": {
-      "upstreamActionId": "list_webhooks",
+    "agents.schedule.update": {
+      "upstreamActionId": "agents.schedule.update",
       "sourceRefs": [
-        "request-auth"
+        "request-auth",
+        "api-base"
       ],
       "documentationUrls": [
-        "https://help.callingly.com/article/38-callingly-api-documentation"
+        "https://help.callingly.com/article/38-callingly-api-documentation",
+        "https://docs.composio.dev/toolkits/callingly"
       ],
       "responseContract": "appcall-provider-json-v1",
       "adaptations": [
-        "GET /v1/webhooks lists webhook subscriptions."
+        "PUT /v1/agents/{{id}}/schedule.",
+        "Returns raw Callingly JSON under data unless the DELETE body is undocumented, in which case the envelope is {success: true}.",
+        "The upstream user-agent is not sent."
+      ]
+    },
+    "agents.update": {
+      "upstreamActionId": "agents.update",
+      "sourceRefs": [
+        "request-auth",
+        "api-base"
+      ],
+      "documentationUrls": [
+        "https://help.callingly.com/article/38-callingly-api-documentation",
+        "https://docs.composio.dev/toolkits/callingly"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "PUT /v1/agents/{{id}}.",
+        "Returns raw Callingly JSON under data unless the DELETE body is undocumented, in which case the envelope is {success: true}.",
+        "The upstream user-agent is not sent."
+      ]
+    },
+    "calls.create": {
+      "upstreamActionId": "calls.create",
+      "sourceRefs": [
+        "request-auth",
+        "api-base"
+      ],
+      "documentationUrls": [
+        "https://help.callingly.com/article/38-callingly-api-documentation",
+        "https://docs.composio.dev/toolkits/callingly"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "POST /v1/calls.",
+        "Returns raw Callingly JSON under data unless the DELETE body is undocumented, in which case the envelope is {success: true}.",
+        "The upstream user-agent is not sent."
+      ]
+    },
+    "calls.get": {
+      "upstreamActionId": "calls.get",
+      "sourceRefs": [
+        "request-auth",
+        "api-base"
+      ],
+      "documentationUrls": [
+        "https://help.callingly.com/article/38-callingly-api-documentation",
+        "https://docs.composio.dev/toolkits/callingly"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "GET /v1/calls/{{call_id}}.",
+        "Returns raw Callingly JSON under data unless the DELETE body is undocumented, in which case the envelope is {success: true}.",
+        "The upstream user-agent is not sent."
+      ]
+    },
+    "calls.list": {
+      "upstreamActionId": "calls.list",
+      "sourceRefs": [
+        "request-auth",
+        "api-base"
+      ],
+      "documentationUrls": [
+        "https://help.callingly.com/article/38-callingly-api-documentation",
+        "https://docs.composio.dev/toolkits/callingly"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "GET /v1/calls.",
+        "Returns raw Callingly JSON under data unless the DELETE body is undocumented, in which case the envelope is {success: true}.",
+        "The upstream user-agent is not sent."
+      ]
+    },
+    "clients.activate": {
+      "upstreamActionId": "clients.activate",
+      "sourceRefs": [
+        "request-auth",
+        "api-base"
+      ],
+      "documentationUrls": [
+        "https://help.callingly.com/article/38-callingly-api-documentation",
+        "https://docs.composio.dev/toolkits/callingly"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "POST /v1/clients/{{client_id}}/active.",
+        "Returns raw Callingly JSON under data unless the DELETE body is undocumented, in which case the envelope is {success: true}.",
+        "The upstream user-agent is not sent."
+      ]
+    },
+    "clients.create": {
+      "upstreamActionId": "clients.create",
+      "sourceRefs": [
+        "request-auth",
+        "api-base"
+      ],
+      "documentationUrls": [
+        "https://help.callingly.com/article/38-callingly-api-documentation",
+        "https://docs.composio.dev/toolkits/callingly"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "POST /v1/clients.",
+        "Returns raw Callingly JSON under data unless the DELETE body is undocumented, in which case the envelope is {success: true}.",
+        "The upstream user-agent is not sent."
+      ]
+    },
+    "clients.delete": {
+      "upstreamActionId": "clients.delete",
+      "sourceRefs": [
+        "request-auth",
+        "api-base"
+      ],
+      "documentationUrls": [
+        "https://help.callingly.com/article/38-callingly-api-documentation",
+        "https://docs.composio.dev/toolkits/callingly"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "DELETE /v1/clients/{{id}}.",
+        "Returns raw Callingly JSON under data unless the DELETE body is undocumented, in which case the envelope is {success: true}.",
+        "The upstream user-agent is not sent."
+      ]
+    },
+    "clients.list": {
+      "upstreamActionId": "clients.list",
+      "sourceRefs": [
+        "request-auth",
+        "api-base"
+      ],
+      "documentationUrls": [
+        "https://help.callingly.com/article/38-callingly-api-documentation",
+        "https://docs.composio.dev/toolkits/callingly"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "GET /v1/clients.",
+        "Returns raw Callingly JSON under data unless the DELETE body is undocumented, in which case the envelope is {success: true}.",
+        "The upstream user-agent is not sent."
+      ]
+    },
+    "leads.delete": {
+      "upstreamActionId": "leads.delete",
+      "sourceRefs": [
+        "request-auth",
+        "api-base"
+      ],
+      "documentationUrls": [
+        "https://help.callingly.com/article/38-callingly-api-documentation",
+        "https://docs.composio.dev/toolkits/callingly"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "DELETE /v1/leads/{{id}}.",
+        "Returns raw Callingly JSON under data unless the DELETE body is undocumented, in which case the envelope is {success: true}.",
+        "The upstream user-agent is not sent."
+      ]
+    },
+    "leads.update": {
+      "upstreamActionId": "leads.update",
+      "sourceRefs": [
+        "request-auth",
+        "api-base"
+      ],
+      "documentationUrls": [
+        "https://help.callingly.com/article/38-callingly-api-documentation",
+        "https://docs.composio.dev/toolkits/callingly"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "PUT /v1/leads/{{id}}.",
+        "Returns raw Callingly JSON under data unless the DELETE body is undocumented, in which case the envelope is {success: true}.",
+        "The upstream user-agent is not sent."
+      ]
+    },
+    "teams.agents.list": {
+      "upstreamActionId": "teams.agents.list",
+      "sourceRefs": [
+        "request-auth",
+        "api-base"
+      ],
+      "documentationUrls": [
+        "https://help.callingly.com/article/38-callingly-api-documentation",
+        "https://docs.composio.dev/toolkits/callingly"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "GET /v1/teams/{{id}}/agents.",
+        "Returns raw Callingly JSON under data unless the DELETE body is undocumented, in which case the envelope is {success: true}.",
+        "The upstream user-agent is not sent."
+      ]
+    },
+    "teams.agents.remove": {
+      "upstreamActionId": "teams.agents.remove",
+      "sourceRefs": [
+        "request-auth",
+        "api-base"
+      ],
+      "documentationUrls": [
+        "https://help.callingly.com/article/38-callingly-api-documentation",
+        "https://docs.composio.dev/toolkits/callingly"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "DELETE /v1/teams/{{team_id}}/agents/{{agent_id}}.",
+        "Returns raw Callingly JSON under data unless the DELETE body is undocumented, in which case the envelope is {success: true}.",
+        "The upstream user-agent is not sent."
+      ]
+    },
+    "teams.agents.update": {
+      "upstreamActionId": "teams.agents.update",
+      "sourceRefs": [
+        "request-auth",
+        "api-base"
+      ],
+      "documentationUrls": [
+        "https://help.callingly.com/article/38-callingly-api-documentation",
+        "https://docs.composio.dev/toolkits/callingly"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "PUT /v1/teams/{{id}}/agents.",
+        "Returns raw Callingly JSON under data unless the DELETE body is undocumented, in which case the envelope is {success: true}.",
+        "The upstream user-agent is not sent."
+      ]
+    },
+    "teams.agents.update_settings": {
+      "upstreamActionId": "teams.agents.update_settings",
+      "sourceRefs": [
+        "request-auth",
+        "api-base"
+      ],
+      "documentationUrls": [
+        "https://help.callingly.com/article/38-callingly-api-documentation",
+        "https://docs.composio.dev/toolkits/callingly"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "PUT /v1/teams/{{team_id}}/agents/{{agent_id}}.",
+        "Returns raw Callingly JSON under data unless the DELETE body is undocumented, in which case the envelope is {success: true}.",
+        "The upstream user-agent is not sent."
+      ]
+    },
+    "teams.create": {
+      "upstreamActionId": "teams.create",
+      "sourceRefs": [
+        "request-auth",
+        "api-base"
+      ],
+      "documentationUrls": [
+        "https://help.callingly.com/article/38-callingly-api-documentation",
+        "https://docs.composio.dev/toolkits/callingly"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "POST /v1/teams.",
+        "Returns raw Callingly JSON under data unless the DELETE body is undocumented, in which case the envelope is {success: true}.",
+        "The upstream user-agent is not sent."
+      ]
+    },
+    "webhooks.create": {
+      "upstreamActionId": "webhooks.create",
+      "sourceRefs": [
+        "request-auth",
+        "api-base"
+      ],
+      "documentationUrls": [
+        "https://help.callingly.com/article/38-callingly-api-documentation",
+        "https://docs.composio.dev/toolkits/callingly"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "POST /v1/webhooks.",
+        "Returns raw Callingly JSON under data unless the DELETE body is undocumented, in which case the envelope is {success: true}.",
+        "The upstream user-agent is not sent."
+      ]
+    },
+    "webhooks.delete": {
+      "upstreamActionId": "webhooks.delete",
+      "sourceRefs": [
+        "request-auth",
+        "api-base"
+      ],
+      "documentationUrls": [
+        "https://help.callingly.com/article/38-callingly-api-documentation",
+        "https://docs.composio.dev/toolkits/callingly"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "DELETE /v1/webhooks/{{id}}.",
+        "Returns raw Callingly JSON under data unless the DELETE body is undocumented, in which case the envelope is {success: true}.",
+        "The upstream user-agent is not sent."
       ]
     },
     "webhooks.get": {
-      "upstreamActionId": "get_webhook",
+      "upstreamActionId": "webhooks.get",
       "sourceRefs": [
-        "request-auth"
+        "request-auth",
+        "api-base"
       ],
       "documentationUrls": [
-        "https://help.callingly.com/article/38-callingly-api-documentation"
+        "https://help.callingly.com/article/38-callingly-api-documentation",
+        "https://docs.composio.dev/toolkits/callingly"
       ],
       "responseContract": "appcall-provider-json-v1",
       "adaptations": [
-        "GET /v1/webhooks/{id} returns one webhook."
+        "GET /v1/webhooks/{{id}}.",
+        "Returns raw Callingly JSON under data unless the DELETE body is undocumented, in which case the envelope is {success: true}.",
+        "The upstream user-agent is not sent."
       ]
     },
-    "webhook.call_completed": {
-      "upstreamActionId": "call_completed",
+    "webhooks.list": {
+      "upstreamActionId": "webhooks.list",
       "sourceRefs": [
-        "request-auth"
+        "request-auth",
+        "api-base"
       ],
       "documentationUrls": [
-        "https://help.callingly.com/article/38-callingly-api-documentation"
+        "https://help.callingly.com/article/38-callingly-api-documentation",
+        "https://docs.composio.dev/toolkits/callingly"
       ],
       "responseContract": "appcall-provider-json-v1",
       "adaptations": [
-        "EventOnly webhook for Callingly call_completed."
+        "GET /v1/webhooks.",
+        "Returns raw Callingly JSON under data unless the DELETE body is undocumented, in which case the envelope is {success: true}.",
+        "The upstream user-agent is not sent."
       ]
     },
-    "webhook.lead_created": {
-      "upstreamActionId": "lead_created",
+    "webhooks.update": {
+      "upstreamActionId": "webhooks.update",
       "sourceRefs": [
-        "request-auth"
+        "request-auth",
+        "api-base"
       ],
       "documentationUrls": [
-        "https://help.callingly.com/article/38-callingly-api-documentation"
+        "https://help.callingly.com/article/38-callingly-api-documentation",
+        "https://docs.composio.dev/toolkits/callingly"
       ],
       "responseContract": "appcall-provider-json-v1",
       "adaptations": [
-        "EventOnly webhook for Callingly lead_created."
-      ]
-    },
-    "webhook.lead_updated": {
-      "upstreamActionId": "lead_updated",
-      "sourceRefs": [
-        "request-auth"
-      ],
-      "documentationUrls": [
-        "https://help.callingly.com/article/38-callingly-api-documentation"
-      ],
-      "responseContract": "appcall-provider-json-v1",
-      "adaptations": [
-        "EventOnly webhook for Callingly lead_updated."
+        "PUT /v1/webhooks/{{id}}.",
+        "Returns raw Callingly JSON under data unless the DELETE body is undocumented, in which case the envelope is {success: true}.",
+        "The upstream user-agent is not sent."
       ]
     }
   },
   "manifest": {
-    "key": "callingly",
-    "name": "Callingly",
-    "version": "0.2.0",
-    "runtime": "bun",
-    "visibility": "public",
-    "categories": [
-      "messaging"
-    ],
     "auth": {
-      "type": "api_key",
       "scopes": [],
       "setup": {
-        "mode": "api_key",
         "fields": [
           {
             "key": "apiKey",
@@ -540,14 +699,47 @@
             "required": true,
             "secret": true
           }
-        ]
+        ],
+        "mode": "api_key"
+      },
+      "type": "api_key"
+    },
+    "categories": [
+      "messaging"
+    ],
+    "evidence": {
+      "fixture": {
+        "status": "supplied"
+      },
+      "live": {
+        "status": "unverified"
       }
     },
-    "network": {
-      "allowedHosts": [
-        "api.callingly.com"
-      ]
+    "http": {
+      "auth": {
+        "field": "apiKey",
+        "in": "header",
+        "name": "Authorization",
+        "value": "Bearer {{apiKey}}"
+      },
+      "baseUrl": "https://api.callingly.com",
+      "errors": {
+        "defaultRetryAfterSeconds": 30,
+        "messagePaths": [
+          "message",
+          "error",
+          "error_message"
+        ],
+        "rateLimitStatuses": [
+          429
+        ],
+        "retryAfterHeader": "retry-after"
+      },
+      "headers": {
+        "Accept": "application/json"
+      }
     },
+    "key": "callingly",
     "models": [
       "team",
       "lead",
@@ -556,196 +748,134 @@
       "agent",
       "webhook"
     ],
-    "http": {
-      "baseUrl": "https://api.callingly.com",
-      "auth": {
-        "field": "apiKey",
-        "in": "header",
-        "name": "Authorization",
-        "value": "Bearer {{apiKey}}"
-      },
-      "headers": {
-        "Accept": "application/json"
-      },
-      "errors": {
-        "rateLimitStatuses": [
-          429
-        ],
-        "retryAfterHeader": "retry-after",
-        "defaultRetryAfterSeconds": 30,
-        "messagePaths": [
-          "message",
-          "error",
-          "error_message"
-        ]
-      }
+    "name": "Callingly",
+    "network": {
+      "allowedHosts": [
+        "api.callingly.com"
+      ]
     },
     "operations": {
       "healthcheck": {
-        "timeoutMs": 5000,
+        "description": "Validate the Callingly bearer token with GET /v1/teams.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {},
+          "type": "object"
+        },
+        "kind": "action",
         "maxInputBytes": 4096,
         "maxResponseBytes": 65536,
-        "kind": "action",
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": [
+                "array",
+                "object"
+              ]
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        },
+        "request": {
+          "method": "GET",
+          "path": "/v1/teams",
+          "success": [
+            200
+          ]
+        },
+        "responseFormat": "json",
         "sideEffect": "read",
+        "timeoutMs": 5000,
         "title": "Healthcheck",
-        "description": "Validate the Callingly bearer token with GET /v1/teams.",
+        "validationMode": "strict-generated"
+      },
+      "leads.get": {
+        "description": "Get one Callingly lead by ID.",
+        "enforceOutputSchema": true,
         "inputSchema": {
-          "type": "object",
-          "properties": {},
-          "additionalProperties": false
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
+          "additionalProperties": false,
           "properties": {
-            "data": {
-              "type": [
-                "array",
-                "object"
-              ]
+            "leadId": {
+              "minimum": 1,
+              "type": "integer"
             }
           },
-          "additionalProperties": false
+          "required": [
+            "leadId"
+          ],
+          "type": "object"
         },
-        "request": {
-          "method": "GET",
-          "path": "/v1/teams",
-          "success": [
-            200
-          ]
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "teams.list": {
-        "timeoutMs": 15000,
+        "kind": "action",
         "maxInputBytes": 65536,
         "maxResponseBytes": 5242880,
-        "kind": "action",
-        "sideEffect": "read",
-        "title": "List teams",
-        "description": "List Callingly teams for the current account or a specified client account.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "accountId": {
-              "type": "integer",
-              "minimum": 1
-            }
-          },
-          "additionalProperties": false
-        },
         "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": [
-                "array",
-                "object"
-              ]
-            }
-          },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "GET",
-          "path": "/v1/teams",
-          "query": {
-            "account_id": "{{accountId}}"
-          },
-          "success": [
-            200
-          ]
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "teams.get": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
-        "sideEffect": "read",
-        "title": "Get team",
-        "description": "Get one Callingly team by ID.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "teamId": {
-              "type": "integer",
-              "minimum": 1
-            }
-          },
-          "required": [
-            "teamId"
-          ],
-          "additionalProperties": false
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
+          "additionalProperties": false,
           "properties": {
             "data": {
               "type": "object"
             }
           },
-          "additionalProperties": false
+          "required": [
+            "data"
+          ],
+          "type": "object"
         },
         "request": {
           "method": "GET",
-          "path": "/v1/teams/{{teamId}}",
+          "path": "/v1/leads/{{leadId}}",
           "success": [
             200
           ]
         },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
+        "responseFormat": "json",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "title": "Get lead",
+        "validationMode": "strict-generated"
       },
       "leads.list": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
-        "sideEffect": "read",
-        "title": "List leads",
         "description": "List Callingly leads with optional date, phone, and account filters.",
+        "enforceOutputSchema": true,
         "inputSchema": {
-          "type": "object",
+          "additionalProperties": false,
           "properties": {
-            "start": {
-              "type": "string",
-              "minLength": 1
+            "accountId": {
+              "minimum": 1,
+              "type": "integer"
             },
             "end": {
-              "type": "string",
-              "minLength": 1
+              "minLength": 1,
+              "type": "string"
             },
             "phone_number": {
-              "type": "string",
-              "minLength": 1
+              "minLength": 1,
+              "type": "string"
             },
-            "accountId": {
-              "type": "integer",
-              "minimum": 1
+            "start": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "page": {
+              "minimum": 1,
+              "type": "integer"
+            },
+            "limit": {
+              "minimum": 1,
+              "type": "integer"
             }
           },
-          "additionalProperties": false
+          "type": "object"
         },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
         "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
+          "additionalProperties": false,
           "properties": {
             "data": {
               "type": [
@@ -754,438 +884,297 @@
               ]
             }
           },
-          "additionalProperties": false
+          "required": [
+            "data"
+          ],
+          "type": "object"
         },
         "request": {
           "method": "GET",
           "path": "/v1/leads",
           "query": {
-            "start": "{{start}}",
+            "account_id": "{{accountId}}",
             "end": "{{end}}",
             "phone_number": "{{phone_number}}",
+            "start": "{{start}}",
+            "page": "{{page}}",
+            "limit": "{{limit}}"
+          },
+          "success": [
+            200
+          ]
+        },
+        "responseFormat": "json",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "title": "List leads",
+        "validationMode": "strict-generated"
+      },
+      "teams.get": {
+        "description": "Get one Callingly team by ID.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "teamId": {
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "teamId"
+          ],
+          "type": "object"
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        },
+        "request": {
+          "method": "GET",
+          "path": "/v1/teams/{{teamId}}",
+          "success": [
+            200
+          ]
+        },
+        "responseFormat": "json",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "title": "Get team",
+        "validationMode": "strict-generated"
+      },
+      "teams.list": {
+        "description": "List Callingly teams for the current account or a specified client account.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "accountId": {
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          "type": "object"
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": [
+                "array",
+                "object"
+              ]
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        },
+        "request": {
+          "method": "GET",
+          "path": "/v1/teams",
+          "query": {
             "account_id": "{{accountId}}"
           },
           "success": [
             200
           ]
         },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "leads.get": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
+        "responseFormat": "json",
         "sideEffect": "read",
-        "title": "Get lead",
-        "description": "Get one Callingly lead by ID.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "leadId": {
-              "type": "integer",
-              "minimum": 1
-            }
-          },
-          "required": [
-            "leadId"
-          ],
-          "additionalProperties": false
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "GET",
-          "path": "/v1/leads/{{leadId}}",
-          "success": [
-            200
-          ]
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "teams.create": {
         "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
-        "sideEffect": "write",
-        "title": "Create team",
-        "description": "Create a Callingly team with routing and retry settings.",
+        "title": "List teams",
+        "validationMode": "strict-generated"
+      },
+      "agents.create": {
+        "description": "Create a Callingly agent under a client account via POST /v1/agents. Maps to CALLINGLY_CREATE_AGENT.",
+        "enforceOutputSchema": true,
         "inputSchema": {
           "type": "object",
+          "additionalProperties": false,
           "properties": {
-            "name": {
-              "type": "string",
-              "description": "Team display name.",
-              "minLength": 1
-            },
             "account_id": {
               "type": "integer",
-              "description": "Agency client account ID.",
-              "minimum": 1
-            },
-            "call_mode": {
-              "type": "string",
-              "description": "Call routing mode.",
-              "enum": [
-                "simultaneous",
-                "round_robin"
-              ]
-            },
-            "is_record": {
-              "type": "integer",
-              "description": "Whether calls are recorded (0 or 1)."
-            },
-            "language": {
-              "type": "string",
-              "description": "Whisper language code."
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "name"
-          ]
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "POST",
-          "path": "/v1/teams",
-          "success": [
-            200,
-            201
-          ],
-          "body": {
-            "name": "{{name}}",
-            "account_id": "{{account_id}}",
-            "call_mode": "{{call_mode}}",
-            "is_record": "{{is_record}}",
-            "language": "{{language}}"
-          },
-          "headers": {
-            "Content-Type": "application/json"
-          }
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "teams.update": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
-        "sideEffect": "write",
-        "title": "Update team",
-        "description": "Update a Callingly team by ID.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "teamId": {
-              "type": "integer",
-              "description": "Team ID.",
-              "minimum": 1
-            },
-            "name": {
-              "type": "string",
-              "description": "Updated team name.",
-              "minLength": 1
-            },
-            "call_mode": {
-              "type": "string",
-              "description": "Call routing mode."
-            },
-            "is_record": {
-              "type": "integer",
-              "description": "Whether calls are recorded (0 or 1)."
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "teamId"
-          ]
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "PUT",
-          "path": "/v1/teams/{{teamId}}",
-          "success": [
-            200,
-            201
-          ],
-          "body": {
-            "name": "{{name}}",
-            "call_mode": "{{call_mode}}",
-            "is_record": "{{is_record}}"
-          },
-          "headers": {
-            "Content-Type": "application/json"
-          }
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "teams.agents.list": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
-        "sideEffect": "read",
-        "title": "List team agents",
-        "description": "List agents assigned to a Callingly team.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "teamId": {
-              "type": "integer",
-              "description": "Team ID.",
-              "minimum": 1
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "teamId"
-          ]
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": [
-                "array",
-                "object"
-              ]
-            }
-          },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "GET",
-          "path": "/v1/teams/{{teamId}}/agents",
-          "success": [
-            200
-          ]
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "leads.update": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
-        "sideEffect": "write",
-        "title": "Update lead",
-        "description": "Update a Callingly lead by ID.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "leadId": {
-              "type": "integer",
-              "description": "Lead ID.",
-              "minimum": 1
-            },
-            "fname": {
-              "type": "string",
-              "description": "First name."
-            },
-            "lname": {
-              "type": "string",
-              "description": "Last name."
+              "minimum": 1,
+              "description": "Client account ID under which the agent will be created."
             },
             "email": {
               "type": "string",
-              "description": "Email address."
+              "minLength": 1,
+              "description": "Agent's email address."
+            },
+            "fname": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Agent's first name."
+            },
+            "lname": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Agent's last name."
             },
             "phone_number": {
               "type": "string",
-              "description": "Phone number."
+              "minLength": 1,
+              "description": "Agent's phone number in E.164 format."
             },
-            "status": {
+            "timezone": {
               "type": "string",
-              "description": "Lead status."
+              "minLength": 1,
+              "description": "Agent's timezone, IANA format (e.g. America/Phoenix)."
             },
-            "company": {
+            "ext": {
               "type": "string",
-              "description": "Company name."
+              "minLength": 1,
+              "description": "Agent's phone extension if applicable."
             }
           },
-          "additionalProperties": false,
           "required": [
-            "leadId"
+            "account_id",
+            "email",
+            "fname",
+            "lname",
+            "phone_number",
+            "timezone"
           ]
         },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
         "outputSchema": {
           "type": "object",
           "required": [
             "data"
           ],
+          "additionalProperties": false,
           "properties": {
             "data": {
               "type": "object"
             }
-          },
-          "additionalProperties": false
+          }
         },
         "request": {
-          "method": "PUT",
-          "path": "/v1/leads/{{leadId}}",
+          "method": "POST",
+          "path": "/v1/agents",
           "success": [
             200,
             201
           ],
-          "body": {
-            "fname": "{{fname}}",
-            "lname": "{{lname}}",
-            "email": "{{email}}",
-            "phone_number": "{{phone_number}}",
-            "status": "{{status}}",
-            "company": "{{company}}"
-          },
           "headers": {
             "Content-Type": "application/json"
+          },
+          "body": {
+            "account_id": "{{account_id}}",
+            "email": "{{email}}",
+            "fname": "{{fname}}",
+            "lname": "{{lname}}",
+            "phone_number": "{{phone_number}}",
+            "timezone": "{{timezone}}",
+            "ext": "{{ext}}"
           }
         },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "leads.delete": {
+        "responseFormat": "json",
+        "sideEffect": "write",
         "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
-        "sideEffect": "destructive",
-        "title": "Delete lead",
-        "description": "Delete a Callingly lead by ID.",
+        "title": "Create agent",
+        "validationMode": "strict-generated"
+      },
+      "agents.delete": {
+        "description": "Permanently delete a Callingly agent via DELETE /v1/agents/{id}. Maps to CALLINGLY_DELETE_AGENT.",
+        "enforceOutputSchema": true,
         "inputSchema": {
           "type": "object",
+          "additionalProperties": false,
           "properties": {
-            "leadId": {
+            "id": {
               "type": "integer",
-              "description": "Lead ID.",
-              "minimum": 1
+              "minimum": 1,
+              "description": "Unique identifier of the agent to delete."
+            },
+            "account_id": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Client account ID that the agent belongs to."
             }
           },
-          "additionalProperties": false,
           "required": [
-            "leadId"
+            "id",
+            "account_id"
           ]
         },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
         "outputSchema": {
           "type": "object",
           "required": [
-            "deleted",
-            "leadId"
+            "success"
           ],
+          "additionalProperties": false,
           "properties": {
-            "deleted": {
+            "success": {
               "type": "boolean"
-            },
-            "leadId": {
-              "type": "integer"
             }
-          },
-          "additionalProperties": false
+          }
         },
         "request": {
           "method": "DELETE",
-          "path": "/v1/leads/{{leadId}}",
+          "path": "/v1/agents/{{id}}",
           "success": [
             200,
             204
           ],
+          "query": {
+            "account_id": "{{account_id}}"
+          },
           "result": {
-            "deleted": true,
-            "leadId": "{{input.leadId}}"
+            "success": true
           }
         },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "calls.list": {
+        "responseFormat": "json",
+        "sideEffect": "destructive",
         "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
-        "sideEffect": "read",
-        "title": "List calls",
-        "description": "List Callingly calls with optional date, team, and pagination filters.",
+        "title": "Delete agent",
+        "validationMode": "strict-generated"
+      },
+      "agents.list": {
+        "description": "List Callingly agents via GET /v1/agents, optionally scoped to a client account. Maps to CALLINGLY_LIST_USERS.",
+        "enforceOutputSchema": true,
         "inputSchema": {
           "type": "object",
+          "additionalProperties": false,
           "properties": {
-            "start": {
-              "type": "string",
-              "description": "Start datetime."
-            },
-            "end": {
-              "type": "string",
-              "description": "End datetime."
-            },
-            "team_id": {
+            "account_id": {
               "type": "integer",
-              "description": "Filter by team ID.",
-              "minimum": 1
-            },
-            "limit": {
-              "type": "integer",
-              "description": "Page size.",
-              "minimum": 1
-            },
-            "page": {
-              "type": "integer",
-              "description": "Page number.",
-              "minimum": 1
+              "minimum": 1,
+              "description": "Filter users by client account ID (required for agency partners)."
             }
-          },
-          "additionalProperties": false
+          }
         },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
         "outputSchema": {
           "type": "object",
           "required": [
             "data"
           ],
+          "additionalProperties": false,
           "properties": {
             "data": {
               "type": [
@@ -1193,131 +1182,50 @@
                 "object"
               ]
             }
-          },
-          "additionalProperties": false
+          }
         },
         "request": {
           "method": "GET",
-          "path": "/v1/calls",
+          "path": "/v1/agents",
           "success": [
             200
           ],
           "query": {
-            "start": "{{start}}",
-            "end": "{{end}}",
-            "team_id": "{{team_id}}",
-            "limit": "{{limit}}",
-            "page": "{{page}}"
+            "account_id": "{{account_id}}"
           }
         },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "calls.get": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
+        "responseFormat": "json",
         "sideEffect": "read",
-        "title": "Get call",
-        "description": "Get one Callingly call by ID.",
+        "timeoutMs": 15000,
+        "title": "List users",
+        "validationMode": "strict-generated"
+      },
+      "agents.schedule.get": {
+        "description": "Retrieve one agent's weekly availability via GET /v1/agents/{id}/schedule. Maps to CALLINGLY_GET_AGENT_SCHEDULE.",
+        "enforceOutputSchema": true,
         "inputSchema": {
           "type": "object",
-          "properties": {
-            "callId": {
-              "type": "integer",
-              "description": "Call ID.",
-              "minimum": 1
-            }
-          },
           "additionalProperties": false,
-          "required": [
-            "callId"
-          ]
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
           "properties": {
-            "data": {
-              "type": "object"
+            "id": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Unique identifier of the agent. Obtain this from List Users."
             }
           },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "GET",
-          "path": "/v1/calls/{{callId}}",
-          "success": [
-            200
+          "required": [
+            "id"
           ]
         },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "calls.create": {
-        "timeoutMs": 15000,
+        "kind": "action",
         "maxInputBytes": 65536,
         "maxResponseBytes": 5242880,
-        "kind": "action",
-        "sideEffect": "write",
-        "title": "Create call",
-        "description": "Create an outbound Callingly call for a lead.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "team_id": {
-              "type": "integer",
-              "description": "Team that will take the call.",
-              "minimum": 1
-            },
-            "first_name": {
-              "type": "string",
-              "description": "Lead first name.",
-              "minLength": 1
-            },
-            "last_name": {
-              "type": "string",
-              "description": "Lead last name."
-            },
-            "phone_number": {
-              "type": "string",
-              "description": "Lead phone number.",
-              "minLength": 1
-            },
-            "email": {
-              "type": "string",
-              "description": "Lead email."
-            },
-            "company": {
-              "type": "string",
-              "description": "Lead company."
-            },
-            "source": {
-              "type": "string",
-              "description": "Lead source."
-            },
-            "account_id": {
-              "type": "integer",
-              "description": "Agency client account ID.",
-              "minimum": 1
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "team_id",
-            "phone_number"
-          ]
-        },
         "outputSchema": {
           "type": "object",
           "required": [
             "data"
           ],
+          "additionalProperties": false,
           "properties": {
             "data": {
               "type": [
@@ -1325,8 +1233,313 @@
                 "object"
               ]
             }
+          }
+        },
+        "request": {
+          "method": "GET",
+          "path": "/v1/agents/{{id}}/schedule",
+          "success": [
+            200
+          ]
+        },
+        "responseFormat": "json",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "title": "Get agent schedule",
+        "validationMode": "strict-generated"
+      },
+      "agents.schedule.update": {
+        "description": "Replace an agent's weekly availability via PUT /v1/agents/{id}/schedule. Maps to CALLINGLY_UPDATE_SCHEDULE.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Unique identifier of the agent whose schedule is being updated."
+            },
+            "schedule": {
+              "type": "array",
+              "minItems": 1,
+              "description": "DaySchedule objects defining weekly availability (Sunday=0 through Saturday=6).",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "label",
+                  "day",
+                  "is_available",
+                  "times"
+                ],
+                "properties": {
+                  "label": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "Day label, e.g. Monday."
+                  },
+                  "day": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 6,
+                    "description": "Zero-based day index (Sunday=0)."
+                  },
+                  "is_available": {
+                    "type": "boolean",
+                    "description": "Whether the agent is available this day."
+                  },
+                  "times": {
+                    "type": "array",
+                    "description": "Availability windows for the day.",
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "start": {
+                          "type": "string",
+                          "minLength": 1,
+                          "description": "Window start, HH:MM:SS or allday."
+                        },
+                        "end": {
+                          "type": "string",
+                          "minLength": 1,
+                          "description": "Window end, HH:MM:SS."
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
           },
-          "additionalProperties": false
+          "required": [
+            "id",
+            "schedule"
+          ]
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": [
+                "array",
+                "object"
+              ]
+            }
+          }
+        },
+        "request": {
+          "method": "PUT",
+          "path": "/v1/agents/{{id}}/schedule",
+          "success": [
+            200
+          ],
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": "{{schedule}}"
+        },
+        "responseFormat": "json",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "title": "Update agent schedule",
+        "validationMode": "strict-generated"
+      },
+      "agents.update": {
+        "description": "Update an existing agent's details via PUT /v1/agents/{id}. Maps to CALLINGLY_UPDATE_AGENT.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Unique identifier of the agent to update."
+            },
+            "account_id": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Client account ID under which the agent exists."
+            },
+            "fname": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Agent's first name."
+            },
+            "lname": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Agent's last name."
+            },
+            "phone_number": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Agent's phone number, in E.164 or local format."
+            },
+            "ext": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Agent's phone extension if applicable."
+            },
+            "timezone": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Agent's timezone, IANA format (e.g. America/Phoenix)."
+            },
+            "donotdisturb": {
+              "type": "integer",
+              "enum": [
+                0,
+                1
+              ],
+              "description": "Do-not-disturb flag: 1 to enable, 0 to disable."
+            },
+            "donotdisturb_until": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Datetime until which do-not-disturb is active, required if donotdisturb=1."
+            }
+          },
+          "required": [
+            "id"
+          ]
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          }
+        },
+        "request": {
+          "method": "PUT",
+          "path": "/v1/agents/{{id}}",
+          "success": [
+            200
+          ],
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "account_id": "{{account_id}}",
+            "fname": "{{fname}}",
+            "lname": "{{lname}}",
+            "phone_number": "{{phone_number}}",
+            "ext": "{{ext}}",
+            "timezone": "{{timezone}}",
+            "donotdisturb": "{{donotdisturb}}",
+            "donotdisturb_until": "{{donotdisturb_until}}"
+          }
+        },
+        "responseFormat": "json",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "title": "Update agent",
+        "validationMode": "strict-generated"
+      },
+      "calls.create": {
+        "description": "Create a Callingly outbound call from lead details via POST /v1/calls. Maps to CALLINGLY_CREATE_CALL. Initiates a real call.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "account_id": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Callingly account ID. Retrieve this using List Teams."
+            },
+            "team_id": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Team that will handle the call. Must belong to account_id."
+            },
+            "first_name": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Lead's first name."
+            },
+            "last_name": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Lead's last name."
+            },
+            "phone_number": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Lead's phone number in E.164 format."
+            },
+            "email": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Lead's email address."
+            },
+            "company": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Lead's company name."
+            },
+            "category": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Category to classify the call."
+            },
+            "source": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Source where the lead originated from."
+            },
+            "crm_id": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "External CRM identifier for the lead."
+            },
+            "scheduled_at": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Optional scheduled timestamp for the call."
+            }
+          },
+          "required": [
+            "account_id",
+            "team_id",
+            "first_name",
+            "last_name",
+            "phone_number",
+            "email"
+          ]
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          }
         },
         "request": {
           "method": "POST",
@@ -1335,114 +1548,365 @@
             200,
             201
           ],
+          "headers": {
+            "Content-Type": "application/json"
+          },
           "body": {
+            "account_id": "{{account_id}}",
             "team_id": "{{team_id}}",
             "first_name": "{{first_name}}",
             "last_name": "{{last_name}}",
             "phone_number": "{{phone_number}}",
             "email": "{{email}}",
             "company": "{{company}}",
+            "category": "{{category}}",
             "source": "{{source}}",
-            "account_id": "{{account_id}}"
-          },
-          "headers": {
-            "Content-Type": "application/json"
+            "crm_id": "{{crm_id}}",
+            "scheduled_at": "{{scheduled_at}}"
           }
         },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "sms.create": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
+        "responseFormat": "json",
         "sideEffect": "write",
-        "title": "Send SMS",
-        "description": "Send an SMS through Callingly.",
+        "timeoutMs": 15000,
+        "title": "Create outbound call",
+        "validationMode": "strict-generated"
+      },
+      "calls.get": {
+        "description": "Retrieve one Callingly call by ID via GET /v1/calls/{call_id}. Maps to CALLINGLY_GET_CALL.",
+        "enforceOutputSchema": true,
         "inputSchema": {
           "type": "object",
+          "additionalProperties": false,
           "properties": {
-            "phone_number": {
-              "type": "string",
-              "description": "Destination phone number.",
-              "minLength": 1
-            },
-            "sms_number": {
-              "type": "string",
-              "description": "Callingly SMS sender number.",
-              "minLength": 1
-            },
-            "message": {
-              "type": "string",
-              "description": "SMS body.",
-              "minLength": 1
+            "call_id": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Unique numeric identifier of the call. Obtain this from List Calls."
             }
           },
-          "additionalProperties": false,
           "required": [
-            "phone_number",
-            "sms_number",
-            "message"
+            "call_id"
           ]
         },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
         "outputSchema": {
           "type": "object",
           "required": [
             "data"
           ],
+          "additionalProperties": false,
           "properties": {
             "data": {
               "type": "object"
             }
-          },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "POST",
-          "path": "/v1/sms",
-          "success": [
-            200,
-            201
-          ],
-          "body": {
-            "phone_number": "{{phone_number}}",
-            "sms_number": "{{sms_number}}",
-            "message": "{{message}}"
-          },
-          "headers": {
-            "Content-Type": "application/json"
           }
         },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "clients.list": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 4096,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
+        "request": {
+          "method": "GET",
+          "path": "/v1/calls/{{call_id}}",
+          "success": [
+            200
+          ]
+        },
+        "responseFormat": "json",
         "sideEffect": "read",
-        "title": "List clients",
-        "description": "List Callingly agency client accounts.",
+        "timeoutMs": 15000,
+        "title": "Get call",
+        "validationMode": "strict-generated"
+      },
+      "calls.list": {
+        "description": "List Callingly calls via GET /v1/calls with optional date, team, and pagination filters. Maps to CALLINGLY_LIST_CALLS.",
+        "enforceOutputSchema": true,
         "inputSchema": {
           "type": "object",
-          "properties": {},
-          "additionalProperties": false
+          "additionalProperties": false,
+          "properties": {
+            "start": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Start date for filtering calls (YYYY-MM-DD)."
+            },
+            "end": {
+              "type": "string",
+              "minLength": 1,
+              "description": "End date for filtering calls (YYYY-MM-DD)."
+            },
+            "team_id": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Filter calls by team ID."
+            },
+            "page": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Page number for pagination."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Number of records per page."
+            }
+          }
         },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
         "outputSchema": {
           "type": "object",
           "required": [
             "data"
           ],
+          "additionalProperties": false,
           "properties": {
             "data": {
-              "type": "array"
+              "type": "object"
+            }
+          }
+        },
+        "request": {
+          "method": "GET",
+          "path": "/v1/calls",
+          "success": [
+            200
+          ],
+          "query": {
+            "start": "{{start}}",
+            "end": "{{end}}",
+            "team_id": "{{team_id}}",
+            "page": "{{page}}",
+            "limit": "{{limit}}"
+          }
+        },
+        "responseFormat": "json",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "title": "List calls",
+        "validationMode": "strict-generated"
+      },
+      "clients.activate": {
+        "description": "Activate or deactivate a client account via POST /v1/clients/{id}/active. Maps to CALLINGLY_ACTIVATE_DEACTIVATE_CLIENT.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "client_id": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Unique identifier of the client account to modify."
+            },
+            "is_active": {
+              "type": "integer",
+              "enum": [
+                0,
+                1
+              ],
+              "description": "Set to 1 to activate the client account or 0 to deactivate it."
             }
           },
-          "additionalProperties": false
+          "required": [
+            "client_id",
+            "is_active"
+          ]
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          }
+        },
+        "request": {
+          "method": "POST",
+          "path": "/v1/clients/{{client_id}}/active",
+          "success": [
+            200,
+            201
+          ],
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "is_active": "{{is_active}}"
+          }
+        },
+        "responseFormat": "json",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "title": "Activate or deactivate client",
+        "validationMode": "strict-generated"
+      },
+      "clients.create": {
+        "description": "Create a client sub-account via POST /v1/clients. Maps to CALLINGLY_CREATE_CLIENT.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "email": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Client's email address."
+            },
+            "fname": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Client's first name."
+            },
+            "lname": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Client's last name."
+            },
+            "company": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Client's company name."
+            },
+            "password": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Password for the client's account."
+            },
+            "phone_number": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Client's phone number in E.164 format."
+            }
+          },
+          "required": [
+            "email",
+            "fname",
+            "lname",
+            "company",
+            "password",
+            "phone_number"
+          ]
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          }
+        },
+        "request": {
+          "method": "POST",
+          "path": "/v1/clients",
+          "success": [
+            200,
+            201
+          ],
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "email": "{{email}}",
+            "fname": "{{fname}}",
+            "lname": "{{lname}}",
+            "company": "{{company}}",
+            "password": "{{password}}",
+            "phone_number": "{{phone_number}}"
+          }
+        },
+        "responseFormat": "json",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "title": "Create client",
+        "validationMode": "strict-generated"
+      },
+      "clients.delete": {
+        "description": "Delete a client account via DELETE /v1/clients/{id}. Maps to CALLINGLY_DELETE_CLIENT.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Positive integer ID of the client to delete."
+            }
+          },
+          "required": [
+            "id"
+          ]
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "success"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "success": {
+              "type": "boolean"
+            }
+          }
+        },
+        "request": {
+          "method": "DELETE",
+          "path": "/v1/clients/{{id}}",
+          "success": [
+            200,
+            204
+          ],
+          "result": {
+            "success": true
+          }
+        },
+        "responseFormat": "json",
+        "sideEffect": "destructive",
+        "timeoutMs": 15000,
+        "title": "Delete client",
+        "validationMode": "strict-generated"
+      },
+      "clients.list": {
+        "description": "List clients associated with the authenticated account via GET /v1/clients. Maps to CALLINGLY_LIST_CLIENTS.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {}
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": [
+                "array",
+                "object"
+              ]
+            }
+          }
         },
         "request": {
           "method": "GET",
@@ -1451,125 +1915,823 @@
             200
           ]
         },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "clients.create": {
+        "responseFormat": "json",
+        "sideEffect": "read",
         "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
-        "sideEffect": "write",
-        "title": "Create client",
-        "description": "Create a Callingly agency client account.",
+        "title": "List clients",
+        "validationMode": "strict-generated"
+      },
+      "leads.delete": {
+        "description": "Permanently delete a lead via DELETE /v1/leads/{id}. Maps to CALLINGLY_DELETE_LEAD.",
+        "enforceOutputSchema": true,
         "inputSchema": {
           "type": "object",
+          "additionalProperties": false,
           "properties": {
-            "fname": {
-              "type": "string",
-              "description": "Client first name.",
-              "minLength": 1
-            },
-            "lname": {
-              "type": "string",
-              "description": "Client last name.",
-              "minLength": 1
-            },
-            "email": {
-              "type": "string",
-              "description": "Client email.",
-              "minLength": 1
-            },
-            "company": {
-              "type": "string",
-              "description": "Client company."
-            },
-            "phone_number": {
-              "type": "string",
-              "description": "Client phone number."
-            },
-            "password": {
-              "type": "string",
-              "description": "Initial password."
+            "id": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Positive integer ID of the lead to delete."
             }
           },
-          "additionalProperties": false,
           "required": [
-            "fname",
-            "lname",
-            "email"
+            "id"
           ]
         },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
         "outputSchema": {
           "type": "object",
           "required": [
             "data"
           ],
+          "additionalProperties": false,
           "properties": {
             "data": {
               "type": "object"
             }
-          },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "POST",
-          "path": "/v1/clients",
-          "success": [
-            200,
-            201
-          ],
-          "body": {
-            "fname": "{{fname}}",
-            "lname": "{{lname}}",
-            "email": "{{email}}",
-            "company": "{{company}}",
-            "phone_number": "{{phone_number}}",
-            "password": "{{password}}"
-          },
-          "headers": {
-            "Content-Type": "application/json"
           }
         },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "agents.list": {
+        "request": {
+          "method": "DELETE",
+          "path": "/v1/leads/{{id}}",
+          "success": [
+            200,
+            204
+          ]
+        },
+        "responseFormat": "json",
+        "sideEffect": "destructive",
         "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
-        "sideEffect": "read",
-        "title": "List agents",
-        "description": "List Callingly agents, optionally scoped to an agency client account.",
+        "title": "Delete lead",
+        "validationMode": "strict-generated"
+      },
+      "leads.update": {
+        "description": "Update an existing lead via PUT /v1/leads/{id}. Maps to CALLINGLY_UPDATE_LEAD.",
+        "enforceOutputSchema": true,
         "inputSchema": {
           "type": "object",
+          "additionalProperties": false,
           "properties": {
-            "account_id": {
+            "id": {
               "type": "integer",
-              "description": "Agency client account ID.",
-              "minimum": 1
+              "minimum": 1,
+              "description": "Unique identifier of the lead to update."
+            },
+            "email": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Email address of the lead."
+            },
+            "fname": {
+              "type": "string",
+              "minLength": 1,
+              "description": "First name of the lead."
+            },
+            "lname": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Last name of the lead."
+            },
+            "stage": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Current stage in the pipeline."
+            },
+            "result": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Outcome/result after call or follow-up."
+            },
+            "source": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Origin/source of the lead."
+            },
+            "status": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Current status of the lead."
+            },
+            "company": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Company name associated with the lead."
+            },
+            "is_blocked": {
+              "type": "integer",
+              "enum": [
+                0,
+                1
+              ],
+              "description": "Flag to block the lead: 1 to block, 0 to unblock."
+            },
+            "is_stopped": {
+              "type": "integer",
+              "enum": [
+                0,
+                1
+              ],
+              "description": "Flag to stop automated calls: 1 to enable, 0 to disable."
+            },
+            "phone_number": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Phone number of the lead in E.164 format."
             }
           },
-          "additionalProperties": false
+          "required": [
+            "id"
+          ]
         },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
         "outputSchema": {
           "type": "object",
           "required": [
             "data"
           ],
+          "additionalProperties": false,
           "properties": {
             "data": {
-              "type": "array"
+              "type": "object"
+            }
+          }
+        },
+        "request": {
+          "method": "PUT",
+          "path": "/v1/leads/{{id}}",
+          "success": [
+            200
+          ],
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "id": "{{id}}",
+            "email": "{{email}}",
+            "fname": "{{fname}}",
+            "lname": "{{lname}}",
+            "stage": "{{stage}}",
+            "result": "{{result}}",
+            "source": "{{source}}",
+            "status": "{{status}}",
+            "company": "{{company}}",
+            "is_blocked": "{{is_blocked}}",
+            "is_stopped": "{{is_stopped}}",
+            "phone_number": "{{phone_number}}"
+          }
+        },
+        "responseFormat": "json",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "title": "Update lead",
+        "validationMode": "strict-generated"
+      },
+      "teams.agents.list": {
+        "description": "List agents assigned to a team via GET /v1/teams/{id}/agents. Maps to CALLINGLY_LIST_TEAM_USERS.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Unique numeric ID of the team. Use List Teams to retrieve team IDs."
             }
           },
-          "additionalProperties": false
+          "required": [
+            "id"
+          ]
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          }
         },
         "request": {
           "method": "GET",
-          "path": "/v1/agents",
+          "path": "/v1/teams/{{id}}/agents",
+          "success": [
+            200
+          ]
+        },
+        "responseFormat": "json",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "title": "List team users",
+        "validationMode": "strict-generated"
+      },
+      "teams.agents.remove": {
+        "description": "Remove an agent from a team via DELETE /v1/teams/{team_id}/agents/{agent_id}. Maps to CALLINGLY_REMOVE_TEAM_AGENT.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "team_id": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Unique identifier of the team to remove the agent from."
+            },
+            "agent_id": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Unique identifier of the agent to remove from the team."
+            }
+          },
+          "required": [
+            "team_id",
+            "agent_id"
+          ]
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "success"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "success": {
+              "type": "boolean"
+            }
+          }
+        },
+        "request": {
+          "method": "DELETE",
+          "path": "/v1/teams/{{team_id}}/agents/{{agent_id}}",
+          "success": [
+            200,
+            204
+          ],
+          "result": {
+            "success": true
+          }
+        },
+        "responseFormat": "json",
+        "sideEffect": "destructive",
+        "timeoutMs": 15000,
+        "title": "Remove team agent",
+        "validationMode": "strict-generated"
+      },
+      "teams.agents.update": {
+        "description": "Replace the agents assigned to a team via PUT /v1/teams/{id}/agents. Maps to CALLINGLY_UPDATE_TEAM_USERS.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Unique identifier of the team to update."
+            },
+            "agents": {
+              "type": "array",
+              "description": "Agent IDs to assign. Replaces all current agents. Empty list removes all.",
+              "items": {
+                "type": "integer",
+                "minimum": 1
+              }
+            }
+          },
+          "required": [
+            "id",
+            "agents"
+          ]
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          }
+        },
+        "request": {
+          "method": "PUT",
+          "path": "/v1/teams/{{id}}/agents",
+          "success": [
+            200
+          ],
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "agents": "{{agents}}"
+          }
+        },
+        "responseFormat": "json",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "title": "Update team users",
+        "validationMode": "strict-generated"
+      },
+      "teams.agents.update_settings": {
+        "description": "Update priority and capacity for one team agent via PUT /v1/teams/{team_id}/agents/{agent_id}. Maps to CALLINGLY_UPDATE_TEAM_AGENT_SETTINGS.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "team_id": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Unique identifier of the team containing the agent."
+            },
+            "agent_id": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Unique identifier of the agent whose settings to update."
+            },
+            "priority": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Calling priority (1 = highest)."
+            },
+            "cap": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Maximum number of calls the agent can receive."
+            }
+          },
+          "required": [
+            "team_id",
+            "agent_id",
+            "priority"
+          ]
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          }
+        },
+        "request": {
+          "method": "PUT",
+          "path": "/v1/teams/{{team_id}}/agents/{{agent_id}}",
+          "success": [
+            200
+          ],
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "priority": "{{priority}}",
+            "cap": "{{cap}}"
+          }
+        },
+        "responseFormat": "json",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "title": "Update team agent settings",
+        "validationMode": "strict-generated"
+      },
+      "teams.create": {
+        "description": "Create a Callingly team via POST /v1/teams. Maps to CALLINGLY_CREATE_TEAM.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Name of the team."
+            },
+            "account_id": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Account ID under which to create the team."
+            },
+            "delay": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Delay in seconds before dialing team members."
+            },
+            "retries": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Number of retry attempts per agent."
+            },
+            "is_retry": {
+              "type": "integer",
+              "enum": [
+                0,
+                1
+              ],
+              "description": "Enable per-agent retries: 1 to enable, 0 to disable."
+            },
+            "language": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Language code for team messages (e.g. en)."
+            },
+            "call_mode": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Call distribution mode. Only simultaneous is supported currently.",
+              "enum": [
+                "simultaneous"
+              ]
+            },
+            "is_record": {
+              "type": "integer",
+              "enum": [
+                0,
+                1
+              ],
+              "description": "Whether calls should be recorded: 1 to record, 0 otherwise."
+            },
+            "whispertext": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Pre-call whisper message template."
+            },
+            "lead_retries": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Number of retries at the lead level."
+            },
+            "is_reschedule": {
+              "type": "integer",
+              "enum": [
+                0,
+                1
+              ],
+              "description": "Enable rescheduling on no-answer: 1 to enable, 0 to disable."
+            },
+            "is_retry_lead": {
+              "type": "integer",
+              "enum": [
+                0,
+                1
+              ],
+              "description": "Enable lead-level retries: 1 to enable, 0 to disable."
+            },
+            "retry_schedule": {
+              "type": "array",
+              "description": "Schedule for per-agent retries in minutes.",
+              "items": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "lead_retry_schedule": {
+              "type": "array",
+              "description": "Schedule for lead-level retries in minutes.",
+              "items": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          },
+          "required": [
+            "name",
+            "account_id"
+          ]
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          }
+        },
+        "request": {
+          "method": "POST",
+          "path": "/v1/teams",
+          "success": [
+            200,
+            201
+          ],
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "name": "{{name}}",
+            "account_id": "{{account_id}}",
+            "delay": "{{delay}}",
+            "retries": "{{retries}}",
+            "is_retry": "{{is_retry}}",
+            "language": "{{language}}",
+            "call_mode": "{{call_mode}}",
+            "is_record": "{{is_record}}",
+            "whispertext": "{{whispertext}}",
+            "lead_retries": "{{lead_retries}}",
+            "is_reschedule": "{{is_reschedule}}",
+            "is_retry_lead": "{{is_retry_lead}}",
+            "retry_schedule": "{{retry_schedule}}",
+            "lead_retry_schedule": "{{lead_retry_schedule}}"
+          }
+        },
+        "responseFormat": "json",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "title": "Create team",
+        "validationMode": "strict-generated"
+      },
+      "webhooks.create": {
+        "description": "Create a Callingly webhook for call or lead events via POST /v1/webhooks. Maps to CALLINGLY_CREATE_WEBHOOK. Outbound registration, not an inbound AppCall trigger.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "description": "A descriptive name for the webhook."
+            },
+            "event": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Event that triggers this webhook.",
+              "enum": [
+                "call_completed",
+                "lead_created",
+                "lead_updated"
+              ]
+            },
+            "target_url": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The callback URL to receive the webhook."
+            },
+            "field": {
+              "type": "string",
+              "minLength": 1,
+              "description": "For lead_created or lead_updated: field to watch for changes.",
+              "enum": [
+                "lead_owner",
+                "result",
+                "stage",
+                "status",
+                "tags"
+              ]
+            },
+            "filter": {
+              "type": "string",
+              "minLength": 1,
+              "description": "For lead_created or lead_updated: value the watched field must match."
+            },
+            "team_id": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "For outbound call_completed events: team ID to filter on."
+            },
+            "direction": {
+              "type": "string",
+              "minLength": 1,
+              "description": "For call_completed events: outbound or inbound.",
+              "enum": [
+                "outbound",
+                "inbound"
+              ]
+            },
+            "number_id": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "For inbound call_completed events: number ID to filter on."
+            },
+            "call_status": {
+              "type": "string",
+              "minLength": 1,
+              "description": "For call_completed events: status filter.",
+              "enum": [
+                "completed",
+                "missed",
+                "offline"
+              ]
+            },
+            "call_lead_status": {
+              "type": "string",
+              "minLength": 1,
+              "description": "For call_completed events: lead outcome filter.",
+              "enum": [
+                "contacted",
+                "missed",
+                "removed",
+                "voicemail"
+              ]
+            }
+          },
+          "required": [
+            "name",
+            "event",
+            "target_url"
+          ]
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          }
+        },
+        "request": {
+          "method": "POST",
+          "path": "/v1/webhooks",
+          "success": [
+            200,
+            201
+          ],
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "name": "{{name}}",
+            "event": "{{event}}",
+            "target_url": "{{target_url}}",
+            "field": "{{field}}",
+            "filter": "{{filter}}",
+            "team_id": "{{team_id}}",
+            "call_direction": "{{direction}}",
+            "number_id": "{{number_id}}",
+            "call_status": "{{call_status}}",
+            "call_lead_status": "{{call_lead_status}}"
+          }
+        },
+        "responseFormat": "json",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "title": "Create webhook",
+        "validationMode": "strict-generated"
+      },
+      "webhooks.delete": {
+        "description": "Delete a webhook via DELETE /v1/webhooks/{id}. Maps to CALLINGLY_DELETE_WEBHOOK.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Unique identifier of the webhook to delete."
+            }
+          },
+          "required": [
+            "id"
+          ]
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          }
+        },
+        "request": {
+          "method": "DELETE",
+          "path": "/v1/webhooks/{{id}}",
+          "success": [
+            200,
+            204
+          ]
+        },
+        "responseFormat": "json",
+        "sideEffect": "destructive",
+        "timeoutMs": 15000,
+        "title": "Delete webhook",
+        "validationMode": "strict-generated"
+      },
+      "webhooks.get": {
+        "description": "Retrieve one webhook via GET /v1/webhooks/{id}. Maps to CALLINGLY_GET_WEBHOOK.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Unique identifier of the webhook to retrieve."
+            }
+          },
+          "required": [
+            "id"
+          ]
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          }
+        },
+        "request": {
+          "method": "GET",
+          "path": "/v1/webhooks/{{id}}",
+          "success": [
+            200
+          ]
+        },
+        "responseFormat": "json",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "title": "Get webhook",
+        "validationMode": "strict-generated"
+      },
+      "webhooks.list": {
+        "description": "List configured webhooks via GET /v1/webhooks. Maps to CALLINGLY_LIST_WEBHOOKS.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "account_id": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Filter webhooks by client account ID (required for agency partners)."
+            }
+          }
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": [
+                "array",
+                "object"
+              ]
+            }
+          }
+        },
+        "request": {
+          "method": "GET",
+          "path": "/v1/webhooks",
           "success": [
             200
           ],
@@ -1577,308 +2739,158 @@
             "account_id": "{{account_id}}"
           }
         },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "agents.create": {
+        "responseFormat": "json",
+        "sideEffect": "read",
         "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
-        "sideEffect": "write",
-        "title": "Create agent",
-        "description": "Create a Callingly agent.",
+        "title": "List webhooks",
+        "validationMode": "strict-generated"
+      },
+      "webhooks.update": {
+        "description": "Partially update a webhook via PUT /v1/webhooks/{id}. Maps to CALLINGLY_UPDATE_WEBHOOK.",
+        "enforceOutputSchema": true,
         "inputSchema": {
           "type": "object",
+          "additionalProperties": false,
           "properties": {
-            "fname": {
-              "type": "string",
-              "description": "Agent first name.",
-              "minLength": 1
-            },
-            "lname": {
-              "type": "string",
-              "description": "Agent last name.",
-              "minLength": 1
-            },
-            "phone_number": {
-              "type": "string",
-              "description": "Agent phone number.",
-              "minLength": 1
-            },
-            "timezone": {
-              "type": "string",
-              "description": "IANA timezone."
-            },
-            "account_id": {
+            "id": {
               "type": "integer",
-              "description": "Agency client account ID.",
-              "minimum": 1
+              "minimum": 1,
+              "description": "Unique identifier of the webhook to update."
             },
-            "ext": {
+            "name": {
               "type": "string",
-              "description": "Phone extension."
+              "minLength": 1,
+              "description": "New descriptive name for the webhook."
+            },
+            "event": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Event type that triggers the webhook.",
+              "enum": [
+                "call_completed",
+                "lead_created",
+                "lead_updated"
+              ]
+            },
+            "field": {
+              "type": "string",
+              "minLength": 1,
+              "description": "For lead_created/lead_updated: the lead field to watch.",
+              "enum": [
+                "lead_owner",
+                "result",
+                "stage",
+                "status",
+                "tags"
+              ]
+            },
+            "filter": {
+              "type": "string",
+              "minLength": 1,
+              "description": "For lead_created/lead_updated: value the watched field must match."
+            },
+            "team_id": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "For outbound call_completed events: filter by team ID."
+            },
+            "number_id": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "For inbound call_completed events: filter by number ID."
+            },
+            "target_url": {
+              "type": "string",
+              "minLength": 1,
+              "description": "New callback URL to receive webhook payloads."
+            },
+            "call_status": {
+              "type": "string",
+              "minLength": 1,
+              "description": "For call_completed events: filter by call status.",
+              "enum": [
+                "completed",
+                "missed",
+                "offline"
+              ]
+            },
+            "call_direction": {
+              "type": "string",
+              "minLength": 1,
+              "description": "For call_completed events: filter by call direction.",
+              "enum": [
+                "outbound",
+                "inbound"
+              ]
+            },
+            "call_lead_status": {
+              "type": "string",
+              "minLength": 1,
+              "description": "For call_completed events: filter by lead outcome.",
+              "enum": [
+                "contacted",
+                "missed",
+                "removed",
+                "voicemail"
+              ]
             }
           },
-          "additionalProperties": false,
           "required": [
-            "fname",
-            "lname",
-            "phone_number"
+            "id"
           ]
         },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
         "outputSchema": {
           "type": "object",
           "required": [
             "data"
           ],
+          "additionalProperties": false,
           "properties": {
             "data": {
               "type": "object"
             }
-          },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "POST",
-          "path": "/v1/agents",
-          "success": [
-            200,
-            201
-          ],
-          "body": {
-            "fname": "{{fname}}",
-            "lname": "{{lname}}",
-            "phone_number": "{{phone_number}}",
-            "timezone": "{{timezone}}",
-            "account_id": "{{account_id}}",
-            "ext": "{{ext}}"
-          },
-          "headers": {
-            "Content-Type": "application/json"
           }
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "agents.update": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
-        "sideEffect": "write",
-        "title": "Update agent",
-        "description": "Update a Callingly agent by ID.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "agentId": {
-              "type": "integer",
-              "description": "Agent ID.",
-              "minimum": 1
-            },
-            "fname": {
-              "type": "string",
-              "description": "Agent first name."
-            },
-            "lname": {
-              "type": "string",
-              "description": "Agent last name."
-            },
-            "phone_number": {
-              "type": "string",
-              "description": "Agent phone number."
-            },
-            "timezone": {
-              "type": "string",
-              "description": "IANA timezone."
-            },
-            "donotdisturb": {
-              "type": "integer",
-              "description": "Do-not-disturb flag (0 or 1)."
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "agentId"
-          ]
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
         },
         "request": {
           "method": "PUT",
-          "path": "/v1/agents/{{agentId}}",
+          "path": "/v1/webhooks/{{id}}",
           "success": [
-            200,
-            201
+            200
           ],
-          "body": {
-            "fname": "{{fname}}",
-            "lname": "{{lname}}",
-            "phone_number": "{{phone_number}}",
-            "timezone": "{{timezone}}",
-            "donotdisturb": "{{donotdisturb}}"
-          },
           "headers": {
             "Content-Type": "application/json"
+          },
+          "body": {
+            "name": "{{name}}",
+            "event": "{{event}}",
+            "field": "{{field}}",
+            "filter": "{{filter}}",
+            "team_id": "{{team_id}}",
+            "number_id": "{{number_id}}",
+            "target_url": "{{target_url}}",
+            "call_status": "{{call_status}}",
+            "call_direction": "{{call_direction}}",
+            "call_lead_status": "{{call_lead_status}}"
           }
         },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "agents.schedule.get": {
+        "responseFormat": "json",
+        "sideEffect": "write",
         "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
-        "sideEffect": "read",
-        "title": "Get agent schedule",
-        "description": "Get a Callingly agent's weekly availability schedule.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "agentId": {
-              "type": "integer",
-              "description": "Agent ID.",
-              "minimum": 1
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "agentId"
-          ]
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "array"
-            }
-          },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "GET",
-          "path": "/v1/agents/{{agentId}}/schedule",
-          "success": [
-            200
-          ]
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "webhooks.list": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 4096,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
-        "sideEffect": "read",
-        "title": "List webhooks",
-        "description": "List Callingly webhook subscriptions.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {},
-          "additionalProperties": false
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "array"
-            }
-          },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "GET",
-          "path": "/v1/webhooks",
-          "success": [
-            200
-          ]
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "webhooks.get": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
-        "sideEffect": "read",
-        "title": "Get webhook",
-        "description": "Get one Callingly webhook subscription by ID.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "webhookId": {
-              "type": "integer",
-              "description": "Webhook ID.",
-              "minimum": 1
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "webhookId"
-          ]
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "GET",
-          "path": "/v1/webhooks/{{webhookId}}",
-          "success": [
-            200
-          ]
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
+        "title": "Update webhook",
+        "validationMode": "strict-generated"
       }
     },
     "provenance": {
       "source": {
-        "url": "https://github.com/oomol-lab/open-connector",
-        "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"
+        "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
+        "url": "https://github.com/oomol-lab/open-connector"
       }
     },
-    "evidence": {
-      "fixture": {
-        "status": "supplied"
-      },
-      "live": {
-        "status": "unverified"
-      }
-    }
+    "runtime": "bun",
+    "version": "0.2.0",
+    "visibility": "public"
   }
 }

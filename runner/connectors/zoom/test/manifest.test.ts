@@ -5,7 +5,7 @@ describe("zoom connector manifest", () => {
   test("declares key, runtime, auth, network, operations, and models", () => {
     expect(manifest.key).toBe("zoom");
     expect(manifest.name).toBe("Zoom");
-    expect(manifest.version).toBe("0.2.0");
+    expect(manifest.version).toBe("0.3.0");
     expect(manifest.runtime).toBe("bun");
   });
 
@@ -17,6 +17,9 @@ describe("zoom connector manifest", () => {
     expect(manifest.auth.scopes).toContain("recording:read");
     expect(manifest.auth.scopes).toContain("recording:write");
     expect(manifest.auth.scopes).toContain("webinar:read");
+    expect(manifest.auth.scopes).toContain("webinar:write");
+    expect(manifest.auth.scopes).toContain("whiteboard:read");
+    expect(manifest.auth.scopes).toContain("report:read:admin");
     expect(manifest.auth.setup.mode).toBe("oauth2");
     expect(manifest.auth.setup.fields).toEqual([]);
   });
@@ -34,6 +37,8 @@ describe("zoom connector manifest", () => {
     expect(manifest.models).toContain("user");
     expect(manifest.models).toContain("webinar");
     expect(manifest.models).toContain("recording");
+    expect(manifest.models).toContain("whiteboard");
+    expect(manifest.models).toContain("conversation");
   });
 
   const ACTION_KEYS = [

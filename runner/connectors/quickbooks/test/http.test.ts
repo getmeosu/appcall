@@ -58,7 +58,7 @@ describe("quickbooks http - client creation", () => {
 
     expect(requests).toHaveLength(1);
     expect(requests[0].headers.get("Authorization")).toBe("Bearer test-access-token");
-    expect(requests[0].headers.get("Content-Type")).toBe("application/json");
+    expect(requests[0].headers.get("Content-Type")).toBeNull();
     expect(requests[0].url).toContain("quickbooks.api.intuit.com/v3/company/123456789");
     expect(result.status).toBe(200);
   });

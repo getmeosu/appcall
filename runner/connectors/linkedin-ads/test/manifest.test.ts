@@ -4,16 +4,19 @@ import manifest from "../manifest.json";
 describe("linkedin-ads manifest", () => {
   it("has correct key and version", () => {
     expect(manifest.key).toBe("linkedin-ads");
-    expect(manifest.version).toBe("0.2.0");
+    expect(manifest.version).toBe("0.5.0");
     expect(manifest.runtime).toBe("bun");
   });
 
-  it("uses oauth2 auth with read-only ad scopes", () => {
+  it("uses oauth2 auth with ads write and organization scopes", () => {
     expect(manifest.auth.type).toBe("oauth2");
     expect(manifest.auth.setup.mode).toBe("oauth2");
     expect(manifest.auth.scopes).toContain("r_ads");
+    expect(manifest.auth.scopes).toContain("rw_ads");
     expect(manifest.auth.scopes).toContain("r_ads_reporting");
-    expect(manifest.auth.scopes).not.toContain("rw_ads");
+    expect(manifest.auth.scopes).toContain("r_organization_social");
+    expect(manifest.auth.scopes).toContain("r_organization_admin");
+    expect(manifest.auth.scopes).toContain("rw_organization_admin");
   });
 
   it("allows linkedin api host", () => {
@@ -32,21 +35,62 @@ describe("linkedin-ads manifest", () => {
     expect(ops).toContain("creatives.list");
     expect(ops).toContain("analytics.report.get");
     expect(ops).toContain("healthcheck");
-    expect(ops).toHaveLength(9);
+    expect(ops).toContain("campaign_groups.get");
+    expect(ops).toContain("audience_counts.get");
+    expect(ops).toContain("targeting.facets.list");
+    expect(ops).toContain("targeting.entities.list");
+    expect(ops).toContain("supply_forecasts.get");
+    expect(ops).toContain("lead_forms.list");
+    expect(ops).toContain("lead_forms.get");
+    expect(ops).toContain("ad_accounts.create");
+    expect(ops).toContain("lead_forms.create");
+    expect(ops).toContain("organizations.network_size.get");
+    expect(ops).toContain("organizations.acls.list");
+    expect(ops).toContain("organizations.page_statistics.get");
+    expect(ops).toContain("organizations.follower_statistics.get");
+    expect(ops).toContain("organizations.share_statistics.get");
+    expect(ops).toContain("conversion_rules.list");
+    expect(ops).toContain("dmp_segments.list");
+    expect(ops).toContain("organizations.list");
+    expect(ops).toContain("posts.list");
+    expect(ops).toContain("organizations.lookup");
+    expect(ops).toContain("uploads.register");
+    expect(ops).toContain("events.search");
+    expect(ops).toContain("lead_forms.update");
+    expect(ops).toContain("organizations.acls.update");
+    expect(ops).toHaveLength(32);
   });
 
-  it("sync operations have correct shape", () => {
-    const campaigns = manifest.operations["campaigns.list"];
-    expect(campaigns.kind).toBe("sync");
-    expect(campaigns.timeoutMs).toBe(30000);
-    expect(campaigns.maxInputBytes).toBe(65536);
-    expect(campaigns.maxResponseBytes).toBe(5242880);
+  it("sync operations have correct shape and a real request", () => {
+    for (const key of ["campaigns.list", "ad_accounts.list", "creative_assets.list"] as const) {
+      const op = manifest.operations[key];
+      expect(op.kind).toBe("sync");
+      expect(op.timeoutMs).toBe(30000);
+      expect(op.maxInputBytes).toBe(65536);
+      expect(op.maxResponseBytes).toBeGreaterThanOrEqual(op.maxInputBytes);
+      expect(op.request.method).toBe("GET");
+      expect(op.request.path.startsWith("/rest/")).toBe(true);
+      expect(op.request.body).toBeUndefined();
+    }
+  });
 
-    const accounts = manifest.operations["ad_accounts.list"];
-    expect(accounts.kind).toBe("sync");
-
-    const creatives = manifest.operations["creative_assets.list"];
-    expect(creatives.kind).toBe("sync");
+  it("gives every operation a request method and path", () => {
+    for (const [key, op] of Object.entries(manifest.operations)) {
+      expect(op.request?.method, key).toEqual(expect.any(String));
+      expect(op.request?.path, key).toEqual(expect.any(String));
+      expect(op.maxResponseBytes).toBeGreaterThanOrEqual(op.maxInputBytes);
+      expect(op.title?.length ?? 0, key).toBeGreaterThan(0);
+      expect(op.inputSchema?.type, key).toBe("object");
+      const method = op.request.method;
+      if (method === "GET" || method === "DELETE") {
+        expect(op.request.body, key).toBeUndefined();
+        expect(op.request.headers?.["Content-Type"], key).toBeUndefined();
+        expect(op.sideEffect, key).toBe("read");
+      } else {
+        expect(op.request.headers?.["Content-Type"], key).toBe("application/json");
+        expect(op.sideEffect, key).toBe("write");
+      }
+    }
   });
 
   it("new P0 ops are actions with schemas", () => {
@@ -61,6 +105,39 @@ describe("linkedin-ads manifest", () => {
       expect(op.kind).toBe("action");
       expect(op.inputSchema).toBeDefined();
       expect(op.outputSchema).toBeDefined();
+    }
+  });
+
+  it("deeper parity actions are actionable and validated", () => {
+    for (const key of [
+      "campaign_groups.get",
+      "audience_counts.get",
+      "targeting.facets.list",
+      "targeting.entities.list",
+      "supply_forecasts.get",
+      "lead_forms.list",
+      "lead_forms.get",
+      "ad_accounts.create",
+      "lead_forms.create",
+      "organizations.network_size.get",
+      "organizations.acls.list",
+      "organizations.page_statistics.get",
+      "organizations.follower_statistics.get",
+      "organizations.share_statistics.get",
+      "conversion_rules.list",
+      "dmp_segments.list",
+      "organizations.list",
+      "posts.list",
+      "organizations.lookup",
+      "uploads.register",
+      "events.search",
+      "lead_forms.update",
+      "organizations.acls.update",
+    ] as const) {
+      expect(manifest.operations[key].kind).toBe("action");
+      expect(manifest.operations[key].inputSchema.type).toBe("object");
+      expect(manifest.operations[key].title.length).toBeGreaterThan(0);
+      expect(manifest.operations[key].description.length).toBeGreaterThan(0);
     }
   });
 
@@ -80,6 +157,8 @@ describe("linkedin-ads manifest", () => {
       "campaign_group",
       "creative",
       "analytics_result",
+      "lead_form",
+      "organization",
     ]);
   });
 });

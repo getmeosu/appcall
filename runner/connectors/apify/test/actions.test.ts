@@ -61,6 +61,7 @@ describe("listActors", () => {
     expect(url.searchParams.get("my")).toBe("1");
     expect(url.searchParams.get("limit")).toBe("5");
     expect(requests[0].headers.get("Authorization")).toBe("Bearer apify_api_test");
+    expect(requests[0].headers.get("Content-Type")).toBeNull();
     expect(result.connector).toBe("apify");
     expect(result.action).toBe("actors.list");
     expect(result.source).toBe("connector");

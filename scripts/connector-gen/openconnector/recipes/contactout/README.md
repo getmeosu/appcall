@@ -1,21 +1,18 @@
 # ContactOut
 
-Read-only international **ContactOut REST API** recipe. Request an API token from ContactOut (official docs: book a meeting / API dashboard) and store it as `apiKey`. Requests send `token`, the documented literal `authorization: basic` header, and `Accept: application/json` to `https://api.contactout.com`.
+International **ContactOut REST API** recipe covering origin healthcheck plus every Composio `CONTACTOUT_*` HTTP tool (25 tools, 29 operations). `healthcheck` is an authenticated `GET /v1/stats` probe and is not a Composio slug. Origin LinkedIn contact checkers (`people.linkedin.personal-email-status`, `people.linkedin.work-email-status`, `people.linkedin.phone-status`) are kept alongside the combined Composio availability tool.
+
+Request an API token from ContactOut and store it as `apiKey`. Requests send `token`, the documented literal `authorization: basic` header, and `Accept: application/json` to `https://api.contactout.com`. JSON writes also send `Content-Type: application/json`.
 
 ## Operations
 
-- `healthcheck`: `GET /v1/stats` with empty input (cheap authenticated usage probe; pinned credential validator). Not People Search.
-- `stats.get`: `GET /v1/stats` with optional `period` (`YYYY-MM`).
-- `people.linkedin.personal-email-status`: `GET /v1/people/linkedin/personal_email_status`; `profile` is a required LinkedIn URL. Official docs: does not consume credits.
-- `people.linkedin.work-email-status`: `GET /v1/people/linkedin/work_email_status`; required `profile`.
-- `people.linkedin.phone-status`: `GET /v1/people/linkedin/phone_status`; required `profile`.
+- Auth / usage: `healthcheck`, `stats.get` (`GET /v1/stats`).
+- LinkedIn contact checkers: `people.linkedin.personal-email-status`, `people.linkedin.work-email-status`, `people.linkedin.phone-status`, `people.linkedin.contact-availability` (`GET /v1/people/linkedin/{contact_type}_status`).
+- Profile / contact: `linkedin.enrich`, `people.linkedin.get`, `people.linkedin.batch`, `people.linkedin.batch.create`, `people.linkedin.batch.job.get`, `people.person.get`, `email.enrich`, `people.enrich`, `people.identifiers`.
+- Search: `people.search`, `people.count`, `people.decision-makers`, `companies.search`, `companies.domain.enrich`.
+- Email verifier: `email.verify`, `email.verify.batch.create`, `email.verify.batch.get`.
+- Campaigns: `campaigns.list`, `campaigns.get`, `campaigns.recipients.add`, `campaigns.recipients.remove`, `campaigns.start`, `campaigns.stop`.
 
-Successful responses are raw provider JSON under AppCall `data`. People Search, People Enrich, contact reveal, email verify, and other credit-consuming lookups are omitted.
+Successful responses are raw provider JSON under AppCall `data`. Optional query and JSON body fields are omitted when unset. `people.linkedin.contact-availability` interpolates Composio `contact_type` (`personal_email` | `work_email` | `phone`) into the official checker path. Campaign recipient removal is `DELETE` with a JSON body as documented. The upstream user-agent is not sent.
 
-## Adaptations
-
-Pinned source and official docs agree on `https://api.contactout.com`, the `token` header, and `authorization: basic`. Native category is `crm` (source Data/Marketing are not in the Rust CATEGORIES allowlist). Healthcheck uses `/v1/stats` rather than billed search. `Content-Type` and the upstream user-agent are not sent on these GET reads.
-
-## License and evidence
-
-Upstream definitions are attributed to [oomol-lab/open-connector](https://github.com/oomol-lab/open-connector) (Apache-2.0) at `33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a`. Fixtures are independently derived from official docs plus pinned source and are fixture-only; live smoke is unverified.
+Source attribution: [oomol-lab/open-connector](https://github.com/oomol-lab/open-connector) (Apache-2.0) at `33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a`. Official docs: https://api.contactout.io/. Fixtures are independently derived from official docs plus pinned source and are fixture-only; live smoke is unverified.

@@ -1,114 +1,2488 @@
 {
-  "schemaVersion": 1,
-  "providerId": "canny",
   "appcallId": "canny",
-  "source": {
-    "url": "https://github.com/oomol-lab/open-connector",
-    "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
-    "files": {
-      "src/providers/canny/definition.ts": "64750c2bf046daf30e6684af88ffe832b6f5dff41d1193b1be2c52c32c33df39",
-      "src/providers/canny/actions.ts": "3dd672d977f233dbd19d58b16e81f96547139fa8ca5794595b3ef0fb74c3314e",
-      "src/providers/canny/executors.ts": "34bf7ded67d17332673b879b74dddd5f2b97687b64e981c12f6b65fe11ae7ecc"
+  "manifest": {
+    "auth": {
+      "scopes": [],
+      "setup": {
+        "fields": [
+          {
+            "key": "apiKey",
+            "label": "Canny secret API key",
+            "required": true,
+            "secret": true
+          }
+        ],
+        "mode": "api_key"
+      },
+      "type": "api_key"
     },
-    "spans": {
-      "provider-auth": {
-        "path": "src/providers/canny/definition.ts",
-        "startLine": 7,
-        "endLine": 23
+    "categories": [
+      "productivity",
+      "dev-tools"
+    ],
+    "evidence": {
+      "fixture": {
+        "status": "supplied"
       },
-      "action-list-boards": {
-        "path": "src/providers/canny/actions.ts",
-        "startLine": 213,
-        "endLine": 221
-      },
-      "action-retrieve-board": {
-        "path": "src/providers/canny/actions.ts",
-        "startLine": 222,
-        "endLine": 227
-      },
-      "action-list-posts": {
-        "path": "src/providers/canny/actions.ts",
-        "startLine": 254,
-        "endLine": 262
-      },
-      "action-retrieve-post": {
-        "path": "src/providers/canny/actions.ts",
-        "startLine": 263,
-        "endLine": 267
-      },
-      "handler-list-boards": {
-        "path": "src/providers/canny/executors.ts",
-        "startLine": 114,
-        "endLine": 117
-      },
-      "handler-retrieve-board": {
-        "path": "src/providers/canny/executors.ts",
-        "startLine": 119,
-        "endLine": 126
-      },
-      "handler-list-posts": {
-        "path": "src/providers/canny/executors.ts",
-        "startLine": 182,
-        "endLine": 201
-      },
-      "handler-retrieve-post": {
-        "path": "src/providers/canny/executors.ts",
-        "startLine": 203,
-        "endLine": 209
-      },
-      "credential-validate": {
-        "path": "src/providers/canny/executors.ts",
-        "startLine": 94,
-        "endLine": 112
-      },
-      "request-body": {
-        "path": "src/providers/canny/executors.ts",
-        "startLine": 302,
-        "endLine": 320
-      },
-      "api-base": {
-        "path": "src/providers/canny/executors.ts",
-        "startLine": 24,
-        "endLine": 25
+      "live": {
+        "status": "unverified"
       }
+    },
+    "http": {
+      "auth": {
+        "field": "apiKey",
+        "in": "body",
+        "name": "apiKey",
+        "value": "{{apiKey}}"
+      },
+      "baseUrl": "https://canny.io/api",
+      "errors": {
+        "defaultRetryAfterSeconds": 30,
+        "messagePaths": [
+          "message",
+          "error"
+        ],
+        "rateLimitStatuses": [
+          429
+        ],
+        "retryAfterHeader": "Retry-After"
+      },
+      "headers": {
+        "Accept": "application/json",
+        "Content-Type": "application/json"
+      }
+    },
+    "key": "canny",
+    "models": [
+      "board",
+      "post",
+      "user",
+      "comment",
+      "tag",
+      "category",
+      "company",
+      "vote",
+      "opportunity",
+      "entry"
+    ],
+    "name": "Canny",
+    "network": {
+      "allowedHosts": [
+        "canny.io"
+      ]
+    },
+    "operations": {
+      "boards.get": {
+        "description": "Retrieve a Canny board by ID.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "boardId": {
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "boardId"
+          ],
+          "type": "object"
+        },
+        "kind": "action",
+        "maxInputBytes": 8192,
+        "maxResponseBytes": 1048576,
+        "outputSchema": {
+          "properties": {
+            "board": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "board"
+          ],
+          "type": "object"
+        },
+        "request": {
+          "body": {
+            "apiKey": "{{apiKey}}",
+            "id": "{{boardId}}"
+          },
+          "method": "POST",
+          "path": "/v1/boards/retrieve",
+          "result": {
+            "board": "{{response}}"
+          },
+          "success": [
+            200
+          ]
+        },
+        "sideEffect": "read",
+        "timeoutMs": 10000,
+        "title": "Get Board"
+      },
+      "boards.list": {
+        "description": "List Canny boards.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {},
+          "type": "object"
+        },
+        "kind": "action",
+        "maxInputBytes": 4096,
+        "maxResponseBytes": 1048576,
+        "outputSchema": {
+          "properties": {
+            "boards": {
+              "items": {
+                "type": "object"
+              },
+              "type": "array"
+            }
+          },
+          "required": [
+            "boards"
+          ],
+          "type": "object"
+        },
+        "request": {
+          "body": {
+            "apiKey": "{{apiKey}}"
+          },
+          "method": "POST",
+          "path": "/v1/boards/list",
+          "result": {
+            "boards": "{{response.boards}}"
+          },
+          "success": [
+            200
+          ]
+        },
+        "sideEffect": "read",
+        "timeoutMs": 10000,
+        "title": "List Boards"
+      },
+      "categories.list": {
+        "description": "List categories via POST /v1/categories/list. Maps to CANNY_LIST_CATEGORIES.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "boardID": {
+              "description": "Filter categories by this board ID.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "limit": {
+              "description": "Number of categories to return. Defaults to 10. Max 10000.",
+              "maximum": 10000,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "skip": {
+              "description": "Number of categories to skip. Defaults to 0.",
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          "type": "object"
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        },
+        "request": {
+          "body": {
+            "apiKey": "{{apiKey}}",
+            "boardID": "{{boardID}}",
+            "limit": "{{limit}}",
+            "skip": "{{skip}}"
+          },
+          "method": "POST",
+          "path": "/v1/categories/list",
+          "success": [
+            200
+          ]
+        },
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "title": "List categories",
+        "validationMode": "strict-generated"
+      },
+      "comments.create": {
+        "description": "Create a portal comment on a post via POST /v1/comments/create. Maps to CANNY_CREATE_COMMENT.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "authorID": {
+              "description": "Canny user ID of the comment author.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "createdAt": {
+              "description": "Original ISO 8601 created timestamp when migrating comments.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "imageURLs": {
+              "description": "Image URLs attached to the comment.",
+              "items": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "internal": {
+              "description": "Internal-only comment. Author must be a company member.",
+              "type": "boolean"
+            },
+            "parentID": {
+              "description": "Parent comment ID when this comment is a reply.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "postID": {
+              "description": "Canny post ID to comment on.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "shouldNotifyVoters": {
+              "description": "Whether to email post voters. Defaults to false.",
+              "type": "boolean"
+            },
+            "value": {
+              "description": "Comment text, up to 2500 characters. Required if imageURLs is empty.",
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "authorID",
+            "postID"
+          ],
+          "type": "object"
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        },
+        "request": {
+          "body": {
+            "apiKey": "{{apiKey}}",
+            "authorID": "{{authorID}}",
+            "createdAt": "{{createdAt}}",
+            "imageURLs": "{{imageURLs}}",
+            "internal": "{{internal}}",
+            "parentID": "{{parentID}}",
+            "postID": "{{postID}}",
+            "shouldNotifyVoters": "{{shouldNotifyVoters}}",
+            "value": "{{value}}"
+          },
+          "method": "POST",
+          "path": "/v1/comments/create",
+          "success": [
+            200
+          ]
+        },
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "title": "Create comment",
+        "validationMode": "strict-generated"
+      },
+      "comments.delete": {
+        "description": "Delete a portal comment via POST /v1/comments/delete. Maps to CANNY_DELETE_COMMENT.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "commentID": {
+              "description": "Unique identifier of the comment to delete.",
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "commentID"
+          ],
+          "type": "object"
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "success": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "success"
+          ],
+          "type": "object"
+        },
+        "request": {
+          "body": {
+            "apiKey": "{{apiKey}}",
+            "commentID": "{{commentID}}"
+          },
+          "method": "POST",
+          "path": "/v1/comments/delete",
+          "result": {
+            "success": true
+          },
+          "success": [
+            200
+          ]
+        },
+        "sideEffect": "destructive",
+        "timeoutMs": 15000,
+        "title": "Delete comment",
+        "validationMode": "strict-generated"
+      },
+      "comments.list": {
+        "description": "List portal comments via POST /v2/comments/list. Maps to CANNY_LIST_COMMENTS. Official pagination uses cursor; skip is accepted when provided.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "authorID": {
+              "description": "Only comments by this author.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "boardID": {
+              "description": "Only comments on this board.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "companyID": {
+              "description": "Only comments from users linked to this company.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "cursor": {
+              "description": "Pagination cursor from a previous response.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "limit": {
+              "description": "Number of comments to return (1-100). Defaults to 10.",
+              "maximum": 100,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "postID": {
+              "description": "Only comments on this post.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "skip": {
+              "description": "Number of comments to skip. Composio alias; official v2 uses cursor.",
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          "type": "object"
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        },
+        "request": {
+          "body": {
+            "apiKey": "{{apiKey}}",
+            "authorID": "{{authorID}}",
+            "boardID": "{{boardID}}",
+            "companyID": "{{companyID}}",
+            "cursor": "{{cursor}}",
+            "limit": "{{limit}}",
+            "postID": "{{postID}}",
+            "skip": "{{skip}}"
+          },
+          "method": "POST",
+          "path": "/v2/comments/list",
+          "success": [
+            200
+          ]
+        },
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "title": "List comments",
+        "validationMode": "strict-generated"
+      },
+      "companies.list": {
+        "description": "List companies via POST /v2/companies/list. Maps to CANNY_LIST_COMPANIES.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "cursor": {
+              "description": "Pagination cursor from a previous response.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "limit": {
+              "description": "Page size (1-100). Defaults to 10.",
+              "maximum": 100,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "search": {
+              "description": "Search by company name. Disables cursor pagination.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "segment": {
+              "description": "URL name of the segment to filter by.",
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "type": "object"
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        },
+        "request": {
+          "body": {
+            "apiKey": "{{apiKey}}",
+            "cursor": "{{cursor}}",
+            "limit": "{{limit}}",
+            "search": "{{search}}",
+            "segment": "{{segment}}"
+          },
+          "method": "POST",
+          "path": "/v2/companies/list",
+          "success": [
+            200
+          ]
+        },
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "title": "List companies",
+        "validationMode": "strict-generated"
+      },
+      "entries.create": {
+        "description": "Create and optionally publish a changelog entry via POST /v1/entries/create. Maps to CANNY_CREATE_CHANGELOG_ENTRY.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "details": {
+              "description": "Markdown details of the changelog entry.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "labelIDs": {
+              "description": "Label IDs to assign to the entry.",
+              "items": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "notify": {
+              "description": "If publishing immediately, whether to email users. Defaults to false.",
+              "type": "boolean"
+            },
+            "postIDs": {
+              "description": "Post IDs to link to the entry.",
+              "items": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "published": {
+              "description": "Whether to publish immediately. Defaults to false.",
+              "type": "boolean"
+            },
+            "publishedOn": {
+              "description": "ISO 8601 publish date in the past when published is true.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "scheduledFor": {
+              "description": "ISO 8601 future publish date.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "title": {
+              "description": "Title of the changelog entry.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "type": {
+              "description": "Entry type.",
+              "enum": [
+                "fixed",
+                "new",
+                "improved"
+              ],
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "title",
+            "details"
+          ],
+          "type": "object"
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        },
+        "request": {
+          "body": {
+            "apiKey": "{{apiKey}}",
+            "details": "{{details}}",
+            "labelIDs": "{{labelIDs}}",
+            "notify": "{{notify}}",
+            "postIDs": "{{postIDs}}",
+            "published": "{{published}}",
+            "publishedOn": "{{publishedOn}}",
+            "scheduledFor": "{{scheduledFor}}",
+            "title": "{{title}}",
+            "type": "{{type}}"
+          },
+          "method": "POST",
+          "path": "/v1/entries/create",
+          "success": [
+            200
+          ]
+        },
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "title": "Create changelog entry",
+        "validationMode": "strict-generated"
+      },
+      "healthcheck": {
+        "description": "Validate the Canny API key with POST /v1/boards/list.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {},
+          "type": "object"
+        },
+        "kind": "action",
+        "maxInputBytes": 4096,
+        "maxResponseBytes": 65536,
+        "outputSchema": {
+          "properties": {
+            "boards": {
+              "items": {
+                "type": "object"
+              },
+              "type": "array"
+            }
+          },
+          "required": [
+            "boards"
+          ],
+          "type": "object"
+        },
+        "request": {
+          "body": {
+            "apiKey": "{{apiKey}}"
+          },
+          "method": "POST",
+          "path": "/v1/boards/list",
+          "result": {
+            "boards": "{{response.boards}}"
+          },
+          "success": [
+            200
+          ]
+        },
+        "sideEffect": "read",
+        "timeoutMs": 5000,
+        "title": "Healthcheck"
+      },
+      "opportunities.list": {
+        "description": "List opportunities linked to posts via POST /v1/opportunities/list. Maps to CANNY_LIST_OPPORTUNITIES.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "limit": {
+              "description": "Number of opportunities to return. Defaults to 10.",
+              "minimum": 1,
+              "type": "integer"
+            },
+            "skip": {
+              "description": "Number of opportunities to skip. Defaults to 0.",
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          "type": "object"
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        },
+        "request": {
+          "body": {
+            "apiKey": "{{apiKey}}",
+            "limit": "{{limit}}",
+            "skip": "{{skip}}"
+          },
+          "method": "POST",
+          "path": "/v1/opportunities/list",
+          "success": [
+            200
+          ]
+        },
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "title": "List opportunities",
+        "validationMode": "strict-generated"
+      },
+      "posts.add_tag": {
+        "description": "Add an existing tag to a Canny post via POST /v1/posts/add_tag. Maps to CANNY_ADD_POST_TAG.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "postID": {
+              "description": "Unique identifier of the post to which the tag will be added.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "tagID": {
+              "description": "Unique identifier of the tag to add to the post.",
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "postID",
+            "tagID"
+          ],
+          "type": "object"
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        },
+        "request": {
+          "body": {
+            "apiKey": "{{apiKey}}",
+            "postID": "{{postID}}",
+            "tagID": "{{tagID}}"
+          },
+          "method": "POST",
+          "path": "/v1/posts/add_tag",
+          "success": [
+            200
+          ]
+        },
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "title": "Add post tag",
+        "validationMode": "strict-generated"
+      },
+      "posts.change_status": {
+        "description": "Change a post's workflow status via POST /v1/posts/change_status. Maps to CANNY_CHANGE_POST_STATUS.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "changerID": {
+              "description": "Unique identifier of the admin recording the status change.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "commentImageURLs": {
+              "description": "Optional image URLs attached to the status-change comment.",
+              "items": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "commentValue": {
+              "description": "Optional comment shown in the post activity feed.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "postID": {
+              "description": "Unique identifier of the post whose status will be changed.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "shouldNotifyVoters": {
+              "description": "Whether non-admin voters should be notified. Defaults to false.",
+              "type": "boolean"
+            },
+            "status": {
+              "description": "New status, e.g. open, under review, planned, in progress, complete, closed, or a custom status.",
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "postID",
+            "status",
+            "changerID"
+          ],
+          "type": "object"
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        },
+        "request": {
+          "body": {
+            "apiKey": "{{apiKey}}",
+            "changerID": "{{changerID}}",
+            "commentImageURLs": "{{commentImageURLs}}",
+            "commentValue": "{{commentValue}}",
+            "postID": "{{postID}}",
+            "shouldNotifyVoters": "{{shouldNotifyVoters}}",
+            "status": "{{status}}"
+          },
+          "method": "POST",
+          "path": "/v1/posts/change_status",
+          "success": [
+            200
+          ]
+        },
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "title": "Change post status",
+        "validationMode": "strict-generated"
+      },
+      "posts.create": {
+        "description": "Create a feedback post on a board via POST /v1/posts/create. Maps to CANNY_CREATE_POST.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "authorID": {
+              "description": "Canny user ID of the post author.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "boardID": {
+              "description": "Board ID where the post will be created.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "byID": {
+              "description": "Admin ID creating the post on behalf of the author.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "categoryID": {
+              "description": "Category or subcategory ID.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "createdAt": {
+              "description": "Original ISO 8601 created timestamp when migrating posts.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "customFields": {
+              "description": "Custom fields for the post.",
+              "type": "object"
+            },
+            "details": {
+              "description": "Post details / body.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "eta": {
+              "description": "Estimated completion date as MM/YYYY.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "etaPublic": {
+              "description": "Whether the ETA is visible to all users.",
+              "type": "boolean"
+            },
+            "imageURLs": {
+              "description": "Image URLs attached to the post.",
+              "items": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "ownerID": {
+              "description": "User ID responsible for completing the work.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "title": {
+              "description": "Post title.",
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "authorID",
+            "boardID",
+            "title",
+            "details"
+          ],
+          "type": "object"
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        },
+        "request": {
+          "body": {
+            "apiKey": "{{apiKey}}",
+            "authorID": "{{authorID}}",
+            "boardID": "{{boardID}}",
+            "byID": "{{byID}}",
+            "categoryID": "{{categoryID}}",
+            "createdAt": "{{createdAt}}",
+            "customFields": "{{customFields}}",
+            "details": "{{details}}",
+            "eta": "{{eta}}",
+            "etaPublic": "{{etaPublic}}",
+            "imageURLs": "{{imageURLs}}",
+            "ownerID": "{{ownerID}}",
+            "title": "{{title}}"
+          },
+          "method": "POST",
+          "path": "/v1/posts/create",
+          "success": [
+            200
+          ]
+        },
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "title": "Create post",
+        "validationMode": "strict-generated"
+      },
+      "posts.delete": {
+        "description": "Permanently delete a post via POST /v1/posts/delete. Maps to CANNY_DELETE_POST.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "postID": {
+              "description": "Unique identifier of the post to delete.",
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "postID"
+          ],
+          "type": "object"
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "success": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "success"
+          ],
+          "type": "object"
+        },
+        "request": {
+          "body": {
+            "apiKey": "{{apiKey}}",
+            "postID": "{{postID}}"
+          },
+          "method": "POST",
+          "path": "/v1/posts/delete",
+          "result": {
+            "success": true
+          },
+          "success": [
+            200
+          ]
+        },
+        "sideEffect": "destructive",
+        "timeoutMs": 15000,
+        "title": "Delete post",
+        "validationMode": "strict-generated"
+      },
+      "posts.get": {
+        "description": "Retrieve a Canny post by ID.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "postId": {
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "postId"
+          ],
+          "type": "object"
+        },
+        "kind": "action",
+        "maxInputBytes": 8192,
+        "maxResponseBytes": 1048576,
+        "outputSchema": {
+          "properties": {
+            "post": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "post"
+          ],
+          "type": "object"
+        },
+        "request": {
+          "body": {
+            "apiKey": "{{apiKey}}",
+            "id": "{{postId}}"
+          },
+          "method": "POST",
+          "path": "/v1/posts/retrieve",
+          "result": {
+            "post": "{{response}}"
+          },
+          "success": [
+            200
+          ]
+        },
+        "sideEffect": "read",
+        "timeoutMs": 10000,
+        "title": "Get Post"
+      },
+      "posts.list": {
+        "description": "List Canny posts with bounded pagination.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "authorID": {
+              "description": "Only fetch posts by this author ID.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "boardId": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "companyID": {
+              "description": "Only fetch posts created by users linked to this company identifier.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "limit": {
+              "maximum": 100,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "search": {
+              "description": "Search query to filter posts by title or details.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "skip": {
+              "minimum": 0,
+              "type": "integer"
+            },
+            "sort": {
+              "description": "Order to fetch posts. relevance requires search.",
+              "enum": [
+                "newest",
+                "oldest",
+                "relevance",
+                "score",
+                "statusChanged",
+                "trending"
+              ],
+              "minLength": 1,
+              "type": "string"
+            },
+            "status": {
+              "description": "Comma-separated list of statuses to filter by.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "tagIDs": {
+              "description": "Only fetch posts tagged with at least one of these tag IDs.",
+              "items": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "type": "array"
+            }
+          },
+          "type": "object"
+        },
+        "kind": "action",
+        "maxInputBytes": 8192,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "properties": {
+            "hasMore": {
+              "type": "boolean"
+            },
+            "posts": {
+              "items": {
+                "type": "object"
+              },
+              "type": "array"
+            }
+          },
+          "required": [
+            "posts",
+            "hasMore"
+          ],
+          "type": "object"
+        },
+        "request": {
+          "body": {
+            "apiKey": "{{apiKey}}",
+            "authorID": "{{authorID}}",
+            "boardID": "{{boardId}}",
+            "companyID": "{{companyID}}",
+            "limit": "{{limit}}",
+            "search": "{{search}}",
+            "skip": "{{skip}}",
+            "sort": "{{sort}}",
+            "status": "{{status}}",
+            "tagIDs": "{{tagIDs}}"
+          },
+          "method": "POST",
+          "path": "/v1/posts/list",
+          "result": {
+            "hasMore": "{{response.hasMore}}",
+            "posts": "{{response.posts}}"
+          },
+          "success": [
+            200
+          ]
+        },
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "title": "List Posts"
+      },
+      "posts.update": {
+        "description": "Update an existing post via POST /v1/posts/update. Maps to CANNY_UPDATE_POST.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "customFields": {
+              "description": "Custom fields to set on the post.",
+              "type": "object"
+            },
+            "details": {
+              "description": "Updated post details.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "eta": {
+              "description": "Estimated completion as MM/YYYY, or null to clear.",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "etaPublic": {
+              "description": "Whether the ETA is visible to end-users.",
+              "type": "boolean"
+            },
+            "imageURLs": {
+              "description": "Image URLs attached to the post.",
+              "items": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "postID": {
+              "description": "Unique identifier of the post to update.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "title": {
+              "description": "Updated post title.",
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "postID"
+          ],
+          "type": "object"
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "success": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "success"
+          ],
+          "type": "object"
+        },
+        "request": {
+          "body": {
+            "apiKey": "{{apiKey}}",
+            "customFields": "{{customFields}}",
+            "details": "{{details}}",
+            "eta": "{{eta}}",
+            "etaPublic": "{{etaPublic}}",
+            "imageURLs": "{{imageURLs}}",
+            "postID": "{{postID}}",
+            "title": "{{title}}"
+          },
+          "method": "POST",
+          "path": "/v1/posts/update",
+          "result": {
+            "success": true
+          },
+          "success": [
+            200
+          ]
+        },
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "title": "Update post",
+        "validationMode": "strict-generated"
+      },
+      "tags.create": {
+        "description": "Create a tag on a board via POST /v1/tags/create. Maps to CANNY_CREATE_TAG.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "boardID": {
+              "description": "Board ID the tag should be created for.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "name": {
+              "description": "Tag name, 1-30 characters.",
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "boardID",
+            "name"
+          ],
+          "type": "object"
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        },
+        "request": {
+          "body": {
+            "apiKey": "{{apiKey}}",
+            "boardID": "{{boardID}}",
+            "name": "{{name}}"
+          },
+          "method": "POST",
+          "path": "/v1/tags/create",
+          "success": [
+            200
+          ]
+        },
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "title": "Create tag",
+        "validationMode": "strict-generated"
+      },
+      "tags.get": {
+        "description": "Retrieve a tag by ID via POST /v1/tags/retrieve. Maps to CANNY_RETRIEVE_TAG.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "description": "Unique identifier of the tag to retrieve.",
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "id"
+          ],
+          "type": "object"
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        },
+        "request": {
+          "body": {
+            "apiKey": "{{apiKey}}",
+            "id": "{{id}}"
+          },
+          "method": "POST",
+          "path": "/v1/tags/retrieve",
+          "success": [
+            200
+          ]
+        },
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "title": "Retrieve tag",
+        "validationMode": "strict-generated"
+      },
+      "tags.list": {
+        "description": "List tags via POST /v1/tags/list. Maps to CANNY_LIST_TAGS.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "boardID": {
+              "description": "Filter tags by this board ID.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "limit": {
+              "description": "Number of tags to return. Defaults to 10.",
+              "minimum": 1,
+              "type": "integer"
+            },
+            "skip": {
+              "description": "Number of tags to skip. Defaults to 0.",
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          "type": "object"
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        },
+        "request": {
+          "body": {
+            "apiKey": "{{apiKey}}",
+            "boardID": "{{boardID}}",
+            "limit": "{{limit}}",
+            "skip": "{{skip}}"
+          },
+          "method": "POST",
+          "path": "/v1/tags/list",
+          "success": [
+            200
+          ]
+        },
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "title": "List tags",
+        "validationMode": "strict-generated"
+      },
+      "users.create_or_update": {
+        "description": "Create a user or update an existing one via POST /v1/users/create_or_update. Maps to CANNY_CREATE_OR_UPDATE_USER. Provide at least one of email, userID, or id.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "alias": {
+              "description": "Optional alias for anonymized boards.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "avatarURL": {
+              "description": "URL of the user's avatar image.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "companies": {
+              "description": "Companies to associate with the user. Associating requires userID.",
+              "items": {
+                "additionalProperties": false,
+                "properties": {
+                  "created": {
+                    "description": "ISO 8601 timestamp when the company was created.",
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "customFields": {
+                    "description": "Custom fields for the company.",
+                    "type": "object"
+                  },
+                  "domain": {
+                    "description": "Company domain.",
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "id": {
+                    "description": "Company identifier in your application.",
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "monthlySpend": {
+                    "description": "Monthly spend associated with the company.",
+                    "type": "number"
+                  },
+                  "name": {
+                    "description": "Company name.",
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "created": {
+              "description": "ISO 8601 date the user was created in your system.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "customFields": {
+              "description": "Custom fields (keys 0-30 chars; string values <200 chars).",
+              "type": "object"
+            },
+            "email": {
+              "description": "User email. One of email, userID, or id is required.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "id": {
+              "description": "Existing Canny user ID when updating.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "name": {
+              "description": "User's name (1-50 characters).",
+              "minLength": 1,
+              "type": "string"
+            },
+            "userID": {
+              "description": "Your application's unique identifier for the user.",
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "name"
+          ],
+          "type": "object"
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        },
+        "request": {
+          "body": {
+            "alias": "{{alias}}",
+            "apiKey": "{{apiKey}}",
+            "avatarURL": "{{avatarURL}}",
+            "companies": "{{companies}}",
+            "created": "{{created}}",
+            "customFields": "{{customFields}}",
+            "email": "{{email}}",
+            "id": "{{id}}",
+            "name": "{{name}}",
+            "userID": "{{userID}}"
+          },
+          "method": "POST",
+          "path": "/v1/users/create_or_update",
+          "success": [
+            200
+          ]
+        },
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "title": "Create or update user",
+        "validationMode": "strict-generated"
+      },
+      "users.delete": {
+        "description": "Delete a user and their comments and votes via POST /v1/users/delete. Maps to CANNY_DELETE_USER.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "description": "Canny user ID to delete.",
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "id"
+          ],
+          "type": "object"
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "success": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "success"
+          ],
+          "type": "object"
+        },
+        "request": {
+          "body": {
+            "apiKey": "{{apiKey}}",
+            "id": "{{id}}"
+          },
+          "method": "POST",
+          "path": "/v1/users/delete",
+          "result": {
+            "success": true
+          },
+          "success": [
+            200
+          ]
+        },
+        "sideEffect": "destructive",
+        "timeoutMs": 15000,
+        "title": "Delete user",
+        "validationMode": "strict-generated"
+      },
+      "users.get": {
+        "description": "Retrieve a user via POST /v1/users/retrieve. Maps to CANNY_RETRIEVE_USER. Provide exactly one of id, userID, or email.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "email": {
+              "description": "User email address.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "id": {
+              "description": "Canny user ID.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "userID": {
+              "description": "Your application's unique identifier for the user.",
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "type": "object"
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        },
+        "request": {
+          "body": {
+            "apiKey": "{{apiKey}}",
+            "email": "{{email}}",
+            "id": "{{id}}",
+            "userID": "{{userID}}"
+          },
+          "method": "POST",
+          "path": "/v1/users/retrieve",
+          "success": [
+            200
+          ]
+        },
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "title": "Retrieve user",
+        "validationMode": "strict-generated"
+      },
+      "users.list": {
+        "description": "List workspace users via POST /v2/users/list. Maps to CANNY_LIST_USERS.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "cursor": {
+              "description": "Pagination cursor from a previous response.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "limit": {
+              "description": "Page size (1-100). Defaults to 10.",
+              "maximum": 100,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          "type": "object"
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        },
+        "request": {
+          "body": {
+            "apiKey": "{{apiKey}}",
+            "cursor": "{{cursor}}",
+            "limit": "{{limit}}"
+          },
+          "method": "POST",
+          "path": "/v2/users/list",
+          "success": [
+            200
+          ]
+        },
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "title": "List users",
+        "validationMode": "strict-generated"
+      },
+      "votes.create": {
+        "description": "Create a vote on a post via POST /v1/votes/create. Maps to CANNY_CREATE_VOTE.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "byID": {
+              "description": "Admin ID casting the vote on behalf of the voter.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "createdAt": {
+              "description": "Original ISO 8601 created timestamp when migrating votes.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "postID": {
+              "description": "Post ID to vote on.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "votePriority": {
+              "description": "Vote priority: 0 (Nice to have), 10 (Important), or 20 (Must have).",
+              "enum": [
+                0,
+                10,
+                20
+              ],
+              "type": "integer"
+            },
+            "voterID": {
+              "description": "User ID of the voter.",
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "postID",
+            "voterID"
+          ],
+          "type": "object"
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "success": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "success"
+          ],
+          "type": "object"
+        },
+        "request": {
+          "body": {
+            "apiKey": "{{apiKey}}",
+            "byID": "{{byID}}",
+            "createdAt": "{{createdAt}}",
+            "postID": "{{postID}}",
+            "votePriority": "{{votePriority}}",
+            "voterID": "{{voterID}}"
+          },
+          "method": "POST",
+          "path": "/v1/votes/create",
+          "result": {
+            "success": true
+          },
+          "success": [
+            200
+          ]
+        },
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "title": "Create vote",
+        "validationMode": "strict-generated"
+      },
+      "votes.delete": {
+        "description": "Remove a user's vote from a post via POST /v1/votes/delete. Maps to CANNY_DELETE_VOTE.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "postID": {
+              "description": "Post ID from which the vote will be removed.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "voterID": {
+              "description": "User ID whose vote is being removed.",
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "postID",
+            "voterID"
+          ],
+          "type": "object"
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "success": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "success"
+          ],
+          "type": "object"
+        },
+        "request": {
+          "body": {
+            "apiKey": "{{apiKey}}",
+            "postID": "{{postID}}",
+            "voterID": "{{voterID}}"
+          },
+          "method": "POST",
+          "path": "/v1/votes/delete",
+          "result": {
+            "success": true
+          },
+          "success": [
+            200
+          ]
+        },
+        "sideEffect": "destructive",
+        "timeoutMs": 15000,
+        "title": "Delete vote",
+        "validationMode": "strict-generated"
+      },
+      "votes.list": {
+        "description": "List votes via POST /v2/votes/list. Maps to CANNY_LIST_VOTES. Composio voterID is sent as official userID.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "boardID": {
+              "description": "Filter votes by board ID.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "companyID": {
+              "description": "Filter votes by users linked to this company.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "cursor": {
+              "description": "Pagination cursor from a previous response.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "limit": {
+              "description": "Number of votes to return (1-100). Defaults to 10.",
+              "maximum": 100,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "postID": {
+              "description": "Filter votes by post ID.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "skip": {
+              "description": "Number of votes to skip. Composio alias; official v2 uses cursor.",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "voterID": {
+              "description": "Filter votes by voter. Mapped to official userID.",
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "type": "object"
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        },
+        "request": {
+          "body": {
+            "apiKey": "{{apiKey}}",
+            "boardID": "{{boardID}}",
+            "companyID": "{{companyID}}",
+            "cursor": "{{cursor}}",
+            "limit": "{{limit}}",
+            "postID": "{{postID}}",
+            "skip": "{{skip}}",
+            "userID": "{{voterID}}"
+          },
+          "method": "POST",
+          "path": "/v2/votes/list",
+          "success": [
+            200
+          ]
+        },
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "title": "List votes",
+        "validationMode": "strict-generated"
+      }
+    },
+    "provenance": {
+      "source": {
+        "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
+        "url": "https://github.com/oomol-lab/open-connector"
+      }
+    },
+    "runtime": "bun",
+    "version": "0.2.0",
+    "visibility": "public"
+  },
+  "operationSources": {
+    "boards.get": {
+      "adaptations": [
+        "Official POST /v1/boards/retrieve uses body field id. Native input boardID maps to id, matching pinned source."
+      ],
+      "documentationUrls": [
+        "https://developers.canny.io/api-reference"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "sourceRefs": [
+        "action-retrieve-board",
+        "handler-retrieve-board",
+        "request-body"
+      ],
+      "upstreamActionId": "retrieve_board"
+    },
+    "boards.list": {
+      "adaptations": [
+        "Official POST /v1/boards/list with apiKey in JSON body. Returns raw Canny JSON under data."
+      ],
+      "documentationUrls": [
+        "https://developers.canny.io/api-reference"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "sourceRefs": [
+        "action-list-boards",
+        "handler-list-boards",
+        "request-body"
+      ],
+      "upstreamActionId": "list_boards"
+    },
+    "categories.list": {
+      "adaptations": [
+        "Official POST /v1/categories/list with apiKey in the JSON body.",
+        "Returns raw Canny JSON under data unless the provider responds with the literal success string, which maps to {success: true}.",
+        "The upstream user-agent is not sent."
+      ],
+      "documentationUrls": [
+        "https://developers.canny.io/api-reference",
+        "https://docs.composio.dev/toolkits/canny"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "sourceRefs": [
+        "request-body",
+        "api-base"
+      ],
+      "upstreamActionId": "categories.list"
+    },
+    "comments.create": {
+      "adaptations": [
+        "Official POST /v1/comments/create with apiKey in the JSON body.",
+        "Returns raw Canny JSON under data unless the provider responds with the literal success string, which maps to {success: true}.",
+        "The upstream user-agent is not sent."
+      ],
+      "documentationUrls": [
+        "https://developers.canny.io/api-reference",
+        "https://docs.composio.dev/toolkits/canny"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "sourceRefs": [
+        "request-body",
+        "api-base"
+      ],
+      "upstreamActionId": "comments.create"
+    },
+    "comments.delete": {
+      "adaptations": [
+        "Official POST /v1/comments/delete with apiKey in the JSON body.",
+        "Returns raw Canny JSON under data unless the provider responds with the literal success string, which maps to {success: true}.",
+        "The upstream user-agent is not sent."
+      ],
+      "documentationUrls": [
+        "https://developers.canny.io/api-reference",
+        "https://docs.composio.dev/toolkits/canny"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "sourceRefs": [
+        "request-body",
+        "api-base"
+      ],
+      "upstreamActionId": "comments.delete"
+    },
+    "comments.list": {
+      "adaptations": [
+        "Official POST /v2/comments/list with apiKey in the JSON body.",
+        "Returns raw Canny JSON under data unless the provider responds with the literal success string, which maps to {success: true}.",
+        "The upstream user-agent is not sent."
+      ],
+      "documentationUrls": [
+        "https://developers.canny.io/api-reference",
+        "https://docs.composio.dev/toolkits/canny"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "sourceRefs": [
+        "request-body",
+        "api-base"
+      ],
+      "upstreamActionId": "comments.list"
+    },
+    "companies.list": {
+      "adaptations": [
+        "Official POST /v2/companies/list with apiKey in the JSON body.",
+        "Returns raw Canny JSON under data unless the provider responds with the literal success string, which maps to {success: true}.",
+        "The upstream user-agent is not sent."
+      ],
+      "documentationUrls": [
+        "https://developers.canny.io/api-reference",
+        "https://docs.composio.dev/toolkits/canny"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "sourceRefs": [
+        "request-body",
+        "api-base"
+      ],
+      "upstreamActionId": "companies.list"
+    },
+    "entries.create": {
+      "adaptations": [
+        "Official POST /v1/entries/create with apiKey in the JSON body.",
+        "Returns raw Canny JSON under data unless the provider responds with the literal success string, which maps to {success: true}.",
+        "The upstream user-agent is not sent."
+      ],
+      "documentationUrls": [
+        "https://developers.canny.io/api-reference",
+        "https://docs.composio.dev/toolkits/canny"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "sourceRefs": [
+        "request-body",
+        "api-base"
+      ],
+      "upstreamActionId": "entries.create"
+    },
+    "healthcheck": {
+      "adaptations": [
+        "HOLD: current unresolved Canny 2026-08-28 incident. Credential-only healthcheck would POST /v1/boards/list with apiKey in the JSON body. Official curl examples use -d form fields; official text and pinned source send JSON with Content-Type application/json. Native category is productivity rather than Productivity/Data. Pinned user-agent is omitted. Returns raw Canny JSON under data instead of the original curated preserve-existing result mapping."
+      ],
+      "documentationUrls": [
+        "https://developers.canny.io/api-reference"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "sourceRefs": [
+        "credential-validate",
+        "handler-list-boards",
+        "request-body",
+        "api-base"
+      ],
+      "upstreamActionId": "list_boards"
+    },
+    "opportunities.list": {
+      "adaptations": [
+        "Official POST /v1/opportunities/list with apiKey in the JSON body.",
+        "Returns raw Canny JSON under data unless the provider responds with the literal success string, which maps to {success: true}.",
+        "The upstream user-agent is not sent."
+      ],
+      "documentationUrls": [
+        "https://developers.canny.io/api-reference",
+        "https://docs.composio.dev/toolkits/canny"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "sourceRefs": [
+        "request-body",
+        "api-base"
+      ],
+      "upstreamActionId": "opportunities.list"
+    },
+    "posts.add_tag": {
+      "adaptations": [
+        "Official POST /v1/posts/add_tag with apiKey in the JSON body.",
+        "Returns raw Canny JSON under data unless the provider responds with the literal success string, which maps to {success: true}.",
+        "The upstream user-agent is not sent."
+      ],
+      "documentationUrls": [
+        "https://developers.canny.io/api-reference",
+        "https://docs.composio.dev/toolkits/canny"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "sourceRefs": [
+        "request-body",
+        "api-base"
+      ],
+      "upstreamActionId": "posts.add_tag"
+    },
+    "posts.change_status": {
+      "adaptations": [
+        "Official POST /v1/posts/change_status with apiKey in the JSON body.",
+        "Returns raw Canny JSON under data unless the provider responds with the literal success string, which maps to {success: true}.",
+        "The upstream user-agent is not sent."
+      ],
+      "documentationUrls": [
+        "https://developers.canny.io/api-reference",
+        "https://docs.composio.dev/toolkits/canny"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "sourceRefs": [
+        "request-body",
+        "api-base"
+      ],
+      "upstreamActionId": "posts.change_status"
+    },
+    "posts.create": {
+      "adaptations": [
+        "Official POST /v1/posts/create with apiKey in the JSON body.",
+        "Returns raw Canny JSON under data unless the provider responds with the literal success string, which maps to {success: true}.",
+        "The upstream user-agent is not sent."
+      ],
+      "documentationUrls": [
+        "https://developers.canny.io/api-reference",
+        "https://docs.composio.dev/toolkits/canny"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "sourceRefs": [
+        "request-body",
+        "api-base"
+      ],
+      "upstreamActionId": "posts.create"
+    },
+    "posts.delete": {
+      "adaptations": [
+        "Official POST /v1/posts/delete with apiKey in the JSON body.",
+        "Returns raw Canny JSON under data unless the provider responds with the literal success string, which maps to {success: true}.",
+        "The upstream user-agent is not sent."
+      ],
+      "documentationUrls": [
+        "https://developers.canny.io/api-reference",
+        "https://docs.composio.dev/toolkits/canny"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "sourceRefs": [
+        "request-body",
+        "api-base"
+      ],
+      "upstreamActionId": "posts.delete"
+    },
+    "posts.get": {
+      "adaptations": [
+        "Official POST /v1/posts/retrieve uses body field id. Native input postID maps to id, matching pinned source."
+      ],
+      "documentationUrls": [
+        "https://developers.canny.io/api-reference"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "sourceRefs": [
+        "action-retrieve-post",
+        "handler-retrieve-post",
+        "request-body"
+      ],
+      "upstreamActionId": "retrieve_post"
+    },
+    "posts.list": {
+      "adaptations": [
+        "Official POST /v1/posts/list. Optional boardID, limit (1-100), and skip map to body fields of the same names.",
+        "Optional authorID, companyID, tagIDs, search, sort, and status from CANNY_LIST_POSTS are omitted when unset. Native input remains boardId mapped to official boardID."
+      ],
+      "documentationUrls": [
+        "https://developers.canny.io/api-reference"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "sourceRefs": [
+        "action-list-posts",
+        "handler-list-posts",
+        "request-body"
+      ],
+      "upstreamActionId": "list_posts"
+    },
+    "posts.update": {
+      "adaptations": [
+        "Official POST /v1/posts/update with apiKey in the JSON body.",
+        "Returns raw Canny JSON under data unless the provider responds with the literal success string, which maps to {success: true}.",
+        "The upstream user-agent is not sent."
+      ],
+      "documentationUrls": [
+        "https://developers.canny.io/api-reference",
+        "https://docs.composio.dev/toolkits/canny"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "sourceRefs": [
+        "request-body",
+        "api-base"
+      ],
+      "upstreamActionId": "posts.update"
+    },
+    "tags.create": {
+      "adaptations": [
+        "Official POST /v1/tags/create with apiKey in the JSON body.",
+        "Returns raw Canny JSON under data unless the provider responds with the literal success string, which maps to {success: true}.",
+        "The upstream user-agent is not sent."
+      ],
+      "documentationUrls": [
+        "https://developers.canny.io/api-reference",
+        "https://docs.composio.dev/toolkits/canny"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "sourceRefs": [
+        "request-body",
+        "api-base"
+      ],
+      "upstreamActionId": "tags.create"
+    },
+    "tags.get": {
+      "adaptations": [
+        "Official POST /v1/tags/retrieve with apiKey in the JSON body.",
+        "Returns raw Canny JSON under data unless the provider responds with the literal success string, which maps to {success: true}.",
+        "The upstream user-agent is not sent."
+      ],
+      "documentationUrls": [
+        "https://developers.canny.io/api-reference",
+        "https://docs.composio.dev/toolkits/canny"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "sourceRefs": [
+        "request-body",
+        "api-base"
+      ],
+      "upstreamActionId": "tags.get"
+    },
+    "tags.list": {
+      "adaptations": [
+        "Official POST /v1/tags/list with apiKey in the JSON body.",
+        "Returns raw Canny JSON under data unless the provider responds with the literal success string, which maps to {success: true}.",
+        "The upstream user-agent is not sent."
+      ],
+      "documentationUrls": [
+        "https://developers.canny.io/api-reference",
+        "https://docs.composio.dev/toolkits/canny"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "sourceRefs": [
+        "request-body",
+        "api-base"
+      ],
+      "upstreamActionId": "tags.list"
+    },
+    "users.create_or_update": {
+      "adaptations": [
+        "Official POST /v1/users/create_or_update with apiKey in the JSON body.",
+        "Returns raw Canny JSON under data unless the provider responds with the literal success string, which maps to {success: true}.",
+        "The upstream user-agent is not sent."
+      ],
+      "documentationUrls": [
+        "https://developers.canny.io/api-reference",
+        "https://docs.composio.dev/toolkits/canny"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "sourceRefs": [
+        "request-body",
+        "api-base"
+      ],
+      "upstreamActionId": "users.create_or_update"
+    },
+    "users.delete": {
+      "adaptations": [
+        "Official POST /v1/users/delete with apiKey in the JSON body.",
+        "Returns raw Canny JSON under data unless the provider responds with the literal success string, which maps to {success: true}.",
+        "The upstream user-agent is not sent."
+      ],
+      "documentationUrls": [
+        "https://developers.canny.io/api-reference",
+        "https://docs.composio.dev/toolkits/canny"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "sourceRefs": [
+        "request-body",
+        "api-base"
+      ],
+      "upstreamActionId": "users.delete"
+    },
+    "users.get": {
+      "adaptations": [
+        "Official POST /v1/users/retrieve with apiKey in the JSON body.",
+        "Returns raw Canny JSON under data unless the provider responds with the literal success string, which maps to {success: true}.",
+        "The upstream user-agent is not sent."
+      ],
+      "documentationUrls": [
+        "https://developers.canny.io/api-reference",
+        "https://docs.composio.dev/toolkits/canny"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "sourceRefs": [
+        "request-body",
+        "api-base"
+      ],
+      "upstreamActionId": "users.get"
+    },
+    "users.list": {
+      "adaptations": [
+        "Official POST /v2/users/list with apiKey in the JSON body.",
+        "Returns raw Canny JSON under data unless the provider responds with the literal success string, which maps to {success: true}.",
+        "The upstream user-agent is not sent."
+      ],
+      "documentationUrls": [
+        "https://developers.canny.io/api-reference",
+        "https://docs.composio.dev/toolkits/canny"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "sourceRefs": [
+        "request-body",
+        "api-base"
+      ],
+      "upstreamActionId": "users.list"
+    },
+    "votes.create": {
+      "adaptations": [
+        "Official POST /v1/votes/create with apiKey in the JSON body.",
+        "Returns raw Canny JSON under data unless the provider responds with the literal success string, which maps to {success: true}.",
+        "The upstream user-agent is not sent."
+      ],
+      "documentationUrls": [
+        "https://developers.canny.io/api-reference",
+        "https://docs.composio.dev/toolkits/canny"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "sourceRefs": [
+        "request-body",
+        "api-base"
+      ],
+      "upstreamActionId": "votes.create"
+    },
+    "votes.delete": {
+      "adaptations": [
+        "Official POST /v1/votes/delete with apiKey in the JSON body.",
+        "Returns raw Canny JSON under data unless the provider responds with the literal success string, which maps to {success: true}.",
+        "The upstream user-agent is not sent."
+      ],
+      "documentationUrls": [
+        "https://developers.canny.io/api-reference",
+        "https://docs.composio.dev/toolkits/canny"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "sourceRefs": [
+        "request-body",
+        "api-base"
+      ],
+      "upstreamActionId": "votes.delete"
+    },
+    "votes.list": {
+      "adaptations": [
+        "Official POST /v2/votes/list with apiKey in the JSON body.",
+        "Returns raw Canny JSON under data unless the provider responds with the literal success string, which maps to {success: true}.",
+        "The upstream user-agent is not sent."
+      ],
+      "documentationUrls": [
+        "https://developers.canny.io/api-reference",
+        "https://docs.composio.dev/toolkits/canny"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "sourceRefs": [
+        "request-body",
+        "api-base"
+      ],
+      "upstreamActionId": "votes.list"
     }
   },
-  "selection": {
-    "providerId": "canny",
+  "providerId": "canny",
+  "research": {
     "appcallId": "canny",
+    "decision": "HOLD",
+    "edition": "international Canny REST API v1",
+    "evidence": [
+      "https://developers.canny.io/api-reference",
+      "https://help.canny.io/en/articles/4195400-the-canny-api",
+      "https://help.21bitcoin.app/en/articles/16774122-security-incident-at-our-external-provider-canny"
+    ],
+    "incidents": [
+      {
+        "affectedData": "21bitcoin support-system contacts (names, emails, phones, DOB, device metadata, account status/balance stored in support, first message/subject). Bitcoin balances and KYC were not in scope per 21bitcoin.",
+        "affectedProduct": "Canny (feedback tool) Intercom integration used by 21bitcoin",
+        "disclosureDate": "2026-09-02",
+        "incidentDate": "2026-08-28",
+        "remediation": "21bitcoin says Canny cut the Intercom connection the same day and invalidated the stolen key. 21bitcoin rotated related credentials. No Canny-authored public incident report located.",
+        "residualRisk": "Unknown whether Canny secret API keys (this recipe's credential) were in the attack scope. Current unresolved credible issue; not waived as historical.",
+        "source": "https://help.21bitcoin.app/en/articles/16774122-security-incident-at-our-external-provider-canny",
+        "status": "unresolved: Canny public RCA not found as of 2026-09-13; 21bitcoin requested forensic report and root-cause analysis from Canny"
+      }
+    ],
+    "marketFocus": "international",
+    "providerId": "canny",
+    "remainingGates": [
+      "unresolved Canny 2026-08-28 incident: 21bitcoin reports Canny was targeted and an Intercom integration access key was stolen; Canny has not published a public RCA as of 2026-09-13",
+      "live authentication unverified"
+    ],
+    "reviewedAt": "2026-09-13",
+    "reviewer": "research review",
+    "searchCoverage": "Official Canny API is POST JSON with apiKey in the body. POST /v1/boards/list is the cheap authenticated board list used by the pinned credential validator. Dated 2026-09-13 incident search found 21bitcoin's 2026-09-02 disclosure that Canny was targeted on 2026-08-28 and an Intercom integration access key was stolen. Canny has not published a public RCA. HOLD, not APPROVED.",
+    "waiverAuthority": "User waiver dated 2026-09-13 permits historical non-China incident coverage. This August 2026 Canny incident is current and is not treated as waived history."
+  },
+  "schemaVersion": 1,
+  "selection": {
+    "appcallId": "canny",
+    "breach": {
+      "researchedAt": "2026-09-13",
+      "status": "unresolved"
+    },
     "disposition": "HOLD",
     "edition": "international Canny REST API v1",
+    "gates": {
+      "boundedNetwork": true,
+      "credentials": true,
+      "license": true,
+      "officialApi": true,
+      "operationQuality": true
+    },
+    "marketFocus": "international",
     "operations": [
       "healthcheck",
       "boards.list",
       "boards.get",
       "posts.list",
       "posts.get",
-      "posts.create",
-      "posts.change_status",
       "posts.add_tag",
+      "posts.change_status",
+      "entries.create",
+      "comments.create",
+      "users.create_or_update",
+      "posts.create",
+      "tags.create",
+      "votes.create",
+      "comments.delete",
+      "posts.delete",
+      "users.delete",
+      "votes.delete",
       "categories.list",
       "comments.list",
-      "comments.get",
-      "comments.create",
-      "comments.delete",
-      "votes.list",
-      "votes.create",
-      "tags.list",
-      "tags.get",
-      "users.list",
-      "users.get",
-      "users.create_or_update",
       "companies.list",
-      "entries.list",
-      "webhook.post.created",
-      "webhook.post.status_changed",
-      "webhook.comment.created",
-      "webhook.vote.created"
+      "opportunities.list",
+      "tags.list",
+      "users.list",
+      "votes.list",
+      "tags.get",
+      "users.get",
+      "posts.update"
     ],
-    "upstreamSha": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
-    "marketFocus": "international",
     "ownership": "Canny, a Canadian product-feedback SaaS (Victoria, BC) in the Tiny portfolio. Reviewed edition is the public international API at https://canny.io/api, not a mainland-China product.",
+    "providerId": "canny",
+    "quality": {
+      "api": 4,
+      "auth": 4,
+      "maintainability": 4,
+      "testability": 4,
+      "usefulness": 4
+    },
     "research": {
       "reviewedAt": "2026-09-13",
       "reviewer": "research review",
@@ -120,1639 +2494,77 @@
         "https://help.21bitcoin.app/en/articles/16774122-security-incident-at-our-external-provider-canny"
       ]
     },
-    "breach": {
-      "status": "unresolved",
-      "researchedAt": "2026-09-13"
-    },
-    "quality": {
-      "usefulness": 4,
-      "api": 4,
-      "auth": 4,
-      "maintainability": 4,
-      "testability": 4
-    },
-    "gates": {
-      "license": true,
-      "credentials": true,
-      "officialApi": true,
-      "boundedNetwork": true,
-      "operationQuality": true
-    }
+    "upstreamSha": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"
   },
-  "research": {
-    "decision": "HOLD",
-    "providerId": "canny",
-    "appcallId": "canny",
-    "edition": "international Canny REST API v1",
-    "marketFocus": "international",
-    "reviewedAt": "2026-09-13",
-    "reviewer": "research review",
-    "evidence": [
-      "https://developers.canny.io/api-reference",
-      "https://help.canny.io/en/articles/4195400-the-canny-api",
-      "https://help.21bitcoin.app/en/articles/16774122-security-incident-at-our-external-provider-canny"
-    ],
-    "searchCoverage": "Official Canny API is POST JSON with apiKey in the body. POST /v1/boards/list is the cheap authenticated board list used by the pinned credential validator. Dated 2026-09-13 incident search found 21bitcoin's 2026-09-02 disclosure that Canny was targeted on 2026-08-28 and an Intercom integration access key was stolen. Canny has not published a public RCA. HOLD, not APPROVED.",
-    "incidents": [
-      {
-        "incidentDate": "2026-08-28",
-        "disclosureDate": "2026-09-02",
-        "affectedProduct": "Canny (feedback tool) Intercom integration used by 21bitcoin",
-        "affectedData": "21bitcoin support-system contacts (names, emails, phones, DOB, device metadata, account status/balance stored in support, first message/subject). Bitcoin balances and KYC were not in scope per 21bitcoin.",
-        "status": "unresolved: Canny public RCA not found as of 2026-09-13; 21bitcoin requested forensic report and root-cause analysis from Canny",
-        "source": "https://help.21bitcoin.app/en/articles/16774122-security-incident-at-our-external-provider-canny",
-        "remediation": "21bitcoin says Canny cut the Intercom connection the same day and invalidated the stolen key. 21bitcoin rotated related credentials. No Canny-authored public incident report located.",
-        "residualRisk": "Unknown whether Canny secret API keys (this recipe's credential) were in the attack scope. Current unresolved credible issue; not waived as historical."
-      }
-    ],
-    "remainingGates": [
-      "unresolved Canny 2026-08-28 incident: 21bitcoin reports Canny was targeted and an Intercom integration access key was stolen; Canny has not published a public RCA as of 2026-09-13",
-      "live authentication unverified"
-    ],
-    "waiverAuthority": "User waiver dated 2026-09-13 permits historical non-China incident coverage. This August 2026 Canny incident is current and is not treated as waived history."
-  },
-  "operationSources": {
-    "healthcheck": {
-      "upstreamActionId": "list_boards",
-      "sourceRefs": [
-        "credential-validate",
-        "handler-list-boards",
-        "request-body",
-        "api-base"
-      ],
-      "documentationUrls": [
-        "https://developers.canny.io/api-reference"
-      ],
-      "responseContract": "appcall-provider-json-v1",
-      "adaptations": [
-        "HOLD: current unresolved Canny 2026-08-28 incident. Credential-only healthcheck would POST /v1/boards/list with apiKey in the JSON body. Official curl examples use -d form fields; official text and pinned source send JSON with Content-Type application/json. Native category is productivity rather than Productivity/Data. Pinned user-agent is omitted. Returns raw Canny JSON under data instead of the original curated preserve-existing result mapping."
-      ]
+  "source": {
+    "files": {
+      "src/providers/canny/actions.ts": "3dd672d977f233dbd19d58b16e81f96547139fa8ca5794595b3ef0fb74c3314e",
+      "src/providers/canny/definition.ts": "64750c2bf046daf30e6684af88ffe832b6f5dff41d1193b1be2c52c32c33df39",
+      "src/providers/canny/executors.ts": "34bf7ded67d17332673b879b74dddd5f2b97687b64e981c12f6b65fe11ae7ecc"
     },
-    "boards.list": {
-      "upstreamActionId": "list_boards",
-      "sourceRefs": [
-        "action-list-boards",
-        "handler-list-boards",
-        "request-body"
-      ],
-      "documentationUrls": [
-        "https://developers.canny.io/api-reference"
-      ],
-      "responseContract": "appcall-provider-json-v1",
-      "adaptations": [
-        "Official POST /v1/boards/list with apiKey in JSON body. Returns raw Canny JSON under data."
-      ]
-    },
-    "boards.get": {
-      "upstreamActionId": "retrieve_board",
-      "sourceRefs": [
-        "action-retrieve-board",
-        "handler-retrieve-board",
-        "request-body"
-      ],
-      "documentationUrls": [
-        "https://developers.canny.io/api-reference"
-      ],
-      "responseContract": "appcall-provider-json-v1",
-      "adaptations": [
-        "Official POST /v1/boards/retrieve uses body field id. Native input boardID maps to id, matching pinned source."
-      ]
-    },
-    "posts.list": {
-      "upstreamActionId": "list_posts",
-      "sourceRefs": [
-        "action-list-posts",
-        "handler-list-posts",
-        "request-body"
-      ],
-      "documentationUrls": [
-        "https://developers.canny.io/api-reference"
-      ],
-      "responseContract": "appcall-provider-json-v1",
-      "adaptations": [
-        "Official POST /v1/posts/list. Optional boardID, limit (1-100), and skip map to body fields of the same names."
-      ]
-    },
-    "posts.get": {
-      "upstreamActionId": "retrieve_post",
-      "sourceRefs": [
-        "action-retrieve-post",
-        "handler-retrieve-post",
-        "request-body"
-      ],
-      "documentationUrls": [
-        "https://developers.canny.io/api-reference"
-      ],
-      "responseContract": "appcall-provider-json-v1",
-      "adaptations": [
-        "Official POST /v1/posts/retrieve uses body field id. Native input postID maps to id, matching pinned source."
-      ]
-    },
-    "webhook.post.created": {
-      "upstreamActionId": "webhook_post_created",
-      "sourceRefs": [
-        "runtime"
-      ],
-      "documentationUrls": [
-        "https://developers.canny.io/api-reference"
-      ],
-      "responseContract": "appcall-provider-json-v1",
-      "adaptations": [
-        "EventOnly webhook for Canny post.created. No HTTP request."
-      ]
-    },
-    "webhook.post.status_changed": {
-      "upstreamActionId": "webhook_post_status_changed",
-      "sourceRefs": [
-        "runtime"
-      ],
-      "documentationUrls": [
-        "https://developers.canny.io/api-reference"
-      ],
-      "responseContract": "appcall-provider-json-v1",
-      "adaptations": [
-        "EventOnly webhook for Canny post.status_changed. No HTTP request."
-      ]
-    },
-    "webhook.comment.created": {
-      "upstreamActionId": "webhook_comment_created",
-      "sourceRefs": [
-        "runtime"
-      ],
-      "documentationUrls": [
-        "https://developers.canny.io/api-reference"
-      ],
-      "responseContract": "appcall-provider-json-v1",
-      "adaptations": [
-        "EventOnly webhook for Canny comment.created. No HTTP request."
-      ]
-    },
-    "webhook.vote.created": {
-      "upstreamActionId": "webhook_vote_created",
-      "sourceRefs": [
-        "runtime"
-      ],
-      "documentationUrls": [
-        "https://developers.canny.io/api-reference"
-      ],
-      "responseContract": "appcall-provider-json-v1",
-      "adaptations": [
-        "EventOnly webhook for Canny vote.created. No HTTP request."
-      ]
-    },
-    "posts.create": {
-      "upstreamActionId": "posts_create",
-      "sourceRefs": [
-        "runtime"
-      ],
-      "documentationUrls": [
-        "https://developers.canny.io/api-reference"
-      ],
-      "responseContract": "appcall-provider-json-v1",
-      "adaptations": [
-        "Official POST /v1/posts/create."
-      ]
-    },
-    "posts.change_status": {
-      "upstreamActionId": "posts_change_status",
-      "sourceRefs": [
-        "runtime"
-      ],
-      "documentationUrls": [
-        "https://developers.canny.io/api-reference"
-      ],
-      "responseContract": "appcall-provider-json-v1",
-      "adaptations": [
-        "Official POST /v1/posts/change_status."
-      ]
-    },
-    "posts.add_tag": {
-      "upstreamActionId": "posts_add_tag",
-      "sourceRefs": [
-        "runtime"
-      ],
-      "documentationUrls": [
-        "https://developers.canny.io/api-reference"
-      ],
-      "responseContract": "appcall-provider-json-v1",
-      "adaptations": [
-        "Official POST /v1/posts/add_tag."
-      ]
-    },
-    "categories.list": {
-      "upstreamActionId": "categories_list",
-      "sourceRefs": [
-        "runtime"
-      ],
-      "documentationUrls": [
-        "https://developers.canny.io/api-reference"
-      ],
-      "responseContract": "appcall-provider-json-v1",
-      "adaptations": [
-        "Official POST /v1/categories/list."
-      ]
-    },
-    "comments.list": {
-      "upstreamActionId": "comments_list",
-      "sourceRefs": [
-        "runtime"
-      ],
-      "documentationUrls": [
-        "https://developers.canny.io/api-reference"
-      ],
-      "responseContract": "appcall-provider-json-v1",
-      "adaptations": [
-        "Official POST /v2/comments/list."
-      ]
-    },
-    "comments.get": {
-      "upstreamActionId": "comments_get",
-      "sourceRefs": [
-        "runtime"
-      ],
-      "documentationUrls": [
-        "https://developers.canny.io/api-reference"
-      ],
-      "responseContract": "appcall-provider-json-v1",
-      "adaptations": [
-        "Official POST /v1/comments/retrieve."
-      ]
-    },
-    "comments.create": {
-      "upstreamActionId": "comments_create",
-      "sourceRefs": [
-        "runtime"
-      ],
-      "documentationUrls": [
-        "https://developers.canny.io/api-reference"
-      ],
-      "responseContract": "appcall-provider-json-v1",
-      "adaptations": [
-        "Official POST /v1/comments/create."
-      ]
-    },
-    "comments.delete": {
-      "upstreamActionId": "comments_delete",
-      "sourceRefs": [
-        "runtime"
-      ],
-      "documentationUrls": [
-        "https://developers.canny.io/api-reference"
-      ],
-      "responseContract": "appcall-provider-json-v1",
-      "adaptations": [
-        "Official POST /v1/comments/delete."
-      ]
-    },
-    "votes.list": {
-      "upstreamActionId": "votes_list",
-      "sourceRefs": [
-        "runtime"
-      ],
-      "documentationUrls": [
-        "https://developers.canny.io/api-reference"
-      ],
-      "responseContract": "appcall-provider-json-v1",
-      "adaptations": [
-        "Official POST /v2/votes/list."
-      ]
-    },
-    "votes.create": {
-      "upstreamActionId": "votes_create",
-      "sourceRefs": [
-        "runtime"
-      ],
-      "documentationUrls": [
-        "https://developers.canny.io/api-reference"
-      ],
-      "responseContract": "appcall-provider-json-v1",
-      "adaptations": [
-        "Official POST /v1/votes/create."
-      ]
-    },
-    "tags.list": {
-      "upstreamActionId": "tags_list",
-      "sourceRefs": [
-        "runtime"
-      ],
-      "documentationUrls": [
-        "https://developers.canny.io/api-reference"
-      ],
-      "responseContract": "appcall-provider-json-v1",
-      "adaptations": [
-        "Official POST /v1/tags/list."
-      ]
-    },
-    "tags.get": {
-      "upstreamActionId": "tags_get",
-      "sourceRefs": [
-        "runtime"
-      ],
-      "documentationUrls": [
-        "https://developers.canny.io/api-reference"
-      ],
-      "responseContract": "appcall-provider-json-v1",
-      "adaptations": [
-        "Official POST /v1/tags/retrieve."
-      ]
-    },
-    "users.list": {
-      "upstreamActionId": "users_list",
-      "sourceRefs": [
-        "runtime"
-      ],
-      "documentationUrls": [
-        "https://developers.canny.io/api-reference"
-      ],
-      "responseContract": "appcall-provider-json-v1",
-      "adaptations": [
-        "Official POST /v2/users/list."
-      ]
-    },
-    "users.get": {
-      "upstreamActionId": "users_get",
-      "sourceRefs": [
-        "runtime"
-      ],
-      "documentationUrls": [
-        "https://developers.canny.io/api-reference"
-      ],
-      "responseContract": "appcall-provider-json-v1",
-      "adaptations": [
-        "Official POST /v1/users/retrieve."
-      ]
-    },
-    "users.create_or_update": {
-      "upstreamActionId": "users_create_or_update",
-      "sourceRefs": [
-        "runtime"
-      ],
-      "documentationUrls": [
-        "https://developers.canny.io/api-reference"
-      ],
-      "responseContract": "appcall-provider-json-v1",
-      "adaptations": [
-        "Official POST /v1/users/create_or_update."
-      ]
-    },
-    "companies.list": {
-      "upstreamActionId": "companies_list",
-      "sourceRefs": [
-        "runtime"
-      ],
-      "documentationUrls": [
-        "https://developers.canny.io/api-reference"
-      ],
-      "responseContract": "appcall-provider-json-v1",
-      "adaptations": [
-        "Official POST /v2/companies/list."
-      ]
-    },
-    "entries.list": {
-      "upstreamActionId": "entries_list",
-      "sourceRefs": [
-        "runtime"
-      ],
-      "documentationUrls": [
-        "https://developers.canny.io/api-reference"
-      ],
-      "responseContract": "appcall-provider-json-v1",
-      "adaptations": [
-        "Official POST /v1/entries/list."
-      ]
-    }
-  },
-  "manifest": {
-    "key": "canny",
-    "name": "Canny",
-    "version": "0.2.0",
-    "runtime": "bun",
-    "visibility": "public",
-    "categories": [
-      "productivity"
-    ],
-    "auth": {
-      "type": "api_key",
-      "scopes": [],
-      "setup": {
-        "mode": "api_key",
-        "fields": [
-          {
-            "key": "apiKey",
-            "label": "Canny secret API key",
-            "required": true,
-            "secret": true
-          }
-        ]
+    "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
+    "spans": {
+      "action-list-boards": {
+        "endLine": 221,
+        "path": "src/providers/canny/actions.ts",
+        "startLine": 213
+      },
+      "action-list-posts": {
+        "endLine": 262,
+        "path": "src/providers/canny/actions.ts",
+        "startLine": 254
+      },
+      "action-retrieve-board": {
+        "endLine": 227,
+        "path": "src/providers/canny/actions.ts",
+        "startLine": 222
+      },
+      "action-retrieve-post": {
+        "endLine": 267,
+        "path": "src/providers/canny/actions.ts",
+        "startLine": 263
+      },
+      "api-base": {
+        "endLine": 25,
+        "path": "src/providers/canny/executors.ts",
+        "startLine": 24
+      },
+      "credential-validate": {
+        "endLine": 112,
+        "path": "src/providers/canny/executors.ts",
+        "startLine": 94
+      },
+      "handler-list-boards": {
+        "endLine": 117,
+        "path": "src/providers/canny/executors.ts",
+        "startLine": 114
+      },
+      "handler-list-posts": {
+        "endLine": 201,
+        "path": "src/providers/canny/executors.ts",
+        "startLine": 182
+      },
+      "handler-retrieve-board": {
+        "endLine": 126,
+        "path": "src/providers/canny/executors.ts",
+        "startLine": 119
+      },
+      "handler-retrieve-post": {
+        "endLine": 209,
+        "path": "src/providers/canny/executors.ts",
+        "startLine": 203
+      },
+      "provider-auth": {
+        "endLine": 23,
+        "path": "src/providers/canny/definition.ts",
+        "startLine": 7
+      },
+      "request-body": {
+        "endLine": 320,
+        "path": "src/providers/canny/executors.ts",
+        "startLine": 302
       }
     },
-    "network": {
-      "allowedHosts": [
-        "canny.io"
-      ]
-    },
-    "models": [
-      "board",
-      "post",
-      "comment",
-      "vote",
-      "tag",
-      "user",
-      "company",
-      "entry",
-      "category"
-    ],
-    "http": {
-      "baseUrl": "https://canny.io/api",
-      "auth": {
-        "field": "apiKey",
-        "in": "body",
-        "name": "apiKey",
-        "value": "{{apiKey}}"
-      },
-      "headers": {
-        "Accept": "application/json",
-        "Content-Type": "application/json"
-      },
-      "errors": {
-        "rateLimitStatuses": [
-          429
-        ],
-        "retryAfterHeader": "retry-after",
-        "defaultRetryAfterSeconds": 30,
-        "messagePaths": [
-          "error",
-          "message"
-        ]
-      }
-    },
-    "operations": {
-      "healthcheck": {
-        "timeoutMs": 5000,
-        "maxInputBytes": 4096,
-        "maxResponseBytes": 65536,
-        "kind": "action",
-        "sideEffect": "read",
-        "title": "Healthcheck",
-        "description": "HOLD: validate the Canny API key with POST /v1/boards/list. Unresolved August 2026 Canny incident.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {},
-          "additionalProperties": false
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "POST",
-          "path": "/v1/boards/list",
-          "body": {
-            "apiKey": "{{apiKey}}"
-          },
-          "success": [
-            200
-          ]
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "boards.list": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
-        "sideEffect": "read",
-        "title": "List boards",
-        "description": "List Canny boards available to the authenticated workspace.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {},
-          "additionalProperties": false
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "POST",
-          "path": "/v1/boards/list",
-          "body": {
-            "apiKey": "{{apiKey}}"
-          },
-          "success": [
-            200
-          ]
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "boards.get": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
-        "sideEffect": "read",
-        "title": "Get board",
-        "description": "Retrieve a Canny board by board ID.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "boardID": {
-              "type": "string",
-              "minLength": 1
-            }
-          },
-          "required": [
-            "boardID"
-          ],
-          "additionalProperties": false
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "POST",
-          "path": "/v1/boards/retrieve",
-          "body": {
-            "apiKey": "{{apiKey}}",
-            "id": "{{boardID}}"
-          },
-          "success": [
-            200
-          ]
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "posts.list": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
-        "sideEffect": "read",
-        "title": "List posts",
-        "description": "List Canny posts with optional board filter and bounded pagination.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "boardID": {
-              "type": "string",
-              "minLength": 1
-            },
-            "limit": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 100
-            },
-            "skip": {
-              "type": "integer",
-              "minimum": 0
-            }
-          },
-          "additionalProperties": false
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "POST",
-          "path": "/v1/posts/list",
-          "body": {
-            "apiKey": "{{apiKey}}",
-            "boardID": "{{boardID}}",
-            "limit": "{{limit}}",
-            "skip": "{{skip}}"
-          },
-          "success": [
-            200
-          ]
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "posts.get": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
-        "sideEffect": "read",
-        "title": "Get post",
-        "description": "Retrieve a Canny post by post ID.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "postID": {
-              "type": "string",
-              "minLength": 1
-            }
-          },
-          "required": [
-            "postID"
-          ],
-          "additionalProperties": false
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "POST",
-          "path": "/v1/posts/retrieve",
-          "body": {
-            "apiKey": "{{apiKey}}",
-            "id": "{{postID}}"
-          },
-          "success": [
-            200
-          ]
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "posts.create": {
-        "kind": "action",
-        "sideEffect": "write",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "title": "Create post",
-        "description": "Create a Canny post on a board via POST /v1/posts/create.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "authorID": {
-              "type": "string",
-              "minLength": 1
-            },
-            "boardID": {
-              "type": "string",
-              "minLength": 1
-            },
-            "title": {
-              "type": "string",
-              "minLength": 1
-            },
-            "details": {
-              "type": "string",
-              "minLength": 1
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "authorID",
-            "boardID",
-            "title"
-          ]
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "POST",
-          "path": "/v1/posts/create",
-          "success": [
-            200
-          ],
-          "body": {
-            "apiKey": "{{apiKey}}",
-            "authorID": "{{authorID}}",
-            "boardID": "{{boardID}}",
-            "title": "{{title}}",
-            "details": "{{details}}"
-          }
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "posts.change_status": {
-        "kind": "action",
-        "sideEffect": "write",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "title": "Change post status",
-        "description": "Change a Canny post's status via POST /v1/posts/change_status.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "postID": {
-              "type": "string",
-              "minLength": 1
-            },
-            "changerID": {
-              "type": "string",
-              "minLength": 1
-            },
-            "status": {
-              "type": "string",
-              "minLength": 1
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "postID",
-            "changerID",
-            "status"
-          ]
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "POST",
-          "path": "/v1/posts/change_status",
-          "success": [
-            200
-          ],
-          "body": {
-            "apiKey": "{{apiKey}}",
-            "postID": "{{postID}}",
-            "changerID": "{{changerID}}",
-            "status": "{{status}}"
-          }
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "posts.add_tag": {
-        "kind": "action",
-        "sideEffect": "write",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "title": "Add tag to post",
-        "description": "Add a tag to a Canny post via POST /v1/posts/add_tag.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "postID": {
-              "type": "string",
-              "minLength": 1
-            },
-            "tagID": {
-              "type": "string",
-              "minLength": 1
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "postID",
-            "tagID"
-          ]
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {}
-          },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "POST",
-          "path": "/v1/posts/add_tag",
-          "success": [
-            200
-          ],
-          "body": {
-            "apiKey": "{{apiKey}}",
-            "postID": "{{postID}}",
-            "tagID": "{{tagID}}"
-          }
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "categories.list": {
-        "kind": "action",
-        "sideEffect": "read",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "title": "List categories",
-        "description": "List Canny categories with optional board filter and skip pagination via POST /v1/categories/list.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "boardID": {
-              "type": "string",
-              "minLength": 1
-            },
-            "limit": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 10000
-            },
-            "skip": {
-              "type": "integer",
-              "minimum": 0
-            }
-          },
-          "additionalProperties": false
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "POST",
-          "path": "/v1/categories/list",
-          "success": [
-            200
-          ],
-          "body": {
-            "apiKey": "{{apiKey}}",
-            "boardID": "{{boardID}}",
-            "limit": "{{limit}}",
-            "skip": "{{skip}}"
-          }
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "comments.list": {
-        "kind": "action",
-        "sideEffect": "read",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "title": "List comments",
-        "description": "List Canny portal comments with cursor pagination via POST /v2/comments/list.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "postID": {
-              "type": "string",
-              "minLength": 1
-            },
-            "boardID": {
-              "type": "string",
-              "minLength": 1
-            },
-            "limit": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 100
-            },
-            "cursor": {
-              "type": "string",
-              "minLength": 1
-            }
-          },
-          "additionalProperties": false
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "POST",
-          "path": "/v2/comments/list",
-          "success": [
-            200
-          ],
-          "body": {
-            "apiKey": "{{apiKey}}",
-            "postID": "{{postID}}",
-            "boardID": "{{boardID}}",
-            "limit": "{{limit}}",
-            "cursor": "{{cursor}}"
-          }
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "comments.get": {
-        "kind": "action",
-        "sideEffect": "read",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "title": "Get comment",
-        "description": "Retrieve a Canny portal comment by ID via POST /v1/comments/retrieve.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "commentID": {
-              "type": "string",
-              "minLength": 1
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "commentID"
-          ]
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "POST",
-          "path": "/v1/comments/retrieve",
-          "success": [
-            200
-          ],
-          "body": {
-            "apiKey": "{{apiKey}}",
-            "id": "{{commentID}}"
-          }
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "comments.create": {
-        "kind": "action",
-        "sideEffect": "write",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "title": "Create comment",
-        "description": "Create a Canny portal comment on a post via POST /v1/comments/create.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "authorID": {
-              "type": "string",
-              "minLength": 1
-            },
-            "postID": {
-              "type": "string",
-              "minLength": 1
-            },
-            "value": {
-              "type": "string",
-              "minLength": 1
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "authorID",
-            "postID",
-            "value"
-          ]
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "POST",
-          "path": "/v1/comments/create",
-          "success": [
-            200
-          ],
-          "body": {
-            "apiKey": "{{apiKey}}",
-            "authorID": "{{authorID}}",
-            "postID": "{{postID}}",
-            "value": "{{value}}"
-          }
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "comments.delete": {
-        "kind": "action",
-        "sideEffect": "destructive",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "title": "Delete comment",
-        "description": "Delete a Canny portal comment via POST /v1/comments/delete.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "commentID": {
-              "type": "string",
-              "minLength": 1
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "commentID"
-          ]
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {}
-          },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "POST",
-          "path": "/v1/comments/delete",
-          "success": [
-            200
-          ],
-          "body": {
-            "apiKey": "{{apiKey}}",
-            "commentID": "{{commentID}}"
-          }
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "votes.list": {
-        "kind": "action",
-        "sideEffect": "read",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "title": "List votes",
-        "description": "List Canny votes with optional post filter via POST /v2/votes/list.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "postID": {
-              "type": "string",
-              "minLength": 1
-            },
-            "limit": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 100
-            },
-            "cursor": {
-              "type": "string",
-              "minLength": 1
-            }
-          },
-          "additionalProperties": false
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "POST",
-          "path": "/v2/votes/list",
-          "success": [
-            200
-          ],
-          "body": {
-            "apiKey": "{{apiKey}}",
-            "postID": "{{postID}}",
-            "limit": "{{limit}}",
-            "cursor": "{{cursor}}"
-          }
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "votes.create": {
-        "kind": "action",
-        "sideEffect": "write",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "title": "Create vote",
-        "description": "Create a Canny vote on a post on behalf of a user via POST /v1/votes/create.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "postID": {
-              "type": "string",
-              "minLength": 1
-            },
-            "voterID": {
-              "type": "string",
-              "minLength": 1
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "postID",
-            "voterID"
-          ]
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {}
-          },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "POST",
-          "path": "/v1/votes/create",
-          "success": [
-            200
-          ],
-          "body": {
-            "apiKey": "{{apiKey}}",
-            "postID": "{{postID}}",
-            "voterID": "{{voterID}}"
-          }
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "tags.list": {
-        "kind": "action",
-        "sideEffect": "read",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "title": "List tags",
-        "description": "List Canny tags with optional board filter via POST /v1/tags/list.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "boardID": {
-              "type": "string",
-              "minLength": 1
-            },
-            "limit": {
-              "type": "integer",
-              "minimum": 1
-            },
-            "skip": {
-              "type": "integer",
-              "minimum": 0
-            }
-          },
-          "additionalProperties": false
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "POST",
-          "path": "/v1/tags/list",
-          "success": [
-            200
-          ],
-          "body": {
-            "apiKey": "{{apiKey}}",
-            "boardID": "{{boardID}}",
-            "limit": "{{limit}}",
-            "skip": "{{skip}}"
-          }
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "tags.get": {
-        "kind": "action",
-        "sideEffect": "read",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "title": "Get tag",
-        "description": "Retrieve a Canny tag by ID via POST /v1/tags/retrieve.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "tagID": {
-              "type": "string",
-              "minLength": 1
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "tagID"
-          ]
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "POST",
-          "path": "/v1/tags/retrieve",
-          "success": [
-            200
-          ],
-          "body": {
-            "apiKey": "{{apiKey}}",
-            "id": "{{tagID}}"
-          }
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "users.list": {
-        "kind": "action",
-        "sideEffect": "read",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "title": "List users",
-        "description": "List Canny users with cursor pagination via POST /v2/users/list.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "limit": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 100
-            },
-            "cursor": {
-              "type": "string",
-              "minLength": 1
-            }
-          },
-          "additionalProperties": false
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "POST",
-          "path": "/v2/users/list",
-          "success": [
-            200
-          ],
-          "body": {
-            "apiKey": "{{apiKey}}",
-            "limit": "{{limit}}",
-            "cursor": "{{cursor}}"
-          }
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "users.get": {
-        "kind": "action",
-        "sideEffect": "read",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "title": "Get user",
-        "description": "Retrieve a Canny user by ID via POST /v1/users/retrieve.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "userID": {
-              "type": "string",
-              "minLength": 1
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "userID"
-          ]
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "POST",
-          "path": "/v1/users/retrieve",
-          "success": [
-            200
-          ],
-          "body": {
-            "apiKey": "{{apiKey}}",
-            "id": "{{userID}}"
-          }
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "users.create_or_update": {
-        "kind": "action",
-        "sideEffect": "write",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "title": "Create or update user",
-        "description": "Create or update a Canny user via POST /v1/users/create_or_update.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "name": {
-              "type": "string",
-              "minLength": 1
-            },
-            "email": {
-              "type": "string",
-              "minLength": 1
-            },
-            "userID": {
-              "type": "string",
-              "minLength": 1
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "name"
-          ]
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "POST",
-          "path": "/v1/users/create_or_update",
-          "success": [
-            200
-          ],
-          "body": {
-            "apiKey": "{{apiKey}}",
-            "name": "{{name}}",
-            "email": "{{email}}",
-            "userID": "{{userID}}"
-          }
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "companies.list": {
-        "kind": "action",
-        "sideEffect": "read",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "title": "List companies",
-        "description": "List Canny companies with cursor pagination via POST /v2/companies/list.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "limit": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 100
-            },
-            "cursor": {
-              "type": "string",
-              "minLength": 1
-            }
-          },
-          "additionalProperties": false
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "POST",
-          "path": "/v2/companies/list",
-          "success": [
-            200
-          ],
-          "body": {
-            "apiKey": "{{apiKey}}",
-            "limit": "{{limit}}",
-            "cursor": "{{cursor}}"
-          }
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "entries.list": {
-        "kind": "action",
-        "sideEffect": "read",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "title": "List changelog entries",
-        "description": "List Canny changelog entries via POST /v1/entries/list.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "limit": {
-              "type": "integer",
-              "minimum": 1
-            },
-            "skip": {
-              "type": "integer",
-              "minimum": 0
-            },
-            "sort": {
-              "type": "string",
-              "minLength": 1
-            }
-          },
-          "additionalProperties": false
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "POST",
-          "path": "/v1/entries/list",
-          "success": [
-            200
-          ],
-          "body": {
-            "apiKey": "{{apiKey}}",
-            "limit": "{{limit}}",
-            "skip": "{{skip}}",
-            "sort": "{{sort}}"
-          }
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      }
-    },
-    "provenance": {
-      "source": {
-        "url": "https://github.com/oomol-lab/open-connector",
-        "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"
-      }
-    },
-    "evidence": {
-      "fixture": {
-        "status": "supplied"
-      },
-      "live": {
-        "status": "unverified"
-      }
-    }
+    "url": "https://github.com/oomol-lab/open-connector"
   }
 }

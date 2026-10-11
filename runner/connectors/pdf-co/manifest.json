@@ -1,17 +1,7 @@
 {
-  "key": "pdf-co",
-  "name": "PDF.co",
-  "version": "0.2.0",
-  "runtime": "bun",
-  "visibility": "public",
-  "categories": [
-    "utility"
-  ],
   "auth": {
-    "type": "api_key",
     "scopes": [],
     "setup": {
-      "mode": "api_key",
       "fields": [
         {
           "key": "apiKey",
@@ -19,37 +9,34 @@
           "required": true,
           "secret": true
         }
-      ]
+      ],
+      "mode": "api_key"
+    },
+    "type": "api_key"
+  },
+  "categories": [
+    "utility"
+  ],
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
     }
   },
-  "network": {
-    "allowedHosts": [
-      "api.pdf.co"
-    ]
-  },
-  "models": [
-    "account",
-    "pdf",
-    "barcode",
-    "job",
-    "file"
-  ],
   "http": {
-    "baseUrl": "https://api.pdf.co",
     "auth": {
       "field": "apiKey",
       "in": "header",
       "name": "x-api-key",
       "value": "{{apiKey}}"
     },
-    "headers": {
-      "Accept": "application/json"
-    },
+    "baseUrl": "https://api.pdf.co",
     "errors": {
-      "rateLimitStatuses": [
-        429
+      "bodyErrorPaths": [
+        "error"
       ],
-      "retryAfterHeader": "retry-after",
       "defaultRetryAfterSeconds": 30,
       "messagePaths": [
         "message",
@@ -57,137 +44,148 @@
         "error",
         "Error"
       ],
-      "bodyErrorPaths": [
-        "error"
-      ]
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after"
+    },
+    "headers": {
+      "Accept": "application/json"
     }
   },
+  "key": "pdf-co",
+  "models": [
+    "account",
+    "pdf",
+    "barcode",
+    "job",
+    "file"
+  ],
+  "name": "PDF.co",
+  "network": {
+    "allowedHosts": [
+      "api.pdf.co"
+    ]
+  },
   "operations": {
+    "account.balance.get": {
+      "description": "Get remaining PDF.co account credits for the API key.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {},
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/account/credit/balance",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get account balance",
+      "validationMode": "strict-generated"
+    },
     "healthcheck": {
-      "timeoutMs": 5000,
+      "description": "Validate the PDF.co API key with GET /v1/account/credit/balance.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {},
+        "type": "object"
+      },
+      "kind": "action",
       "maxInputBytes": 4096,
       "maxResponseBytes": 65536,
-      "kind": "action",
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/account/credit/balance",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
       "sideEffect": "read",
+      "timeoutMs": 5000,
       "title": "Healthcheck",
-      "description": "Validate the PDF.co API key with GET /v1/account/credit/balance.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {},
-        "additionalProperties": false
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "GET",
-        "path": "/v1/account/credit/balance",
-        "success": [
-          200
-        ]
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "account.balance.get": {
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "kind": "action",
-      "sideEffect": "read",
-      "title": "Get account balance",
-      "description": "Get remaining PDF.co account credits for the API key.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {},
-        "additionalProperties": false
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "GET",
-        "path": "/v1/account/credit/balance",
-        "success": [
-          200
-        ]
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
+      "validationMode": "strict-generated"
     },
     "pdf.info.get": {
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "kind": "action",
-      "sideEffect": "read",
-      "title": "Get PDF info",
       "description": "Read metadata and security details from a PDF URL.",
+      "enforceOutputSchema": true,
       "inputSchema": {
-        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "expiration": {
+            "description": "Optional output link expiration in minutes.",
+            "type": "number"
+          },
+          "password": {
+            "description": "Optional password for an encrypted source PDF.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "timeout": {
+            "description": "Optional PDF.co operation timeout in seconds.",
+            "type": "number"
+          },
+          "url": {
+            "description": "Publicly reachable source PDF URL.",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
         "required": [
           "url"
         ],
-        "properties": {
-          "url": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Publicly reachable source PDF URL."
-          },
-          "password": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Optional password for an encrypted source PDF."
-          },
-          "timeout": {
-            "type": "number",
-            "description": "Optional PDF.co operation timeout in seconds."
-          },
-          "expiration": {
-            "type": "number",
-            "description": "Optional output link expiration in minutes."
-          }
-        },
-        "additionalProperties": false
+        "type": "object"
       },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
       "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
+        "additionalProperties": false,
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "additionalProperties": false
+        "required": [
+          "data"
+        ],
+        "type": "object"
       },
       "request": {
-        "method": "POST",
-        "path": "/v1/pdf/info",
-        "headers": {
-          "Content-Type": "application/json"
-        },
         "body": {
           "async": false,
           "expiration": "{{expiration}}",
@@ -195,50 +193,208 @@
           "timeout": "{{timeout}}",
           "url": "{{url}}"
         },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "method": "POST",
+        "path": "/v1/pdf/info",
         "success": [
           200
         ]
       },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get PDF info",
+      "validationMode": "strict-generated"
     },
-    "pdf.convert.to.text": {
+    "barcode.generate": {
       "timeoutMs": 15000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
       "kind": "action",
       "sideEffect": "write",
-      "title": "Convert PDF to text",
-      "description": "Convert PDF to text from a source URL using PDF.co.",
+      "title": "Generate barcode (deprecated)",
+      "description": "Generate a barcode image (QR, Code128, Code39, PDF417, and others). Prefer pdfco.post.barcode.generate.",
       "inputSchema": {
         "type": "object",
-        "required": [
-          "url"
-        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Optional output file name.",
+            "minLength": 1
+          },
+          "type": {
+            "type": "string",
+            "description": "Barcode type such as QRCode, Code128, Code39, or PDF417.",
+            "minLength": 1
+          },
+          "value": {
+            "type": "string",
+            "description": "String encoded into the barcode.",
+            "minLength": 1
+          },
+          "async_": {
+            "type": "boolean",
+            "description": "Run the job asynchronously and return a jobId."
+          },
+          "margin": {
+            "type": "integer",
+            "description": "White border around the barcode in pixels.",
+            "minimum": 0
+          },
+          "addText": {
+            "type": "boolean",
+            "description": "Draw human-readable text below the barcode."
+          },
+          "fontName": {
+            "type": "string",
+            "description": "Font name for barcode caption text.",
+            "minLength": 1
+          },
+          "fontSize": {
+            "type": "integer",
+            "description": "Caption font size in points.",
+            "minimum": 1
+          },
+          "backColor": {
+            "type": "string",
+            "description": "Barcode background color (hex or rgba).",
+            "minLength": 1
+          },
+          "foreColor": {
+            "type": "string",
+            "description": "Barcode foreground color (hex or rgba).",
+            "minLength": 1
+          },
+          "resolution": {
+            "type": "integer",
+            "description": "Barcode image resolution in DPI.",
+            "minimum": 1
+          },
+          "aspectRatio": {
+            "type": "number",
+            "description": "Width/height ratio for 2D barcodes."
+          },
+          "pdfPassword": {
+            "type": "string",
+            "description": "Password if the barcode is emitted as a PDF.",
+            "minLength": 1
+          },
+          "barcodeWidth": {
+            "type": "integer",
+            "description": "Barcode image width in pixels.",
+            "minimum": 1
+          },
+          "outputFormat": {
+            "type": "string",
+            "description": "Parsed output format: JSON, CSV, or XML.",
+            "minLength": 1
+          },
+          "barcodeHeight": {
+            "type": "integer",
+            "description": "Barcode image height in pixels.",
+            "minimum": 1
+          },
+          "caseSensitive": {
+            "type": "boolean",
+            "description": "Whether matching or encoding is case-sensitive."
+          }
+        },
         "additionalProperties": false,
+        "required": [
+          "type",
+          "value"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/barcode/generate",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "name": "{{name}}",
+          "type": "{{type}}",
+          "value": "{{value}}",
+          "async": "{{async_}}",
+          "margin": "{{margin}}",
+          "addText": "{{addText}}",
+          "fontName": "{{fontName}}",
+          "fontSize": "{{fontSize}}",
+          "backColor": "{{backColor}}",
+          "foreColor": "{{foreColor}}",
+          "resolution": "{{resolution}}",
+          "aspectRatio": "{{aspectRatio}}",
+          "pdfPassword": "{{pdfPassword}}",
+          "barcodeWidth": "{{barcodeWidth}}",
+          "outputFormat": "{{outputFormat}}",
+          "barcodeHeight": "{{barcodeHeight}}",
+          "caseSensitive": "{{caseSensitive}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "convert.excel.to.csv": {
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Convert Excel to CSV",
+      "description": "Convert an Excel XLS/XLSX URL to CSV.",
+      "inputSchema": {
+        "type": "object",
         "properties": {
           "url": {
             "type": "string",
-            "minLength": 1,
-            "description": "Publicly reachable source file URL."
+            "description": "Publicly reachable source file URL.",
+            "minLength": 1
           },
           "name": {
             "type": "string",
-            "minLength": 1,
-            "description": "Optional output file name."
+            "description": "Optional output file name.",
+            "minLength": 1
           },
           "pages": {
             "type": "string",
-            "minLength": 1,
-            "description": "Optional page range, for example 0- or 1-2."
+            "description": "Page indices or ranges to process, for example 0,2-4.",
+            "minLength": 1
+          },
+          "inline": {
+            "type": "boolean",
+            "description": "Return result data inline instead of an output URL."
           },
           "password": {
             "type": "string",
-            "minLength": 1,
-            "description": "Optional password for an encrypted source PDF."
+            "description": "Password for a protected source file.",
+            "minLength": 1
+          },
+          "profiles": {
+            "description": "Advanced PDF.co profiles as a JSON string or object."
           }
-        }
+        },
+        "additionalProperties": false,
+        "required": [
+          "url"
+        ]
       },
       "outputSchema": {
         "type": "object",
@@ -254,7 +410,7 @@
       },
       "request": {
         "method": "POST",
-        "path": "/v1/pdf/convert/to/text",
+        "path": "/v1/xls/convert/to/csv",
         "success": [
           200
         ],
@@ -263,52 +419,122 @@
         },
         "body": {
           "url": "{{url}}",
-          "async": false,
           "name": "{{name}}",
           "pages": "{{pages}}",
-          "password": "{{password}}"
+          "inline": "{{inline}}",
+          "password": "{{password}}",
+          "profiles": "{{profiles}}"
         }
       },
       "enforceOutputSchema": true,
       "validationMode": "strict-generated",
       "responseFormat": "json"
     },
-    "pdf.convert.to.csv": {
-      "timeoutMs": 15000,
+    "convert.excel.to.html": {
+      "timeoutMs": 30000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
       "kind": "action",
       "sideEffect": "write",
-      "title": "Convert PDF to CSV",
-      "description": "Convert PDF to CSV from a source URL using PDF.co.",
+      "title": "Convert Excel to HTML",
+      "description": "Convert an Excel URL to HTML.",
       "inputSchema": {
         "type": "object",
-        "required": [
-          "url"
-        ],
-        "additionalProperties": false,
         "properties": {
           "url": {
             "type": "string",
-            "minLength": 1,
-            "description": "Publicly reachable source file URL."
+            "description": "Publicly reachable source file URL.",
+            "minLength": 1
           },
           "name": {
             "type": "string",
-            "minLength": 1,
-            "description": "Optional output file name."
+            "description": "Optional output file name.",
+            "minLength": 1
+          },
+          "async": {
+            "type": "boolean",
+            "description": "Run the job asynchronously and return a jobId."
+          },
+          "profiles": {
+            "description": "Advanced PDF.co profiles as a JSON string or object."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "url"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/xls/convert/to/html",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "url": "{{url}}",
+          "name": "{{name}}",
+          "async": "{{async}}",
+          "profiles": "{{profiles}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "convert.excel.to.json": {
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Convert Excel to JSON",
+      "description": "Convert an Excel or CSV URL to JSON.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "Publicly reachable source file URL.",
+            "minLength": 1
+          },
+          "name": {
+            "type": "string",
+            "description": "Optional output file name.",
+            "minLength": 1
           },
           "pages": {
             "type": "string",
-            "minLength": 1,
-            "description": "Optional page range, for example 0- or 1-2."
+            "description": "Page indices or ranges to process, for example 0,2-4.",
+            "minLength": 1
           },
           "password": {
             "type": "string",
-            "minLength": 1,
-            "description": "Optional password for an encrypted source PDF."
+            "description": "Password for a protected source file.",
+            "minLength": 1
+          },
+          "profiles": {
+            "description": "Advanced PDF.co profiles as a JSON string or object."
           }
-        }
+        },
+        "additionalProperties": false,
+        "required": [
+          "url"
+        ]
       },
       "outputSchema": {
         "type": "object",
@@ -324,7 +550,7 @@
       },
       "request": {
         "method": "POST",
-        "path": "/v1/pdf/convert/to/csv",
+        "path": "/v1/xls/convert/to/json",
         "success": [
           200
         ],
@@ -333,52 +559,63 @@
         },
         "body": {
           "url": "{{url}}",
-          "async": false,
           "name": "{{name}}",
           "pages": "{{pages}}",
-          "password": "{{password}}"
+          "password": "{{password}}",
+          "profiles": "{{profiles}}"
         }
       },
       "enforceOutputSchema": true,
       "validationMode": "strict-generated",
       "responseFormat": "json"
     },
-    "pdf.convert.to.json": {
-      "timeoutMs": 15000,
+    "convert.excel.to.text": {
+      "timeoutMs": 30000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
       "kind": "action",
       "sideEffect": "write",
-      "title": "Convert PDF to JSON",
-      "description": "Convert PDF to JSON from a source URL using PDF.co.",
+      "title": "Convert Excel to text",
+      "description": "Convert an Excel URL to plain text.",
       "inputSchema": {
         "type": "object",
-        "required": [
-          "url"
-        ],
-        "additionalProperties": false,
         "properties": {
           "url": {
             "type": "string",
-            "minLength": 1,
-            "description": "Publicly reachable source file URL."
+            "description": "Publicly reachable source file URL.",
+            "minLength": 1
           },
           "name": {
             "type": "string",
-            "minLength": 1,
-            "description": "Optional output file name."
+            "description": "Optional output file name.",
+            "minLength": 1
           },
           "pages": {
             "type": "string",
-            "minLength": 1,
-            "description": "Optional page range, for example 0- or 1-2."
+            "description": "Page indices or ranges to process, for example 0,2-4.",
+            "minLength": 1
+          },
+          "inline": {
+            "type": "boolean",
+            "description": "Return result data inline instead of an output URL."
+          },
+          "encrypt": {
+            "type": "boolean",
+            "description": "Encrypt the generated output file."
           },
           "password": {
             "type": "string",
-            "minLength": 1,
-            "description": "Optional password for an encrypted source PDF."
+            "description": "Password for a protected source file.",
+            "minLength": 1
+          },
+          "profiles": {
+            "description": "Advanced PDF.co profiles as a JSON string or object."
           }
-        }
+        },
+        "additionalProperties": false,
+        "required": [
+          "url"
+        ]
       },
       "outputSchema": {
         "type": "object",
@@ -394,7 +631,7 @@
       },
       "request": {
         "method": "POST",
-        "path": "/v1/pdf/convert/to/json",
+        "path": "/v1/xls/convert/to/txt",
         "success": [
           200
         ],
@@ -403,374 +640,221 @@
         },
         "body": {
           "url": "{{url}}",
-          "async": false,
           "name": "{{name}}",
           "pages": "{{pages}}",
-          "password": "{{password}}"
+          "inline": "{{inline}}",
+          "encrypt": "{{encrypt}}",
+          "password": "{{password}}",
+          "profiles": "{{profiles}}"
         }
       },
       "enforceOutputSchema": true,
       "validationMode": "strict-generated",
       "responseFormat": "json"
     },
-    "pdf.convert.to.html": {
-      "timeoutMs": 15000,
+    "convert.excel.to.xml": {
+      "timeoutMs": 30000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
       "kind": "action",
       "sideEffect": "write",
-      "title": "Convert PDF to HTML",
-      "description": "Convert PDF to HTML from a source URL using PDF.co.",
+      "title": "Convert Excel to XML",
+      "description": "Convert an Excel or CSV URL to XML.",
       "inputSchema": {
         "type": "object",
-        "required": [
-          "url"
-        ],
-        "additionalProperties": false,
         "properties": {
           "url": {
             "type": "string",
-            "minLength": 1,
-            "description": "Publicly reachable source file URL."
+            "description": "Publicly reachable source file URL.",
+            "minLength": 1
           },
           "name": {
             "type": "string",
-            "minLength": 1,
-            "description": "Optional output file name."
+            "description": "Optional output file name.",
+            "minLength": 1
+          },
+          "async": {
+            "type": "boolean",
+            "description": "Run the job asynchronously and return a jobId."
+          },
+          "inline": {
+            "type": "boolean",
+            "description": "Return result data inline instead of an output URL."
+          },
+          "callback": {
+            "type": "string",
+            "description": "Webhook URL invoked when an async job completes.",
+            "minLength": 1
+          },
+          "profiles": {
+            "description": "Advanced PDF.co profiles as a JSON string or object."
+          },
+          "expiration": {
+            "type": "integer",
+            "description": "Output link lifetime in minutes.",
+            "minimum": 1
+          },
+          "httppassword": {
+            "type": "string",
+            "description": "HTTP password for a protected source URL.",
+            "minLength": 1
+          },
+          "httpusername": {
+            "type": "string",
+            "description": "HTTP username for a protected source URL.",
+            "minLength": 1
+          },
+          "worksheetIndex": {
+            "type": "string",
+            "description": "Zero-based worksheet index as a string.",
+            "minLength": 1
+          },
+          "DataDecryptionIV": {
+            "type": "string",
+            "description": "Initialization vector for decryption.",
+            "minLength": 1
+          },
+          "DataEncryptionIV": {
+            "type": "string",
+            "description": "Initialization vector for encryption.",
+            "minLength": 1
+          },
+          "DataDecryptionKey": {
+            "type": "string",
+            "description": "Decryption key.",
+            "minLength": 1
+          },
+          "DataEncryptionKey": {
+            "type": "string",
+            "description": "Encryption key.",
+            "minLength": 1
+          },
+          "DataDecryptionAlgorithm": {
+            "type": "string",
+            "enum": [
+              "AES128",
+              "AES192",
+              "AES256"
+            ],
+            "description": "Decryption algorithm."
+          },
+          "DataEncryptionAlgorithm": {
+            "type": "string",
+            "enum": [
+              "AES128",
+              "AES192",
+              "AES256"
+            ],
+            "description": "Encryption algorithm."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "url"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/xls/convert/to/xml",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "url": "{{url}}",
+          "name": "{{name}}",
+          "async": "{{async}}",
+          "inline": "{{inline}}",
+          "callback": "{{callback}}",
+          "profiles": "{{profiles}}",
+          "expiration": "{{expiration}}",
+          "httppassword": "{{httppassword}}",
+          "httpusername": "{{httpusername}}",
+          "worksheetIndex": "{{worksheetIndex}}",
+          "DataDecryptionIV": "{{DataDecryptionIV}}",
+          "DataEncryptionIV": "{{DataEncryptionIV}}",
+          "DataDecryptionKey": "{{DataDecryptionKey}}",
+          "DataEncryptionKey": "{{DataEncryptionKey}}",
+          "DataDecryptionAlgorithm": "{{DataDecryptionAlgorithm}}",
+          "DataEncryptionAlgorithm": "{{DataEncryptionAlgorithm}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "document.parser": {
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Parse document",
+      "description": "Extract structured fields from a PDF URL with a document-parser template.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "Publicly reachable source file URL.",
+            "minLength": 1
+          },
+          "file": {
+            "description": "Local file payload. Prefer uploading with file.upload and passing the returned URL."
+          },
+          "name": {
+            "type": "string",
+            "description": "Optional output file name.",
+            "minLength": 1
           },
           "pages": {
             "type": "string",
-            "minLength": 1,
-            "description": "Optional page range, for example 0- or 1-2."
+            "description": "Page indices or ranges to process, for example 0,2-4.",
+            "minLength": 1
+          },
+          "inline": {
+            "type": "boolean",
+            "description": "Return result data inline instead of an output URL."
           },
           "password": {
             "type": "string",
-            "minLength": 1,
-            "description": "Optional password for an encrypted source PDF."
-          }
-        }
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
+            "description": "Password for a protected source file.",
+            "minLength": 1
+          },
+          "template": {
+            "type": "string",
+            "description": "Inline YAML or JSON document-parser template.",
+            "minLength": 1
+          },
+          "async_req": {
+            "type": "boolean",
+            "description": "Run parsing asynchronously and return a result URL."
+          },
+          "outputFormat": {
+            "type": "string",
+            "description": "Parsed output format: JSON, CSV, or XML.",
+            "minLength": 1
           }
         },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "POST",
-        "path": "/v1/pdf/convert/to/html",
-        "success": [
-          200
-        ],
-        "headers": {
-          "Content-Type": "application/json"
-        },
-        "body": {
-          "url": "{{url}}",
-          "async": false,
-          "name": "{{name}}",
-          "pages": "{{pages}}",
-          "password": "{{password}}"
-        }
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "pdf.convert.to.jpg": {
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "kind": "action",
-      "sideEffect": "write",
-      "title": "Convert PDF to JPG",
-      "description": "Convert PDF to JPG from a source URL using PDF.co.",
-      "inputSchema": {
-        "type": "object",
-        "required": [
-          "url"
-        ],
         "additionalProperties": false,
-        "properties": {
-          "url": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Publicly reachable source file URL."
-          },
-          "name": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Optional output file name."
-          },
-          "pages": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Optional page range, for example 0- or 1-2."
-          },
-          "password": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Optional password for an encrypted source PDF."
-          }
-        }
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "POST",
-        "path": "/v1/pdf/convert/to/jpg",
-        "success": [
-          200
-        ],
-        "headers": {
-          "Content-Type": "application/json"
-        },
-        "body": {
-          "url": "{{url}}",
-          "async": false,
-          "name": "{{name}}",
-          "pages": "{{pages}}",
-          "password": "{{password}}"
-        }
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "pdf.convert.to.xlsx": {
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "kind": "action",
-      "sideEffect": "write",
-      "title": "Convert PDF to XLSX",
-      "description": "Convert PDF to XLSX from a source URL using PDF.co.",
-      "inputSchema": {
-        "type": "object",
-        "required": [
-          "url"
-        ],
-        "additionalProperties": false,
-        "properties": {
-          "url": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Publicly reachable source file URL."
-          },
-          "name": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Optional output file name."
-          },
-          "pages": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Optional page range, for example 0- or 1-2."
-          },
-          "password": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Optional password for an encrypted source PDF."
-          }
-        }
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "POST",
-        "path": "/v1/pdf/convert/to/xlsx",
-        "success": [
-          200
-        ],
-        "headers": {
-          "Content-Type": "application/json"
-        },
-        "body": {
-          "url": "{{url}}",
-          "async": false,
-          "name": "{{name}}",
-          "pages": "{{pages}}",
-          "password": "{{password}}"
-        }
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "pdf.convert.from.html": {
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "kind": "action",
-      "sideEffect": "write",
-      "title": "Convert HTML to PDF",
-      "description": "Convert raw HTML markup into a PDF with PDF.co.",
-      "inputSchema": {
-        "type": "object",
-        "required": [
-          "html"
-        ],
-        "additionalProperties": false,
-        "properties": {
-          "html": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Raw HTML markup to convert into a PDF."
-          },
-          "name": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Optional output file name."
-          }
-        }
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "POST",
-        "path": "/v1/pdf/convert/from/html",
-        "success": [
-          200
-        ],
-        "headers": {
-          "Content-Type": "application/json"
-        },
-        "body": {
-          "html": "{{html}}",
-          "async": false,
-          "name": "{{name}}"
-        }
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "pdf.merge": {
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "kind": "action",
-      "sideEffect": "write",
-      "title": "Merge PDFs",
-      "description": "Merge one or more comma-separated PDF URLs into a single PDF.",
-      "inputSchema": {
-        "type": "object",
-        "required": [
-          "url"
-        ],
-        "additionalProperties": false,
-        "properties": {
-          "url": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Comma-separated source PDF URLs to merge."
-          },
-          "name": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Optional output file name."
-          }
-        }
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "POST",
-        "path": "/v1/pdf/merge",
-        "success": [
-          200
-        ],
-        "headers": {
-          "Content-Type": "application/json"
-        },
-        "body": {
-          "url": "{{url}}",
-          "async": false,
-          "name": "{{name}}"
-        }
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "pdf.split": {
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "kind": "action",
-      "sideEffect": "write",
-      "title": "Split PDF",
-      "description": "Split a PDF into multiple files by page numbers or ranges.",
-      "inputSchema": {
-        "type": "object",
         "required": [
           "url",
-          "pages"
-        ],
-        "additionalProperties": false,
-        "properties": {
-          "url": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Publicly reachable source PDF URL."
-          },
-          "pages": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Page numbers or ranges to keep in each output, for example 1-2,3."
-          },
-          "name": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Optional output file name."
-          }
-        }
+          "template"
+        ]
       },
       "outputSchema": {
         "type": "object",
@@ -786,7 +870,7 @@
       },
       "request": {
         "method": "POST",
-        "path": "/v1/pdf/split",
+        "path": "/v1/pdf/documentparser",
         "success": [
           200
         ],
@@ -795,9 +879,375 @@
         },
         "body": {
           "url": "{{url}}",
+          "name": "{{name}}",
           "pages": "{{pages}}",
-          "async": false,
+          "inline": "{{inline}}",
+          "password": "{{password}}",
+          "template": "{{template}}",
+          "async": "{{async_req}}",
+          "outputFormat": "{{outputFormat}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "file.upload": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Upload file",
+      "description": "Upload a remote URL (GET /v1/file/upload/url) or local file bytes (POST /v1/file/upload/base64) into PDF.co storage.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "Publicly reachable source file URL.",
+            "minLength": 1
+          },
+          "file": {
+            "description": "Local file payload. Prefer uploading with file.upload and passing the returned URL."
+          },
+          "name": {
+            "type": "string",
+            "description": "Optional output file name.",
+            "minLength": 1
+          },
+          "run_async": {
+            "type": "boolean",
+            "description": "Run the job asynchronously and return a jobId."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/file/upload/url",
+        "success": [
+          200
+        ],
+        "query": {
+          "url": "{{url}}",
           "name": "{{name}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "job.check": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Check job status",
+      "description": "Poll an asynchronous PDF.co job by job_id (sent as jobid).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "force": {
+            "type": "boolean",
+            "description": "When true, invalid job IDs return unknown instead of working."
+          },
+          "job_id": {
+            "type": "string",
+            "description": "Asynchronous PDF.co job identifier.",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "job_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/job/check",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "force": "{{force}}",
+          "jobid": "{{job_id}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "pdf.add": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Add content to PDF",
+      "description": "Overlay text, images, barcodes, or links onto a PDF URL.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "Publicly reachable source file URL.",
+            "minLength": 1
+          },
+          "name": {
+            "type": "string",
+            "description": "Optional output file name.",
+            "minLength": 1
+          },
+          "pages": {
+            "type": "string",
+            "description": "Page indices or ranges to process, for example 0,2-4.",
+            "minLength": 1
+          },
+          "objects": {
+            "type": "array",
+            "minItems": 1,
+            "description": "Objects to add (text, image, barcode, link, or document).",
+            "items": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          },
+          "password": {
+            "type": "string",
+            "description": "Password for a protected source file.",
+            "minLength": 1
+          },
+          "run_async": {
+            "type": "boolean",
+            "description": "Run the job asynchronously and return a jobId."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "url",
+          "objects"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/pdf/edit/add",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "url": "{{url}}",
+          "name": "{{name}}",
+          "pages": "{{pages}}",
+          "objects": "{{objects}}",
+          "password": "{{password}}",
+          "async": "{{run_async}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "pdf.auto.rotate": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Auto-rotate PDF pages",
+      "description": "Detect and correct PDF page rotation using OCR.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "Publicly reachable source file URL.",
+            "minLength": 1
+          },
+          "lang": {
+            "type": "string",
+            "description": "OCR language code, or combined codes such as eng+deu.",
+            "minLength": 1
+          },
+          "name": {
+            "type": "string",
+            "description": "Optional output file name.",
+            "minLength": 1
+          },
+          "profiles": {
+            "description": "Advanced PDF.co profiles as a JSON string or object."
+          },
+          "httppassword": {
+            "type": "string",
+            "description": "HTTP password for a protected source URL.",
+            "minLength": 1
+          },
+          "httpusername": {
+            "type": "string",
+            "description": "HTTP username for a protected source URL.",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "url"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/pdf/edit/rotate/auto",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "url": "{{url}}",
+          "lang": "{{lang}}",
+          "name": "{{name}}",
+          "profiles": "{{profiles}}",
+          "httppassword": "{{httppassword}}",
+          "httpusername": "{{httpusername}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "pdf.change.text.searchable": {
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Make PDF text searchable",
+      "description": "Add a searchable OCR text layer to a scanned PDF. language is sent as lang.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "Publicly reachable source file URL.",
+            "minLength": 1
+          },
+          "rect": {
+            "type": "string",
+            "description": "Crop or OCR rectangle coordinates.",
+            "minLength": 1
+          },
+          "pages": {
+            "type": "string",
+            "description": "Page indices or ranges to process, for example 0,2-4.",
+            "minLength": 1
+          },
+          "inline": {
+            "type": "boolean",
+            "description": "Return result data inline instead of an output URL."
+          },
+          "language": {
+            "type": "string",
+            "description": "OCR language code (sent to PDF.co as lang).",
+            "minLength": 1
+          },
+          "password": {
+            "type": "string",
+            "description": "Password for a protected source file.",
+            "minLength": 1
+          },
+          "profiles": {
+            "description": "Advanced PDF.co profiles as a JSON string or object."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "url"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/pdf/makesearchable",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "url": "{{url}}",
+          "rect": "{{rect}}",
+          "pages": "{{pages}}",
+          "inline": "{{inline}}",
+          "lang": "{{language}}",
+          "password": "{{password}}",
+          "profiles": "{{profiles}}"
         }
       },
       "enforceOutputSchema": true,
@@ -805,24 +1255,44 @@
       "responseFormat": "json"
     },
     "pdf.compress": {
-      "timeoutMs": 15000,
+      "timeoutMs": 30000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
       "kind": "action",
       "sideEffect": "write",
       "title": "Compress PDF",
-      "description": "Compress a PDF with a PDF.co v2 preset such as medium or high.",
+      "description": "Compress a PDF URL with a preset or detailed image and font controls.",
       "inputSchema": {
         "type": "object",
-        "required": [
-          "url"
-        ],
-        "additionalProperties": false,
         "properties": {
           "url": {
             "type": "string",
-            "minLength": 1,
-            "description": "Publicly reachable source PDF URL."
+            "description": "Publicly reachable source file URL.",
+            "minLength": 1
+          },
+          "name": {
+            "type": "string",
+            "description": "Optional output file name.",
+            "minLength": 1
+          },
+          "config": {
+            "description": "Partial advanced compression configuration object or JSON string."
+          },
+          "password": {
+            "type": "string",
+            "description": "Password for a protected source file.",
+            "minLength": 1
+          },
+          "expiration": {
+            "type": "integer",
+            "description": "Output link lifetime in minutes.",
+            "minimum": 1
+          },
+          "colorQuality": {
+            "type": "integer",
+            "description": "JPEG quality for color and grayscale images from 1 to 100.",
+            "minimum": 1,
+            "maximum": 100
           },
           "compressionLevel": {
             "type": "string",
@@ -832,14 +1302,13 @@
               "high",
               "aggressive"
             ],
-            "description": "Optional compression preset. Defaults to medium on the vendor."
-          },
-          "name": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Optional output file name."
+            "description": "Ready-to-use PDF compression preset."
           }
-        }
+        },
+        "additionalProperties": false,
+        "required": [
+          "url"
+        ]
       },
       "outputSchema": {
         "type": "object",
@@ -864,51 +1333,68 @@
         },
         "body": {
           "url": "{{url}}",
-          "async": false,
-          "compressionLevel": "{{compressionLevel}}",
-          "name": "{{name}}"
+          "name": "{{name}}",
+          "config": "{{config}}",
+          "password": "{{password}}",
+          "expiration": "{{expiration}}",
+          "colorQuality": "{{colorQuality}}",
+          "compressionLevel": "{{compressionLevel}}"
         }
       },
       "enforceOutputSchema": true,
       "validationMode": "strict-generated",
       "responseFormat": "json"
     },
-    "pdf.find": {
-      "timeoutMs": 15000,
+    "pdf.convert.to.text.simple": {
+      "timeoutMs": 30000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
       "kind": "action",
-      "sideEffect": "read",
-      "title": "Find text in PDF",
-      "description": "Search a PDF for text and return coordinates. Supports regular expressions.",
+      "sideEffect": "write",
+      "title": "Convert PDF to text (simple)",
+      "description": "Extract plain text from a text-based PDF without OCR or layout analysis.",
       "inputSchema": {
         "type": "object",
-        "required": [
-          "url",
-          "searchString"
-        ],
-        "additionalProperties": false,
         "properties": {
           "url": {
             "type": "string",
-            "minLength": 1,
-            "description": "Publicly reachable source PDF URL."
+            "description": "Publicly reachable source file URL.",
+            "minLength": 1
           },
-          "searchString": {
+          "name": {
             "type": "string",
-            "minLength": 1,
-            "description": "Text or regular expression to find."
-          },
-          "regex": {
-            "type": "boolean",
-            "description": "Treat searchString as a regular expression."
+            "description": "Optional output file name.",
+            "minLength": 1
           },
           "pages": {
             "type": "string",
-            "minLength": 1,
-            "description": "Optional page range."
+            "description": "Page indices or ranges to process, for example 0,2-4.",
+            "minLength": 1
+          },
+          "inline": {
+            "type": "boolean",
+            "description": "Return result data inline instead of an output URL."
+          },
+          "password": {
+            "type": "string",
+            "description": "Password for a protected source file.",
+            "minLength": 1
+          },
+          "httppassword": {
+            "type": "string",
+            "description": "HTTP password for a protected source URL.",
+            "minLength": 1
+          },
+          "httpusername": {
+            "type": "string",
+            "description": "HTTP username for a protected source URL.",
+            "minLength": 1
           }
-        }
+        },
+        "additionalProperties": false,
+        "required": [
+          "url"
+        ]
       },
       "outputSchema": {
         "type": "object",
@@ -924,7 +1410,7 @@
       },
       "request": {
         "method": "POST",
-        "path": "/v1/pdf/find",
+        "path": "/v1/pdf/convert/to/text-simple",
         "success": [
           200
         ],
@@ -933,53 +1419,130 @@
         },
         "body": {
           "url": "{{url}}",
-          "searchString": "{{searchString}}",
-          "regex": "{{regex}}",
+          "name": "{{name}}",
           "pages": "{{pages}}",
-          "async": false
+          "inline": "{{inline}}",
+          "password": "{{password}}",
+          "httppassword": "{{httppassword}}",
+          "httpusername": "{{httpusername}}"
         }
       },
       "enforceOutputSchema": true,
       "validationMode": "strict-generated",
       "responseFormat": "json"
     },
-    "pdf.security.add": {
+    "pdfco.post.barcode.generate": {
       "timeoutMs": 15000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
       "kind": "action",
       "sideEffect": "write",
-      "title": "Add PDF password",
-      "description": "Add an owner password and security limitations to a PDF.",
+      "title": "Generate barcode",
+      "description": "Generate a barcode image in 45+ formats. decorationImage is sent as decorationimage.",
       "inputSchema": {
         "type": "object",
-        "required": [
-          "url",
-          "ownerPassword"
-        ],
-        "additionalProperties": false,
         "properties": {
-          "url": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Publicly reachable source PDF URL."
-          },
-          "ownerPassword": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Owner password to apply."
-          },
-          "userPassword": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Optional user password."
-          },
           "name": {
             "type": "string",
-            "minLength": 1,
-            "description": "Optional output file name."
+            "description": "Optional output file name.",
+            "minLength": 1
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "AustralianPostCode",
+              "Aztec",
+              "Codabar",
+              "CodablockF",
+              "Code128",
+              "Code16K",
+              "Code39",
+              "Code39Extended",
+              "Code39Mod43",
+              "Code39Mod43Extended",
+              "Code93",
+              "DataMatrix",
+              "DPMDataMatrix",
+              "EAN13",
+              "EAN2",
+              "EAN5",
+              "EAN8",
+              "GS1DataBarExpanded",
+              "GS1DataBarExpandedStacked",
+              "GS1DataBarLimited",
+              "GS1DataBarOmnidirectional",
+              "GS1DataBarStacked",
+              "GTIN12",
+              "GTIN13",
+              "GTIN14",
+              "GTIN8",
+              "IntelligentMail",
+              "Interleaved2of5",
+              "ITF14",
+              "MaxiCode",
+              "MICR",
+              "MicroPDF",
+              "MSI",
+              "PatchCode",
+              "PDF417",
+              "Pharmacode",
+              "PostNet",
+              "PZN",
+              "QRCode",
+              "RoyalMail",
+              "RoyalMailKIX",
+              "Trioptic",
+              "UPCA",
+              "UPCE",
+              "UPU"
+            ],
+            "description": "Barcode format to generate. Defaults to QRCode."
+          },
+          "async": {
+            "type": "boolean",
+            "description": "Run the job asynchronously and return a jobId."
+          },
+          "value": {
+            "type": "string",
+            "description": "String encoded into the barcode.",
+            "minLength": 1
+          },
+          "inline": {
+            "type": "boolean",
+            "description": "Return result data inline instead of an output URL."
+          },
+          "encrypt": {
+            "type": "boolean",
+            "description": "Encrypt the generated output file."
+          },
+          "callback": {
+            "type": "string",
+            "description": "Webhook URL invoked when an async job completes.",
+            "minLength": 1
+          },
+          "expiration": {
+            "type": "integer",
+            "description": "Output link lifetime in minutes.",
+            "minimum": 1
+          },
+          "decorationImage": {
+            "type": "string",
+            "description": "Image URL inserted as a QR-code logo (sent as decorationimage).",
+            "minLength": 1
+          },
+          "outputDataFormat": {
+            "type": "string",
+            "description": "Set to base64 for base64-encoded output.",
+            "minLength": 1
+          },
+          "profiles": {
+            "description": "Advanced PDF.co profiles as a JSON string or object."
           }
-        }
+        },
+        "additionalProperties": false,
+        "required": [
+          "value"
+        ]
       },
       "outputSchema": {
         "type": "object",
@@ -995,7 +1558,7 @@
       },
       "request": {
         "method": "POST",
-        "path": "/v1/pdf/security/add",
+        "path": "/v1/barcode/generate",
         "success": [
           200
         ],
@@ -1003,11 +1566,80 @@
           "Content-Type": "application/json"
         },
         "body": {
-          "url": "{{url}}",
-          "ownerPassword": "{{ownerPassword}}",
-          "userPassword": "{{userPassword}}",
-          "async": false,
-          "name": "{{name}}"
+          "name": "{{name}}",
+          "type": "{{type}}",
+          "async": "{{async}}",
+          "value": "{{value}}",
+          "inline": "{{inline}}",
+          "encrypt": "{{encrypt}}",
+          "callback": "{{callback}}",
+          "expiration": "{{expiration}}",
+          "decorationimage": "{{decorationImage}}",
+          "outputDataFormat": "{{outputDataFormat}}",
+          "profiles": "{{profiles}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "pdfco.post.file.upload.base64": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Upload file from base64",
+      "description": "Create a temporary PDF.co file from base64-encoded bytes.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "file": {
+            "type": "string",
+            "description": "Base64-encoded file bytes, optionally as a data URI.",
+            "minLength": 1
+          },
+          "name": {
+            "type": "string",
+            "description": "Optional output file name.",
+            "minLength": 1
+          },
+          "expiration": {
+            "type": "integer",
+            "description": "Output link lifetime in minutes.",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "file"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/file/upload/base64",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "file": "{{file}}",
+          "name": "{{name}}",
+          "expiration": "{{expiration}}"
         }
       },
       "enforceOutputSchema": true,
@@ -1021,31 +1653,43 @@
       "kind": "action",
       "sideEffect": "write",
       "title": "Delete PDF pages",
-      "description": "Delete selected pages from a PDF file.",
+      "description": "Delete specific pages from a PDF URL.",
       "inputSchema": {
         "type": "object",
-        "required": [
-          "url",
-          "pages"
-        ],
-        "additionalProperties": false,
         "properties": {
           "url": {
             "type": "string",
-            "minLength": 1,
-            "description": "Publicly reachable source PDF URL."
-          },
-          "pages": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Pages to delete, for example 1,3-4."
+            "description": "Publicly reachable source file URL.",
+            "minLength": 1
           },
           "name": {
             "type": "string",
-            "minLength": 1,
-            "description": "Optional output file name."
+            "description": "Optional output file name.",
+            "minLength": 1
+          },
+          "pages": {
+            "type": "string",
+            "description": "Page indices or ranges to process, for example 0,2-4.",
+            "minLength": 1
+          },
+          "password": {
+            "type": "string",
+            "description": "Password for a protected source file.",
+            "minLength": 1
+          },
+          "profiles": {
+            "description": "Advanced PDF.co profiles as a JSON string or object."
+          },
+          "async_job": {
+            "type": "boolean",
+            "description": "Run the job asynchronously and return a jobId."
           }
-        }
+        },
+        "additionalProperties": false,
+        "required": [
+          "url",
+          "pages"
+        ]
       },
       "outputSchema": {
         "type": "object",
@@ -1070,46 +1714,71 @@
         },
         "body": {
           "url": "{{url}}",
+          "name": "{{name}}",
           "pages": "{{pages}}",
-          "async": false,
-          "name": "{{name}}"
+          "password": "{{password}}",
+          "profiles": "{{profiles}}",
+          "async": "{{async_job}}"
         }
       },
       "enforceOutputSchema": true,
       "validationMode": "strict-generated",
       "responseFormat": "json"
     },
-    "barcode.read": {
+    "pdf.extract.attachments": {
       "timeoutMs": 15000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
       "kind": "action",
-      "sideEffect": "read",
-      "title": "Read barcodes",
-      "description": "Read barcodes from an image or PDF URL.",
+      "sideEffect": "write",
+      "title": "Extract PDF attachments",
+      "description": "Extract embedded attachments from a PDF URL.",
       "inputSchema": {
         "type": "object",
-        "required": [
-          "url"
-        ],
-        "additionalProperties": false,
         "properties": {
           "url": {
             "type": "string",
-            "minLength": 1,
-            "description": "Publicly reachable image or PDF URL."
+            "description": "Publicly reachable source file URL.",
+            "minLength": 1
           },
-          "types": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Optional comma-separated barcode types to scan."
+          "inline": {
+            "type": "boolean",
+            "description": "Return result data inline instead of an output URL."
           },
-          "pages": {
+          "callback": {
             "type": "string",
-            "minLength": 1,
-            "description": "Optional page range for PDF sources."
+            "description": "Webhook URL invoked when an async job completes.",
+            "minLength": 1
+          },
+          "password": {
+            "type": "string",
+            "description": "Password for a protected source file.",
+            "minLength": 1
+          },
+          "async_job": {
+            "type": "boolean",
+            "description": "Run the job asynchronously and return a jobId."
+          },
+          "expiration": {
+            "type": "integer",
+            "description": "Output link lifetime in minutes.",
+            "minimum": 1
+          },
+          "httppassword": {
+            "type": "string",
+            "description": "HTTP password for a protected source URL.",
+            "minLength": 1
+          },
+          "httpusername": {
+            "type": "string",
+            "description": "HTTP username for a protected source URL.",
+            "minLength": 1
           }
-        }
+        },
+        "additionalProperties": false,
+        "required": [
+          "url"
+        ]
       },
       "outputSchema": {
         "type": "object",
@@ -1125,7 +1794,7 @@
       },
       "request": {
         "method": "POST",
-        "path": "/v1/barcode/read/from/url",
+        "path": "/v1/pdf/attachments/extract",
         "success": [
           200
         ],
@@ -1134,151 +1803,1050 @@
         },
         "body": {
           "url": "{{url}}",
-          "types": "{{types}}",
-          "pages": "{{pages}}",
-          "async": false
+          "inline": "{{inline}}",
+          "callback": "{{callback}}",
+          "password": "{{password}}",
+          "async": "{{async_job}}",
+          "expiration": "{{expiration}}",
+          "httppassword": "{{httppassword}}",
+          "httpusername": "{{httpusername}}"
         }
       },
       "enforceOutputSchema": true,
       "validationMode": "strict-generated",
       "responseFormat": "json"
     },
-    "barcode.generate": {
+    "pdf.find": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Find text in PDF",
+      "description": "Find keywords or regex patterns in a PDF and return page positions. regexSearch is sent as regex.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "Publicly reachable source file URL.",
+            "minLength": 1
+          },
+          "pages": {
+            "type": "string",
+            "description": "Page indices or ranges to process, for example 0,2-4.",
+            "minLength": 1
+          },
+          "password": {
+            "type": "string",
+            "description": "Password for a protected source file.",
+            "minLength": 1
+          },
+          "profiles": {
+            "description": "Advanced PDF.co profiles as a JSON string or object."
+          },
+          "regexSearch": {
+            "type": "boolean",
+            "description": "Treat searchString as a regular expression (sent as regex)."
+          },
+          "searchString": {
+            "type": "string",
+            "description": "Keyword or regex pattern to find.",
+            "minLength": 1
+          },
+          "caseSensitive": {
+            "type": "boolean",
+            "description": "Whether matching or encoding is case-sensitive."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "url",
+          "searchString"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/pdf/find",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "url": "{{url}}",
+          "pages": "{{pages}}",
+          "password": "{{password}}",
+          "profiles": "{{profiles}}",
+          "regex": "{{regexSearch}}",
+          "searchString": "{{searchString}}",
+          "caseSensitive": "{{caseSensitive}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "pdf.find.table": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Find tables in PDF",
+      "description": "Detect tables in a PDF and return page, bounds, and column positions.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "Publicly reachable source file URL.",
+            "minLength": 1
+          },
+          "pages": {
+            "type": "string",
+            "description": "Page indices or ranges to process, for example 0,2-4.",
+            "minLength": 1
+          },
+          "inline": {
+            "type": "boolean",
+            "description": "Return result data inline instead of an output URL."
+          },
+          "password": {
+            "type": "string",
+            "description": "Password for a protected source file.",
+            "minLength": 1
+          },
+          "profiles": {
+            "description": "Advanced PDF.co profiles as a JSON string or object."
+          },
+          "httppassword": {
+            "type": "string",
+            "description": "HTTP password for a protected source URL.",
+            "minLength": 1
+          },
+          "httpusername": {
+            "type": "string",
+            "description": "HTTP username for a protected source URL.",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "url"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/pdf/find/table",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "url": "{{url}}",
+          "pages": "{{pages}}",
+          "inline": "{{inline}}",
+          "password": "{{password}}",
+          "profiles": "{{profiles}}",
+          "httppassword": "{{httppassword}}",
+          "httpusername": "{{httpusername}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "pdf.forms.info": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Read PDF form fields",
+      "description": "Read names, types, values, and coordinates of PDF form fields.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "Publicly reachable source file URL.",
+            "minLength": 1
+          },
+          "async": {
+            "type": "boolean",
+            "description": "Run the job asynchronously and return a jobId."
+          },
+          "password": {
+            "type": "string",
+            "description": "Password for a protected source file.",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "url"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/pdf/info/fields",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "url": "{{url}}",
+          "async": "{{async}}",
+          "password": "{{password}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "pdf.from.csv": {
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Convert CSV or Excel to PDF",
+      "description": "Convert CSV or spreadsheet pages to PDF.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "Publicly reachable source file URL.",
+            "minLength": 1
+          },
+          "name": {
+            "type": "string",
+            "description": "Optional output file name.",
+            "minLength": 1
+          },
+          "pages": {
+            "type": "string",
+            "description": "Page indices or ranges to process, for example 0,2-4.",
+            "minLength": 1
+          },
+          "autosize": {
+            "type": "boolean",
+            "description": "Fit output page size to worksheet content."
+          },
+          "profiles": {
+            "description": "Advanced PDF.co profiles as a JSON string or object."
+          },
+          "expiration": {
+            "type": "integer",
+            "description": "Output link lifetime in minutes.",
+            "minimum": 1
+          },
+          "httppassword": {
+            "type": "string",
+            "description": "HTTP password for a protected source URL.",
+            "minLength": 1
+          },
+          "httpusername": {
+            "type": "string",
+            "description": "HTTP username for a protected source URL.",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "url"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/pdf/convert/from/csv",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "url": "{{url}}",
+          "name": "{{name}}",
+          "pages": "{{pages}}",
+          "autosize": "{{autosize}}",
+          "profiles": "{{profiles}}",
+          "expiration": "{{expiration}}",
+          "httppassword": "{{httppassword}}",
+          "httpusername": "{{httpusername}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "pdf.from.document.txt": {
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Convert text to PDF",
+      "description": "Convert a publicly reachable .txt URL to PDF. Raw inline text is not accepted.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "Publicly reachable source file URL.",
+            "minLength": 1
+          },
+          "name": {
+            "type": "string",
+            "description": "Optional output file name.",
+            "minLength": 1
+          },
+          "profiles": {
+            "description": "Advanced PDF.co profiles as a JSON string or object."
+          },
+          "async_job": {
+            "type": "boolean",
+            "description": "Run the job asynchronously and return a jobId."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "url",
+          "name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/pdf/convert/from/doc",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "url": "{{url}}",
+          "name": "{{name}}",
+          "profiles": "{{profiles}}",
+          "async": "{{async_job}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "pdf.from.email": {
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Convert email to PDF",
+      "description": "Convert a publicly reachable .eml or .msg URL to PDF.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "Publicly reachable source file URL.",
+            "minLength": 1
+          },
+          "name": {
+            "type": "string",
+            "description": "Optional output file name.",
+            "minLength": 1
+          },
+          "profiles": {
+            "description": "Advanced PDF.co profiles as a JSON string or object."
+          },
+          "async_job": {
+            "type": "boolean",
+            "description": "Run the job asynchronously and return a jobId."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "url"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/pdf/convert/from/email",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "url": "{{url}}",
+          "name": "{{name}}",
+          "profiles": "{{profiles}}",
+          "async": "{{async_job}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "pdf.from.html": {
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Convert HTML URL to PDF",
+      "description": "Convert a webpage URL to PDF via POST /v1/pdf/convert/from/url. Raw HTML is not accepted; upload first.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "Publicly reachable source file URL.",
+            "minLength": 1
+          },
+          "name": {
+            "type": "string",
+            "description": "Optional output file name.",
+            "minLength": 1
+          },
+          "async": {
+            "type": "boolean",
+            "description": "Run the job asynchronously and return a jobId."
+          },
+          "footer": {
+            "type": "string",
+            "description": "HTML inserted in the footer of every page.",
+            "minLength": 1
+          },
+          "header": {
+            "type": "string",
+            "description": "HTML inserted in the header of every page.",
+            "minLength": 1
+          },
+          "margins": {
+            "type": "string",
+            "description": "Page margins using px, mm, cm, or in units.",
+            "minLength": 1
+          },
+          "callback": {
+            "type": "string",
+            "description": "Webhook URL invoked when an async job completes.",
+            "minLength": 1
+          },
+          "profiles": {
+            "description": "Advanced PDF.co profiles as a JSON string or object."
+          },
+          "mediaType": {
+            "type": "string",
+            "enum": [
+              "print",
+              "screen",
+              "none"
+            ],
+            "description": "CSS media type used while rendering."
+          },
+          "paperSize": {
+            "type": "string",
+            "description": "Paper size such as Letter, A4, or a custom width and height.",
+            "minLength": 1
+          },
+          "expiration": {
+            "type": "integer",
+            "description": "Output link lifetime in minutes.",
+            "minimum": 1
+          },
+          "orientation": {
+            "type": "string",
+            "enum": [
+              "Portrait",
+              "Landscape"
+            ],
+            "description": "Page orientation."
+          },
+          "printBackground": {
+            "type": "boolean",
+            "description": "Include background colors and images."
+          },
+          "DoNotWaitFullLoad": {
+            "type": "boolean",
+            "description": "Start conversion before the page fully loads."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "url"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/pdf/convert/from/url",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "url": "{{url}}",
+          "name": "{{name}}",
+          "async": "{{async}}",
+          "footer": "{{footer}}",
+          "header": "{{header}}",
+          "margins": "{{margins}}",
+          "callback": "{{callback}}",
+          "profiles": "{{profiles}}",
+          "mediaType": "{{mediaType}}",
+          "paperSize": "{{paperSize}}",
+          "expiration": "{{expiration}}",
+          "orientation": "{{orientation}}",
+          "printBackground": "{{printBackground}}",
+          "DoNotWaitFullLoad": "{{DoNotWaitFullLoad}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "pdf.from.image": {
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Convert images to PDF",
+      "description": "Convert one or more JPG, PNG, or TIFF image URLs into a PDF.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "Publicly reachable source file URL.",
+            "minLength": 1
+          },
+          "name": {
+            "type": "string",
+            "description": "Optional output file name.",
+            "minLength": 1
+          },
+          "pages": {
+            "type": "string",
+            "description": "Page indices or ranges to process, for example 0,2-4.",
+            "minLength": 1
+          },
+          "profiles": {
+            "description": "Advanced PDF.co profiles as a JSON string or object."
+          },
+          "expiration": {
+            "type": "integer",
+            "description": "Output link lifetime in minutes.",
+            "minimum": 1
+          },
+          "httppassword": {
+            "type": "string",
+            "description": "HTTP password for a protected source URL.",
+            "minLength": 1
+          },
+          "httpusername": {
+            "type": "string",
+            "description": "HTTP username for a protected source URL.",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "url"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/pdf/convert/from/image",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "url": "{{url}}",
+          "name": "{{name}}",
+          "pages": "{{pages}}",
+          "profiles": "{{profiles}}",
+          "expiration": "{{expiration}}",
+          "httppassword": "{{httppassword}}",
+          "httpusername": "{{httpusername}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "pdf.from.url": {
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Convert webpage URL to PDF",
+      "description": "Convert a webpage URL to PDF with timeout and renderer controls.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "Publicly reachable source file URL.",
+            "minLength": 1
+          },
+          "name": {
+            "type": "string",
+            "description": "Optional output file name.",
+            "minLength": 1
+          },
+          "footer": {
+            "type": "string",
+            "description": "HTML inserted in the footer of every page.",
+            "minLength": 1
+          },
+          "header": {
+            "type": "string",
+            "description": "HTML inserted in the header of every page.",
+            "minLength": 1
+          },
+          "margins": {
+            "type": "string",
+            "description": "Page margins using px, mm, cm, or in units.",
+            "minLength": 1
+          },
+          "profiles": {
+            "description": "Advanced PDF.co profiles as a JSON string or object."
+          },
+          "mediaType": {
+            "type": "string",
+            "enum": [
+              "print",
+              "screen",
+              "none"
+            ],
+            "description": "CSS media type used while rendering."
+          },
+          "paperSize": {
+            "type": "string",
+            "description": "Paper size such as Letter, A4, or a custom width and height.",
+            "minLength": 1
+          },
+          "expiration": {
+            "type": "integer",
+            "description": "Output link lifetime in minutes.",
+            "minimum": 1
+          },
+          "orientation": {
+            "type": "string",
+            "enum": [
+              "Portrait",
+              "Landscape"
+            ],
+            "description": "Page orientation."
+          },
+          "renderTimeout": {
+            "type": "integer",
+            "description": "Maximum webpage render time in milliseconds.",
+            "minimum": 1,
+            "maximum": 177000
+          },
+          "legacyRendition": {
+            "type": "boolean",
+            "description": "Render with PDF.co's legacy Chromium version."
+          },
+          "printBackground": {
+            "type": "boolean",
+            "description": "Include background colors and images."
+          },
+          "DoNotWaitFullLoad": {
+            "type": "boolean",
+            "description": "Start conversion before the page fully loads."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "url"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/pdf/convert/from/url",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "url": "{{url}}",
+          "name": "{{name}}",
+          "footer": "{{footer}}",
+          "header": "{{header}}",
+          "margins": "{{margins}}",
+          "profiles": "{{profiles}}",
+          "mediaType": "{{mediaType}}",
+          "paperSize": "{{paperSize}}",
+          "expiration": "{{expiration}}",
+          "orientation": "{{orientation}}",
+          "renderTimeout": "{{renderTimeout}}",
+          "legacyRendition": "{{legacyRendition}}",
+          "printBackground": "{{printBackground}}",
+          "DoNotWaitFullLoad": "{{DoNotWaitFullLoad}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "pdf.merge": {
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Merge PDFs",
+      "description": "Merge comma-separated PDF URLs into one document. urls is sent as url.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Optional output file name.",
+            "minLength": 1
+          },
+          "urls": {
+            "type": "string",
+            "description": "Comma-separated PDF URLs to merge in order.",
+            "minLength": 1
+          },
+          "profiles": {
+            "description": "Advanced PDF.co profiles as a JSON string or object."
+          },
+          "run_async": {
+            "type": "boolean",
+            "description": "Run the job asynchronously and return a jobId."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "urls"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/pdf/merge",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "name": "{{name}}",
+          "url": "{{urls}}",
+          "profiles": "{{profiles}}",
+          "async": "{{run_async}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "pdf.optimize": {
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Optimize PDF (retired)",
+      "description": "Call the retired PDF.co optimizer. Prefer pdf.compress for new work.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "Publicly reachable source file URL.",
+            "minLength": 1
+          },
+          "name": {
+            "type": "string",
+            "description": "Optional output file name.",
+            "minLength": 1
+          },
+          "password": {
+            "type": "string",
+            "description": "Password for a protected source file.",
+            "minLength": 1
+          },
+          "profiles": {
+            "description": "Advanced PDF.co profiles as a JSON string or object."
+          },
+          "expiration": {
+            "type": "integer",
+            "description": "Output link lifetime in minutes.",
+            "minimum": 1
+          },
+          "httppassword": {
+            "type": "string",
+            "description": "HTTP password for a protected source URL.",
+            "minLength": 1
+          },
+          "httpusername": {
+            "type": "string",
+            "description": "HTTP username for a protected source URL.",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "url"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/pdf/optimize",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "url": "{{url}}",
+          "name": "{{name}}",
+          "password": "{{password}}",
+          "profiles": "{{profiles}}",
+          "expiration": "{{expiration}}",
+          "httppassword": "{{httppassword}}",
+          "httpusername": "{{httpusername}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "pdf.replace.text.with.image": {
       "timeoutMs": 15000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
       "kind": "action",
       "sideEffect": "write",
-      "title": "Generate barcode",
-      "description": "Generate a barcode or QR code image from a value.",
+      "title": "Replace PDF text with image",
+      "description": "Replace matching text in a PDF with an image URL.",
       "inputSchema": {
         "type": "object",
-        "required": [
-          "value"
-        ],
-        "additionalProperties": false,
-        "properties": {
-          "value": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Value encoded into the barcode."
-          },
-          "type": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Barcode type such as QRCode or Code128."
-          },
-          "name": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Optional output file name."
-          }
-        }
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "POST",
-        "path": "/v1/barcode/generate",
-        "success": [
-          200
-        ],
-        "headers": {
-          "Content-Type": "application/json"
-        },
-        "body": {
-          "value": "{{value}}",
-          "type": "{{type}}",
-          "async": false,
-          "name": "{{name}}"
-        }
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "job.check": {
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "kind": "action",
-      "sideEffect": "read",
-      "title": "Check background job",
-      "description": "Check the status of an asynchronous PDF.co job by jobid.",
-      "inputSchema": {
-        "type": "object",
-        "required": [
-          "jobid"
-        ],
-        "additionalProperties": false,
-        "properties": {
-          "jobid": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Background job identifier returned by an async PDF.co call."
-          }
-        }
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "POST",
-        "path": "/v1/job/check",
-        "success": [
-          200
-        ],
-        "headers": {
-          "Content-Type": "application/json"
-        },
-        "body": {
-          "jobid": "{{jobid}}"
-        }
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "file.hash": {
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "kind": "action",
-      "sideEffect": "read",
-      "title": "Hash file by URL",
-      "description": "Calculate the MD5 hash of a file from its URL.",
-      "inputSchema": {
-        "type": "object",
-        "required": [
-          "url"
-        ],
-        "additionalProperties": false,
         "properties": {
           "url": {
             "type": "string",
-            "minLength": 1,
-            "description": "Publicly reachable source file URL."
+            "description": "Publicly reachable source file URL.",
+            "minLength": 1
+          },
+          "name": {
+            "type": "string",
+            "description": "Optional output file name.",
+            "minLength": 1
+          },
+          "pages": {
+            "type": "string",
+            "description": "Page indices or ranges to process, for example 0,2-4.",
+            "minLength": 1
+          },
+          "regex": {
+            "type": "boolean",
+            "description": "Treat searchString as a regular expression."
+          },
+          "password": {
+            "type": "string",
+            "description": "Password for a protected source file.",
+            "minLength": 1
+          },
+          "profiles": {
+            "description": "Advanced PDF.co profiles as a JSON string or object."
+          },
+          "expiration": {
+            "type": "integer",
+            "description": "Output link lifetime in minutes.",
+            "minimum": 1
+          },
+          "httppassword": {
+            "type": "string",
+            "description": "HTTP password for a protected source URL.",
+            "minLength": 1
+          },
+          "httpusername": {
+            "type": "string",
+            "description": "HTTP username for a protected source URL.",
+            "minLength": 1
+          },
+          "replaceImage": {
+            "type": "string",
+            "description": "Public image URL that replaces matched text.",
+            "minLength": 1
+          },
+          "searchString": {
+            "type": "string",
+            "description": "Keyword or regex pattern to find.",
+            "minLength": 1
+          },
+          "caseSensitive": {
+            "type": "boolean",
+            "description": "Whether matching or encoding is case-sensitive."
+          },
+          "replacementLimit": {
+            "type": "integer",
+            "description": "Maximum number of replacements to apply.",
+            "minimum": 0
           }
-        }
+        },
+        "additionalProperties": false,
+        "required": [
+          "url",
+          "replaceImage",
+          "searchString"
+        ]
       },
       "outputSchema": {
         "type": "object",
@@ -1293,13 +2861,1689 @@
         "additionalProperties": false
       },
       "request": {
-        "method": "GET",
-        "path": "/v1/file/hash",
+        "method": "POST",
+        "path": "/v1/pdf/edit/replace-text-with-image",
         "success": [
           200
         ],
-        "query": {
-          "url": "{{url}}"
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "url": "{{url}}",
+          "name": "{{name}}",
+          "pages": "{{pages}}",
+          "regex": "{{regex}}",
+          "password": "{{password}}",
+          "profiles": "{{profiles}}",
+          "expiration": "{{expiration}}",
+          "httppassword": "{{httppassword}}",
+          "httpusername": "{{httpusername}}",
+          "replaceImage": "{{replaceImage}}",
+          "searchString": "{{searchString}}",
+          "caseSensitive": "{{caseSensitive}}",
+          "replacementLimit": "{{replacementLimit}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "pdf.rotate": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Rotate PDF pages",
+      "description": "Rotate selected PDF pages by 90, 180, or 270 degrees.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "Publicly reachable source file URL.",
+            "minLength": 1
+          },
+          "name": {
+            "type": "string",
+            "description": "Optional output file name.",
+            "minLength": 1
+          },
+          "angle": {
+            "type": "integer",
+            "enum": [
+              90,
+              180,
+              270
+            ],
+            "description": "Rotation angle in degrees."
+          },
+          "pages": {
+            "type": "string",
+            "description": "Page indices or ranges to process, for example 0,2-4.",
+            "minLength": 1
+          },
+          "password": {
+            "type": "string",
+            "description": "Password for a protected source file.",
+            "minLength": 1
+          },
+          "run_async": {
+            "type": "boolean",
+            "description": "Run the job asynchronously and return a jobId."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "url",
+          "angle",
+          "pages"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/pdf/edit/rotate",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "url": "{{url}}",
+          "name": "{{name}}",
+          "angle": "{{angle}}",
+          "pages": "{{pages}}",
+          "password": "{{password}}",
+          "async": "{{run_async}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "pdf.search.and.delete.text": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Search and delete text",
+      "description": "Search for and delete text in a PDF by keyword or regex.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "Publicly reachable source file URL.",
+            "minLength": 1
+          },
+          "name": {
+            "type": "string",
+            "description": "Optional output file name.",
+            "minLength": 1
+          },
+          "async": {
+            "type": "boolean",
+            "description": "Run the job asynchronously and return a jobId."
+          },
+          "pages": {
+            "type": "string",
+            "description": "Page indices or ranges to process, for example 0,2-4.",
+            "minLength": 1
+          },
+          "regex": {
+            "type": "boolean",
+            "description": "Treat searchString as a regular expression."
+          },
+          "password": {
+            "type": "string",
+            "description": "Password for a protected source file.",
+            "minLength": 1
+          },
+          "searchString": {
+            "type": "string",
+            "description": "Keyword or regex pattern to find.",
+            "minLength": 1
+          },
+          "caseSensitive": {
+            "type": "boolean",
+            "description": "Whether matching or encoding is case-sensitive."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "url",
+          "searchString"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/pdf/edit/delete-text",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "url": "{{url}}",
+          "name": "{{name}}",
+          "async": "{{async}}",
+          "pages": "{{pages}}",
+          "regex": "{{regex}}",
+          "password": "{{password}}",
+          "searchString": "{{searchString}}",
+          "caseSensitive": "{{caseSensitive}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "pdf.search.and.replace.text": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Search and replace text",
+      "description": "Search for and replace text in a PDF. regexSearch is sent as regex.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "Publicly reachable source file URL.",
+            "minLength": 1
+          },
+          "name": {
+            "type": "string",
+            "description": "Optional output file name.",
+            "minLength": 1
+          },
+          "async": {
+            "type": "boolean",
+            "description": "Run the job asynchronously and return a jobId."
+          },
+          "password": {
+            "type": "string",
+            "description": "Password for a protected source file.",
+            "minLength": 1
+          },
+          "regexSearch": {
+            "type": "boolean",
+            "description": "Treat searchString as a regular expression (sent as regex)."
+          },
+          "searchString": {
+            "type": "string",
+            "description": "Keyword or regex pattern to find.",
+            "minLength": 1
+          },
+          "replaceString": {
+            "type": "string",
+            "description": "Replacement text for each match.",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "url",
+          "searchString",
+          "replaceString"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/pdf/edit/replace-text",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "url": "{{url}}",
+          "name": "{{name}}",
+          "async": "{{async}}",
+          "password": "{{password}}",
+          "regex": "{{regexSearch}}",
+          "searchString": "{{searchString}}",
+          "replaceString": "{{replaceString}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "pdf.security.add": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Add PDF password and security",
+      "description": "Create a secured PDF copy with passwords and permission restrictions.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "Publicly reachable source file URL.",
+            "minLength": 1
+          },
+          "name": {
+            "type": "string",
+            "description": "Optional output file name.",
+            "minLength": 1
+          },
+          "profiles": {
+            "description": "Advanced PDF.co profiles as a JSON string or object."
+          },
+          "expiration": {
+            "type": "integer",
+            "description": "Output link lifetime in minutes.",
+            "minimum": 1
+          },
+          "printQuality": {
+            "type": "string",
+            "enum": [
+              "LowResolution",
+              "HighResolution"
+            ],
+            "description": "Printing quality allowed for the secured PDF."
+          },
+          "userPassword": {
+            "type": "string",
+            "description": "Password required to open the PDF.",
+            "minLength": 1
+          },
+          "ownerPassword": {
+            "type": "string",
+            "description": "Owner password used to change security restrictions.",
+            "minLength": 1
+          },
+          "allowFillForms": {
+            "type": "boolean",
+            "description": "Allow filling interactive form and signature fields."
+          },
+          "allowPrintDocument": {
+            "type": "boolean",
+            "description": "Allow printing."
+          },
+          "allowModifyDocument": {
+            "type": "boolean",
+            "description": "Allow document modification."
+          },
+          "encryptionAlgorithm": {
+            "type": "string",
+            "enum": [
+              "RC4_40bit",
+              "RC4_128bit",
+              "AES_128bit",
+              "AES_256bit"
+            ],
+            "description": "Encryption algorithm for the secured PDF."
+          },
+          "allowAssemblyDocument": {
+            "type": "boolean",
+            "description": "Allow document assembly."
+          },
+          "allowContentExtraction": {
+            "type": "boolean",
+            "description": "Allow copying PDF content."
+          },
+          "allowModifyAnnotations": {
+            "type": "boolean",
+            "description": "Allow annotation and form interaction."
+          },
+          "allowAccessibilitySupport": {
+            "type": "boolean",
+            "description": "Allow content extraction for accessibility."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "url"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/pdf/security/add",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "url": "{{url}}",
+          "name": "{{name}}",
+          "profiles": "{{profiles}}",
+          "expiration": "{{expiration}}",
+          "printQuality": "{{printQuality}}",
+          "userPassword": "{{userPassword}}",
+          "ownerPassword": "{{ownerPassword}}",
+          "allowFillForms": "{{allowFillForms}}",
+          "allowPrintDocument": "{{allowPrintDocument}}",
+          "allowModifyDocument": "{{allowModifyDocument}}",
+          "encryptionAlgorithm": "{{encryptionAlgorithm}}",
+          "allowAssemblyDocument": "{{allowAssemblyDocument}}",
+          "allowContentExtraction": "{{allowContentExtraction}}",
+          "allowModifyAnnotations": "{{allowModifyAnnotations}}",
+          "allowAccessibilitySupport": "{{allowAccessibilitySupport}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "pdf.security.remove": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Remove PDF security",
+      "description": "Remove password protection and usage restrictions from a PDF copy.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "Publicly reachable source file URL.",
+            "minLength": 1
+          },
+          "name": {
+            "type": "string",
+            "description": "Optional output file name.",
+            "minLength": 1
+          },
+          "password": {
+            "type": "string",
+            "description": "Password for a protected source file.",
+            "minLength": 1
+          },
+          "profiles": {
+            "description": "Advanced PDF.co profiles as a JSON string or object."
+          },
+          "expiration": {
+            "type": "integer",
+            "description": "Output link lifetime in minutes.",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "url"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/pdf/security/remove",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "url": "{{url}}",
+          "name": "{{name}}",
+          "password": "{{password}}",
+          "profiles": "{{profiles}}",
+          "expiration": "{{expiration}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "pdf.split": {
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Split PDF",
+      "description": "Split a PDF URL into multiple files by page ranges. Local files should be uploaded first.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "Publicly reachable source file URL.",
+            "minLength": 1
+          },
+          "file": {
+            "description": "Local file payload. Prefer uploading with file.upload and passing the returned URL."
+          },
+          "name": {
+            "type": "string",
+            "description": "Optional output file name.",
+            "minLength": 1
+          },
+          "pages": {
+            "type": "string",
+            "description": "Page indices or ranges to process, for example 0,2-4.",
+            "minLength": 1
+          },
+          "inline": {
+            "type": "boolean",
+            "description": "Return result data inline instead of an output URL."
+          },
+          "callback": {
+            "type": "string",
+            "description": "Webhook URL invoked when an async job completes.",
+            "minLength": 1
+          },
+          "password": {
+            "type": "string",
+            "description": "Password for a protected source file.",
+            "minLength": 1
+          },
+          "profiles": {
+            "description": "Advanced PDF.co profiles as a JSON string or object."
+          },
+          "run_async": {
+            "type": "boolean",
+            "description": "Run the job asynchronously and return a jobId."
+          },
+          "expiration": {
+            "type": "integer",
+            "description": "Output link lifetime in minutes.",
+            "minimum": 1
+          },
+          "httppassword": {
+            "type": "string",
+            "description": "HTTP password for a protected source URL.",
+            "minLength": 1
+          },
+          "httpusername": {
+            "type": "string",
+            "description": "HTTP username for a protected source URL.",
+            "minLength": 1
+          },
+          "DataEncryptionIV": {
+            "type": "string",
+            "description": "Initialization vector for encryption.",
+            "minLength": 1
+          },
+          "outputDataFormat": {
+            "type": "string",
+            "description": "Set to base64 for base64-encoded output.",
+            "minLength": 1
+          },
+          "DataEncryptionKey": {
+            "type": "string",
+            "description": "Encryption key.",
+            "minLength": 1
+          },
+          "DataEncryptionAlgorithm": {
+            "type": "string",
+            "enum": [
+              "AES128",
+              "AES192",
+              "AES256"
+            ],
+            "description": "Encryption algorithm."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "url"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/pdf/split",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "url": "{{url}}",
+          "name": "{{name}}",
+          "pages": "{{pages}}",
+          "inline": "{{inline}}",
+          "callback": "{{callback}}",
+          "password": "{{password}}",
+          "profiles": "{{profiles}}",
+          "async": "{{run_async}}",
+          "expiration": "{{expiration}}",
+          "httppassword": "{{httppassword}}",
+          "httpusername": "{{httpusername}}",
+          "DataEncryptionIV": "{{DataEncryptionIV}}",
+          "outputDataFormat": "{{outputDataFormat}}",
+          "DataEncryptionKey": "{{DataEncryptionKey}}",
+          "DataEncryptionAlgorithm": "{{DataEncryptionAlgorithm}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "pdf.convert.to.csv": {
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Convert PDF to CSV",
+      "description": "Convert a PDF URL to CSV.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "Publicly reachable source file URL.",
+            "minLength": 1
+          },
+          "lang": {
+            "type": "string",
+            "description": "OCR language code, or combined codes such as eng+deu.",
+            "minLength": 1
+          },
+          "name": {
+            "type": "string",
+            "description": "Optional output file name.",
+            "minLength": 1
+          },
+          "pages": {
+            "type": "string",
+            "description": "Page indices or ranges to process, for example 0,2-4.",
+            "minLength": 1
+          },
+          "inline": {
+            "type": "boolean",
+            "description": "Return result data inline instead of an output URL."
+          },
+          "encrypt": {
+            "type": "boolean",
+            "description": "Encrypt the generated output file."
+          },
+          "password": {
+            "type": "string",
+            "description": "Password for a protected source file.",
+            "minLength": 1
+          },
+          "profiles": {
+            "description": "Advanced PDF.co profiles as a JSON string or object."
+          },
+          "run_async": {
+            "type": "boolean",
+            "description": "Run the job asynchronously and return a jobId."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "url"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/pdf/convert/to/csv",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "url": "{{url}}",
+          "lang": "{{lang}}",
+          "name": "{{name}}",
+          "pages": "{{pages}}",
+          "inline": "{{inline}}",
+          "encrypt": "{{encrypt}}",
+          "password": "{{password}}",
+          "profiles": "{{profiles}}",
+          "async": "{{run_async}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "pdf.convert.to.html": {
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Convert PDF to HTML",
+      "description": "Convert a PDF URL to HTML. Local files should be uploaded first.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "Publicly reachable source file URL.",
+            "minLength": 1
+          },
+          "file": {
+            "description": "Local file payload. Prefer uploading with file.upload and passing the returned URL."
+          },
+          "name": {
+            "type": "string",
+            "description": "Optional output file name.",
+            "minLength": 1
+          },
+          "pages": {
+            "type": "string",
+            "description": "Page indices or ranges to process, for example 0,2-4.",
+            "minLength": 1
+          },
+          "inline": {
+            "type": "boolean",
+            "description": "Return result data inline instead of an output URL."
+          },
+          "encrypt": {
+            "type": "boolean",
+            "description": "Encrypt the generated output file."
+          },
+          "password": {
+            "type": "string",
+            "description": "Password for a protected source file.",
+            "minLength": 1
+          },
+          "profiles": {
+            "description": "Advanced PDF.co profiles as a JSON string or object."
+          },
+          "run_async": {
+            "type": "boolean",
+            "description": "Run the job asynchronously and return a jobId."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "url"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/pdf/convert/to/html",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "url": "{{url}}",
+          "name": "{{name}}",
+          "pages": "{{pages}}",
+          "inline": "{{inline}}",
+          "encrypt": "{{encrypt}}",
+          "password": "{{password}}",
+          "profiles": "{{profiles}}",
+          "async": "{{run_async}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "pdf.convert.to.image": {
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Convert PDF to image",
+      "description": "Convert PDF pages to PNG, JPG, or TIFF. imageFormat selects /v1/pdf/convert/to/{png,jpg,tiff}; default png.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "dpi": {
+            "type": "integer",
+            "description": "Output image resolution in DPI.",
+            "minimum": 1,
+            "maximum": 300
+          },
+          "url": {
+            "type": "string",
+            "description": "Publicly reachable source file URL.",
+            "minLength": 1
+          },
+          "async": {
+            "type": "boolean",
+            "description": "Run the job asynchronously and return a jobId."
+          },
+          "pages": {
+            "type": "string",
+            "description": "Page indices or ranges to process, for example 0,2-4.",
+            "minLength": 1
+          },
+          "password": {
+            "type": "string",
+            "description": "Password for a protected source file.",
+            "minLength": 1
+          },
+          "profiles": {
+            "description": "Advanced PDF.co profiles as a JSON string or object."
+          },
+          "imageFormat": {
+            "type": "string",
+            "enum": [
+              "PNG",
+              "JPG",
+              "TIFF"
+            ],
+            "description": "Output image format. Defaults to PNG."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "url"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/pdf/convert/to/png",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "dpi": "{{dpi}}",
+          "url": "{{url}}",
+          "async": "{{async}}",
+          "pages": "{{pages}}",
+          "password": "{{password}}",
+          "profiles": "{{profiles}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "pdf.convert.to.json": {
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Convert PDF to JSON",
+      "description": "Convert a PDF URL to JSON. Local files should be uploaded first.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "Publicly reachable source file URL.",
+            "minLength": 1
+          },
+          "file": {
+            "description": "Local file payload. Prefer uploading with file.upload and passing the returned URL."
+          },
+          "name": {
+            "type": "string",
+            "description": "Optional output file name.",
+            "minLength": 1
+          },
+          "async": {
+            "type": "boolean",
+            "description": "Run the job asynchronously and return a jobId."
+          },
+          "pages": {
+            "type": "string",
+            "description": "Page indices or ranges to process, for example 0,2-4.",
+            "minLength": 1
+          },
+          "inline": {
+            "type": "boolean",
+            "description": "Return result data inline instead of an output URL."
+          },
+          "password": {
+            "type": "string",
+            "description": "Password for a protected source file.",
+            "minLength": 1
+          },
+          "profiles": {
+            "description": "Advanced PDF.co profiles as a JSON string or object."
+          },
+          "searchString": {
+            "type": "string",
+            "description": "Keyword or regex pattern to find.",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "url"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/pdf/convert/to/json",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "url": "{{url}}",
+          "name": "{{name}}",
+          "async": "{{async}}",
+          "pages": "{{pages}}",
+          "inline": "{{inline}}",
+          "password": "{{password}}",
+          "profiles": "{{profiles}}",
+          "searchString": "{{searchString}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "pdf.convert.to.text": {
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Convert PDF to text",
+      "description": "Convert a PDF URL to plain text, optionally with OCR.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "Publicly reachable source file URL.",
+            "minLength": 1
+          },
+          "lang": {
+            "type": "string",
+            "description": "OCR language code, or combined codes such as eng+deu.",
+            "minLength": 1
+          },
+          "name": {
+            "type": "string",
+            "description": "Optional output file name.",
+            "minLength": 1
+          },
+          "rect": {
+            "type": "string",
+            "description": "Crop or OCR rectangle coordinates.",
+            "minLength": 1
+          },
+          "pages": {
+            "type": "string",
+            "description": "Page indices or ranges to process, for example 0,2-4.",
+            "minLength": 1
+          },
+          "inline": {
+            "type": "boolean",
+            "description": "Return result data inline instead of an output URL."
+          },
+          "unwrap": {
+            "type": "boolean",
+            "description": "Unwrap table-cell lines when lineGrouping is 1."
+          },
+          "callback": {
+            "type": "string",
+            "description": "Webhook URL invoked when an async job completes.",
+            "minLength": 1
+          },
+          "password": {
+            "type": "string",
+            "description": "Password for a protected source file.",
+            "minLength": 1
+          },
+          "run_async": {
+            "type": "boolean",
+            "description": "Run the job asynchronously and return a jobId."
+          },
+          "expiration": {
+            "type": "integer",
+            "description": "Output link lifetime in minutes.",
+            "minimum": 1
+          },
+          "httppassword": {
+            "type": "string",
+            "description": "HTTP password for a protected source URL.",
+            "minLength": 1
+          },
+          "httpusername": {
+            "type": "string",
+            "description": "HTTP username for a protected source URL.",
+            "minLength": 1
+          },
+          "lineGrouping": {
+            "type": "string",
+            "description": "Line grouping mode: 1, 2, or 3.",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "url"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/pdf/convert/to/text",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "url": "{{url}}",
+          "lang": "{{lang}}",
+          "name": "{{name}}",
+          "rect": "{{rect}}",
+          "pages": "{{pages}}",
+          "inline": "{{inline}}",
+          "unwrap": "{{unwrap}}",
+          "callback": "{{callback}}",
+          "password": "{{password}}",
+          "async": "{{run_async}}",
+          "expiration": "{{expiration}}",
+          "httppassword": "{{httppassword}}",
+          "httpusername": "{{httpusername}}",
+          "lineGrouping": "{{lineGrouping}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "pdf.convert.to.tiff": {
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Convert PDF to TIFF",
+      "description": "Render PDF pages as TIFF.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "Publicly reachable source file URL.",
+            "minLength": 1
+          },
+          "lang": {
+            "type": "string",
+            "description": "OCR language code, or combined codes such as eng+deu.",
+            "minLength": 1
+          },
+          "name": {
+            "type": "string",
+            "description": "Optional output file name.",
+            "minLength": 1
+          },
+          "rect": {
+            "type": "string",
+            "description": "Crop or OCR rectangle coordinates.",
+            "minLength": 1
+          },
+          "pages": {
+            "type": "string",
+            "description": "Page indices or ranges to process, for example 0,2-4.",
+            "minLength": 1
+          },
+          "inline": {
+            "type": "boolean",
+            "description": "Return result data inline instead of an output URL."
+          },
+          "password": {
+            "type": "string",
+            "description": "Password for a protected source file.",
+            "minLength": 1
+          },
+          "profiles": {
+            "description": "Advanced PDF.co profiles as a JSON string or object."
+          },
+          "expiration": {
+            "type": "integer",
+            "description": "Output link lifetime in minutes.",
+            "minimum": 1
+          },
+          "httppassword": {
+            "type": "string",
+            "description": "HTTP password for a protected source URL.",
+            "minLength": 1
+          },
+          "httpusername": {
+            "type": "string",
+            "description": "HTTP username for a protected source URL.",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "url"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/pdf/convert/to/tiff",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "url": "{{url}}",
+          "lang": "{{lang}}",
+          "name": "{{name}}",
+          "rect": "{{rect}}",
+          "pages": "{{pages}}",
+          "inline": "{{inline}}",
+          "password": "{{password}}",
+          "profiles": "{{profiles}}",
+          "expiration": "{{expiration}}",
+          "httppassword": "{{httppassword}}",
+          "httpusername": "{{httpusername}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "pdf.convert.to.webp": {
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Convert PDF to WEBP",
+      "description": "Convert selected PDF pages into WEBP images.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "Publicly reachable source file URL.",
+            "minLength": 1
+          },
+          "lang": {
+            "type": "string",
+            "description": "OCR language code, or combined codes such as eng+deu.",
+            "minLength": 1
+          },
+          "name": {
+            "type": "string",
+            "description": "Optional output file name.",
+            "minLength": 1
+          },
+          "rect": {
+            "type": "string",
+            "description": "Crop or OCR rectangle coordinates.",
+            "minLength": 1
+          },
+          "pages": {
+            "type": "string",
+            "description": "Page indices or ranges to process, for example 0,2-4.",
+            "minLength": 1
+          },
+          "inline": {
+            "type": "boolean",
+            "description": "Return result data inline instead of an output URL."
+          },
+          "password": {
+            "type": "string",
+            "description": "Password for a protected source file.",
+            "minLength": 1
+          },
+          "profiles": {
+            "description": "Advanced PDF.co profiles as a JSON string or object."
+          },
+          "expiration": {
+            "type": "integer",
+            "description": "Output link lifetime in minutes.",
+            "minimum": 1
+          },
+          "httppassword": {
+            "type": "string",
+            "description": "HTTP password for a protected source URL.",
+            "minLength": 1
+          },
+          "httpusername": {
+            "type": "string",
+            "description": "HTTP username for a protected source URL.",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "url"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/pdf/convert/to/webp",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "url": "{{url}}",
+          "lang": "{{lang}}",
+          "name": "{{name}}",
+          "rect": "{{rect}}",
+          "pages": "{{pages}}",
+          "inline": "{{inline}}",
+          "password": "{{password}}",
+          "profiles": "{{profiles}}",
+          "expiration": "{{expiration}}",
+          "httppassword": "{{httppassword}}",
+          "httpusername": "{{httpusername}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "pdf.convert.to.xls": {
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Convert PDF to XLS",
+      "description": "Convert a PDF URL to XLS.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "Publicly reachable source file URL.",
+            "minLength": 1
+          },
+          "name": {
+            "type": "string",
+            "description": "Optional output file name.",
+            "minLength": 1
+          },
+          "pages": {
+            "type": "string",
+            "description": "Page indices or ranges to process, for example 0,2-4.",
+            "minLength": 1
+          },
+          "password": {
+            "type": "string",
+            "description": "Password for a protected source file.",
+            "minLength": 1
+          },
+          "profiles": {
+            "description": "Advanced PDF.co profiles as a JSON string or object."
+          },
+          "run_async": {
+            "type": "boolean",
+            "description": "Run the job asynchronously and return a jobId."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "url"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/pdf/convert/to/xls",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "url": "{{url}}",
+          "name": "{{name}}",
+          "pages": "{{pages}}",
+          "password": "{{password}}",
+          "profiles": "{{profiles}}",
+          "async": "{{run_async}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "pdf.convert.to.xlsx": {
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Convert PDF to XLSX",
+      "description": "Convert a PDF URL to XLSX.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "Publicly reachable source file URL.",
+            "minLength": 1
+          },
+          "name": {
+            "type": "string",
+            "description": "Optional output file name.",
+            "minLength": 1
+          },
+          "async": {
+            "type": "boolean",
+            "description": "Run the job asynchronously and return a jobId."
+          },
+          "pages": {
+            "type": "string",
+            "description": "Page indices or ranges to process, for example 0,2-4.",
+            "minLength": 1
+          },
+          "inline": {
+            "type": "boolean",
+            "description": "Return result data inline instead of an output URL."
+          },
+          "encrypt": {
+            "type": "boolean",
+            "description": "Encrypt the generated output file."
+          },
+          "password": {
+            "type": "string",
+            "description": "Password for a protected source file.",
+            "minLength": 1
+          },
+          "profiles": {
+            "description": "Advanced PDF.co profiles as a JSON string or object."
+          },
+          "expiration": {
+            "type": "integer",
+            "description": "Output link lifetime in minutes.",
+            "minimum": 1
+          },
+          "optimization": {
+            "type": "string",
+            "description": "Optimization mode such as ocr.",
+            "minLength": 1
+          },
+          "columns0Based": {
+            "type": "boolean",
+            "description": "Treat profile column indices as zero-based."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "url"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/pdf/convert/to/xlsx",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "url": "{{url}}",
+          "name": "{{name}}",
+          "async": "{{async}}",
+          "pages": "{{pages}}",
+          "inline": "{{inline}}",
+          "encrypt": "{{encrypt}}",
+          "password": "{{password}}",
+          "profiles": "{{profiles}}",
+          "expiration": "{{expiration}}",
+          "optimization": "{{optimization}}",
+          "columns0Based": "{{columns0Based}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "pdf.convert.to.xml": {
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Convert PDF to XML",
+      "description": "Convert a PDF URL to XML.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "Publicly reachable source file URL.",
+            "minLength": 1
+          },
+          "pages": {
+            "type": "string",
+            "description": "Page indices or ranges to process, for example 0,2-4.",
+            "minLength": 1
+          },
+          "password": {
+            "type": "string",
+            "description": "Password for a protected source file.",
+            "minLength": 1
+          },
+          "profiles": {
+            "description": "Advanced PDF.co profiles as a JSON string or object."
+          },
+          "run_async": {
+            "type": "boolean",
+            "description": "Run the job asynchronously and return a jobId."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "url"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/pdf/convert/to/xml",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "url": "{{url}}",
+          "pages": "{{pages}}",
+          "password": "{{password}}",
+          "profiles": "{{profiles}}",
+          "async": "{{run_async}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "xls.to.pdf": {
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Convert Excel to PDF",
+      "description": "Convert a selected Excel worksheet or CSV URL to PDF.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "Publicly reachable source file URL.",
+            "minLength": 1
+          },
+          "name": {
+            "type": "string",
+            "description": "Optional output file name.",
+            "minLength": 1
+          },
+          "inline": {
+            "type": "boolean",
+            "description": "Return result data inline instead of an output URL."
+          },
+          "profiles": {
+            "description": "Advanced PDF.co profiles as a JSON string or object."
+          },
+          "expiration": {
+            "type": "integer",
+            "description": "Output link lifetime in minutes.",
+            "minimum": 1
+          },
+          "httppassword": {
+            "type": "string",
+            "description": "HTTP password for a protected source URL.",
+            "minLength": 1
+          },
+          "httpusername": {
+            "type": "string",
+            "description": "HTTP username for a protected source URL.",
+            "minLength": 1
+          },
+          "worksheetIndex": {
+            "type": "string",
+            "description": "Zero-based worksheet index as a string.",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "url"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/xls/convert/to/pdf",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "url": "{{url}}",
+          "name": "{{name}}",
+          "inline": "{{inline}}",
+          "profiles": "{{profiles}}",
+          "expiration": "{{expiration}}",
+          "httppassword": "{{httppassword}}",
+          "httpusername": "{{httpusername}}",
+          "worksheetIndex": "{{worksheetIndex}}"
         }
       },
       "enforceOutputSchema": true,
@@ -1309,16 +4553,11 @@
   },
   "provenance": {
     "source": {
-      "url": "https://github.com/oomol-lab/open-connector",
-      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
+      "url": "https://github.com/oomol-lab/open-connector"
     }
   },
-  "evidence": {
-    "fixture": {
-      "status": "supplied"
-    },
-    "live": {
-      "status": "unverified"
-    }
-  }
+  "runtime": "bun",
+  "version": "0.2.0",
+  "visibility": "public"
 }

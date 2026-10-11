@@ -1,9 +1,9 @@
 # BigMailer
 
-BigMailer REST API v1 recipe. Configure an API key from the BigMailer account API page. The runner sends it as the official `X-API-Key` header to `https://api.bigmailer.io` plus `Accept: application/json`.
+BigMailer REST API v1 recipe covering the 57 Composio HTTP tools plus a credential healthcheck. Configure an API key from the BigMailer account API page. The runner sends it as the official `X-API-Key` header to `https://api.bigmailer.io` plus `Accept: application/json`.
 
-Covered HTTP operations include brand, list, and contact CRUD, templates, and transactional campaign list/get/send. EventOnly webhooks: `webhook.bounce`, `webhook.click`, `webhook.complaint`, `webhook.open`, `webhook.unsubscribe`.
+Origin operations remain `healthcheck` (`GET /v1/brands?limit=1`), `brands.list`, `brands.get`, `lists.list`, and `contacts.list`. Added operations cover brands, brand properties, bulk campaigns, contacts (including upsert and batches), fields, lists, segments, suppression lists, templates, transactional campaigns, users, connections, message types, and senders. Official updates use POST. `suppressionLists.create` is a handwritten multipart handler because the compiler JSON-encodes bodies and cannot send `multipart/form-data`.
 
-`brandId` is the native name for official `brand_id`. Responses keep raw provider JSON under `data`.
+Adaptations versus the pinned OpenConnector source: `brandId` is the native name for official `brand_id` and is URL-encoded as a path segment; other resource IDs follow the same camelCase pattern; list and contact query names stay documented snake_case (`list_id`, `validate`, `field_values_op`); JSON bodies map camelCase AppCall inputs onto official snake_case fields (`from_name`, `field_values`, `from` via `fromAddress`); GET requests omit `Content-Type`; the upstream user-agent is not sent; responses keep raw provider JSON under `data`. `users.me` implements Composio `GET /me` as `GET /v1/users/me`.
 
-Source attribution: oomol-lab/open-connector at `33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a` (Apache-2.0). Official docs: https://docs.bigmailer.io/. Fixtures are independently derived; live smoke is unverified.
+Source attribution: oomol-lab/open-connector at `33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a` (Apache License 2.0). Official docs: https://docs.bigmailer.io/ and https://docs.bigmailer.io/reference/listbrands. Fixtures are independently derived and do not represent live provider access. Live smoke remains unverified: configure the API key, call `healthcheck` with `{}`, then `brands.list`.

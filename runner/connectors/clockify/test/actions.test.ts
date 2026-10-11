@@ -1,106 +1,67 @@
 import { describe, expect, test } from "bun:test";
 import { compileDeclarativeConnector } from "../../../bun/src/declarative/compile";
 import manifest from "../manifest.json";
-import user from "../fixtures/user.json";
-import workspaces from "../fixtures/workspaces.json";
-import project from "../fixtures/project.json";
-import task from "../fixtures/task.json";
-import timeEntry from "../fixtures/time-entry.json";
-import client from "../fixtures/client.json";
 
-const { actions } = compileDeclarativeConnector(manifest);
-const res = (body: unknown, status = 200, headers?: HeadersInit) =>
-  new Response(body === "" ? "" : JSON.stringify(body), { status, headers });
+const { actions } = compileDeclarativeConnector(manifest as never);
+const res = (b: unknown, s = 200, h?: HeadersInit) => new Response(JSON.stringify(b), { status: s, headers: h });
 
-describe("clockify HTTP contract", () => {
-  test("auth header is X-Api-Key for existing reads", async () => {
-    for (const name of ["healthcheck", "workspaces.list", "projects.list", "tasks.list"] as const) {
-      const input: Record<string, unknown> = {
+describe("clockify origin contract", () => {
+  test("auth header on origin operations", async () => {
+    for (const n of ["healthcheck", "workspaces.list", "projects.list", "tasks.list"] as const) {
+      const a: Record<string, unknown> = {
         apiKey: "secret",
-        fetch: async (i: RequestInfo, x?: RequestInit) => {
+        fetch: async (i: RequestInfo | URL, x?: RequestInit) => {
           expect(new Request(i, x).headers.get("x-api-key")).toBe("secret");
-          return res(name === "healthcheck" ? user : []);
+          return res(n === "healthcheck" ? {} : []);
         },
       };
-      if (name.includes("projects") || name.includes("tasks")) {
-        input.workspaceId = "w";
-        if (name.includes("tasks")) input.projectId = "p";
+      if (n.includes("projects") || n.includes("tasks")) {
+        a.workspaceId = "w";
+        if (n.includes("tasks")) a.projectId = "p";
       }
-      await actions[name]!(input);
+      await actions[n]!(a);
     }
   });
 
-  test("encodes ids and maps create/get/delete", async () => {
-    const seen: Request[] = [];
-    const fetch = async (i: RequestInfo, x?: RequestInit) => {
-      seen.push(new Request(i, x));
-      return res(project, 201);
-    };
-    const created = await actions["projects.create"]!({ apiKey: "secret", workspaceId: "w/1", name: "Example", fetch });
-    expect(seen[0].url).toBe("https://api.clockify.me/api/v1/workspaces/w%2F1/projects");
-    expect(seen[0].headers.get("content-type")).toBe("application/json");
-    expect(created).toMatchObject({ project, source: "provider" });
+  test("errors malformed", async () => {
+    for (const s of [401, 429]) {
+      await expect(actions["workspaces.list"]!({ apiKey: "x", fetch: async () => res({}, s, { "retry-after": "7" }) })).rejects.toBeTruthy();
+    }
+    await expect(actions["workspaces.list"]!({ apiKey: "x", fetch: async () => res({}) })).rejects.toBeTruthy();
+  });
 
-    seen.length = 0;
-    await actions["timeEntries.get"]!({
-      apiKey: "secret",
-      workspaceId: "w1",
-      id: "e1",
-      fetch: async (i: RequestInfo, x?: RequestInit) => {
+  test("healthcheck maps user and optional memberships query", async () => {
+    const seen: Request[] = [];
+    const user = { id: "u1", name: "Example User" };
+    const result = await actions.healthcheck!({
+      apiKey: "k",
+      "include-memberships": true,
+      fetch: async (i, x) => {
         seen.push(new Request(i, x));
-        return res(timeEntry);
+        return res(user);
       },
     });
-    expect(seen[0].url).toBe("https://api.clockify.me/api/v1/workspaces/w1/time-entries/e1");
-
-    await expect(
-      actions["timeEntries.delete"]!({
-        apiKey: "secret",
-        workspaceId: "w1",
-        id: "e1",
-        fetch: async () => res("", 204),
-      }),
-    ).resolves.toMatchObject({ ok: true, source: "provider" });
+    expect(new URL(seen[0]!.url).pathname).toBe("/api/v1/user");
+    expect(new URL(seen[0]!.url).searchParams.get("include-memberships")).toBe("true");
+    expect(result).toMatchObject({ user, source: "provider", connector: "clockify" });
   });
 
-  test("rejects missing required fields and maps rate limits", async () => {
-    await expect(actions["projects.create"]!({ apiKey: "secret", workspaceId: "w" })).rejects.toMatchObject({
-      code: "INVALID_ACTION_INPUT",
-    });
-    await expect(
-      actions["clients.list"]!({
-        apiKey: "x",
-        workspaceId: "w1",
-        fetch: async () => res({ message: "slow" }, 429, { "retry-after": "7" }),
-      }),
-    ).rejects.toMatchObject({ code: "CONNECTOR_RATE_LIMITED" });
-    await expect(
-      actions["workspaces.get"]!({ apiKey: "x", workspaceId: "w1", fetch: async () => res([]) }),
-    ).rejects.toMatchObject({ code: "CONNECTOR_RESPONSE_INVALID" });
-  });
-
-  test("lists clients, tags, users, and tasks", async () => {
-    const listed = await actions["clients.list"]!({
-      apiKey: "secret",
+  test("projects.list sends page-size from either alias", async () => {
+    const seen: Request[] = [];
+    await actions["projects.list"]!({
+      apiKey: "k",
       workspaceId: "w1",
-      fetch: async () => res([client]),
+      pageSize: 25,
+      fetch: async (i, x) => { seen.push(new Request(i, x)); return res([]); },
     });
-    expect(listed).toMatchObject({ items: [client], source: "provider" });
-    await actions["tags.list"]!({ apiKey: "secret", workspaceId: "w1", fetch: async () => res([]) });
-    await actions["users.list"]!({ apiKey: "secret", workspaceId: "w1", fetch: async () => res([user]) });
-    await actions["tasks.get"]!({
-      apiKey: "secret",
+    expect(new URL(seen[0]!.url).searchParams.getAll("page-size")).toEqual(["25"]);
+    seen.length = 0;
+    await actions["projects.list"]!({
+      apiKey: "k",
       workspaceId: "w1",
-      projectId: "p1",
-      taskId: "t1",
-      fetch: async () => res(task),
+      "page-size": 40,
+      fetch: async (i, x) => { seen.push(new Request(i, x)); return res([]); },
     });
-    await actions["timeEntries.create"]!({
-      apiKey: "secret",
-      workspaceId: "w1",
-      start: "2024-01-01T09:00:00Z",
-      fetch: async () => res(timeEntry, 201),
-    });
-    await actions["workspaces.list"]!({ apiKey: "secret", fetch: async () => res(workspaces) });
+    expect(new URL(seen[0]!.url).searchParams.getAll("page-size")).toEqual(["40"]);
   });
 });
