@@ -215,12 +215,20 @@ export function validateRunGraphqlQueryInput(input: unknown): GraphqlQueryBody {
  * string or block string outside parentheses/braces (descriptions are not executable).
  */
 export function graphqlOperationKinds(document: string): string[] {
+  // One bracket stack for "{", "(" and "[": the document top level is "stack empty".
+  // Braces inside variable definitions / arguments (object-literal default values such as
+  // `($v: I = {a: [1, {b: 2}]})`) are value nesting, so closing them never re-opens the
+  // "next definition" position; a directive after the variable definitions (`@d`) is
+  // therefore not mistaken for a definition keyword.
   const kinds: string[] = [];
+  const stack: string[] = [];
   let i = 0;
-  let depth = 0;
-  let parens = 0;
   let expectDefinition = true;
   const n = document.length;
+  const close = (open: string, label: string) => {
+    if (stack.length === 0 || stack[stack.length - 1] !== open) throw new Error(`body.query has unbalanced ${label}`);
+    stack.pop();
+  };
   while (i < n) {
     const ch = document[i]!;
     if (ch === "#") {
@@ -230,7 +238,7 @@ export function graphqlOperationKinds(document: string): string[] {
     if (ch === '"') {
       // Descriptions are not valid in executable documents, and a top-level string would
       // otherwise hide the next definition keyword from this lexer: reject it outright.
-      if (depth === 0 && parens === 0) {
+      if (stack.length === 0) {
         throw new Error("body.query has a top-level string or block string; descriptions are not allowed in executable documents");
       }
       if (document.startsWith('"""', i)) {
@@ -270,27 +278,35 @@ export function graphqlOperationKinds(document: string): string[] {
       continue;
     }
     if (ch === "{") {
-      if (depth === 0 && parens === 0 && expectDefinition) kinds.push("query");
-      depth += 1;
-      expectDefinition = false;
+      if (stack.length === 0) {
+        // A top-level "{" opens a selection set: an anonymous query when no definition
+        // keyword preceded it, otherwise the body of the current definition.
+        if (expectDefinition) kinds.push("query");
+        expectDefinition = false;
+      }
+      stack.push("{");
       i += 1;
       continue;
     }
     if (ch === "}") {
-      depth -= 1;
-      if (depth < 0) throw new Error("body.query has unbalanced braces");
-      if (depth === 0) expectDefinition = true;
+      close("{", "braces");
+      // Only closing a top-level selection set ends a definition.
+      if (stack.length === 0) expectDefinition = true;
       i += 1;
       continue;
     }
-    if (ch === "(") {
-      parens += 1;
+    if (ch === "(" || ch === "[") {
+      stack.push(ch);
       i += 1;
       continue;
     }
     if (ch === ")") {
-      parens -= 1;
-      if (parens < 0) throw new Error("body.query has unbalanced parentheses");
+      close("(", "parentheses");
+      i += 1;
+      continue;
+    }
+    if (ch === "]") {
+      close("[", "brackets");
       i += 1;
       continue;
     }
@@ -298,7 +314,7 @@ export function graphqlOperationKinds(document: string): string[] {
       let j = i + 1;
       while (j < n && /[_0-9A-Za-z]/.test(document[j]!)) j += 1;
       const name = document.slice(i, j);
-      if (depth === 0 && parens === 0 && expectDefinition) {
+      if (stack.length === 0 && expectDefinition) {
         if (name === "query" || name === "mutation" || name === "subscription") kinds.push(name);
         else if (name !== "fragment") throw new Error(`body.query has a non-executable definition: ${name}`);
         expectDefinition = false;
@@ -308,8 +324,10 @@ export function graphqlOperationKinds(document: string): string[] {
     }
     i += 1;
   }
-  if (depth !== 0) throw new Error("body.query has unbalanced braces");
-  if (parens !== 0) throw new Error("body.query has unbalanced parentheses");
+  if (stack.length > 0) {
+    const open = stack[stack.length - 1];
+    throw new Error(`body.query has unbalanced ${open === "{" ? "braces" : open === "(" ? "parentheses" : "brackets"}`);
+  }
   return kinds;
 }
 

@@ -1,7 +1,7 @@
 {
   "key": "github",
   "name": "GitHub",
-  "version": "0.80.3",
+  "version": "0.81.0",
   "runtime": "bun",
   "categories": [
     "dev-tools"
@@ -1437,6 +1437,137 @@
         }
       }
     },
+    "issues.comments.edits.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "List Comment Edit History",
+      "description": "Read the edit history of an issue, pull request conversation or pull request review comment: POST /graphql node(id: commentId) on IssueComment / PullRequestReviewComment, then userContentEdits(first, after). Returns items {id, editedAt, createdAt, deletedAt, editorLogin, deletedByLogin, diff} newest first, pageInfo (pass pageInfo.endCursor as after for the next page) and totalCount. commentId is the comment's GraphQL node id (node_id in REST). A NOT_FOUND or null node returns found:false with no items; a node of another type is CONNECTOR_UPSTREAM_ERROR. Read only. No effectPolicy. Runs through the shared GraphQL transport: GraphQL errors on HTTP 200 map to CONNECTOR_UPSTREAM_ERROR, RATE_LIMITED to CONNECTOR_RATE_LIMITED. Composio: GITHUB_LIST_COMMENT_CHANGES.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "commentId"
+        ],
+        "properties": {
+          "commentId": {
+            "type": "string",
+            "description": "GraphQL node id of the IssueComment or PullRequestReviewComment (REST node_id)."
+          },
+          "first": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Edits per page (1-100, default 30)."
+          },
+          "after": {
+            "type": "string",
+            "description": "Cursor from pageInfo.endCursor of the previous page."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "found": {
+            "type": "boolean"
+          },
+          "commentId": {
+            "type": "string"
+          },
+          "commentType": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "url": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "editedAt": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "createdAt": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "deletedAt": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "editorLogin": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "deletedByLogin": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "diff": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              }
+            }
+          },
+          "pageInfo": {
+            "type": "object",
+            "properties": {
+              "hasNextPage": {
+                "type": "boolean"
+              },
+              "endCursor": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "hasPreviousPage": {
+                "type": "boolean"
+              },
+              "startCursor": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            }
+          },
+          "totalCount": {
+            "type": "integer"
+          }
+        }
+      }
+    },
     "issues.assignees.add": {
       "kind": "action",
       "timeoutMs": 15000,
@@ -1541,10 +1672,8 @@
       "maxInputBytes": 65536,
       "maxResponseBytes": 1048576,
       "sideEffect": "write",
-      "effectPolicy": "Reconcile",
-      "reconcile": "issues.get",
       "title": "Remove Issue Labels",
-      "description": "Remove one or more labels from an issue via DELETE /repos/{owner}/{repo}/issues/{issue_number}/labels/{name}. EffectPolicy Reconcile observes via issues.get. Primary action result is returned; EffectPolicy Reconcile observes via issues.get for durability.",
+      "description": "Remove one or more labels from an issue: one DELETE /repos/{owner}/{repo}/issues/{issue_number}/labels/{name} per label (name URL-encoded), in order. A 404 (label not on the issue, or issue missing) is CONNECTOR_UPSTREAM_ERROR. Not atomic: removing several labels is a sequence of DELETEs, so a failure part-way leaves the earlier labels removed and the error (404 included) names the labels already removed. Returns the labels GitHub reports after the last DELETE. No effectPolicy (delete).",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -1999,7 +2128,7 @@
       "maxInputBytes": 65536,
       "maxResponseBytes": 1048576,
       "title": "Convert Pull Request to Draft",
-      "description": "Convert an open pull request to draft via POST /repos/{owner}/{repo}/pulls/{pull_number}/convert_to_draft. EffectPolicy Reconcile observes via pull_requests.get.",
+      "description": "Convert an open pull request to draft. Resolves the pull request node id with GET /repos/{owner}/{repo}/pulls/{pull_number}, then runs the GraphQL convertPullRequestToDraft mutation (GitHub has no REST route for this). GraphQL errors on HTTP 200 map to CONNECTOR_UPSTREAM_ERROR, RATE_LIMITED to CONNECTOR_RATE_LIMITED. EffectPolicy Reconcile observes via pull_requests.get.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -2057,7 +2186,7 @@
       "maxInputBytes": 65536,
       "maxResponseBytes": 1048576,
       "title": "Mark Pull Request Ready for Review",
-      "description": "Mark a draft pull request ready for review via POST /repos/{owner}/{repo}/pulls/{pull_number}/ready_for_review. EffectPolicy Reconcile observes via pull_requests.get.",
+      "description": "Mark a draft pull request ready for review. Resolves the pull request node id with GET /repos/{owner}/{repo}/pulls/{pull_number}, then runs the GraphQL markPullRequestReadyForReview mutation (GitHub has no REST route for this). GraphQL errors on HTTP 200 map to CONNECTOR_UPSTREAM_ERROR, RATE_LIMITED to CONNECTOR_RATE_LIMITED. EffectPolicy Reconcile observes via pull_requests.get.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -42589,7 +42718,7 @@
       "maxResponseBytes": 1048576,
       "sideEffect": "write",
       "title": "Create a custom organization role",
-      "description": "POST /orgs/{org}/organization-roles - Create a custom organization role. Public GitHub REST. Composio: GITHUB_CREATE_A_CUSTOM_ORGANIZATION_ROLE.",
+      "description": "GHEC plan-gated: GitHub Enterprise Cloud organizations only (org owner). POST /orgs/{org}/organization-roles - Create a custom organization role. Requires per-op scope admin:org. No effectPolicy (create). A missing scope (403/404 whose X-Accepted-OAuth-Scopes are not granted) returns CONNECTOR_CAPABILITY_MISSING (reason permission_missing, reconsentRequired) naming the scope; reconnect GitHub to re-consent. Returns { data } with the GitHub response body. Composio: GITHUB_CREATE_A_CUSTOM_ORGANIZATION_ROLE.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -42612,22 +42741,9 @@
         "type": "object",
         "additionalProperties": true
       },
-      "request": {
-        "method": "POST",
-        "baseUrl": "https://api.github.com",
-        "path": "/orgs/{{org}}/organization-roles",
-        "headers": {
-          "Accept": "application/vnd.github+json",
-          "X-GitHub-Api-Version": "2022-11-28",
-          "Authorization": "Bearer {{accessToken}}",
-          "Content-Type": "application/json"
-        },
-        "success": [
-          201,
-          200
-        ],
-        "body": "{{body}}"
-      }
+      "requiredScopes": [
+        "admin:org"
+      ]
     },
     "rest.apps.create_from_manifest": {
       "kind": "action",
@@ -43126,7 +43242,7 @@
       "maxResponseBytes": 1048576,
       "sideEffect": "write",
       "title": "Delete a custom organization role",
-      "description": "DELETE /orgs/{org}/organization-roles/{role_id} - Delete a custom organization role. Public GitHub REST. Composio: GITHUB_DELETE_CUSTOM_ORGANIZATION_ROLE.",
+      "description": "GHEC plan-gated: GitHub Enterprise Cloud organizations only (org owner). DELETE /orgs/{org}/organization-roles/{role_id} - Delete a custom organization role. Requires per-op scope admin:org. A 404 is CONNECTOR_UPSTREAM_ERROR. No effectPolicy (delete). A missing scope (403/404 whose X-Accepted-OAuth-Scopes are not granted) returns CONNECTOR_CAPABILITY_MISSING (reason permission_missing, reconsentRequired) naming the scope; reconnect GitHub to re-consent. Returns { data } with the GitHub response body. Composio: GITHUB_DELETE_CUSTOM_ORGANIZATION_ROLE.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -43148,19 +43264,9 @@
         "type": "object",
         "additionalProperties": true
       },
-      "request": {
-        "method": "DELETE",
-        "baseUrl": "https://api.github.com",
-        "path": "/orgs/{{org}}/organization-roles/{{role_id}}",
-        "headers": {
-          "Accept": "application/vnd.github+json",
-          "X-GitHub-Api-Version": "2022-11-28",
-          "Authorization": "Bearer {{accessToken}}"
-        },
-        "success": [
-          204
-        ]
-      }
+      "requiredScopes": [
+        "admin:org"
+      ]
     },
     "graphql.discussions.delete": {
       "kind": "action",
@@ -43310,10 +43416,10 @@
         "id": "organizationId"
       },
       "requiredScopes": [
-        "user"
+        "user:follow"
       ],
       "title": "Follow an organization",
-      "description": "POST /graphql mutation followOrganization(input: {organizationId}). Returns organization {id login viewerIsFollowing}. EffectPolicy Reconcile: observes graphql.node.get(id = organizationId), exact on Organization.viewerIsFollowing = true. Never retried. Per-op scope: user (user:follow is enough for follow/unfollow; not part of the default connect scopes; re-consent on first use). Runs through the shared GraphQL transport: GraphQL errors on HTTP 200 map to CONNECTOR_UPSTREAM_ERROR, RATE_LIMITED to CONNECTOR_RATE_LIMITED, and a missing per-op scope (INSUFFICIENT_SCOPES, or X-Accepted-OAuth-Scopes vs X-OAuth-Scopes on 403/404) maps to CONNECTOR_CAPABILITY_MISSING with missingScopes and reconsentRequired.",
+      "description": "POST /graphql mutation followOrganization(input: {organizationId}). Returns organization {id login viewerIsFollowing}. EffectPolicy Reconcile: observes graphql.node.get(id = organizationId), exact on Organization.viewerIsFollowing = true. Never retried. Per-op scope: user:follow (least privilege; not part of the default connect scopes; re-consent on first use). Runs through the shared GraphQL transport: GraphQL errors on HTTP 200 map to CONNECTOR_UPSTREAM_ERROR, RATE_LIMITED to CONNECTOR_RATE_LIMITED, and a missing per-op scope (INSUFFICIENT_SCOPES, or X-Accepted-OAuth-Scopes vs X-OAuth-Scopes on 403/404) maps to CONNECTOR_CAPABILITY_MISSING with missingScopes and reconsentRequired.",
       "inputSchema": {
         "type": "object",
         "additionalProperties": false,
@@ -43514,7 +43620,7 @@
       "maxResponseBytes": 1048576,
       "sideEffect": "read",
       "title": "Get the audit log for an organization",
-      "description": "GET /orgs/{org}/audit-log - Get the audit log for an organization. Public GitHub REST. Composio: GITHUB_GET_ORGANIZATION_AUDIT_LOG.",
+      "description": "GHEC plan-gated: GitHub Enterprise Cloud organizations only (org owner). GET /orgs/{org}/audit-log - Get the audit log for an organization. Requires per-op scope read:audit_log (not part of the default connect scopes). A missing scope (403/404 whose X-Accepted-OAuth-Scopes are not granted) returns CONNECTOR_CAPABILITY_MISSING (reason permission_missing, reconsentRequired) naming the scope; reconnect GitHub to re-consent. Returns { data } with the GitHub response body. Composio: GITHUB_GET_ORGANIZATION_AUDIT_LOG.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -43555,27 +43661,9 @@
         "type": "object",
         "additionalProperties": true
       },
-      "request": {
-        "method": "GET",
-        "baseUrl": "https://api.github.com",
-        "path": "/orgs/{{org}}/audit-log",
-        "headers": {
-          "Accept": "application/vnd.github+json",
-          "X-GitHub-Api-Version": "2022-11-28",
-          "Authorization": "Bearer {{accessToken}}"
-        },
-        "success": [
-          200
-        ],
-        "query": {
-          "phrase": "{{phrase}}",
-          "include": "{{include}}",
-          "after": "{{after}}",
-          "before": "{{before}}",
-          "order": "{{order}}",
-          "per_page": "{{per_page}}"
-        }
-      }
+      "requiredScopes": [
+        "read:audit_log"
+      ]
     },
     "rest.issues.get_parent": {
       "kind": "action",
@@ -43861,7 +43949,7 @@
       "maxResponseBytes": 1048576,
       "sideEffect": "read",
       "title": "List organization fine-grained permissions",
-      "description": "GET /orgs/{org}/organization-fine-grained-permissions - List organization fine-grained permissions. Public GitHub REST. Composio: GITHUB_LIST_ORG_FINE_GRAINED_PERMISSIONS.",
+      "description": "GHEC plan-gated: GitHub Enterprise Cloud organizations only (org owner). GET /orgs/{org}/organization-fine-grained-permissions - List organization fine-grained permissions. Requires per-op scope admin:org. A missing scope (403/404 whose X-Accepted-OAuth-Scopes are not granted) returns CONNECTOR_CAPABILITY_MISSING (reason permission_missing, reconsentRequired) naming the scope; reconnect GitHub to re-consent. Returns { data } with the GitHub response body. Composio: GITHUB_LIST_ORG_FINE_GRAINED_PERMISSIONS.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -43878,19 +43966,9 @@
         "type": "object",
         "additionalProperties": true
       },
-      "request": {
-        "method": "GET",
-        "baseUrl": "https://api.github.com",
-        "path": "/orgs/{{org}}/organization-fine-grained-permissions",
-        "headers": {
-          "Accept": "application/vnd.github+json",
-          "X-GitHub-Api-Version": "2022-11-28",
-          "Authorization": "Bearer {{accessToken}}"
-        },
-        "success": [
-          200
-        ]
-      }
+      "requiredScopes": [
+        "admin:org"
+      ]
     },
     "rest.orgs.list_pat_grants": {
       "kind": "action",
@@ -44632,7 +44710,7 @@
       "maxResponseBytes": 1048576,
       "sideEffect": "read",
       "title": "Run a GitHub GraphQL query",
-      "description": "POST /graphql with a caller-supplied read-only document. The document is parsed before any request: mutation and subscription operations are rejected with a validation error, including when mixed into a multi-operation document (fragments allowed; operationName selects an operation). Top-level strings and block strings (descriptions) are rejected: they are not valid in executable documents. Returns data. Read only. No effectPolicy. Scopes depend on the fields queried (connect scopes apply). Composio: GITHUB_RUN_GRAPH_QL_QUERY. Runs through the shared GraphQL transport: GraphQL errors on HTTP 200 map to CONNECTOR_UPSTREAM_ERROR, RATE_LIMITED to CONNECTOR_RATE_LIMITED, and INSUFFICIENT_SCOPES to CONNECTOR_UPSTREAM_ERROR.",
+      "description": "POST /graphql with a caller-supplied read-only document. The document is parsed before any request: mutation and subscription operations are rejected with a validation error, including when mixed into a multi-operation document (fragments allowed; operationName selects an operation). Top-level strings and block strings (descriptions) are rejected: they are not valid in executable documents. Returns data. Read only. No effectPolicy. Scopes depend on the fields queried (connect scopes apply). Composio: GITHUB_RUN_GRAPH_QL_QUERY and GITHUB_RUN_GRAPH_QL_RELAY_QUERY (a relay selection is an ordinary read query). Runs through the shared GraphQL transport: GraphQL errors on HTTP 200 map to CONNECTOR_UPSTREAM_ERROR, RATE_LIMITED to CONNECTOR_RATE_LIMITED, and INSUFFICIENT_SCOPES to CONNECTOR_UPSTREAM_ERROR.",
       "inputSchema": {
         "type": "object",
         "additionalProperties": false,
@@ -44651,6 +44729,55 @@
               "query": {
                 "type": "string",
                 "description": "GraphQL document containing only query operations (and fragments)."
+              },
+              "variables": {
+                "type": "object",
+                "additionalProperties": true,
+                "description": "Variables for the document."
+              },
+              "operationName": {
+                "type": "string",
+                "description": "Operation to run when the document has several."
+              }
+            }
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "graphql.mutate": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Run a GitHub GraphQL mutation",
+      "description": "WARNING: runs an arbitrary caller-supplied GraphQL mutation against the connected account (it can create, change or delete anything the token can reach). POST /graphql; the document is parsed before any request and only mutation operations are accepted: query and subscription operations are rejected with a validation error, including when mixed into a multi-operation document (fragments allowed; operationName selects an operation). Top-level strings and block strings (descriptions) are rejected: they are not valid in executable documents. Never retried. Any GraphQL error, NOT_FOUND included, fails the call. No effectPolicy (no exact observe is possible). Scopes depend on the document: INSUFFICIENT_SCOPES maps to CONNECTOR_CAPABILITY_MISSING (reason permission_missing, reconsentRequired) with missingScopes taken from the GitHub error when it names them. Runs through the shared GraphQL transport: GraphQL errors on HTTP 200 map to CONNECTOR_UPSTREAM_ERROR, RATE_LIMITED to CONNECTOR_RATE_LIMITED. Returns data. No Composio equivalent.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "body"
+        ],
+        "properties": {
+          "body": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "query"
+            ],
+            "description": "GraphQL request body.",
+            "properties": {
+              "query": {
+                "type": "string",
+                "description": "GraphQL document containing only mutation operations (and fragments)."
               },
               "variables": {
                 "type": "object",
@@ -44819,10 +44946,10 @@
         "id": "organizationId"
       },
       "requiredScopes": [
-        "user"
+        "user:follow"
       ],
       "title": "Unfollow an organization",
-      "description": "POST /graphql mutation unfollowOrganization(input: {organizationId}). Returns organization {id login viewerIsFollowing}. EffectPolicy Reconcile: observes graphql.node.get(id = organizationId), exact on Organization.viewerIsFollowing = false. Never retried. Per-op scope: user (user:follow is enough for follow/unfollow; not part of the default connect scopes; re-consent on first use). Runs through the shared GraphQL transport: GraphQL errors on HTTP 200 map to CONNECTOR_UPSTREAM_ERROR, RATE_LIMITED to CONNECTOR_RATE_LIMITED, and a missing per-op scope (INSUFFICIENT_SCOPES, or X-Accepted-OAuth-Scopes vs X-OAuth-Scopes on 403/404) maps to CONNECTOR_CAPABILITY_MISSING with missingScopes and reconsentRequired.",
+      "description": "POST /graphql mutation unfollowOrganization(input: {organizationId}). Returns organization {id login viewerIsFollowing}. EffectPolicy Reconcile: observes graphql.node.get(id = organizationId), exact on Organization.viewerIsFollowing = false. Never retried. Per-op scope: user:follow (least privilege; not part of the default connect scopes; re-consent on first use). Runs through the shared GraphQL transport: GraphQL errors on HTTP 200 map to CONNECTOR_UPSTREAM_ERROR, RATE_LIMITED to CONNECTOR_RATE_LIMITED, and a missing per-op scope (INSUFFICIENT_SCOPES, or X-Accepted-OAuth-Scopes vs X-OAuth-Scopes on 403/404) maps to CONNECTOR_CAPABILITY_MISSING with missingScopes and reconsentRequired.",
       "inputSchema": {
         "type": "object",
         "additionalProperties": false,
@@ -44855,7 +44982,7 @@
       "maxResponseBytes": 1048576,
       "sideEffect": "write",
       "title": "Update a custom organization role",
-      "description": "PATCH /orgs/{org}/organization-roles/{role_id} - Update a custom organization role. Public GitHub REST. Composio: GITHUB_UPDATE_A_CUSTOM_ORGANIZATION_ROLE.",
+      "description": "GHEC plan-gated: GitHub Enterprise Cloud organizations only (org owner). PATCH /orgs/{org}/organization-roles/{role_id} - Update a custom organization role. Requires per-op scope admin:org. No effectPolicy. A missing scope (403/404 whose X-Accepted-OAuth-Scopes are not granted) returns CONNECTOR_CAPABILITY_MISSING (reason permission_missing, reconsentRequired) naming the scope; reconnect GitHub to re-consent. Returns { data } with the GitHub response body. Composio: GITHUB_UPDATE_A_CUSTOM_ORGANIZATION_ROLE.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -44883,21 +45010,9 @@
         "type": "object",
         "additionalProperties": true
       },
-      "request": {
-        "method": "PATCH",
-        "baseUrl": "https://api.github.com",
-        "path": "/orgs/{{org}}/organization-roles/{{role_id}}",
-        "headers": {
-          "Accept": "application/vnd.github+json",
-          "X-GitHub-Api-Version": "2022-11-28",
-          "Authorization": "Bearer {{accessToken}}",
-          "Content-Type": "application/json"
-        },
-        "success": [
-          200
-        ],
-        "body": "{{body}}"
-      }
+      "requiredScopes": [
+        "admin:org"
+      ]
     },
     "rest.migrations.set_lfs_preference": {
       "kind": "action",

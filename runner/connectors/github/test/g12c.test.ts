@@ -81,9 +81,9 @@ function call(op: string, input: Record<string, unknown>) {
 const opsOf = manifest.operations as Record<string, Record<string, any>>;
 
 describe("github FIX-G12C: G12 GraphQL ops via gqlRequest", () => {
-  test("version 0.80.2 at 910 ops; auth.scopes unchanged (per-op scopes only)", () => {
-    expect(manifest.version).toBe("0.80.3");
-    expect(Object.keys(opsOf)).toHaveLength(910);
+  test("version 0.81.0 at 912 ops; auth.scopes unchanged (per-op scopes only)", () => {
+    expect(manifest.version).toBe("0.81.0");
+    expect(Object.keys(opsOf)).toHaveLength(912);
     expect(manifest.auth.scopes).toEqual(["repo", "read:org", "admin:repo_hook", "admin:org_hook", "gist", "notifications", "admin:org"]);
     expect(manifest.auth.scopes).not.toContain("user");
     expect(manifest.auth.scopes).not.toContain("read:enterprise");
@@ -111,7 +111,8 @@ describe("github FIX-G12C: G12 GraphQL ops via gqlRequest", () => {
       expect(defaultConnectorRegistry.describe("github")).toBeDefined();
     }
     expect(G12C_REQUIRED_SCOPES["graphql.enterprise.member_invitation.get"]).toEqual(["read:enterprise"]);
-    expect(G12C_REQUIRED_SCOPES["graphql.organizations.follow"]).toEqual(["user"]);
+    expect(G12C_REQUIRED_SCOPES["graphql.organizations.follow"]).toEqual(["user:follow"]);
+    expect(G12C_REQUIRED_SCOPES["graphql.organizations.unfollow"]).toEqual(["user:follow"]);
   });
 
   test("G11 enrichment the observes need is on main (node.get viewerIsFollowing, viewer.get status)", () => {
@@ -182,6 +183,25 @@ describe("github FIX-G12C: G12 GraphQL ops via gqlRequest", () => {
     }
   });
 
+  test("organization follow/unfollow need only user:follow (least privilege) and name it in CAPABILITY_MISSING", async () => {
+    for (const op of ["graphql.organizations.follow", "graphql.organizations.unfollow"]) {
+      expect(opsOf[op]!.requiredScopes, op).toEqual(["user:follow"]);
+      expect(String(opsOf[op]!.description), op).toContain("Per-op scope: user:follow (least privilege");
+      const fx = await fixture(op);
+      const r = recorder([json({ data: null, errors: [{ type: "INSUFFICIENT_SCOPES", message: "needs user:follow" }] })]);
+      const err = await call(op, { ...fx.input, accessToken: "tok", fetch: r.fetch }).catch((e) => e);
+      expect(err, op).toMatchObject({ code: "CONNECTOR_CAPABILITY_MISSING", missingScopes: ["user:follow"], requiredScopes: ["user:follow"], reconsentRequired: true });
+      expect(err.message, op).toBe(`GitHub ${op} is missing permission user:follow. Reconnect GitHub to re-consent with user:follow (not part of the default connect scopes).`);
+      const h = recorder([json({ message: "Forbidden" }, 403, { "X-Accepted-OAuth-Scopes": "user:follow", "X-OAuth-Scopes": "repo, read:org" })]);
+      await expect(call(op, { ...fx.input, accessToken: "tok", fetch: h.fetch }), op).rejects.toMatchObject({
+        code: "CONNECTOR_CAPABILITY_MISSING",
+        status: 403,
+        missingScopes: ["user:follow"],
+      });
+    }
+    expect(manifest.auth.scopes).not.toContain("user:follow");
+  });
+
   test("403/404 scope headers: missing = X-Accepted-OAuth-Scopes − X-OAuth-Scopes", async () => {
     const fx = await fixture("graphql.enterprise.member_invitation.get");
     const r = recorder([
@@ -213,7 +233,7 @@ describe("github FIX-G12C: G12 GraphQL ops via gqlRequest", () => {
 
   test("scope headers that show nothing missing, or ops without requiredScopes, stay CONNECTOR_UPSTREAM_ERROR", async () => {
     const fx = await fixture("graphql.organizations.follow");
-    const granted = recorder([json({ message: "Forbidden" }, 403, { "x-accepted-oauth-scopes": "user", "x-oauth-scopes": "repo, user" })]);
+    const granted = recorder([json({ message: "Forbidden" }, 403, { "x-accepted-oauth-scopes": "user:follow", "x-oauth-scopes": "repo, user:follow" })]);
     await expect(call("graphql.organizations.follow", { ...fx.input, accessToken: "tok", fetch: granted.fetch })).rejects.toMatchObject({
       code: "CONNECTOR_UPSTREAM_ERROR",
     });

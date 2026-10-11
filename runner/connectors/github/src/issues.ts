@@ -668,42 +668,46 @@ export function createIssuesClient(options: { accessToken: string; fetch?: typeo
       return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "GitHub rejected the remove assignees request." } };
     },
 
+    // FIX-G14C: one DELETE /repos/{owner}/{repo}/issues/{issue_number}/labels/{name} per
+    // label (name URL-encoded), instead of GET + PUT of the remaining set (which raced with
+    // concurrent label edits). A 404 (label not on the issue, or issue missing) is
+    // CONNECTOR_UPSTREAM_ERROR. Returns the labels GitHub reports after the last DELETE.
     async removeLabels(input: unknown) {
       const payload = validateRemoveLabelsInput(input);
-      const current = await client.fetchJSON(`/repos/${payload.owner}/${payload.repo}/issues/${payload.issueNumber}/labels`);
-      if (current.status === 404) {
-        return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Issue not found." } };
+      const names = [...new Set(payload.labels)];
+      const removed: string[] = [];
+      let remaining: string[] = [];
+      for (const name of names) {
+        const response = await client.fetchJSON(
+          `/repos/${encodeURIComponent(payload.owner)}/${encodeURIComponent(payload.repo)}/issues/${payload.issueNumber}/labels/${encodeURIComponent(name)}`,
+          { method: "DELETE" },
+        );
+        const partial = removed.length > 0 ? ` Already removed: ${removed.join(", ")}.` : "";
+        if (response.status === 200) {
+          remaining = Array.isArray(response.body)
+            ? (response.body as unknown[])
+                .map((l) => (isRecord(l) && typeof l.name === "string" ? l.name : ""))
+                .filter((l) => l.length > 0)
+            : [];
+          removed.push(name);
+          continue;
+        }
+        if (response.status === 404) {
+          return {
+            ok: false as const,
+            error: { code: "CONNECTOR_UPSTREAM_ERROR", message: `Label "${name}" is not on the issue, or the issue was not found.${partial}` },
+          };
+        }
+        if (response.status === 429 || (response.status === 403 && parseGitHubRateLimit(response.status, response.headers).limited)) {
+          const rateLimit = parseGitHubRateLimit(response.status, response.headers);
+          return {
+            ok: false as const,
+            error: { code: "CONNECTOR_RATE_LIMITED", message: `GitHub rate limit exceeded.${partial}`, retryAfterSeconds: rateLimit.limited ? rateLimit.retryAfterSeconds : undefined },
+          };
+        }
+        return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: `GitHub rejected the remove label request.${partial}` } };
       }
-      if (current.status === 429 || (current.status === 403 && parseGitHubRateLimit(current.status, current.headers).limited)) {
-        const rateLimit = parseGitHubRateLimit(current.status, current.headers);
-        return { ok: false as const, error: { code: "CONNECTOR_RATE_LIMITED", message: "GitHub rate limit exceeded.", retryAfterSeconds: rateLimit.limited ? rateLimit.retryAfterSeconds : undefined } };
-      }
-      if (current.status !== 200 || !Array.isArray(current.body)) {
-        return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "GitHub rejected the list issue labels request." } };
-      }
-      const remove = new Set(payload.labels);
-      const remaining = (current.body as Record<string, unknown>[])
-        .map((l) => (typeof l.name === "string" ? l.name : ""))
-        .filter((name) => name.length > 0 && !remove.has(name));
-      const response = await client.fetchJSON(`/repos/${payload.owner}/${payload.repo}/issues/${payload.issueNumber}/labels`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(remaining),
-      });
-      if (response.status === 200) {
-        const labelsList = Array.isArray(response.body)
-          ? (response.body as Record<string, unknown>[]).map((l) => (typeof l.name === "string" ? l.name : ""))
-          : remaining;
-        return { ok: true as const, labels: labelsList };
-      }
-      if (response.status === 404) {
-        return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Issue not found." } };
-      }
-      if (response.status === 429 || (response.status === 403 && parseGitHubRateLimit(response.status, response.headers).limited)) {
-        const rateLimit = parseGitHubRateLimit(response.status, response.headers);
-        return { ok: false as const, error: { code: "CONNECTOR_RATE_LIMITED", message: "GitHub rate limit exceeded.", retryAfterSeconds: rateLimit.limited ? rateLimit.retryAfterSeconds : undefined } };
-      }
-      return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "GitHub rejected the remove labels request." } };
+      return { ok: true as const, labels: remaining };
     },
 
     async setLabels(input: unknown) {

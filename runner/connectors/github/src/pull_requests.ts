@@ -1,4 +1,5 @@
 import { createGitHubClient, parseGitHubRateLimit, type GitHubClient } from "./http";
+import { gqlRequest } from "./graphql";
 
 export type GitHubPullRequest = {
   id: number;
@@ -609,6 +610,45 @@ export function normalizeGitHubReviewComment(comment: Record<string, unknown>): 
 export function createPullRequestsClient(options: { accessToken: string; fetch?: typeof fetch; githubClient?: GitHubClient }) {
   const client = options.githubClient ?? createGitHubClient({ accessToken: options.accessToken, fetch: options.fetch, operation: "pull_requests.create" });
 
+  async function setDraftState(payload: DraftStateInput, draft: boolean) {
+    const action = draft ? "convert to draft" : "mark ready for review";
+    const current = await client.fetchJSON(
+      `/repos/${encodeURIComponent(payload.owner)}/${encodeURIComponent(payload.repo)}/pulls/${payload.pullNumber}`,
+    );
+    if (current.status !== 200 || !isRecord(current.body)) {
+      if (current.status === 404) {
+        return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Pull request not found." } };
+      }
+      return mapGithubError(current, action);
+    }
+    const pr = current.body as GitHubPullRequest;
+    const nodeId = typeof pr.node_id === "string" && pr.node_id.length > 0 ? pr.node_id : null;
+    if (!nodeId) {
+      return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "GitHub returned no pull request node id." } };
+    }
+    const root = draft ? "convertPullRequestToDraft" : "markPullRequestReadyForReview";
+    const result = await gqlRequest(
+      client,
+      `mutation ${draft ? "ConvertPullRequestToDraft" : "MarkPullRequestReadyForReview"}($id: ID!) { ${root}(input: { pullRequestId: $id }) { pullRequest { id isDraft state updatedAt } } }`,
+      { id: nodeId },
+      { operation: draft ? "pull_requests.convert_to_draft" : "pull_requests.mark_ready" },
+    );
+    if (!result.ok) return { ok: false as const, error: result.error };
+    const payloadRoot = isRecord(result.data[root]) ? (result.data[root] as Record<string, unknown>) : null;
+    const updated = payloadRoot && isRecord(payloadRoot.pullRequest) ? payloadRoot.pullRequest : null;
+    if (!updated || typeof updated.isDraft !== "boolean") {
+      return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: `GitHub returned no ${root} pull request.` } };
+    }
+    return {
+      ok: true as const,
+      pullRequest: normalizeGitHubPullRequest({
+        ...pr,
+        draft: updated.isDraft,
+        ...(typeof updated.updatedAt === "string" ? { updated_at: updated.updatedAt } : {}),
+      }),
+    };
+  }
+
   return {
     async get(input: unknown) {
       const payload = validateGetPullRequestInput(input);
@@ -1035,26 +1075,15 @@ export function createPullRequestsClient(options: { accessToken: string; fetch?:
       return mapGithubError(response, "check merged");
     },
 
+    // FIX-G14C: GitHub has no REST convert_to_draft route and no REST draft toggle on
+    // ready_for_review for PATs; both run the GraphQL mutations on the PR node id, which is
+    // resolved first with GET /repos/{owner}/{repo}/pulls/{pull_number}.
     async convertToDraft(input: unknown) {
-      const payload = validateDraftStateInput(input);
-      const response = await client.fetchJSON(`/repos/${payload.owner}/${payload.repo}/pulls/${payload.pullNumber}/convert_to_draft`, {
-        method: "POST",
-      });
-      if (response.status === 200) {
-        return { ok: true as const, pullRequest: normalizeGitHubPullRequest(response.body as GitHubPullRequest) };
-      }
-      return mapGithubError(response, "convert to draft");
+      return setDraftState(validateDraftStateInput(input), true);
     },
 
     async markReady(input: unknown) {
-      const payload = validateDraftStateInput(input);
-      const response = await client.fetchJSON(`/repos/${payload.owner}/${payload.repo}/pulls/${payload.pullNumber}/ready_for_review`, {
-        method: "POST",
-      });
-      if (response.status === 200) {
-        return { ok: true as const, pullRequest: normalizeGitHubPullRequest(response.body as GitHubPullRequest) };
-      }
-      return mapGithubError(response, "mark ready for review");
+      return setDraftState(validateDraftStateInput(input), false);
     },
 
     async listConversationComments(input: unknown) {

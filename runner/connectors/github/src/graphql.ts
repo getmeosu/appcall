@@ -8,7 +8,10 @@ export type GraphqlError = {
     code: "CONNECTOR_UPSTREAM_ERROR" | "CONNECTOR_RATE_LIMITED" | "CONNECTOR_CAPABILITY_MISSING";
     message: string;
     retryAfterSeconds?: number;
-  } & Partial<CapabilityMissingFields>;
+  } & Partial<CapabilityMissingFields> & {
+    /** FIX-G14C graphql.mutate: non-null data that came back alongside errors[] (possible partial write). */
+    partialData?: Record<string, unknown>;
+  };
 };
 
 /** meta-ads-g3 precedent (src/g3.ts handleError): per-op scope missing → re-consent on first use. */
@@ -73,6 +76,17 @@ export type GqlRequestOptions = {
   operation?: string;
   /** FIX-G13C graphql.query: selects one operation of a multi-operation document. */
   operationName?: string;
+  /**
+   * FIX-G14C graphql.mutate: the document decides the scopes, so there is no requiredScopes.
+   * INSUFFICIENT_SCOPES (or a 403/404 scope-header diff) still maps to CONNECTOR_CAPABILITY_MISSING,
+   * with missingScopes read from the error message when GitHub names them.
+   */
+  scopesFromError?: boolean;
+  /**
+   * FIX-G14C graphql.mutate: any errors[] entry (NOT_FOUND included) is CONNECTOR_UPSTREAM_ERROR,
+   * so a failed mutation never comes back as success with a null payload.
+   */
+  strictErrors?: boolean;
 };
 
 export async function gqlRequest(
@@ -118,6 +132,14 @@ export async function gqlRequest(
   }
 
   const data = isRecord(response.body.data) ? response.body.data : null;
+  if (opts.strictErrors && errors.length > 0) {
+    const failed = upstream(
+      typeof errors[0]!.message === "string" && errors[0]!.message.trim().length > 0 ? errors[0]!.message : "GitHub rejected the GraphQL request.",
+    );
+    // A multi-field mutation can apply some fields before another fails: surface what did come back.
+    if (data !== null && Object.values(data).some((value) => value !== null)) failed.error.partialData = data;
+    return failed;
+  }
   const allNotFound = errors.length > 0 && errors.every((error) => error.type === "NOT_FOUND");
   if (opts.allowNotFound && allNotFound) {
     return { ok: true as const, data: data ?? {}, notFound: true as const };
@@ -251,19 +273,25 @@ function capabilityMissing(
   errors: Record<string, unknown>[],
   opts: GqlRequestOptions,
 ): GraphqlError | null {
-  const scopes = [...(opts.requiredScopes ?? [])];
-  if (scopes.length === 0) return null;
+  const declared = [...(opts.requiredScopes ?? [])];
+  if (declared.length === 0 && !opts.scopesFromError) return null;
   const insufficient = errors.find((error) => error.type === "INSUFFICIENT_SCOPES");
   const headerMissing = status === 403 || status === 404 ? missingScopesFromHeaders(headers) : null;
   const headerSignal = headerMissing !== null && headerMissing.length > 0;
   if (!insufficient && !headerSignal) return null;
+  const fromError = declared.length === 0 ? scopesNamedInErrors(errors) : [];
+  const scopes = declared.length > 0 ? declared : fromError.length > 0 ? fromError : headerSignal ? headerMissing! : [];
   const missing = headerSignal ? headerMissing! : scopes;
   const label = opts.operation ?? "operation";
+  const message =
+    missing.length > 0
+      ? `GitHub ${label} is missing permission ${missing.join(", ")}. Reconnect GitHub to re-consent with ${missing.join(", ")} (not part of the default connect scopes).`
+      : `GitHub ${label} is missing a permission this document needs. Reconnect GitHub to re-consent with the scopes it requires (not part of the default connect scopes).`;
   return {
     ok: false,
     error: {
       code: "CONNECTOR_CAPABILITY_MISSING",
-      message: `GitHub ${label} is missing permission ${missing.join(", ")}. Reconnect GitHub to re-consent with ${missing.join(", ")} (not part of the default connect scopes).`,
+      message,
       status,
       reason: "permission_missing",
       missingScopes: missing,
@@ -274,6 +302,39 @@ function capabilityMissing(
       providerError: insufficient ? errors : isRecord(body) ? body : null,
     },
   };
+}
+
+/**
+ * Scopes GitHub names in INSUFFICIENT_SCOPES messages, e.g. "The 'x' field requires one of the
+ * following scopes: ['read:org'], but your token has only been granted the: ['repo'] scopes."
+ */
+export function scopesNamedInErrors(errors: Record<string, unknown>[]): string[] {
+  const out: string[] = [];
+  for (const error of errors) {
+    if (error.type !== "INSUFFICIENT_SCOPES" || typeof error.message !== "string") continue;
+    const match = /requires one of the following scopes:\s*\[([^\]]*)\]/i.exec(error.message);
+    if (!match) continue;
+    for (const raw of match[1]!.split(",")) {
+      const scope = raw.trim().replace(/^['"]|['"]$/g, "").trim();
+      if (scope.length > 0 && !out.includes(scope)) out.push(scope);
+    }
+  }
+  return out;
+}
+
+/**
+ * FIX-G14C: REST ops with per-op requiredScopes (GHEC rest.x.*). A 403/404 whose
+ * X-Accepted-OAuth-Scopes are not all in X-OAuth-Scopes maps to CONNECTOR_CAPABILITY_MISSING
+ * with the same meta-ads shape as gqlRequest; anything else returns null.
+ */
+export function restCapabilityMissing(
+  status: number,
+  headers: Record<string, string>,
+  body: unknown,
+  requiredScopes: readonly string[],
+  operation: string,
+): GraphqlError | null {
+  return capabilityMissing(status, lowerHeaders(headers), body, [], { requiredScopes, operation });
 }
 
 function upstream(message: string): GraphqlError {
