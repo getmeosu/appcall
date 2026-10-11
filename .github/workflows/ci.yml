@@ -30,10 +30,11 @@ jobs:
   build-clean:
     name: locked Rust build
     runs-on: ubuntu-latest
-    # Restore the Cargo cache on pull requests. Only a main push may write it.
+    # Read-only. GitHub rejects expressions in permissions, and a write token
+    # here would be available to the build. The cache is restored, not saved.
     permissions:
       contents: read
-      actions: ${{ github.event_name == 'push' && 'write' || 'read' }}
+      actions: read
     steps:
       - uses: actions/checkout@v4
       - name: native TLS build dependencies
@@ -44,7 +45,7 @@ jobs:
         with:
           prefix-key: v1-rust-release-check
           shared-key: release-check
-          save-if: ${{ github.event_name == 'push' }}
+          save-if: false
       # The image job links the release bins. This job only typechecks that
       # profile, so a pull request does not pay a second release codegen.
       - name: locked release check
@@ -78,7 +79,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      actions: ${{ github.event_name == 'push' && 'write' || 'read' }}
+      actions: read
     services:
       postgres:
         image: postgres:16-alpine@sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685
@@ -121,7 +122,7 @@ jobs:
         with:
           prefix-key: v1-rust-dev
           shared-key: dev
-          save-if: ${{ github.event_name == 'push' }}
+          save-if: false
       - run: make check-rust test-rust
       - name: Rust dependency audit
         run: |
