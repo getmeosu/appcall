@@ -1,17 +1,7 @@
 {
-  "key": "bannerbear",
-  "name": "Bannerbear",
-  "version": "0.2.0",
-  "runtime": "bun",
-  "visibility": "public",
-  "categories": [
-    "utility"
-  ],
   "auth": {
-    "type": "api_key",
     "scopes": [],
     "setup": {
-      "mode": "api_key",
       "fields": [
         {
           "key": "apiKey",
@@ -19,418 +9,248 @@
           "required": true,
           "secret": true
         }
-      ]
+      ],
+      "mode": "api_key"
+    },
+    "type": "api_key"
+  },
+  "categories": [
+    "utility"
+  ],
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
     }
   },
-  "network": {
-    "allowedHosts": [
-      "api.bannerbear.com"
-    ]
-  },
-  "models": [
-    "project",
-    "template",
-    "image",
-    "video",
-    "collection",
-    "screenshot",
-    "font"
-  ],
   "http": {
-    "baseUrl": "https://api.bannerbear.com",
     "auth": {
       "field": "apiKey",
       "in": "header",
       "name": "Authorization",
       "value": "Bearer {{apiKey}}"
     },
-    "headers": {
-      "Accept": "application/json"
-    },
+    "baseUrl": "https://api.bannerbear.com",
     "errors": {
-      "rateLimitStatuses": [
-        429
-      ],
-      "retryAfterHeader": "retry-after",
       "defaultRetryAfterSeconds": 30,
       "messagePaths": [
         "message",
         "error",
         "errors"
-      ]
+      ],
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after"
+    },
+    "headers": {
+      "Accept": "application/json"
     }
+  },
+  "key": "bannerbear",
+  "models": [
+    "account",
+    "project",
+    "template",
+    "template_set",
+    "image",
+    "video",
+    "video_template",
+    "animated_gif",
+    "screenshot",
+    "collection",
+    "webhook",
+    "signed_base",
+    "font",
+    "effect",
+    "pdf_join"
+  ],
+  "name": "Bannerbear",
+  "network": {
+    "allowedHosts": [
+      "api.bannerbear.com"
+    ]
   },
   "operations": {
     "healthcheck": {
-      "kind": "action",
-      "sideEffect": "read",
-      "timeoutMs": 5000,
-      "maxInputBytes": 4096,
-      "maxResponseBytes": 65536,
-      "title": "Healthcheck",
-      "description": "Validate the Bannerbear API key with GET /v2/auth.",
+      "description": "Validate the Bannerbear API key with GET /v2/auth. Maps to BANNERBEAR_GET_AUTH.",
+      "enforceOutputSchema": true,
       "inputSchema": {
         "type": "object",
-        "properties": {},
-        "additionalProperties": false
+        "additionalProperties": false,
+        "properties": {
+          "project_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Bannerbear project UID. Required when using a Master API Key. Omit when using a project API key."
+          }
+        }
       },
+      "kind": "action",
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
       "outputSchema": {
         "type": "object",
         "required": [
           "data"
         ],
+        "additionalProperties": false,
         "properties": {
           "data": {
             "type": "object"
           }
-        },
-        "additionalProperties": false
+        }
       },
       "request": {
         "method": "GET",
         "path": "/v2/auth",
         "success": [
           200
-        ]
+        ],
+        "query": {
+          "project_id": "{{project_id}}"
+        }
       },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 5000,
+      "title": "Healthcheck",
+      "validationMode": "strict-generated"
     },
     "account.get": {
-      "kind": "action",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "title": "Get account",
-      "description": "Read Bannerbear account quota and current project usage.",
+      "description": "Retrieve Bannerbear account information including subscription plan, API usage, and quota via GET /v2/account.",
+      "enforceOutputSchema": true,
       "inputSchema": {
         "type": "object",
-        "properties": {},
-        "additionalProperties": false
+        "additionalProperties": false,
+        "properties": {
+          "project_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Bannerbear project UID. Required when using a Master API Key. Omit when using a project API key."
+          }
+        }
       },
+      "kind": "action",
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
       "outputSchema": {
         "type": "object",
         "required": [
           "data"
         ],
+        "additionalProperties": false,
         "properties": {
           "data": {
             "type": "object"
           }
-        },
-        "additionalProperties": false
+        }
       },
       "request": {
         "method": "GET",
         "path": "/v2/account",
         "success": [
           200
-        ]
+        ],
+        "query": {
+          "project_id": "{{project_id}}"
+        }
       },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "templates.list": {
-      "kind": "action",
+      "responseFormat": "json",
       "sideEffect": "read",
       "timeoutMs": 15000,
-      "maxInputBytes": 4096,
-      "maxResponseBytes": 5242880,
-      "title": "List templates",
-      "description": "List Bannerbear templates in the connected project.",
+      "title": "Get account info",
+      "validationMode": "strict-generated"
+    },
+    "animated_gifs.get": {
+      "description": "Retrieve a single animated GIF by UID via GET /v2/animated_gifs/{uid}.",
+      "enforceOutputSchema": true,
       "inputSchema": {
         "type": "object",
-        "properties": {},
-        "additionalProperties": false
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
+        "additionalProperties": false,
         "properties": {
-          "data": {
-            "type": "array",
-            "items": {
-              "type": "object"
-            }
+          "uid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique identifier (UID) of the animated GIF."
+          },
+          "project_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Bannerbear project UID. Required when using a Master API Key. Omit when using a project API key."
           }
         },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "GET",
-        "path": "/v2/templates",
-        "success": [
-          200
+        "required": [
+          "uid"
         ]
       },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "templates.get": {
       "kind": "action",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 1048576,
-      "title": "Get template",
-      "description": "Retrieve one Bannerbear template by UID.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "uid": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Resource identifier."
-          }
-        },
-        "additionalProperties": false,
-        "required": [
-          "uid"
-        ]
-      },
       "outputSchema": {
         "type": "object",
         "required": [
           "data"
         ],
+        "additionalProperties": false,
         "properties": {
           "data": {
             "type": "object"
           }
-        },
-        "additionalProperties": false
+        }
       },
       "request": {
         "method": "GET",
-        "path": "/v2/templates/{{uid}}",
+        "path": "/v2/animated_gifs/{{uid}}",
         "success": [
           200
-        ]
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "templates.create": {
-      "kind": "action",
-      "sideEffect": "write",
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "title": "Create template",
-      "description": "Create a blank Bannerbear template with a name and canvas size.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "name": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Template name."
-          },
-          "width": {
-            "type": "integer",
-            "minimum": 1,
-            "description": "Canvas width in pixels."
-          },
-          "height": {
-            "type": "integer",
-            "minimum": 1,
-            "description": "Canvas height in pixels."
-          },
-          "metadata": {
-            "type": "string",
-            "description": "Optional caller metadata."
-          }
-        },
-        "additionalProperties": false,
-        "required": [
-          "name",
-          "width",
-          "height"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
         ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "POST",
-        "path": "/v2/templates",
-        "success": [
-          200,
-          201,
-          202
-        ],
-        "body": {
-          "name": "{{name}}",
-          "width": "{{width}}",
-          "height": "{{height}}",
-          "metadata": "{{metadata}}"
-        },
-        "headers": {
-          "Content-Type": "application/json"
+        "query": {
+          "project_id": "{{project_id}}"
         }
       },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "templates.update": {
-      "kind": "action",
-      "sideEffect": "write",
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "title": "Update template",
-      "description": "Update Bannerbear template name, tags, or canvas size.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "uid": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Resource identifier."
-          },
-          "name": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Template name."
-          },
-          "metadata": {
-            "type": "string",
-            "description": "Optional caller metadata."
-          }
-        },
-        "additionalProperties": false,
-        "required": [
-          "uid"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "PATCH",
-        "path": "/v2/templates/{{uid}}",
-        "success": [
-          200,
-          201,
-          202
-        ],
-        "body": {
-          "name": "{{name}}",
-          "metadata": "{{metadata}}"
-        },
-        "headers": {
-          "Content-Type": "application/json"
-        }
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "templates.delete": {
-      "kind": "action",
-      "sideEffect": "destructive",
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "title": "Delete template",
-      "description": "Permanently delete a Bannerbear template. This cannot be undone.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "uid": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Resource identifier."
-          }
-        },
-        "additionalProperties": false,
-        "required": [
-          "uid"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "deleted"
-        ],
-        "properties": {
-          "deleted": {
-            "type": "boolean"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "DELETE",
-        "path": "/v2/templates/{{uid}}",
-        "success": [
-          200,
-          204
-        ],
-        "result": {
-          "deleted": true
-        }
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "images.list": {
-      "kind": "action",
+      "responseFormat": "json",
       "sideEffect": "read",
       "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "title": "List images",
-      "description": "List generated Bannerbear images in the connected project.",
+      "title": "Get animated GIF",
+      "validationMode": "strict-generated"
+    },
+    "animated_gifs.list": {
+      "description": "List animated GIFs in the project via GET /v2/animated_gifs.",
+      "enforceOutputSchema": true,
       "inputSchema": {
         "type": "object",
+        "additionalProperties": false,
         "properties": {
           "page": {
             "type": "integer",
-            "minimum": 1,
-            "description": "Page of results."
+            "description": "Page of results. Bannerbear returns 25 items per page by default.",
+            "minimum": 1
           },
           "limit": {
             "type": "integer",
+            "description": "Items per page. Default 25, maximum 100.",
             "minimum": 1,
-            "maximum": 100,
-            "description": "Page size, max 100."
+            "maximum": 100
+          },
+          "project_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Bannerbear project UID. Required when using a Master API Key. Omit when using a project API key."
           }
-        },
-        "additionalProperties": false
+        }
       },
+      "kind": "action",
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 5242880,
       "outputSchema": {
         "type": "object",
         "required": [
           "data"
         ],
+        "additionalProperties": false,
         "properties": {
           "data": {
             "type": "array",
@@ -438,8 +258,275 @@
               "type": "object"
             }
           }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/animated_gifs",
+        "success": [
+          200
+        ],
+        "query": {
+          "page": "{{page}}",
+          "limit": "{{limit}}",
+          "project_id": "{{project_id}}"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List animated GIFs",
+      "validationMode": "strict-generated"
+    },
+    "collections.list": {
+      "description": "List collections in the project via GET /v2/collections.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "page": {
+            "type": "integer",
+            "description": "Page of results. Bannerbear returns 25 items per page by default.",
+            "minimum": 1
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Items per page. Default 25, maximum 100.",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "project_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Bannerbear project UID. Required when using a Master API Key. Omit when using a project API key."
+          }
+        }
+      },
+      "kind": "action",
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/collections",
+        "success": [
+          200
+        ],
+        "query": {
+          "page": "{{page}}",
+          "limit": "{{limit}}",
+          "project_id": "{{project_id}}"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List collections",
+      "validationMode": "strict-generated"
+    },
+    "effects.list": {
+      "description": "List available image effects via GET /v2/effects.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "project_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Bannerbear project UID. Required when using a Master API Key. Omit when using a project API key."
+          }
+        }
+      },
+      "kind": "action",
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/effects",
+        "success": [
+          200
+        ],
+        "query": {
+          "project_id": "{{project_id}}"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List effects",
+      "validationMode": "strict-generated"
+    },
+    "fonts.list": {
+      "description": "Retrieve available Bannerbear fonts via GET /v2/fonts.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "project_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Bannerbear project UID. Required when using a Master API Key. Omit when using a project API key."
+          }
+        }
+      },
+      "kind": "action",
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/fonts",
+        "success": [
+          200
+        ],
+        "query": {
+          "project_id": "{{project_id}}"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get available fonts",
+      "validationMode": "strict-generated"
+    },
+    "images.get": {
+      "description": "Retrieve one Bannerbear image by UID via GET /v2/images/{uid}.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "uid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique identifier (UID) of the image."
+          },
+          "project_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Bannerbear project UID. Required when using a Master API Key. Omit when using a project API key."
+          }
         },
-        "additionalProperties": false
+        "required": [
+          "uid"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/images/{{uid}}",
+        "success": [
+          200
+        ],
+        "query": {
+          "project_id": "{{project_id}}"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get image",
+      "validationMode": "strict-generated"
+    },
+    "images.list": {
+      "description": "List images in the project via GET /v2/images.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "page": {
+            "type": "integer",
+            "description": "Page of results. Bannerbear returns 25 items per page by default.",
+            "minimum": 1
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Items per page. Default 25, maximum 100.",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "project_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Bannerbear project UID. Required when using a Master API Key. Omit when using a project API key."
+          }
+        }
+      },
+      "kind": "action",
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
       },
       "request": {
         "method": "GET",
@@ -449,176 +536,289 @@
         ],
         "query": {
           "page": "{{page}}",
-          "limit": "{{limit}}"
+          "limit": "{{limit}}",
+          "project_id": "{{project_id}}"
         }
       },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "images.get": {
-      "kind": "action",
+      "responseFormat": "json",
       "sideEffect": "read",
       "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 1048576,
-      "title": "Get image",
-      "description": "Retrieve one Bannerbear image by UID.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "uid": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Resource identifier."
-          }
-        },
-        "additionalProperties": false,
-        "required": [
-          "uid"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "GET",
-        "path": "/v2/images/{{uid}}",
-        "success": [
-          200
-        ]
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
+      "title": "List images",
+      "validationMode": "strict-generated"
     },
-    "images.create": {
-      "kind": "action",
-      "sideEffect": "write",
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "title": "Create image",
-      "description": "Queue a Bannerbear image render from a template and layer modifications. Rendering is asynchronous; poll images.get or use a webhook.",
+    "pdfs.join": {
+      "description": "Merge publicly accessible PDF URLs into one PDF via POST /v2/utilities/pdf/join. Composio pdf_urls maps to Bannerbear pdf_inputs.",
+      "enforceOutputSchema": true,
       "inputSchema": {
         "type": "object",
+        "additionalProperties": false,
         "properties": {
-          "template": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Resource identifier."
-          },
-          "modifications": {
+          "pdf_urls": {
             "type": "array",
-            "minItems": 1,
-            "description": "Layer modifications.",
             "items": {
-              "type": "object",
-              "additionalProperties": false,
-              "required": [
-                "name"
-              ],
-              "properties": {
-                "name": {
-                  "type": "string",
-                  "minLength": 1,
-                  "description": "Layer name."
-                },
-                "text": {
-                  "type": "string",
-                  "description": "Replacement text."
-                },
-                "image_url": {
-                  "type": "string",
-                  "minLength": 1,
-                  "description": "Replacement image URL."
-                }
-              }
-            }
+              "type": "string",
+              "minLength": 1
+            },
+            "description": "Public PDF URLs to join, in order. Mapped to Bannerbear pdf_inputs.",
+            "minItems": 1
           },
           "webhook_url": {
             "type": "string",
             "minLength": 1,
-            "description": "Optional completion webhook URL."
+            "description": "Webhook URL notified when joining completes."
           },
-          "metadata": {
+          "project_id": {
             "type": "string",
-            "description": "Optional caller metadata."
+            "minLength": 1,
+            "description": "Bannerbear project UID. Required when using a Master API Key. Omit when using a project API key."
           }
         },
-        "additionalProperties": false,
         "required": [
-          "template",
-          "modifications"
+          "pdf_urls"
         ]
       },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
       "outputSchema": {
         "type": "object",
         "required": [
           "data"
         ],
+        "additionalProperties": false,
         "properties": {
           "data": {
             "type": "object"
           }
-        },
-        "additionalProperties": false
+        }
       },
       "request": {
         "method": "POST",
-        "path": "/v2/images",
+        "path": "/v2/utilities/pdf/join",
         "success": [
-          202,
           200,
-          201
+          201,
+          202
         ],
-        "body": {
-          "template": "{{template}}",
-          "modifications": "{{modifications}}",
-          "webhook_url": "{{webhook_url}}",
-          "metadata": "{{metadata}}"
-        },
         "headers": {
           "Content-Type": "application/json"
+        },
+        "body": {
+          "pdf_inputs": "{{pdf_urls}}",
+          "webhook_url": "{{webhook_url}}",
+          "project_id": "{{project_id}}"
         }
       },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "videos.list": {
-      "kind": "action",
-      "sideEffect": "read",
+      "responseFormat": "json",
+      "sideEffect": "write",
       "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "title": "List videos",
-      "description": "List generated Bannerbear videos in the connected project.",
+      "title": "Join PDFs",
+      "validationMode": "strict-generated"
+    },
+    "projects.create": {
+      "description": "Create a Bannerbear project via POST /v2/projects. Requires a Master API Key.",
+      "enforceOutputSchema": true,
       "inputSchema": {
         "type": "object",
+        "additionalProperties": false,
         "properties": {
-          "page": {
-            "type": "integer",
-            "minimum": 1,
-            "description": "Page of results."
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Name of the new project."
+          },
+          "image_proxy": {
+            "type": "boolean",
+            "description": "Enable the project image proxy."
+          },
+          "web_sessions": {
+            "type": "boolean",
+            "description": "Enable web sessions for capturing screenshots of web pages."
           }
         },
-        "additionalProperties": false
+        "required": [
+          "name"
+        ]
       },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
       "outputSchema": {
         "type": "object",
         "required": [
           "data"
         ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v2/projects",
+        "success": [
+          200,
+          201,
+          202
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "name": "{{name}}",
+          "image_proxy": "{{image_proxy}}",
+          "web_sessions": "{{web_sessions}}"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Create project",
+      "validationMode": "strict-generated"
+    },
+    "projects.get": {
+      "description": "Retrieve a Bannerbear project by UID via GET /v2/projects/{uid}. Requires a Master API Key.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "uid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique identifier (UID) of the project."
+          }
+        },
+        "required": [
+          "uid"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/projects/{{uid}}",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get project",
+      "validationMode": "strict-generated"
+    },
+    "projects.hydrate": {
+      "description": "Copy templates into a destination project via POST /v2/projects/{uid}/hydrate. Provide source or templates, not both.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "uid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "UID of the destination project that will receive the templates."
+          },
+          "source": {
+            "type": "string",
+            "minLength": 1,
+            "description": "UID of the source project to copy all templates from. Mutually exclusive with templates."
+          },
+          "templates": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "description": "Specific template UIDs to copy. Mutually exclusive with source."
+          }
+        },
+        "required": [
+          "uid"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v2/projects/{{uid}}/hydrate",
+        "success": [
+          200,
+          201,
+          202
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "source": "{{source}}",
+          "templates": "{{templates}}"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Hydrate project",
+      "validationMode": "strict-generated"
+    },
+    "projects.list": {
+      "description": "List Bannerbear projects via GET /v2/projects. Requires a Master API Key.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "page": {
+            "type": "integer",
+            "description": "Page of results. Bannerbear returns 25 items per page by default.",
+            "minimum": 1
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Items per page. Default 25, maximum 100.",
+            "minimum": 1,
+            "maximum": 100
+          }
+        }
+      },
+      "kind": "action",
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false,
         "properties": {
           "data": {
             "type": "array",
@@ -626,8 +826,1058 @@
               "type": "object"
             }
           }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/projects",
+        "success": [
+          200
+        ],
+        "query": {
+          "page": "{{page}}",
+          "limit": "{{limit}}"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List projects",
+      "validationMode": "strict-generated"
+    },
+    "screenshots.get": {
+      "description": "Retrieve a screenshot by UID via GET /v2/screenshots/{uid}.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "uid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique identifier (UID) of the screenshot."
+          },
+          "project_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Bannerbear project UID. Required when using a Master API Key. Omit when using a project API key."
+          }
         },
-        "additionalProperties": false
+        "required": [
+          "uid"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/screenshots/{{uid}}",
+        "success": [
+          200
+        ],
+        "query": {
+          "project_id": "{{project_id}}"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get screenshot",
+      "validationMode": "strict-generated"
+    },
+    "screenshots.list": {
+      "description": "List screenshots in the project via GET /v2/screenshots.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "page": {
+            "type": "integer",
+            "description": "Page of results. Bannerbear returns 25 items per page by default.",
+            "minimum": 1
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Items per page. Default 25, maximum 100.",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "project_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Bannerbear project UID. Required when using a Master API Key. Omit when using a project API key."
+          }
+        }
+      },
+      "kind": "action",
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/screenshots",
+        "success": [
+          200
+        ],
+        "query": {
+          "page": "{{page}}",
+          "limit": "{{limit}}",
+          "project_id": "{{project_id}}"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List screenshots",
+      "validationMode": "strict-generated"
+    },
+    "signed_bases.create": {
+      "description": "Create a signed URL base for a template via POST /v2/templates/{template_uid}/signed_bases.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "template_uid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Template UID to create a signed base for."
+          },
+          "project_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Bannerbear project UID. Required when using a Master API Key. Omit when using a project API key."
+          }
+        },
+        "required": [
+          "template_uid"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v2/templates/{{template_uid}}/signed_bases",
+        "success": [
+          200,
+          201,
+          202
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "project_id": "{{project_id}}"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Create signed base",
+      "validationMode": "strict-generated"
+    },
+    "signed_bases.list": {
+      "description": "List signed bases for a template via GET /v2/templates/{template_uid}/signed_bases.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "template_uid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Template UID to list signed bases for."
+          },
+          "page": {
+            "type": "integer",
+            "description": "Page of results. Bannerbear returns 25 items per page by default.",
+            "minimum": 1
+          },
+          "project_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Bannerbear project UID. Required when using a Master API Key. Omit when using a project API key."
+          }
+        },
+        "required": [
+          "template_uid"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/templates/{{template_uid}}/signed_bases",
+        "success": [
+          200
+        ],
+        "query": {
+          "page": "{{page}}",
+          "project_id": "{{project_id}}"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List signed bases",
+      "validationMode": "strict-generated"
+    },
+    "template_sets.create": {
+      "description": "Create a template set via POST /v2/template_sets.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Name for the template set."
+          },
+          "templates": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "description": "Template UIDs to include in the set.",
+            "minItems": 1
+          },
+          "project_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Bannerbear project UID. Required when using a Master API Key. Omit when using a project API key."
+          }
+        },
+        "required": [
+          "name",
+          "templates"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v2/template_sets",
+        "success": [
+          200,
+          201,
+          202
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "name": "{{name}}",
+          "templates": "{{templates}}",
+          "project_id": "{{project_id}}"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Create template set",
+      "validationMode": "strict-generated"
+    },
+    "template_sets.get": {
+      "description": "Retrieve a template set by UID via GET /v2/template_sets/{uid}.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "uid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique identifier (UID) of the template set."
+          },
+          "extended": {
+            "type": "boolean",
+            "description": "Return current layer defaults."
+          },
+          "project_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Bannerbear project UID. Required when using a Master API Key. Omit when using a project API key."
+          }
+        },
+        "required": [
+          "uid"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/template_sets/{{uid}}",
+        "success": [
+          200
+        ],
+        "query": {
+          "extended": "{{extended}}",
+          "project_id": "{{project_id}}"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get template set",
+      "validationMode": "strict-generated"
+    },
+    "template_sets.list": {
+      "description": "List template sets in the project via GET /v2/template_sets.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "page": {
+            "type": "integer",
+            "description": "Page of results. Bannerbear returns 25 items per page by default.",
+            "minimum": 1
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Items per page. Default 25, maximum 100.",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "extended": {
+            "type": "boolean",
+            "description": "Return current layer defaults."
+          },
+          "project_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Bannerbear project UID. Required when using a Master API Key. Omit when using a project API key."
+          }
+        }
+      },
+      "kind": "action",
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/template_sets",
+        "success": [
+          200
+        ],
+        "query": {
+          "page": "{{page}}",
+          "limit": "{{limit}}",
+          "extended": "{{extended}}",
+          "project_id": "{{project_id}}"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List template sets",
+      "validationMode": "strict-generated"
+    },
+    "template_sets.update": {
+      "description": "Replace the templates in a template set via PATCH /v2/template_sets/{uid}. The set is cleared first, then the new list is applied.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "uid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique identifier (UID) of the template set."
+          },
+          "templates": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "description": "Replacement list of template UIDs.",
+            "minItems": 1
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Optional new name for the template set."
+          },
+          "project_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Bannerbear project UID. Required when using a Master API Key. Omit when using a project API key."
+          }
+        },
+        "required": [
+          "uid",
+          "templates"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/v2/template_sets/{{uid}}",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "templates": "{{templates}}",
+          "name": "{{name}}",
+          "project_id": "{{project_id}}"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Update template set",
+      "validationMode": "strict-generated"
+    },
+    "templates.create": {
+      "description": "Create a blank template via POST /v2/templates. Requires a Master API Key.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Name of the new blank template."
+          },
+          "width": {
+            "type": "integer",
+            "description": "Width in pixels.",
+            "minimum": 1
+          },
+          "height": {
+            "type": "integer",
+            "description": "Height in pixels.",
+            "minimum": 1
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "description": "Tags for organizing the template."
+          },
+          "metadata": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Custom metadata such as an external database ID."
+          },
+          "project_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Bannerbear project UID. Required when using a Master API Key. Omit when using a project API key."
+          }
+        },
+        "required": [
+          "name",
+          "width",
+          "height"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v2/templates",
+        "success": [
+          200,
+          201,
+          202
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "name": "{{name}}",
+          "width": "{{width}}",
+          "height": "{{height}}",
+          "tags": "{{tags}}",
+          "metadata": "{{metadata}}",
+          "project_id": "{{project_id}}"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Create template",
+      "validationMode": "strict-generated"
+    },
+    "templates.delete": {
+      "description": "Permanently delete a template via DELETE /v2/templates/{uid}.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "uid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique identifier (UID) of the template."
+          },
+          "project_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Bannerbear project UID. Required when using a Master API Key. Omit when using a project API key."
+          }
+        },
+        "required": [
+          "uid"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "success"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "success": {
+            "type": "boolean"
+          }
+        }
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/v2/templates/{{uid}}",
+        "success": [
+          200,
+          204
+        ],
+        "query": {
+          "project_id": "{{project_id}}"
+        },
+        "result": {
+          "success": true
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "title": "Delete template",
+      "validationMode": "strict-generated"
+    },
+    "templates.get": {
+      "description": "Retrieve one Bannerbear template by UID via GET /v2/templates/{uid}.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "uid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique identifier (UID) of the template."
+          },
+          "extended": {
+            "type": "boolean",
+            "description": "Return current layer defaults."
+          },
+          "project_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Bannerbear project UID. Required when using a Master API Key. Omit when using a project API key."
+          }
+        },
+        "required": [
+          "uid"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/templates/{{uid}}",
+        "success": [
+          200
+        ],
+        "query": {
+          "extended": "{{extended}}",
+          "project_id": "{{project_id}}"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get template",
+      "validationMode": "strict-generated"
+    },
+    "templates.import": {
+      "description": "Import public library templates via POST /v2/templates/import. Use publication IDs, not private template UIDs.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "publications": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "description": "Publication IDs of publicly available templates to import.",
+            "minItems": 1
+          },
+          "project_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Bannerbear project UID. Required when using a Master API Key. Omit when using a project API key."
+          }
+        },
+        "required": [
+          "publications"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v2/templates/import",
+        "success": [
+          200,
+          201,
+          202
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "publications": "{{publications}}",
+          "project_id": "{{project_id}}"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Import template",
+      "validationMode": "strict-generated"
+    },
+    "templates.list": {
+      "description": "List Bannerbear templates in the connected project via GET /v2/templates.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "tag": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Return only templates with this tag."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Partial name match."
+          },
+          "page": {
+            "type": "integer",
+            "description": "Page of results. Bannerbear returns 25 items per page by default.",
+            "minimum": 1
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Items per page. Default 25, maximum 100.",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "extended": {
+            "type": "boolean",
+            "description": "Return current layer defaults for each template."
+          },
+          "project_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Bannerbear project UID. Required when using a Master API Key. Omit when using a project API key."
+          }
+        }
+      },
+      "kind": "action",
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/templates",
+        "success": [
+          200
+        ],
+        "query": {
+          "tag": "{{tag}}",
+          "name": "{{name}}",
+          "page": "{{page}}",
+          "limit": "{{limit}}",
+          "extended": "{{extended}}",
+          "project_id": "{{project_id}}"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List templates",
+      "validationMode": "strict-generated"
+    },
+    "video_templates.create": {
+      "description": "Create a video template from an image template via POST /v2/video_templates.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "template": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Image template UID to base this video template on."
+          },
+          "render_type": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Build Pack type.",
+            "enum": [
+              "overlay",
+              "transcribe",
+              "multi_overlay"
+            ]
+          },
+          "approval_required": {
+            "type": "boolean",
+            "description": "Require approval before rendering. Applies to the transcribe Build Pack."
+          },
+          "transcription_layer_name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Text layer that receives transcribed speech. Applies to the transcribe Build Pack."
+          },
+          "project_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Bannerbear project UID. Required when using a Master API Key. Omit when using a project API key."
+          }
+        },
+        "required": [
+          "template",
+          "render_type"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v2/video_templates",
+        "success": [
+          200,
+          201,
+          202
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "template": "{{template}}",
+          "render_type": "{{render_type}}",
+          "approval_required": "{{approval_required}}",
+          "transcription_layer_name": "{{transcription_layer_name}}",
+          "project_id": "{{project_id}}"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Create video template",
+      "validationMode": "strict-generated"
+    },
+    "video_templates.list": {
+      "description": "List video templates in the project via GET /v2/video_templates.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "page": {
+            "type": "integer",
+            "description": "Page of results. Bannerbear returns 25 items per page by default.",
+            "minimum": 1
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Items per page. Default 25, maximum 100.",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "project_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Bannerbear project UID. Required when using a Master API Key. Omit when using a project API key."
+          }
+        }
+      },
+      "kind": "action",
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/video_templates",
+        "success": [
+          200
+        ],
+        "query": {
+          "page": "{{page}}",
+          "limit": "{{limit}}",
+          "project_id": "{{project_id}}"
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List video templates",
+      "validationMode": "strict-generated"
+    },
+    "videos.list": {
+      "description": "List videos in the project via GET /v2/videos.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "page": {
+            "type": "integer",
+            "description": "Page of results. Bannerbear returns 25 items per page by default.",
+            "minimum": 1
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Items per page. Default 25, maximum 100.",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "project_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Bannerbear project UID. Required when using a Master API Key. Omit when using a project API key."
+          }
+        }
+      },
+      "kind": "action",
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
       },
       "request": {
         "method": "GET",
@@ -636,557 +1886,211 @@
           200
         ],
         "query": {
-          "page": "{{page}}"
+          "page": "{{page}}",
+          "limit": "{{limit}}",
+          "project_id": "{{project_id}}"
         }
       },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "videos.get": {
-      "kind": "action",
+      "responseFormat": "json",
       "sideEffect": "read",
       "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "title": "Get video",
-      "description": "Retrieve one Bannerbear video by UID.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "uid": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Resource identifier."
-          }
-        },
-        "additionalProperties": false,
-        "required": [
-          "uid"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "GET",
-        "path": "/v2/videos/{{uid}}",
-        "success": [
-          200
-        ]
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
+      "title": "List videos",
+      "validationMode": "strict-generated"
     },
-    "videos.create": {
-      "kind": "action",
-      "sideEffect": "write",
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "title": "Create video",
-      "description": "Queue a Bannerbear video render from a video template and input media URL.",
+    "webhooks.create": {
+      "description": "Register a project-level webhook via POST /v2/webhooks. This is an outbound registration, not an inbound AppCall trigger.",
+      "enforceOutputSchema": true,
       "inputSchema": {
         "type": "object",
+        "additionalProperties": false,
         "properties": {
-          "video_template": {
+          "url": {
             "type": "string",
             "minLength": 1,
-            "description": "Resource identifier."
+            "description": "External webhook receiver URL."
           },
-          "input_media_url": {
+          "event": {
             "type": "string",
             "minLength": 1,
-            "description": "Source video or audio URL."
+            "description": "Event type to subscribe to.",
+            "enum": [
+              "template_created",
+              "template_edited",
+              "image_created",
+              "collection_created",
+              "video_created",
+              "animated_gif_created",
+              "movie_created",
+              "screenshot_created"
+            ]
           },
-          "webhook_url": {
+          "project_id": {
             "type": "string",
             "minLength": 1,
-            "description": "Optional completion webhook URL."
-          },
-          "metadata": {
-            "type": "string",
-            "description": "Optional caller metadata."
+            "description": "Bannerbear project UID. Required when using a Master API Key. Omit when using a project API key."
           }
         },
-        "additionalProperties": false,
         "required": [
-          "video_template"
+          "url",
+          "event"
         ]
       },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
       "outputSchema": {
         "type": "object",
         "required": [
           "data"
         ],
+        "additionalProperties": false,
         "properties": {
           "data": {
             "type": "object"
           }
-        },
-        "additionalProperties": false
+        }
       },
       "request": {
         "method": "POST",
-        "path": "/v2/videos",
-        "success": [
-          202,
-          200,
-          201
-        ],
-        "body": {
-          "video_template": "{{video_template}}",
-          "input_media_url": "{{input_media_url}}",
-          "webhook_url": "{{webhook_url}}",
-          "metadata": "{{metadata}}"
-        },
-        "headers": {
-          "Content-Type": "application/json"
-        }
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "videos.update": {
-      "kind": "action",
-      "sideEffect": "write",
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "title": "Update video",
-      "description": "Approve a Bannerbear video or patch its transcription so rendering can start.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "uid": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Resource identifier."
-          },
-          "approved": {
-            "type": "boolean",
-            "description": "Set true to approve and start rendering."
-          }
-        },
-        "additionalProperties": false,
-        "required": [
-          "uid"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "PATCH",
-        "path": "/v2/videos",
+        "path": "/v2/webhooks",
         "success": [
           200,
           201,
           202
         ],
-        "body": {
-          "uid": "{{uid}}",
-          "approved": "{{approved}}"
-        },
         "headers": {
           "Content-Type": "application/json"
-        }
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "collections.list": {
-      "kind": "action",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "title": "List collections",
-      "description": "List Bannerbear collections (multi-template image sets) in the connected project.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {},
-        "additionalProperties": false
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "array",
-            "items": {
-              "type": "object"
-            }
-          }
         },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "GET",
-        "path": "/v2/collections",
-        "success": [
-          200
-        ]
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "collections.get": {
-      "kind": "action",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "title": "Get collection",
-      "description": "Retrieve one Bannerbear collection by UID.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "uid": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Resource identifier."
-          }
-        },
-        "additionalProperties": false,
-        "required": [
-          "uid"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "GET",
-        "path": "/v2/collections/{{uid}}",
-        "success": [
-          200
-        ]
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "collections.create": {
-      "kind": "action",
-      "sideEffect": "write",
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "title": "Create collection",
-      "description": "Queue a Bannerbear collection render against a template set.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "template_set": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Resource identifier."
-          },
-          "modifications": {
-            "type": "array",
-            "minItems": 1,
-            "description": "Layer modifications.",
-            "items": {
-              "type": "object",
-              "additionalProperties": false,
-              "required": [
-                "name"
-              ],
-              "properties": {
-                "name": {
-                  "type": "string",
-                  "minLength": 1,
-                  "description": "Layer name."
-                },
-                "text": {
-                  "type": "string",
-                  "description": "Replacement text."
-                },
-                "image_url": {
-                  "type": "string",
-                  "minLength": 1,
-                  "description": "Replacement image URL."
-                }
-              }
-            }
-          },
-          "webhook_url": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Optional completion webhook URL."
-          }
-        },
-        "additionalProperties": false,
-        "required": [
-          "template_set",
-          "modifications"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "POST",
-        "path": "/v2/collections",
-        "success": [
-          202,
-          200,
-          201
-        ],
-        "body": {
-          "template_set": "{{template_set}}",
-          "modifications": "{{modifications}}",
-          "webhook_url": "{{webhook_url}}"
-        },
-        "headers": {
-          "Content-Type": "application/json"
-        }
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "screenshots.list": {
-      "kind": "action",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "title": "List screenshots",
-      "description": "List Bannerbear website screenshots in the connected project.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {},
-        "additionalProperties": false
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "array",
-            "items": {
-              "type": "object"
-            }
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "GET",
-        "path": "/v2/screenshots",
-        "success": [
-          200
-        ]
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "screenshots.get": {
-      "kind": "action",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "title": "Get screenshot",
-      "description": "Retrieve one Bannerbear screenshot by UID.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "uid": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Resource identifier."
-          }
-        },
-        "additionalProperties": false,
-        "required": [
-          "uid"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "GET",
-        "path": "/v2/screenshots/{{uid}}",
-        "success": [
-          200
-        ]
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "screenshots.create": {
-      "kind": "action",
-      "sideEffect": "write",
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "title": "Create screenshot",
-      "description": "Queue a Bannerbear screenshot of a public website URL.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "url": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Website URL to capture."
-          },
-          "width": {
-            "type": "integer",
-            "minimum": 1,
-            "description": "Browser width in pixels."
-          },
-          "webhook_url": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Optional completion webhook URL."
-          }
-        },
-        "additionalProperties": false,
-        "required": [
-          "url"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "POST",
-        "path": "/v2/screenshots",
-        "success": [
-          202,
-          200,
-          201
-        ],
         "body": {
           "url": "{{url}}",
-          "width": "{{width}}",
-          "webhook_url": "{{webhook_url}}"
-        },
-        "headers": {
-          "Content-Type": "application/json"
+          "event": "{{event}}",
+          "project_id": "{{project_id}}"
         }
       },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "fonts.list": {
-      "kind": "action",
-      "sideEffect": "read",
+      "responseFormat": "json",
+      "sideEffect": "write",
       "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "title": "List fonts",
-      "description": "List valid Bannerbear font families grouped by style.",
+      "title": "Create webhook",
+      "validationMode": "strict-generated"
+    },
+    "webhooks.delete": {
+      "description": "Delete a webhook via DELETE /v2/webhooks/{uid}.",
+      "enforceOutputSchema": true,
       "inputSchema": {
         "type": "object",
-        "properties": {},
-        "additionalProperties": false
+        "additionalProperties": false,
+        "properties": {
+          "uid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique identifier (UID) of the webhook."
+          },
+          "project_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Bannerbear project UID. Required when using a Master API Key. Omit when using a project API key."
+          }
+        },
+        "required": [
+          "uid"
+        ]
       },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "success"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "success": {
+            "type": "boolean"
+          }
+        }
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/v2/webhooks/{{uid}}",
+        "success": [
+          200,
+          204
+        ],
+        "query": {
+          "project_id": "{{project_id}}"
+        },
+        "result": {
+          "success": true
+        }
+      },
+      "responseFormat": "json",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "title": "Delete webhook",
+      "validationMode": "strict-generated"
+    },
+    "webhooks.get": {
+      "description": "Retrieve a webhook by UID via GET /v2/webhooks/{uid}.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "uid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique identifier (UID) of the webhook."
+          },
+          "project_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Bannerbear project UID. Required when using a Master API Key. Omit when using a project API key."
+          }
+        },
+        "required": [
+          "uid"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
       "outputSchema": {
         "type": "object",
         "required": [
           "data"
         ],
+        "additionalProperties": false,
         "properties": {
           "data": {
             "type": "object"
           }
-        },
-        "additionalProperties": false
+        }
       },
       "request": {
         "method": "GET",
-        "path": "/v2/fonts",
+        "path": "/v2/webhooks/{{uid}}",
         "success": [
           200
-        ]
+        ],
+        "query": {
+          "project_id": "{{project_id}}"
+        }
       },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get webhook",
+      "validationMode": "strict-generated"
     }
   },
   "provenance": {
     "source": {
-      "url": "https://github.com/oomol-lab/open-connector",
-      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
+      "url": "https://github.com/oomol-lab/open-connector"
     }
   },
-  "evidence": {
-    "fixture": {
-      "status": "supplied"
-    },
-    "live": {
-      "status": "unverified"
-    }
-  }
+  "runtime": "bun",
+  "version": "0.2.0",
+  "visibility": "public"
 }
