@@ -69,7 +69,25 @@ const G3_EFFECTS: Record<string, [string, string | undefined, string | undefined
   "users.me": ["read", undefined, undefined, "user_me_read"],
 };
 
-const NEW_EFFECTS = { ...G1_EFFECTS, ...G2_EFFECTS, ...G3_EFFECTS };
+// G4 lock: [sideEffect, effectPolicy, reconcile, OAuth scope].
+const G4_EFFECTS: Record<string, [string, string | undefined, string | undefined, string]> = {
+  "departments.list": ["read", undefined, undefined, "configuration_read"],
+  "departments.get": ["read", undefined, undefined, "configuration_read"],
+  "hiring_processes.list": ["read", undefined, undefined, "configuration_read"],
+  "hiring_processes.get": ["read", undefined, undefined, "configuration_read"],
+  "rejection_reasons.list": ["read", undefined, undefined, "configuration_read"],
+  "withdrawal_reasons.list": ["read", undefined, undefined, "configuration_read"],
+  "sources.types.list": ["read", undefined, undefined, "configuration_read"],
+  "sources.values.list": ["read", undefined, undefined, "configuration_read"],
+  "candidate_properties.list": ["read", undefined, undefined, "configuration_read"],
+  "job_properties.list": ["read", undefined, undefined, "configuration_read"],
+  "job_properties.values.list": ["read", undefined, undefined, "configuration_read"],
+  "offer_properties.list": ["read", undefined, undefined, "configuration_read"],
+  "company.get": ["read", undefined, undefined, "configuration_read"],
+  "postings.departments.list": ["read", undefined, undefined, "none"],
+};
+
+const NEW_EFFECTS = { ...G1_EFFECTS, ...G2_EFFECTS, ...G3_EFFECTS, ...G4_EFFECTS };
 
 const STRICT_KEYS = new Set([
   "type",
@@ -114,8 +132,8 @@ describe("SmartRecruiters manifest", () => {
     expect(manifest.key).toBe("smartrecruiters");
   });
 
-  it("has version 0.6.0", () => {
-    expect(manifest.version).toBe("0.6.0");
+  it("has version 0.7.0", () => {
+    expect(manifest.version).toBe("0.7.0");
   });
 
   it("uses bun runtime", () => {
@@ -156,9 +174,9 @@ describe("SmartRecruiters manifest", () => {
     expect(manifest.operations.healthcheck.request.query).toEqual({ limit: 1 });
   });
 
-  it("declares the 8 SR-1 operations plus 15 G1, 15 G2 and 15 G3 operations (53)", () => {
+  it("declares the 8 SR-1 operations plus 15 G1, 15 G2, 15 G3 and 14 G4 operations (67)", () => {
     expect(Object.keys(manifest.operations).sort()).toEqual([...SR1_OPS, ...Object.keys(NEW_EFFECTS)].sort());
-    expect(Object.keys(manifest.operations)).toHaveLength(53);
+    expect(Object.keys(manifest.operations)).toHaveLength(67);
   });
 
   it("declares authenticated healthcheck request", () => {

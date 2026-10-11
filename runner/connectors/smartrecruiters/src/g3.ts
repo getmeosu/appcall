@@ -38,8 +38,8 @@
  *
  * update/delete work only for interviews created via the Public API (official note).
  * offers.search requires Extended/Admin credentials (official note).
- * messages.list is ADMINISTRATOR-only (official note); the Link next cursor is not
- * returned (getJSON does not expose response headers).
+ * messages.list is ADMINISTRATOR-only (official note); its next cursor is read from
+ * the Link header (rel="next" pageId) and returned as nextPageId.
  */
 import { assertSafePathSegment } from "../../_shared/jobboard";
 import { createApiClient } from "./http";
@@ -53,6 +53,7 @@ import {
   withJobPrefix,
   withUserPrefix,
 } from "./ids";
+import { pageIdParam } from "./paging";
 import {
   normalizeInterview,
   normalizeUser,
@@ -380,17 +381,20 @@ export async function executeMessagesList(
     pageId?: string;
     limit?: number;
   },
-): Promise<{ messages: MessageRow[]; total: number }> {
+): Promise<{ messages: MessageRow[]; total: number; nextPageId: string | null }> {
   const qs = new URLSearchParams();
   qs.set("candidateId", candidateIdSegment(input.candidateId, "candidateId"));
   if (input.jobId != null) qs.set("jobId", jobIdSegment(input.jobId, "jobId"));
-  const pageId = optionalString(input.pageId, "pageId");
+  const pageId = pageIdParam(input.pageId, "pageId");
   if (pageId) qs.set("pageId", pageId);
   if (input.limit != null) {
     if (!Number.isInteger(input.limit) || input.limit < 1 || input.limit > 100) throw new Error("limit must be 1-100");
     qs.set("limit", String(input.limit));
   }
-  const raw = await client(input, "messages.list").getJSON(`/messages?${qs.toString()}`);
+  // MessagesView is a bare array; the next cursor is only in the Link header
+  // (rel="next" URL carrying pageId), per messagesfetch-1.
+  const page = await client(input, "messages.list").getPage(`/messages?${qs.toString()}`);
+  const raw = page.data;
   const rows = Array.isArray(raw) ? raw.filter(isRecord) : [];
   const messages = rows.map((m) => {
     const context = isRecord(m.context) ? m.context : {};
@@ -406,7 +410,7 @@ export async function executeMessagesList(
       })),
     };
   });
-  return { messages, total: messages.length };
+  return { messages, total: messages.length, nextPageId: page.nextPageId };
 }
 
 // ---------------------------------------------------------------------------

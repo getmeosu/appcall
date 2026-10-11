@@ -1260,6 +1260,22 @@ import {
   executeUsersGet as getSmartRecruitersUser,
   executeUsersMe as getSmartRecruitersMe,
 } from "../../connectors/smartrecruiters/src/g3";
+import {
+  executeDepartmentsList as listSmartRecruitersDepartments,
+  executeDepartmentsGet as getSmartRecruitersDepartment,
+  executeHiringProcessesList as listSmartRecruitersHiringProcesses,
+  executeHiringProcessesGet as getSmartRecruitersHiringProcess,
+  executeRejectionReasonsList as listSmartRecruitersRejectionReasons,
+  executeWithdrawalReasonsList as listSmartRecruitersWithdrawalReasons,
+  executeSourcesTypesList as listSmartRecruitersSourceTypes,
+  executeSourcesValuesList as listSmartRecruitersSourceValues,
+  executeCandidatePropertiesList as listSmartRecruitersCandidateProperties,
+  executeJobPropertiesList as listSmartRecruitersJobProperties,
+  executeJobPropertiesValuesList as listSmartRecruitersJobPropertyValues,
+  executeOfferPropertiesList as listSmartRecruitersOfferProperties,
+  executeCompanyGet as getSmartRecruitersCompany,
+  executePostingsDepartmentsList as listSmartRecruitersPostingDepartments,
+} from "../../connectors/smartrecruiters/src/g4";
 import recruiteeManifest from "../../connectors/recruitee/manifest.json";
 import { healthcheck as recruiteeHealthcheck } from "../../connectors/recruitee/src/healthcheck";
 import {
@@ -3356,6 +3372,20 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
       "scorecards.criteria.list": listSmartRecruitersScorecardCriteria,
       "users.get": getSmartRecruitersUser,
       "users.me": getSmartRecruitersMe,
+      "departments.list": listSmartRecruitersDepartments,
+      "departments.get": getSmartRecruitersDepartment,
+      "hiring_processes.list": listSmartRecruitersHiringProcesses,
+      "hiring_processes.get": getSmartRecruitersHiringProcess,
+      "rejection_reasons.list": listSmartRecruitersRejectionReasons,
+      "withdrawal_reasons.list": listSmartRecruitersWithdrawalReasons,
+      "sources.types.list": listSmartRecruitersSourceTypes,
+      "sources.values.list": listSmartRecruitersSourceValues,
+      "candidate_properties.list": listSmartRecruitersCandidateProperties,
+      "job_properties.list": listSmartRecruitersJobProperties,
+      "job_properties.values.list": listSmartRecruitersJobPropertyValues,
+      "offer_properties.list": listSmartRecruitersOfferProperties,
+      "company.get": getSmartRecruitersCompany,
+      "postings.departments.list": listSmartRecruitersPostingDepartments,
     },
     intercom: {
       "conversations.reply": replyIntercomConversation,

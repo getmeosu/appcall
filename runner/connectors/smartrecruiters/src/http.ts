@@ -20,6 +20,7 @@ import {
   type ConnectorUpstreamError,
 } from "../../_shared/jobboard";
 import manifest from "../manifest.json";
+import { nextPageIdOf } from "./paging";
 
 export interface SmartRecruitersClientConfig {
   company: string;
@@ -91,6 +92,11 @@ export function createAuthClient(config: SmartRecruitersAuthClientConfig): JobBo
  */
 export type SmartRecruitersApiClient = {
   getJSON(path: string): Promise<unknown>;
+  /**
+   * GET that also surfaces the next-page cursor: the body's `nextPageId` when
+   * present, otherwise the `pageId` of the `Link` header's rel="next" URL.
+   */
+  getPage(path: string): Promise<{ data: unknown; nextPageId: string | null }>;
   request(
     method: "POST" | "PUT" | "PATCH" | "DELETE",
     path: string,
@@ -114,6 +120,15 @@ export function createApiClient(config: SmartRecruitersAuthClientConfig): SmartR
   const base = "https://api.smartrecruiters.com";
 
   async function send(method: string, path: string, body?: unknown, contentType = "application/json"): Promise<unknown> {
+    return (await sendWithHeaders(method, path, body, contentType)).data;
+  }
+
+  async function sendWithHeaders(
+    method: string,
+    path: string,
+    body?: unknown,
+    contentType = "application/json",
+  ): Promise<{ data: unknown; headers: Record<string, string> }> {
     const headers: Record<string, string> = {
       "X-SmartToken": config.apiKey,
       Accept: "application/json",
@@ -128,10 +143,10 @@ export function createApiClient(config: SmartRecruitersAuthClientConfig): SmartR
       throw upstreamErrorFor("SmartRecruiters", response.status, response.headers, response.body);
     }
     if (response.status === 204 || response.body.trim().length === 0) {
-      return undefined;
+      return { data: undefined, headers: response.headers };
     }
     try {
-      return JSON.parse(response.body);
+      return { data: JSON.parse(response.body), headers: response.headers };
     } catch {
       throw {
         ok: false,
@@ -143,6 +158,10 @@ export function createApiClient(config: SmartRecruitersAuthClientConfig): SmartR
 
   return {
     getJSON: (path) => send("GET", path),
+    getPage: async (path) => {
+      const { data, headers } = await sendWithHeaders("GET", path);
+      return { data, nextPageId: nextPageIdOf(data, headers.link ?? headers.Link ?? null) };
+    },
     request: (method, path, body, contentType) => send(method, path, body, contentType),
   };
 }

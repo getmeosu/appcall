@@ -12,6 +12,7 @@
 
 import { createClient, createAuthClient } from "./http";
 import { candidateIdSegment, jobIdSegment } from "./ids";
+import { pageIdParam } from "./paging";
 import {
   parseJobsResponse,
   parsePostingsResponse,
@@ -169,7 +170,7 @@ export async function executeCandidatesListSync(
     "/candidates" +
     buildQuery({
       limit: input.limit != null ? String(input.limit) : undefined,
-      pageId: input.pageId,
+      pageId: pageIdParam(input.pageId, "pageId", { emptyAsAbsent: true }),
       q: input.q,
       jobId: input.jobId != null ? jobIdSegment(input.jobId, "jobId") : undefined,
       updatedAfter: input.updatedAfter,
@@ -248,7 +249,7 @@ export async function executeUsersListSync(
     USERS_LIST_PATH +
     buildQuery({
       limit: input.limit != null ? String(input.limit) : undefined,
-      pageId: input.pageId,
+      pageId: pageIdParam(input.pageId, "pageId", { emptyAsAbsent: true }),
       q: input.q,
       updatedAfter: input.updatedAfter,
     });
