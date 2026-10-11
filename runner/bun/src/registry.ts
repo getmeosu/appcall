@@ -1018,7 +1018,6 @@ import {
   executeSourcesListSync as listAshbySources,
   executeArchiveReasonsListSync as listAshbyArchiveReasons,
   executeInterviewSchedulesListSync as listAshbyInterviewSchedules,
-  executeInterviewSchedulesGetSync as getAshbyInterviewSchedule,
   executeInterviewStagesListSync as listAshbyInterviewStages,
   executeOpeningsListSync as listAshbyOpenings,
 } from "../../connectors/ashby/src/sync";
@@ -3301,7 +3300,6 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
       "sources.list": listAshbySources,
       "archive_reasons.list": listAshbyArchiveReasons,
       "interview_schedules.list": listAshbyInterviewSchedules,
-      "interview_schedules.get": getAshbyInterviewSchedule,
       "interview_stages.list": listAshbyInterviewStages,
       "openings.list": listAshbyOpenings,
     },

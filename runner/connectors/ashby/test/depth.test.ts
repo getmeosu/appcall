@@ -9,7 +9,6 @@ import {
   executeSourcesListSync,
   executeArchiveReasonsListSync,
   executeInterviewSchedulesListSync,
-  executeInterviewSchedulesGetSync,
   executeInterviewStagesListSync,
   executeOpeningsListSync,
 } from "../src/sync";
@@ -22,7 +21,6 @@ import usersFixture from "../fixtures/users_list.json";
 import sourcesFixture from "../fixtures/sources_list.json";
 import archiveReasonsFixture from "../fixtures/archive_reasons_list.json";
 import schedulesFixture from "../fixtures/interview_schedules_list.json";
-import scheduleInfoFixture from "../fixtures/interview_schedule_info.json";
 import stagesFixture from "../fixtures/interview_stages_list.json";
 import openingsFixture from "../fixtures/openings_list.json";
 
@@ -69,14 +67,16 @@ describe("Ashby candidates.update (write; runner owns Reconcile)", () => {
     });
     expect(calls).toHaveLength(1);
     expect(new URL(calls[0].url).pathname).toBe("/candidate.update");
-    expect(JSON.parse(await calls[0].text())).toEqual({
-      id: "e9ed20fd-d45f-4aad-8a00-a19bfba0083e",
+    const posted = JSON.parse(await calls[0].text());
+    expect(posted).toEqual({
+      candidateId: "e9ed20fd-d45f-4aad-8a00-a19bfba0083e",
       phoneNumber: "+1-555-0199",
     });
+    expect(posted.id).toBeUndefined();
     expect(result.candidate).toBeNull();
   });
 
-  test("maps websiteUrl to Ashby website", async () => {
+  test("sends websiteUrl as Ashby websiteUrl", async () => {
     const { calls, impl } = stubFetch(JSON.stringify(candidateUpdatedFixture));
     await executeCandidatesUpdateSync({
       ...auth,
@@ -84,7 +84,11 @@ describe("Ashby candidates.update (write; runner owns Reconcile)", () => {
       websiteUrl: "https://example.com",
       fetch: impl,
     });
-    expect(JSON.parse(await calls[0].text()).website).toBe("https://example.com");
+    const posted = JSON.parse(await calls[0].text());
+    expect(posted.websiteUrl).toBe("https://example.com");
+    expect(posted.website).toBeUndefined();
+    expect(posted.candidateId).toBe("e9ed20fd-d45f-4aad-8a00-a19bfba0083e");
+    expect(posted.id).toBeUndefined();
   });
 
   test("rejects missing id before fetch", async () => {
@@ -180,7 +184,7 @@ describe("Ashby archive_reasons.list", () => {
   });
 });
 
-describe("Ashby interview_schedules.list / get", () => {
+describe("Ashby interview_schedules.list", () => {
   test("POSTs /interviewSchedule.list", async () => {
     const { impl } = stubFetch(JSON.stringify(schedulesFixture));
     const result = await executeInterviewSchedulesListSync({ ...auth, fetch: impl });
@@ -188,25 +192,30 @@ describe("Ashby interview_schedules.list / get", () => {
     expect(result.interviewSchedules[0].events).toHaveLength(1);
   });
 
-  test("POSTs /interviewSchedule.info with interviewScheduleId as id", async () => {
-    const { calls, impl } = stubFetch(JSON.stringify(scheduleInfoFixture));
-    const result = await executeInterviewSchedulesGetSync({
-      ...auth,
-      interviewScheduleId: "sched-1",
-      fetch: impl,
-    });
-    expect(new URL(calls[0].url).pathname).toBe("/interviewSchedule.info");
-    expect(JSON.parse(await calls[0].text())).toEqual({ id: "sched-1" });
-    expect(result.interviewSchedule?.status).toBe("Scheduled");
-  });
 });
 
 describe("Ashby interview_stages.list", () => {
-  test("POSTs /interviewStage.list", async () => {
-    const { impl } = stubFetch(JSON.stringify(stagesFixture));
-    const result = await executeInterviewStagesListSync({ ...auth, fetch: impl });
+  test("POSTs /interviewStage.list with exactly interviewPlanId", async () => {
+    const { calls, impl } = stubFetch(JSON.stringify(stagesFixture));
+    const result = await executeInterviewStagesListSync({ ...auth, interviewPlanId: "plan-1", fetch: impl });
+    expect(calls).toHaveLength(1);
+    expect(new URL(calls[0].url).pathname).toBe("/interviewStage.list");
+    expect(JSON.parse(await calls[0].text())).toEqual({ interviewPlanId: "plan-1" });
     expect(result.interviewStages[0].id).toBe("ash-interview-stage:stage-1");
     expect(result.interviewStages[0].title).toBe("Phone Screen");
+  });
+
+  test("rejects missing interviewPlanId before fetch", async () => {
+    const { calls, impl } = stubFetch("{}");
+    await expect(
+      executeInterviewStagesListSync({ ...auth, interviewPlanId: "", fetch: impl }),
+    ).rejects.toThrow(/interviewPlanId/);
+    await expect(
+      executeInterviewStagesListSync({ ...auth, fetch: impl } as unknown as Parameters<
+        typeof executeInterviewStagesListSync
+      >[0]),
+    ).rejects.toThrow(/interviewPlanId/);
+    expect(calls).toHaveLength(0);
   });
 });
 
