@@ -1,3 +1,4 @@
+import { encodePathSegment } from "../../_shared/jobboard";
 import { createJiraClient, parseJiraRateLimit, pickStr, pickNum, asAdf } from "./http";
 import { normalizeIssue } from "./issues";
 import { normalizeProject } from "./projects";
@@ -117,7 +118,7 @@ export function getIssue(input: unknown): Record<string, unknown> | Promise<Reco
     else if (typeof fields === "string") qs.set("fields", fields);
     const query = qs.toString();
     return getClient(input, "issues.get")
-      .fetchJSON(`/issue/${encodeURIComponent(payload.issueKey)}${query ? `?${query}` : ""}`)
+      .fetchJSON(`/issue/${encodePathSegment(payload.issueKey, "issueKey")}${query ? `?${query}` : ""}`)
       .then((result) => {
         if (result.status === 200) return { connector: "jira", action: "issues.get", source: "connector", issue: normalizeIssue(result.body as any) };
         throw handleError(result);
@@ -159,7 +160,7 @@ export function updateIssue(input: unknown): Record<string, unknown> | Promise<R
     if (payload.dueDate !== undefined) fields.duedate = payload.dueDate;
 
     return getClient(input, "issues.update")
-      .fetchJSON(`/issue/${encodeURIComponent(payload.issueKey)}`, { method: "PUT", body: JSON.stringify({ fields }) })
+      .fetchJSON(`/issue/${encodePathSegment(payload.issueKey, "issueKey")}`, { method: "PUT", body: JSON.stringify({ fields }) })
       .then((result) => {
         if (result.status === 204) return { connector: "jira", action: "issues.update", source: "connector", updated: true };
         throw handleError(result);
@@ -187,7 +188,7 @@ export function deleteIssue(input: unknown): Record<string, unknown> | Promise<R
     const payload = validateDeleteIssueInput(input);
     const qs = payload.deleteSubtasks ? "?deleteSubtasks=true" : "";
     return getClient(input, "issues.delete")
-      .fetchJSON(`/issue/${encodeURIComponent(payload.issueKey)}${qs}`, { method: "DELETE" })
+      .fetchJSON(`/issue/${encodePathSegment(payload.issueKey, "issueKey")}${qs}`, { method: "DELETE" })
       .then((result) => {
         if (result.status === 204) return { connector: "jira", action: "issues.delete", source: "connector", deleted: true };
         throw handleError(result);
@@ -268,7 +269,7 @@ export function addComment(input: unknown): Record<string, unknown> | Promise<Re
       content: [{ type: "paragraph", content: [{ type: "text", text: payload.body }] }],
     };
     return getClient(input, "issues.comments.add")
-      .fetchJSON(`/issue/${encodeURIComponent(payload.issueKey)}/comment`, { method: "POST", body: JSON.stringify({ body: adfBody }) })
+      .fetchJSON(`/issue/${encodePathSegment(payload.issueKey, "issueKey")}/comment`, { method: "POST", body: JSON.stringify({ body: adfBody }) })
       .then((result) => {
         if (result.status === 201) {
           return { connector: "jira", action: "issues.comments.add", source: "connector", comment: normalizeComment(result.body as any, payload.issueKey) };
@@ -299,7 +300,7 @@ export function listComments(input: unknown): Record<string, unknown> | Promise<
     const payload = validateListCommentsInput(input);
     const qs = `?startAt=${payload.startAt}&maxResults=${payload.maxResults}`;
     return getClient(input, "issues.comments.list")
-      .fetchJSON(`/issue/${encodeURIComponent(payload.issueKey)}/comment${qs}`)
+      .fetchJSON(`/issue/${encodePathSegment(payload.issueKey, "issueKey")}/comment${qs}`)
       .then((result) => {
         if (result.status === 200) {
           const parsed = parseCommentsResponse(result.body, payload.issueKey);
@@ -326,7 +327,7 @@ export function listTransitions(input: unknown): Record<string, unknown> | Promi
   if (hasAuth(input)) {
     const payload = validateListTransitionsInput(input);
     return getClient(input, "issues.transitions.list")
-      .fetchJSON(`/issue/${encodeURIComponent(payload.issueKey)}/transitions`)
+      .fetchJSON(`/issue/${encodePathSegment(payload.issueKey, "issueKey")}/transitions`)
       .then((result) => {
         if (result.status === 200) {
           const parsed = parseTransitionsResponse(result.body);
@@ -373,7 +374,7 @@ export function doTransition(input: unknown): Record<string, unknown> | Promise<
       };
     }
     return getClient(input, "issues.transitions.do")
-      .fetchJSON(`/issue/${encodeURIComponent(payload.issueKey)}/transitions`, { method: "POST", body: JSON.stringify(body) })
+      .fetchJSON(`/issue/${encodePathSegment(payload.issueKey, "issueKey")}/transitions`, { method: "POST", body: JSON.stringify(body) })
       .then((result) => {
         if (result.status === 204) return { connector: "jira", action: "issues.transitions.do", source: "connector", transitioned: true };
         throw handleError(result);
@@ -401,7 +402,7 @@ export function assignIssue(input: unknown): Record<string, unknown> | Promise<R
     const payload = validateAssignIssueInput(input);
     const body = { accountId: payload.accountId ?? null };
     return getClient(input, "issues.assign")
-      .fetchJSON(`/issue/${encodeURIComponent(payload.issueKey)}/assignee`, { method: "PUT", body: JSON.stringify(body) })
+      .fetchJSON(`/issue/${encodePathSegment(payload.issueKey, "issueKey")}/assignee`, { method: "PUT", body: JSON.stringify(body) })
       .then((result) => {
         if (result.status === 204) return { connector: "jira", action: "issues.assign", source: "connector", assigned: true };
         throw handleError(result);
@@ -429,7 +430,7 @@ export function getProject(input: unknown): Record<string, unknown> | Promise<Re
     if (expand) qs.set("expand", expand);
     const query = qs.toString();
     return getClient(input, "projects.get")
-      .fetchJSON(`/project/${encodeURIComponent(payload.projectKey)}${query ? `?${query}` : ""}`)
+      .fetchJSON(`/project/${encodePathSegment(payload.projectKey, "projectKey")}${query ? `?${query}` : ""}`)
       .then((result) => {
         if (result.status === 200) return { connector: "jira", action: "projects.get", source: "connector", project: normalizeProject(result.body as any) };
         throw handleError(result);
@@ -486,7 +487,7 @@ export function getIssueChangelog(input: unknown): Record<string, unknown> | Pro
     const payload = validateGetIssueChangelogInput(input);
     const qs = `?startAt=${payload.startAt}&maxResults=${payload.maxResults}`;
     return getClient(input, "issues.changelog.get")
-      .fetchJSON(`/issue/${encodeURIComponent(payload.issueKey)}/changelog${qs}`)
+      .fetchJSON(`/issue/${encodePathSegment(payload.issueKey, "issueKey")}/changelog${qs}`)
       .then((result) => {
         if (result.status === 200) {
           const r = isRecord(result.body) ? result.body : {};
@@ -525,7 +526,7 @@ export function addWatcher(input: unknown): Record<string, unknown> | Promise<Re
   if (hasAuth(input)) {
     const payload = validateAddWatcherInput(input);
     return getClient(input, "issues.watchers.add")
-      .fetchJSON(`/issue/${encodeURIComponent(payload.issueKey)}/watchers`, { method: "POST", body: JSON.stringify(payload.accountId) })
+      .fetchJSON(`/issue/${encodePathSegment(payload.issueKey, "issueKey")}/watchers`, { method: "POST", body: JSON.stringify(payload.accountId) })
       .then((result) => {
         if (result.status === 204 || result.status === 201) return { connector: "jira", action: "issues.watchers.add", source: "connector", added: true };
         throw handleError(result);
@@ -615,7 +616,7 @@ export function addWorklog(input: unknown): Record<string, unknown> | Promise<Re
     if (payload.started) body.started = payload.started;
     if (payload.comment) body.comment = asAdf(payload.comment) ?? adfParagraph(payload.comment);
     return getClient(input, "worklogs.add")
-      .fetchJSON(`/issue/${encodeURIComponent(payload.issueKey)}/worklog`, { method: "POST", body: JSON.stringify(body) })
+      .fetchJSON(`/issue/${encodePathSegment(payload.issueKey, "issueKey")}/worklog`, { method: "POST", body: JSON.stringify(body) })
       .then((result) => {
         if (result.status === 201 || result.status === 200) {
           return {

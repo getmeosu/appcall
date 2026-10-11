@@ -1,4 +1,5 @@
 import { createSendGridClient, parseSendGridRateLimit } from "./http";
+import { assertSafePathSegment } from "../../_shared/jobboard";
 import { normalizeContact, normalizeList, type NormalizedContact, type NormalizedList } from "./objects";
 
 // ─── contacts.upsert ─────────────────────────────────────────────────────────
@@ -63,7 +64,7 @@ export type ListGetInput = { listId: string };
 
 export function validateListGetInput(input: unknown): ListGetInput {
   if (!isRecord(input)) throw new Error("input must be an object");
-  return { listId: requireString(input.listId, "listId") };
+  return { listId: requireSafeId(input.listId, "listId") };
 }
 
 // ─── lists.delete ─────────────────────────────────────────────────────────────
@@ -73,7 +74,7 @@ export type ListDeleteInput = { listId: string; deleteContacts?: boolean };
 export function validateListDeleteInput(input: unknown): ListDeleteInput {
   if (!isRecord(input)) throw new Error("input must be an object");
   return {
-    listId: requireString(input.listId, "listId"),
+    listId: requireSafeId(input.listId, "listId"),
     deleteContacts: typeof input.deleteContacts === "boolean" ? input.deleteContacts : false,
   };
 }
@@ -84,7 +85,7 @@ export type ContactGetInput = { contactId: string };
 
 export function validateContactGetInput(input: unknown): ContactGetInput {
   if (!isRecord(input)) throw new Error("input must be an object");
-  return { contactId: requireString(input.contactId, "contactId") };
+  return { contactId: requireSafeId(input.contactId, "contactId") };
 }
 
 // ─── lists.list.action ────────────────────────────────────────────────────────
@@ -126,7 +127,7 @@ export function validateListContactsAddInput(input: unknown): ListContactsAddInp
   const emails = stringArray(input.emails);
   const contactIds = stringArray(input.contactIds);
   if (emails.length === 0 && contactIds.length === 0) throw new Error("emails or contactIds is required");
-  return { listId: requireString(input.listId, "listId"), emails: emails.length ? emails : undefined, contactIds: contactIds.length ? contactIds : undefined };
+  return { listId: requireSafeId(input.listId, "listId"), emails: emails.length ? emails : undefined, contactIds: contactIds.length ? contactIds : undefined };
 }
 
 // ─── lists.contacts.remove ────────────────────────────────────────────────────
@@ -137,7 +138,7 @@ export function validateListContactsRemoveInput(input: unknown): ListContactsRem
   if (!isRecord(input)) throw new Error("input must be an object");
   const contactIds = stringArray(input.contactIds);
   if (contactIds.length === 0) throw new Error("contactIds must be a non-empty array");
-  return { listId: requireString(input.listId, "listId"), contactIds };
+  return { listId: requireSafeId(input.listId, "listId"), contactIds };
 }
 
 // ─── Client ───────────────────────────────────────────────────────────────────
@@ -339,10 +340,12 @@ function requireString(v: unknown, f: string): string {
   if (typeof v !== "string" || !v.length) throw new Error(`${f} is required`);
   return v;
 }
+// SendGrid list and contact ids are UUIDs. They are interpolated into URL paths
+// and, for lists.contacts.list, into an SGQL string literal, so they must pass
+// the shared strict guard: [A-Za-z0-9._-] only (no quotes, separators or "%")
+// and never a dot segment.
 function requireSafeId(v: unknown, f: string): string {
-  const id = requireString(v, f);
-  if (/['"]/.test(id)) throw new Error(`${f} is invalid`);
-  return id;
+  return assertSafePathSegment(requireString(v, f), f);
 }
 function stringArray(v: unknown): string[] {
   return Array.isArray(v) ? v.filter((item): item is string => typeof item === "string" && item.length > 0) : [];

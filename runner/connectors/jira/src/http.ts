@@ -1,5 +1,6 @@
 import { createConnectorHttpClient } from "../../../bun/src/http";
 import manifest from "../manifest.json";
+import { encodePathSegment } from "../../_shared/jobboard";
 
 export type JiraRateLimitResult =
   | { limited: true; retryAfterSeconds: number }
@@ -55,7 +56,8 @@ export type JiraClientOptions = {
   family?: JiraApiFamily;
 };
 
-function restBase(cloudId: string, family: JiraApiFamily): string {
+function restBase(rawCloudId: string, family: JiraApiFamily): string {
+  const cloudId = encodePathSegment(rawCloudId, "cloudId");
   if (family === "agile") return `https://api.atlassian.com/ex/jira/${cloudId}/rest/agile/1.0`;
   if (family === "servicedesk") return `https://api.atlassian.com/ex/jira/${cloudId}/rest/servicedeskapi`;
   return `https://api.atlassian.com/ex/jira/${cloudId}/rest/api/3`;

@@ -1,4 +1,5 @@
 import { createSendGridClient, parseSendGridRateLimit, prop, isRecord } from "./http";
+import { assertSafePathSegment } from "../../_shared/jobboard";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -44,7 +45,7 @@ export type TemplateGetInput = { templateId: string };
 
 export function validateTemplateGetInput(input: unknown): TemplateGetInput {
   if (!isRecord(input)) throw new Error("input must be an object");
-  return { templateId: requireString(input.templateId, "templateId") };
+  return { templateId: assertSafePathSegment(requireString(input.templateId, "templateId"), "templateId") };
 }
 
 export type TemplateListInput = { generations?: string; pageSize?: number; pageToken?: string };
@@ -62,14 +63,14 @@ export type TemplateUpdateInput = { templateId: string; name: string };
 
 export function validateTemplateUpdateInput(input: unknown): TemplateUpdateInput {
   if (!isRecord(input)) throw new Error("input must be an object");
-  return { templateId: requireString(input.templateId, "templateId"), name: requireString(input.name, "name") };
+  return { templateId: assertSafePathSegment(requireString(input.templateId, "templateId"), "templateId"), name: requireString(input.name, "name") };
 }
 
 export type TemplateDeleteInput = { templateId: string };
 
 export function validateTemplateDeleteInput(input: unknown): TemplateDeleteInput {
   if (!isRecord(input)) throw new Error("input must be an object");
-  return { templateId: requireString(input.templateId, "templateId") };
+  return { templateId: assertSafePathSegment(requireString(input.templateId, "templateId"), "templateId") };
 }
 
 // ─── suppression.bounces.list ─────────────────────────────────────────────────

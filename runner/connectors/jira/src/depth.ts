@@ -10,6 +10,7 @@ import {
   type JiraApiFamily,
 } from "./http";
 import rawSpecs from "./depth_specs.json";
+import { assertNoTraversalSegment, encodePathSegment } from "../../_shared/jobboard";
 
 export type DepthSpec = {
   id: string;
@@ -53,9 +54,8 @@ function requireAliases(input: Record<string, unknown>, aliases: string[]): unkn
 }
 
 function asPathSegment(value: unknown, field: string): string {
-  if (typeof value === "string" && value.length > 0) return value;
-  if (typeof value === "number" && Number.isFinite(value)) return String(value);
-  throw new Error(`${field} is required`);
+  // encodeURIComponent leaves "." and ".." intact, so reject traversal first.
+  return assertNoTraversalSegment(value, field);
 }
 
 function interpolatePath(spec: DepthSpec, input: Record<string, unknown>): string {
@@ -203,7 +203,7 @@ const BUILDERS: Record<string, (spec: DepthSpec, input: Record<string, unknown>)
       throw new Error("file_to_upload is required");
     }
     return {
-      path: `/issue/${encodeURIComponent(issueKey)}/attachments`,
+      path: `/issue/${encodePathSegment(issueKey, "issueKey")}/attachments`,
       method: "POST",
       body: form,
       headers: { "X-Atlassian-Token": "no-check" },
@@ -457,16 +457,16 @@ const BUILDERS: Record<string, (spec: DepthSpec, input: Record<string, unknown>)
     const projects = pickValue(input, ["projectIdsOrKeys", "project_ids_or_keys", "projectKey", "project_id_or_key"]);
     const project = Array.isArray(projects) ? projects[0] : projects;
     if (project !== undefined && project !== null && `${project}`.length > 0) {
-      const path = appendQuery(`/project/${encodeURIComponent(String(project))}/component`, spec, input);
+      const path = appendQuery(`/project/${encodePathSegment(String(project), "projectIdsOrKeys")}/component`, spec, input);
       return { path, method: "GET" };
     }
     const id = pickStr(input, "query", "id", "component_id");
     if (!id) throw new Error("projectIdsOrKeys is required");
-    return { path: `/component/${encodeURIComponent(id)}`, method: "GET" };
+    return { path: `/component/${encodePathSegment(id, "id")}`, method: "GET" };
   },
   getProjectType(_spec, input) {
     const key = pickStr(input, "project_type_key", "projectTypeKey");
-    if (key) return { path: `/project/type/${encodeURIComponent(key)}`, method: "GET" };
+    if (key) return { path: `/project/type/${encodePathSegment(key, "projectTypeKey")}`, method: "GET" };
     return { path: "/project/type", method: "GET" };
   },
 };
