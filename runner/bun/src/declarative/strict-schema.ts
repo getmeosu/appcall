@@ -4,7 +4,7 @@ import type { JSONSchema } from "./validate";
 const MAX_DEPTH = 64;
 const MAX_NODES = 4096;
 const forbidden = new Set(["__proto__", "constructor", "prototype"]);
-const supported = new Set(["type", "enum", "properties", "required", "additionalProperties", "items", "minItems", "minLength", "minimum", "maximum", "title", "description", "anyOf", "allOf", "oneOf"]);
+const supported = new Set(["type", "enum", "const", "properties", "required", "additionalProperties", "items", "minItems", "maxItems", "minLength", "maxLength", "minProperties", "maxProperties", "minimum", "maximum", "exclusiveMinimum", "exclusiveMaximum", "uniqueItems", "title", "description", "anyOf", "allOf", "oneOf"]);
 // Bounded combinators, shared with the control plane validator
 // (crates/appcall-connectors/src/schema.rs): each branch is a schema node that
 // counts toward MAX_NODES and MAX_DEPTH, and a combinator holds 1..64 branches.
@@ -14,7 +14,7 @@ const MAX_COMBINATOR_BRANCHES = 64;
 // Annotation-only keywords the control plane's schema checker accepts
 // (crates/appcall-connectors/src/schema.rs `check_schema`). They never
 // constrain a value, so registry dispatch validation may skip over them.
-const annotations = new Set(["default", "examples", "$schema", "$id", "$comment", "readOnly", "writeOnly", "deprecated"]);
+const annotations = new Set(["default", "examples", "format", "$schema", "$id", "$comment", "readOnly", "writeOnly", "deprecated"]);
 
 export function assertStrictSchema(schema: JSONSchema, depth = 0, state = { nodes: 0 }, allowAnnotations = false): void {
   if (!isRecord(schema)) throw new Error("Invalid strict-generated schema");
@@ -27,8 +27,9 @@ export function assertStrictSchema(schema: JSONSchema, depth = 0, state = { node
   for (const type of (typeof types === "string" ? [types] : Array.isArray(types) ? types : [])) {
     if (!["string", "number", "integer", "boolean", "array", "object", "null"].includes(type)) throw new Error(`Invalid schema type: ${type}`);
   }
-  for (const key of ["minItems", "minLength"]) if (schema[key] !== undefined && (!Number.isInteger(schema[key]) || (schema[key] as number) < 0)) throw new Error(`${key} must be a non-negative integer`);
-  for (const key of ["minimum", "maximum"]) if (schema[key] !== undefined && (typeof schema[key] !== "number" || !Number.isFinite(schema[key]) || Math.abs(schema[key] as number) > Number.MAX_SAFE_INTEGER)) throw new Error(`${key} must be a finite safe number`);
+  for (const key of ["minItems", "maxItems", "minLength", "maxLength", "minProperties", "maxProperties"]) if (schema[key] !== undefined && (!Number.isInteger(schema[key]) || (schema[key] as number) < 0)) throw new Error(`${key} must be a non-negative integer`);
+  for (const key of ["minimum", "maximum", "exclusiveMinimum", "exclusiveMaximum"]) if (schema[key] !== undefined && (typeof schema[key] !== "number" || !Number.isFinite(schema[key]) || Math.abs(schema[key] as number) > Number.MAX_SAFE_INTEGER)) throw new Error(`${key} must be a finite safe number`);
+  if (schema.uniqueItems !== undefined && typeof schema.uniqueItems !== "boolean") throw new Error("uniqueItems must be a boolean");
   if (schema.enum !== undefined && (!Array.isArray(schema.enum) || schema.enum.length === 0)) throw new Error("enum must be a non-empty array");
   if (schema.required !== undefined && (!Array.isArray(schema.required) || !schema.required.every((x) => typeof x === "string" && !forbidden.has(x)))) throw new Error("required must be an array of safe property names");
   if (schema.additionalProperties !== undefined && typeof schema.additionalProperties !== "boolean" && !isRecord(schema.additionalProperties)) throw new Error("additionalProperties must be boolean or schema");
@@ -106,10 +107,19 @@ export function compileStrictValidator(schema: JSONSchema, options: StrictValida
     const matchers = types.map((t) => typeMatchers[t] ?? ((value: unknown) => typeof value === t));
     const expected = registry ? ` (expected ${types.join(" or ")})` : "";
     const enumValues = s.enum ? s.enum as unknown[] : undefined;
+    const hasConst = Object.hasOwn(s, "const");
+    const constant = s.const;
     const minLength = s.minLength as number | undefined;
+    const maxLength = s.maxLength as number | undefined;
     const minimum = s.minimum as number | undefined;
     const maximum = s.maximum as number | undefined;
+    const exclusiveMinimum = s.exclusiveMinimum as number | undefined;
+    const exclusiveMaximum = s.exclusiveMaximum as number | undefined;
     const minItems = s.minItems as number | undefined;
+    const maxItems = s.maxItems as number | undefined;
+    const minProperties = s.minProperties as number | undefined;
+    const maxProperties = s.maxProperties as number | undefined;
+    const uniqueItems = s.uniqueItems === true;
     const props = isRecord(s.properties) ? s.properties : {};
     const propChecks = new Map<string, NodeCheck>();
     for (const [k, child] of Object.entries(props)) propChecks.set(k, compileNode(child as JSONSchema));
@@ -130,17 +140,38 @@ export function compileStrictValidator(schema: JSONSchema, options: StrictValida
         for (let i = 0; i < enumValues.length && !allowed; i++) allowed = deepEqual(enumValues[i], value);
         if (!allowed) throw new Error(`${pathOf(parent, key) || "input"} is not an allowed value`);
       }
-      if (typeof value === "string") { if (minLength !== undefined && [...value].length < minLength) throw new Error(`${pathOf(parent, key)} is too short`); return; }
-      if (typeof value === "number") { if (minimum !== undefined && value < minimum) throw new Error(`${pathOf(parent, key)} is below minimum`); if (maximum !== undefined && value > maximum) throw new Error(`${pathOf(parent, key)} is above maximum`); return; }
+      if (hasConst && !deepEqual(constant, value)) throw new Error(`${pathOf(parent, key) || "input"} is not an allowed value`);
+      if (typeof value === "string") {
+        const path = pathOf(parent, key);
+        const len = [...value].length;
+        if (minLength !== undefined && len < minLength) throw new Error(`${path} is too short`);
+        if (maxLength !== undefined && len > maxLength) throw new Error(`${path} is too long`);
+        return;
+      }
+      if (typeof value === "number") {
+        const path = pathOf(parent, key);
+        if (minimum !== undefined && value < minimum) throw new Error(`${path} is below minimum`);
+        if (exclusiveMinimum !== undefined && value <= exclusiveMinimum) throw new Error(`${path} is below minimum`);
+        if (maximum !== undefined && value > maximum) throw new Error(`${path} is above maximum`);
+        if (exclusiveMaximum !== undefined && value >= exclusiveMaximum) throw new Error(`${path} is above maximum`);
+        return;
+      }
       if (Array.isArray(value)) {
         const path = pathOf(parent, key);
         if (minItems !== undefined && value.length < minItems) throw new Error(`${path} has too few items`);
+        if (maxItems !== undefined && value.length > maxItems) throw new Error(`${path} has too many items`);
+        if (uniqueItems) {
+          for (let i = 0; i < value.length; i++) for (let j = i + 1; j < value.length; j++) if (deepEqual(value[i], value[j])) throw new Error(`${path} has duplicate items`);
+        }
         const item = items ?? empty;
         for (let i = 0; i < value.length; i++) item(value[i], path, i, depth + 1, ctx);
         return;
       }
       if (isRecord(value)) {
         const path = pathOf(parent, key);
+        const propCount = Object.keys(value).length;
+        if (minProperties !== undefined && propCount < minProperties) throw new Error(`${path || "input"} has too few properties`);
+        if (maxProperties !== undefined && propCount > maxProperties) throw new Error(`${path || "input"} has too many properties`);
         for (const k of required) if (!Object.hasOwn(value, k)) throw new Error(`${childPath(path, k)} is required`);
         const atTop = path === "";
         for (const k in value) {

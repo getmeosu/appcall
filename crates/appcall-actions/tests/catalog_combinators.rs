@@ -14,15 +14,51 @@ fn github_combinator_operations_are_dispatchable_through_the_catalog() {
     ))
     .unwrap();
     let cases = [
-        ("deployments.create", json!({"owner":"o","repo":"r","ref":"main","payload":{"a":1}}), json!({"owner":"o","repo":"r","ref":"main","payload":5})),
-        ("deployments.get", json!({"owner":"o","repo":"r","deploymentId":42}), json!({"owner":"o","repo":"r"})),
-        ("discussions.comments.create", json!({"owner":"o","repo":"r","body":"b","discussionId":"D_1"}), json!({"owner":"o","repo":"r","body":"b"})),
-        ("discussions.comments.list", json!({"owner":"o","repo":"r","discussionNumber":7}), json!({"owner":"o","repo":"r"})),
-        ("discussions.comments.update", json!({"owner":"o","repo":"r","commentId":"C","body":"b","discussionNumber":7}), json!({"owner":"o","repo":"r","commentId":"C","body":"b"})),
-        ("discussions.get", json!({"owner":"o","repo":"r","title":"Welcome"}), json!({"owner":"o","repo":"r"})),
-        ("discussions.update", json!({"owner":"o","repo":"r","discussionNumber":7,"title":"t"}), json!({"owner":"o","repo":"r","discussionNumber":7})),
-        ("environments.get", json!({"owner":"o","repo":"r","name":"prod"}), json!({"owner":"o","repo":"r"})),
-        ("releases.assets.get", json!({"owner":"o","repo":"r","releaseId":3,"name":"app.zip"}), json!({"owner":"o","repo":"r","releaseId":3})),
+        (
+            "deployments.create",
+            json!({"owner":"o","repo":"r","ref":"main","payload":{"a":1}}),
+            json!({"owner":"o","repo":"r","ref":"main","payload":5}),
+        ),
+        (
+            "deployments.get",
+            json!({"owner":"o","repo":"r","deploymentId":42}),
+            json!({"owner":"o","repo":"r"}),
+        ),
+        (
+            "discussions.comments.create",
+            json!({"owner":"o","repo":"r","body":"b","discussionId":"D_1"}),
+            json!({"owner":"o","repo":"r","body":"b"}),
+        ),
+        (
+            "discussions.comments.list",
+            json!({"owner":"o","repo":"r","discussionNumber":7}),
+            json!({"owner":"o","repo":"r"}),
+        ),
+        (
+            "discussions.comments.update",
+            json!({"owner":"o","repo":"r","commentId":"C","body":"b","discussionNumber":7}),
+            json!({"owner":"o","repo":"r","commentId":"C","body":"b"}),
+        ),
+        (
+            "discussions.get",
+            json!({"owner":"o","repo":"r","title":"Welcome"}),
+            json!({"owner":"o","repo":"r"}),
+        ),
+        (
+            "discussions.update",
+            json!({"owner":"o","repo":"r","discussionNumber":7,"title":"t"}),
+            json!({"owner":"o","repo":"r","discussionNumber":7}),
+        ),
+        (
+            "environments.get",
+            json!({"owner":"o","repo":"r","name":"prod"}),
+            json!({"owner":"o","repo":"r"}),
+        ),
+        (
+            "releases.assets.get",
+            json!({"owner":"o","repo":"r","releaseId":3,"name":"app.zip"}),
+            json!({"owner":"o","repo":"r","releaseId":3}),
+        ),
     ];
     for (action, mut valid, mut invalid) in cases {
         valid["accessToken"] = json!("synthetic-stored-token");

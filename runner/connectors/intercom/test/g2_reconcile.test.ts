@@ -106,7 +106,7 @@ describe("Intercom G2 input errors", () => {
     test(`${action} rejects ${JSON.stringify(Object.keys(input))} before any fetch`, async () => {
       const settled = await run(action, input);
       expect(settled.calls).toHaveLength(0);
-      const code = (settled.failure?.error as { code?: string } | undefined)?.code ?? settled.error?.code;
+      const code = (settled.failure?.code as string | undefined) ?? (settled.failure?.error as { code?: string } | undefined)?.code ?? settled.error?.code;
       expect(code).toBe("INVALID_ACTION_INPUT");
     });
   }

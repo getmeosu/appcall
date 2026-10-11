@@ -81,7 +81,7 @@ describe("registry input schema validation", () => {
       expect(result.ok).toBe(true);
       if (result.ok) await Promise.resolve(result.output).catch(() => undefined);
       expect(net.calls.length).toBeGreaterThan(0);
-      expect(net.calls[0]).toStartWith("https://api.lever.eu/v1/opportunities/opp-1");
+      expect(net.calls[0]).toStartWith("https://api.eu.lever.co/v1/opportunities/opp-1");
     });
 
     test("the runner RPC maps a schema rejection to HTTP 400 INVALID_ACTION_INPUT", async () => {

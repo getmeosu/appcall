@@ -256,12 +256,6 @@ const KNOWN_OPEN_OBSERVE_GAPS = [
   "github issues.comments.update -> issues.get [issueNumber]",
   "github notifications.threads.subscription.set -> notifications.threads.subscription.get [thread_id]",
   "github orgs.repos.create -> repos.get [owner,repo]",
-  "google-ads ad_groups.mutate -> ad_groups.get [adGroupId]",
-  "google-ads ads.mutate -> ads.get [adId]",
-  "google-ads budgets.mutate -> budgets.get [budgetId]",
-  "google-ads campaigns.mutate -> campaigns.get [campaignId]",
-  "google-ads conversion_actions.mutate -> conversion_actions.get [conversionActionId]",
-  "google-ads keywords.mutate -> keywords.get [criterionId]",
 ];
 
 describe("effect pairing scan (all connector manifests)", () => {
