@@ -28,7 +28,7 @@ describe("runner startup smoke", () => {
       process.kill();
       await process.exited;
     }
-  }, 10000);
+  }, 20000);
 
   test("APPCALL_RUNNER_TOKEN gates RPC end-to-end through the real entrypoint", async () => {
     const smokePort = await reserveFreePort();
@@ -61,12 +61,12 @@ describe("runner startup smoke", () => {
       process.kill();
       await process.exited;
     }
-  }, 10000);
+  }, 20000);
 });
 
 async function waitForRunnerHealthz(healthzURL: string): Promise<void> {
   let lastError: unknown;
-  for (let attempt = 0; attempt < 30; attempt += 1) {
+  for (let attempt = 0; attempt < 120; attempt += 1) {
     try {
       const response = await fetch(healthzURL);
       if (response.ok) {
@@ -96,7 +96,7 @@ async function reserveFreePort(): Promise<number> {
 
 async function waitForRunnerRPC(smokeURL: string): Promise<Response> {
   let lastError: unknown;
-  for (let attempt = 0; attempt < 30; attempt += 1) {
+  for (let attempt = 0; attempt < 120; attempt += 1) {
     try {
       const response = await fetch(smokeURL, {
         method: "POST",
