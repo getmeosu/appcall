@@ -24,7 +24,7 @@ function empty(status: number) {
 
 describe("github write card 8 package version deletes and package restores", () => {
   test("version is 0.79.0 at 852 ops with the write breakdown", () => {
-    expect(manifest.version).toBe("0.80.0");
+    expect(manifest.version).toBe("0.80.1");
     const ops = manifest.operations as Record<string, Record<string, unknown>>;
     expect(Object.keys(ops)).toHaveLength(910);
     const kinds = { action: 0, sync: 0, webhook: 0 };
