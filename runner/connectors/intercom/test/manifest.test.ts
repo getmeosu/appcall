@@ -6,8 +6,8 @@ describe("Intercom manifest", () => {
     expect(manifest.key).toBe("intercom");
   });
 
-  it("has version 0.4.0", () => {
-    expect(manifest.version).toBe("0.4.0");
+  it("has version 0.4.1", () => {
+    expect(manifest.version).toBe("0.4.1");
   });
 
   it("uses bun runtime", () => {
@@ -101,13 +101,11 @@ describe("Intercom manifest", () => {
     );
   });
 
-  it("wires conversations.reply Idempotent → conversations.get", () => {
-    const reply = manifest.operations["conversations.reply"] as {
-      effectPolicy?: string;
-      reconcile?: string;
-    };
-    expect(reply.effectPolicy).toBe("Idempotent");
-    expect(reply.reconcile).toBe("conversations.get");
+  it("declares conversations.reply as a create with no EffectPolicy", () => {
+    const reply = manifest.operations["conversations.reply"] as Record<string, unknown>;
+    expect(reply.sideEffect).toBe("write");
+    expect(Object.hasOwn(reply, "effectPolicy")).toBe(false);
+    expect(Object.hasOwn(reply, "reconcile")).toBe(false);
   });
 
   it("declares contacts.get + conversations.search as reads", () => {
