@@ -1,17 +1,7 @@
 {
-  "key": "anchor-browser",
-  "name": "Anchor Browser",
-  "version": "0.2.0",
-  "runtime": "bun",
-  "visibility": "public",
-  "categories": [
-    "dev-tools"
-  ],
   "auth": {
-    "type": "api_key",
     "scopes": [],
     "setup": {
-      "mode": "api_key",
       "fields": [
         {
           "key": "apiKey",
@@ -19,152 +9,169 @@
           "required": true,
           "secret": true
         }
-      ]
+      ],
+      "mode": "api_key"
+    },
+    "type": "api_key"
+  },
+  "categories": [
+    "dev-tools"
+  ],
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
     }
   },
-  "network": {
-    "allowedHosts": [
-      "api.anchorbrowser.io"
-    ]
-  },
-  "models": [
-    "billing",
-    "project",
-    "session",
-    "profile",
-    "recording",
-    "webhook",
-    "extension"
-  ],
   "http": {
-    "baseUrl": "https://api.anchorbrowser.io",
     "auth": {
       "field": "apiKey",
       "in": "header",
       "name": "anchor-api-key",
       "value": "{{apiKey}}"
     },
+    "baseUrl": "https://api.anchorbrowser.io",
     "errors": {
-      "rateLimitStatuses": [
-        429
-      ],
-      "retryAfterHeader": "retry-after",
       "defaultRetryAfterSeconds": 30,
       "messagePaths": [
         "error.message",
         "error",
         "message"
-      ]
+      ],
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after"
     },
     "headers": {
       "Accept": "application/json"
     }
   },
+  "key": "anchor-browser",
+  "models": [
+    "billing",
+    "project",
+    "session",
+    "profile",
+    "task",
+    "extension",
+    "integration",
+    "recording",
+    "agent",
+    "event",
+    "batch"
+  ],
+  "name": "Anchor Browser",
+  "network": {
+    "allowedHosts": [
+      "api.anchorbrowser.io"
+    ]
+  },
   "operations": {
+    "billing.get": {
+      "description": "Retrieve credit balance, usage, tier, and browser limits for the authenticated project.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {},
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/billing",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get billing",
+      "validationMode": "strict-generated"
+    },
     "healthcheck": {
-      "timeoutMs": 5000,
+      "description": "Validate the Anchor Browser API key by reading project billing.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {},
+        "type": "object"
+      },
+      "kind": "action",
       "maxInputBytes": 4096,
       "maxResponseBytes": 65536,
-      "kind": "action",
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/billing",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
       "sideEffect": "read",
+      "timeoutMs": 5000,
       "title": "Healthcheck",
-      "description": "Validate the Anchor Browser API key by reading project billing.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {},
-        "additionalProperties": false
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "GET",
-        "path": "/v1/billing",
-        "success": [
-          200
-        ]
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "billing.get": {
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "kind": "action",
-      "sideEffect": "read",
-      "title": "Get billing",
-      "description": "Retrieve credit balance, usage, tier, and browser limits for the authenticated project.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {},
-        "additionalProperties": false
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "GET",
-        "path": "/v1/billing",
-        "success": [
-          200
-        ]
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
+      "validationMode": "strict-generated"
     },
     "projects.metadata.get": {
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "kind": "action",
-      "sideEffect": "read",
-      "title": "Get project metadata",
       "description": "Retrieve lightweight Anchor Browser project metadata by project ID.",
+      "enforceOutputSchema": true,
       "inputSchema": {
-        "type": "object",
+        "additionalProperties": false,
         "properties": {
           "projectId": {
-            "type": "string",
-            "minLength": 1
+            "minLength": 1,
+            "type": "string"
           }
         },
-        "additionalProperties": false,
         "required": [
           "projectId"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
         ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "additionalProperties": false
+        "required": [
+          "data"
+        ],
+        "type": "object"
       },
       "request": {
         "method": "GET",
@@ -173,48 +180,1904 @@
           200
         ]
       },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "sessions.list": {
-      "kind": "action",
+      "responseFormat": "json",
       "sideEffect": "read",
       "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "title": "List sessions",
-      "description": "List Anchor Browser sessions for the authenticated project.",
+      "title": "Get project metadata",
+      "validationMode": "strict-generated"
+    },
+    "sessions.mouse.click": {
+      "description": "Perform a mouse click at specified coordinates in a browser session.",
+      "enforceOutputSchema": true,
       "inputSchema": {
-        "type": "object",
+        "additionalProperties": false,
         "properties": {
-          "page": {
-            "type": "integer",
-            "minimum": 1,
-            "description": "Page number to fetch."
+          "session_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Browser session ID."
           },
-          "limit": {
+          "x": {
             "type": "integer",
-            "description": "Sessions per page. Supported values are 10, 20, and 50."
+            "description": "Horizontal click coordinate in pixels."
+          },
+          "y": {
+            "type": "integer",
+            "description": "Vertical click coordinate in pixels."
+          },
+          "button": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Mouse button to click.",
+            "enum": [
+              "left",
+              "right",
+              "middle"
+            ]
           }
         },
-        "additionalProperties": false
-      },
-      "outputSchema": {
         "type": "object",
         "required": [
-          "data"
-        ],
+          "session_id",
+          "x",
+          "y"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "additionalProperties": false
+        "required": [
+          "data"
+        ],
+        "type": "object"
       },
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Click mouse",
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "POST",
+        "path": "/v1/sessions/{{session_id}}/mouse/click",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "x": "{{x}}",
+          "y": "{{y}}",
+          "button": "{{button}}"
+        }
+      }
+    },
+    "sessions.copy": {
+      "description": "Copy currently selected text in a browser session to the clipboard.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Browser session ID."
+          }
+        },
+        "type": "object",
+        "required": [
+          "session_id"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Copy selected text",
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "POST",
+        "path": "/v1/sessions/{{session_id}}/copy",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {}
+      }
+    },
+    "integrations.create": {
+      "description": "Create a third-party integration such as 1Password for use in sessions and profiles.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Integration name."
+          },
+          "type": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Integration type.",
+            "enum": [
+              "1PASSWORD"
+            ]
+          },
+          "credentials": {
+            "type": "object",
+            "description": "Credentials required to authenticate with the third-party service."
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "type",
+          "credentials"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Create integration",
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "POST",
+        "path": "/v1/integrations",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "name": "{{name}}",
+          "type": "{{type}}",
+          "credentials": "{{credentials}}"
+        }
+      }
+    },
+    "tasks.draft.create": {
+      "description": "Create or update the draft version of a legacy v1 task. Code is base64-encoded TypeScript.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "task_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Task UUID."
+          },
+          "code": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Base64-encoded draft code."
+          }
+        },
+        "type": "object",
+        "required": [
+          "task_id",
+          "code"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Create or update task draft",
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "POST",
+        "path": "/v1/task/{{task_id}}/draft",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "code": "{{code}}"
+        }
+      }
+    },
+    "profiles.create": {
+      "description": "Create a browser profile that stores cookies, local storage, and cache from an active session.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique profile name."
+          },
+          "session_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Active session to snapshot into the profile."
+          },
+          "source": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Profile data source.",
+            "enum": [
+              "session"
+            ]
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Optional profile description."
+          },
+          "dedicated_sticky_ip": {
+            "type": "boolean",
+            "description": "Reserve a dedicated sticky IP for this profile."
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "session_id"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Create profile",
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "POST",
+        "path": "/v1/profiles",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "name": "{{name}}",
+          "session_id": "{{session_id}}",
+          "source": "{{source}}",
+          "description": "{{description}}",
+          "dedicated_sticky_ip": "{{dedicated_sticky_ip}}"
+        }
+      }
+    },
+    "tasks.create": {
+      "description": "Create a reusable legacy v1 TypeScript task, or update an existing task with the same name.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Task identifier (letters, numbers, hyphens, underscores)."
+          },
+          "language": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Task language.",
+            "enum": [
+              "typescript"
+            ]
+          },
+          "code": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Base64-encoded task implementation."
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Human-readable description of the task."
+          },
+          "browserConfiguration": {
+            "type": "object",
+            "description": "Browser configuration for task execution."
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "language"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Create task",
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "POST",
+        "path": "/v1/task",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "name": "{{name}}",
+          "language": "{{language}}",
+          "code": "{{code}}",
+          "description": "{{description}}",
+          "browserConfiguration": "{{browserConfiguration}}"
+        }
+      }
+    },
+    "extensions.delete": {
+      "description": "Delete a stored browser extension by ID.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Extension UUID."
+          }
+        },
+        "type": "object",
+        "required": [
+          "id"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "title": "Delete extension",
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "DELETE",
+        "path": "/v1/extensions/{{id}}",
+        "success": [
+          200,
+          204
+        ]
+      }
+    },
+    "integrations.delete": {
+      "description": "Delete an integration and its stored credentials.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "integration_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Integration ID."
+          }
+        },
+        "type": "object",
+        "required": [
+          "integration_id"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "title": "Delete integration",
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "DELETE",
+        "path": "/v1/integrations/{{integration_id}}",
+        "success": [
+          200,
+          204
+        ]
+      }
+    },
+    "profiles.delete": {
+      "description": "Delete a browser profile by name.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Profile name (ID)."
+          }
+        },
+        "type": "object",
+        "required": [
+          "name"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "title": "Delete profile",
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "DELETE",
+        "path": "/v1/profiles/{{name}}",
+        "success": [
+          200,
+          204
+        ]
+      }
+    },
+    "tasks.delete": {
+      "description": "Soft-delete a legacy v1 task and all of its versions.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "task_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Task UUID."
+          }
+        },
+        "type": "object",
+        "required": [
+          "task_id"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "title": "Delete task",
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "DELETE",
+        "path": "/v1/task/{{task_id}}",
+        "success": [
+          200,
+          204
+        ]
+      }
+    },
+    "tasks.versions.delete": {
+      "description": "Soft-delete a specific version of a legacy v1 task.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "task_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Task UUID."
+          },
+          "version": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Version number or 'latest'."
+          }
+        },
+        "type": "object",
+        "required": [
+          "task_id",
+          "version"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "title": "Delete task version",
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "DELETE",
+        "path": "/v1/task/{{task_id}}/{{version}}",
+        "success": [
+          200,
+          204
+        ]
+      }
+    },
+    "tasks.deploy": {
+      "description": "Deploy a legacy v1 task by creating a new auto-incremented version.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "taskId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Task UUID."
+          },
+          "code": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Base64-encoded task code for this deployment."
+          },
+          "language": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Programming language.",
+            "enum": [
+              "typescript"
+            ]
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Optional version description."
+          },
+          "browserConfiguration": {
+            "type": "object",
+            "description": "Browser settings for task execution."
+          }
+        },
+        "type": "object",
+        "required": [
+          "taskId",
+          "code"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Deploy task",
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "POST",
+        "path": "/v1/task/{{taskId}}/deploy",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "code": "{{code}}",
+          "language": "{{language}}",
+          "description": "{{description}}",
+          "browserConfiguration": "{{browserConfiguration}}"
+        }
+      }
+    },
+    "sessions.mouse.double_click": {
+      "description": "Perform a double click at specified coordinates in a browser session.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "sessionId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Browser session ID."
+          },
+          "x": {
+            "type": "integer",
+            "description": "X coordinate in pixels."
+          },
+          "y": {
+            "type": "integer",
+            "description": "Y coordinate in pixels."
+          }
+        },
+        "type": "object",
+        "required": [
+          "sessionId"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Double click mouse",
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "POST",
+        "path": "/v1/sessions/{{sessionId}}/mouse/doubleClick",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "x": "{{x}}",
+          "y": "{{y}}"
+        }
+      }
+    },
+    "sessions.drag_and_drop": {
+      "description": "Drag from start coordinates to end coordinates in a browser session.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "sessionId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Browser session ID."
+          },
+          "startX": {
+            "type": "number",
+            "description": "Start X coordinate in pixels."
+          },
+          "startY": {
+            "type": "number",
+            "description": "Start Y coordinate in pixels."
+          },
+          "endX": {
+            "type": "number",
+            "description": "End X coordinate in pixels."
+          },
+          "endY": {
+            "type": "number",
+            "description": "End Y coordinate in pixels."
+          }
+        },
+        "type": "object",
+        "required": [
+          "sessionId",
+          "startX",
+          "startY",
+          "endX",
+          "endY"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Drag and drop",
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "POST",
+        "path": "/v1/sessions/{{sessionId}}/drag-and-drop",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "startX": "{{startX}}",
+          "startY": "{{startY}}",
+          "endX": "{{endX}}",
+          "endY": "{{endY}}"
+        }
+      }
+    },
+    "sessions.delete_all": {
+      "description": "Terminate every active browser session for the authenticated user.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {},
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "title": "End all sessions",
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "DELETE",
+        "path": "/v1/sessions/all",
+        "success": [
+          200,
+          204
+        ]
+      }
+    },
+    "sessions.delete": {
+      "description": "End a specific browser session by ID.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Browser session ID."
+          }
+        },
+        "type": "object",
+        "required": [
+          "session_id"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "title": "End browser session",
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "DELETE",
+        "path": "/v1/sessions/{{session_id}}",
+        "success": [
+          200,
+          204
+        ]
+      }
+    },
+    "batch_sessions.get": {
+      "description": "Retrieve status, progress, and per-session details for a batch session request.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "batch_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Batch UUID."
+          }
+        },
+        "type": "object",
+        "required": [
+          "batch_id"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get batch session status",
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/v1/batch-sessions/{{batch_id}}",
+        "success": [
+          200
+        ]
+      }
+    },
+    "sessions.get": {
+      "description": "Retrieve details for a specific browser session.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Session ID."
+          }
+        },
+        "type": "object",
+        "required": [
+          "session_id"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get browser session",
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/v1/sessions/{{session_id}}",
+        "success": [
+          200
+        ]
+      }
+    },
+    "sessions.clipboard.get": {
+      "description": "Read the current clipboard contents from a browser session.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Browser session ID."
+          }
+        },
+        "type": "object",
+        "required": [
+          "session_id"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get clipboard content",
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/v1/sessions/{{session_id}}/clipboard",
+        "success": [
+          200
+        ]
+      }
+    },
+    "tasks.versions.latest.get": {
+      "description": "Retrieve the latest published version of a legacy v1 task, including base64 code.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "taskId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Task UUID."
+          }
+        },
+        "type": "object",
+        "required": [
+          "taskId"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get latest task version",
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/v1/task/{{taskId}}/latest",
+        "success": [
+          200
+        ]
+      }
+    },
+    "profiles.get": {
+      "description": "Retrieve a stored browser profile by name.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Profile name."
+          }
+        },
+        "type": "object",
+        "required": [
+          "name"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get profile",
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/v1/profiles/{{name}}",
+        "success": [
+          200
+        ]
+      }
+    },
+    "sessions.pages.get": {
+      "description": "List pages/tabs associated with a browser session.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Session ID."
+          }
+        },
+        "type": "object",
+        "required": [
+          "session_id"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get session pages",
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/v1/sessions/{{session_id}}/pages",
+        "success": [
+          200
+        ]
+      }
+    },
+    "tasks.draft.get": {
+      "description": "Retrieve the unpublished draft version of a legacy v1 task.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "task_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Task UUID."
+          }
+        },
+        "type": "object",
+        "required": [
+          "task_id"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get task draft",
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/v1/task/{{task_id}}/draft",
+        "success": [
+          200
+        ]
+      }
+    },
+    "tasks.executions.get": {
+      "description": "Retrieve a single legacy v1 task execution by task and execution ID.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "task_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Task UUID."
+          },
+          "execution_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Execution UUID."
+          }
+        },
+        "type": "object",
+        "required": [
+          "task_id",
+          "execution_id"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get task execution result",
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/v1/task/{{task_id}}/executions/{{execution_id}}",
+        "success": [
+          200
+        ]
+      }
+    },
+    "tasks.get": {
+      "description": "Retrieve legacy v1 task metadata without downloading full code.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "task_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Task UUID."
+          }
+        },
+        "type": "object",
+        "required": [
+          "task_id"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get task metadata",
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/v1/task/{{task_id}}",
+        "success": [
+          200
+        ]
+      }
+    },
+    "tasks.versions.get": {
+      "description": "Retrieve a specific legacy v1 task version, including full code.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "task_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Task UUID."
+          },
+          "version": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Version identifier: draft, latest, or a number."
+          }
+        },
+        "type": "object",
+        "required": [
+          "task_id",
+          "version"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get task version",
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/v1/task/{{task_id}}/{{version}}",
+        "success": [
+          200
+        ]
+      }
+    },
+    "tools.fetch_webpage": {
+      "description": "Fetch rendered webpage content as HTML or Markdown, optionally inside an existing session.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "url": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Webpage URL. Optional when sessionId points at an existing page."
+          },
+          "wait": {
+            "type": "integer",
+            "description": "Milliseconds to wait for dynamic content.",
+            "minimum": 0
+          },
+          "format": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Returned content format.",
+            "enum": [
+              "html",
+              "markdown"
+            ]
+          },
+          "new_page": {
+            "type": "boolean",
+            "description": "Open a new tab in the session for this fetch."
+          },
+          "sessionId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Existing browser session ID."
+          },
+          "page_index": {
+            "type": "integer",
+            "description": "Tab index to read.",
+            "minimum": 0
+          },
+          "return_partial_on_timeout": {
+            "type": "boolean",
+            "description": "Return partial content after the 20s timeout."
+          }
+        },
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "sideEffect": "write",
+      "timeoutMs": 60000,
+      "title": "Get webpage content",
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "POST",
+        "path": "/v1/tools/fetch-webpage",
+        "success": [
+          200,
+          201
+        ],
+        "query": {
+          "sessionId": "{{sessionId}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "url": "{{url}}",
+          "wait": "{{wait}}",
+          "format": "{{format}}",
+          "new_page": "{{new_page}}",
+          "page_index": "{{page_index}}",
+          "return_partial_on_timeout": "{{return_partial_on_timeout}}"
+        }
+      }
+    },
+    "sessions.agent.files.list": {
+      "description": "List files previously uploaded as agent resources on a running session.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Active session UUID."
+          }
+        },
+        "type": "object",
+        "required": [
+          "session_id"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List agent resources",
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/v1/sessions/{{session_id}}/agent/files",
+        "success": [
+          200
+        ]
+      }
+    },
+    "extensions.list": {
+      "description": "List browser extensions uploaded by the authenticated user.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {},
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List extensions",
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/v1/extensions",
+        "success": [
+          200
+        ]
+      }
+    },
+    "integrations.list": {
+      "description": "List integrations for the authenticated team.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {},
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List integrations",
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/v1/integrations",
+        "success": [
+          200
+        ]
+      }
+    },
+    "profiles.list": {
+      "description": "List stored browser profiles for the authenticated user.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {},
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List profiles",
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/v1/profiles",
+        "success": [
+          200
+        ]
+      }
+    },
+    "sessions.downloads.list": {
+      "description": "List metadata for files downloaded during a browser session.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Session ID."
+          }
+        },
+        "type": "object",
+        "required": [
+          "session_id"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List session downloads",
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/v1/sessions/{{session_id}}/downloads",
+        "success": [
+          200
+        ]
+      }
+    },
+    "sessions.recordings.list": {
+      "description": "List video recording URLs for a browser session.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Session UUID."
+          }
+        },
+        "type": "object",
+        "required": [
+          "session_id"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List session recordings",
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/v1/sessions/{{session_id}}/recordings",
+        "success": [
+          200
+        ]
+      }
+    },
+    "sessions.list": {
+      "description": "List browser sessions for the authenticated team.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {},
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List sessions",
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
       "request": {
         "method": "GET",
         "path": "/v1/sessions",
+        "success": [
+          200
+        ]
+      }
+    },
+    "tasks.executions.list": {
+      "description": "List execution history for a legacy v1 task, with optional filters.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "taskId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Task UUID."
+          },
+          "page": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Page number."
+          },
+          "limit": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Page size (1-100)."
+          },
+          "status": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Execution status filter.",
+            "enum": [
+              "success",
+              "failure",
+              "timeout",
+              "cancelled",
+              "queued",
+              "running"
+            ]
+          },
+          "version": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by draft, latest, or a version number."
+          }
+        },
+        "type": "object",
+        "required": [
+          "taskId"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List task executions",
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/v1/task/{{taskId}}/executions",
+        "success": [
+          200
+        ],
+        "query": {
+          "page": "{{page}}",
+          "limit": "{{limit}}",
+          "status": "{{status}}",
+          "version": "{{version}}"
+        }
+      }
+    },
+    "tasks.list": {
+      "description": "List legacy v1 tasks for the authenticated team.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "page": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Page number."
+          },
+          "limit": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Page size (1-100)."
+          }
+        },
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List tasks",
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/v1/task",
         "success": [
           200
         ],
@@ -222,36 +2085,1374 @@
           "page": "{{page}}",
           "limit": "{{limit}}"
         }
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
+      }
     },
-    "sessions.create": {
-      "kind": "action",
-      "sideEffect": "write",
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "title": "Create session",
-      "description": "Start an Anchor Browser cloud Chromium session.",
+    "tasks.versions.list": {
+      "description": "List draft and published versions of a legacy v1 task.",
+      "enforceOutputSchema": true,
       "inputSchema": {
-        "type": "object",
-        "properties": {},
-        "additionalProperties": false
-      },
-      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "task_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Task UUID."
+          }
+        },
         "type": "object",
         "required": [
-          "data"
-        ],
+          "task_id"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "additionalProperties": false
+        "required": [
+          "data"
+        ],
+        "type": "object"
       },
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List task versions",
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/v1/task/{{task_id}}/versions",
+        "success": [
+          200
+        ]
+      }
+    },
+    "sessions.mouse.move": {
+      "description": "Move the mouse cursor to coordinates in a browser session.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Browser session ID."
+          },
+          "x": {
+            "type": "integer",
+            "description": "X coordinate in pixels."
+          },
+          "y": {
+            "type": "integer",
+            "description": "Y coordinate in pixels."
+          }
+        },
+        "type": "object",
+        "required": [
+          "session_id",
+          "x",
+          "y"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Move mouse",
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "POST",
+        "path": "/v1/sessions/{{session_id}}/mouse/move",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "x": "{{x}}",
+          "y": "{{y}}"
+        }
+      }
+    },
+    "sessions.goto": {
+      "description": "Navigate an existing browser session to a URL.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Browser session ID."
+          },
+          "url": {
+            "type": "string",
+            "minLength": 1,
+            "description": "HTTP or HTTPS URL to open."
+          }
+        },
+        "type": "object",
+        "required": [
+          "session_id",
+          "url"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Navigate to URL",
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "POST",
+        "path": "/v1/sessions/{{session_id}}/goto",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "url": "{{url}}"
+        }
+      }
+    },
+    "sessions.paste": {
+      "description": "Paste text at the current cursor position in a browser session.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Browser session ID."
+          },
+          "text": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Text to paste."
+          }
+        },
+        "type": "object",
+        "required": [
+          "session_id",
+          "text"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Paste text",
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "POST",
+        "path": "/v1/sessions/{{session_id}}/paste",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "text": "{{text}}"
+        }
+      }
+    },
+    "sessions.agent.pause": {
+      "description": "Pause the AI agent for a browser session without ending the session.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Browser session ID."
+          }
+        },
+        "type": "object",
+        "required": [
+          "session_id"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Pause agent",
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "POST",
+        "path": "/v1/sessions/{{session_id}}/agent/pause",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {}
+      }
+    },
+    "sessions.recordings.pause": {
+      "description": "Pause video recording for a browser session.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Browser session ID."
+          }
+        },
+        "type": "object",
+        "required": [
+          "session_id"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Pause session recording",
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "POST",
+        "path": "/v1/sessions/{{session_id}}/recordings/pause",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {}
+      }
+    },
+    "sessions.keyboard.shortcut": {
+      "description": "Press a chord of keys in a browser session.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Browser session ID."
+          },
+          "keys": {
+            "type": "array",
+            "description": "Keys to press together.",
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1
+          },
+          "hold_time": {
+            "type": "integer",
+            "description": "Hold duration in milliseconds.",
+            "minimum": 0
+          }
+        },
+        "type": "object",
+        "required": [
+          "session_id",
+          "keys"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Perform keyboard shortcut",
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "POST",
+        "path": "/v1/sessions/{{session_id}}/keyboard/shortcut",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "keys": "{{keys}}",
+          "hold_time": "{{hold_time}}"
+        }
+      }
+    },
+    "tools.perform_web_task": {
+      "description": "Run an autonomous natural-language web task with a built-in AI agent.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "prompt": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Natural-language task for the agent."
+          },
+          "url": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Starting URL. Optional when sessionId is set."
+          },
+          "agent": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Agent type.",
+            "enum": [
+              "browser-use",
+              "openai-cua",
+              "gemini-computer-use",
+              "anthropic-cua"
+            ]
+          },
+          "async": {
+            "type": "boolean",
+            "description": "Return a workflow ID immediately instead of waiting."
+          },
+          "model": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Model identifier for the selected provider."
+          },
+          "provider": {
+            "type": "string",
+            "minLength": 1,
+            "description": "LLM provider.",
+            "enum": [
+              "openai",
+              "gemini",
+              "groq",
+              "azure",
+              "xai"
+            ]
+          },
+          "max_steps": {
+            "type": "integer",
+            "description": "Maximum agent steps.",
+            "minimum": 1
+          },
+          "sessionId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Existing browser session ID."
+          },
+          "output_schema": {
+            "type": "object",
+            "description": "JSON Schema for structured agent output."
+          },
+          "secret_values": {
+            "type": "object",
+            "description": "Secret environment values for the agent."
+          },
+          "detect_elements": {
+            "type": "boolean",
+            "description": "Enable element detection."
+          },
+          "highlight_elements": {
+            "type": "boolean",
+            "description": "Highlight UI elements during execution."
+          },
+          "human_intervention": {
+            "type": "boolean",
+            "description": "Allow the agent to request human input."
+          }
+        },
+        "type": "object",
+        "required": [
+          "prompt"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "sideEffect": "write",
+      "timeoutMs": 120000,
+      "title": "Perform web task",
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "POST",
+        "path": "/v1/tools/perform-web-task",
+        "success": [
+          200,
+          201
+        ],
+        "query": {
+          "sessionId": "{{sessionId}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "prompt": "{{prompt}}",
+          "url": "{{url}}",
+          "agent": "{{agent}}",
+          "async": "{{async}}",
+          "model": "{{model}}",
+          "provider": "{{provider}}",
+          "max_steps": "{{max_steps}}",
+          "output_schema": "{{output_schema}}",
+          "secret_values": "{{secret_values}}",
+          "detect_elements": "{{detect_elements}}",
+          "highlight_elements": "{{highlight_elements}}",
+          "human_intervention": "{{human_intervention}}"
+        }
+      }
+    },
+    "sessions.mouse.down": {
+      "description": "Press and hold a mouse button at coordinates in a browser session.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Browser session ID."
+          },
+          "x": {
+            "type": "integer",
+            "description": "X coordinate in pixels."
+          },
+          "y": {
+            "type": "integer",
+            "description": "Y coordinate in pixels."
+          },
+          "button": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Mouse button.",
+            "enum": [
+              "left",
+              "right",
+              "middle"
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "session_id",
+          "x",
+          "y"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Press mouse button",
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "POST",
+        "path": "/v1/sessions/{{session_id}}/mouse/down",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "x": "{{x}}",
+          "y": "{{y}}",
+          "button": "{{button}}"
+        }
+      }
+    },
+    "tasks.versions.publish": {
+      "description": "Publish a numeric version of a legacy v1 task.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "taskId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Task UUID."
+          },
+          "taskVersion": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Numeric version to publish (not 'draft')."
+          },
+          "code": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Base64-encoded task code."
+          },
+          "language": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Task language.",
+            "enum": [
+              "javascript",
+              "typescript"
+            ]
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Optional version description."
+          },
+          "browserConfiguration": {
+            "type": "object",
+            "description": "Optional browser configuration."
+          }
+        },
+        "type": "object",
+        "required": [
+          "taskId",
+          "taskVersion",
+          "code",
+          "language"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Publish task version",
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "POST",
+        "path": "/v1/task/{{taskId}}/{{taskVersion}}",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "code": "{{code}}",
+          "language": "{{language}}",
+          "description": "{{description}}",
+          "browserConfiguration": "{{browserConfiguration}}"
+        }
+      }
+    },
+    "sessions.mouse.up": {
+      "description": "Release a mouse button at coordinates in a browser session.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Browser session ID."
+          },
+          "x": {
+            "type": "integer",
+            "description": "X coordinate in pixels."
+          },
+          "y": {
+            "type": "integer",
+            "description": "Y coordinate in pixels."
+          },
+          "button": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Mouse button.",
+            "enum": [
+              "left",
+              "middle",
+              "right"
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "session_id",
+          "x",
+          "y"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Release mouse button",
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "POST",
+        "path": "/v1/sessions/{{session_id}}/mouse/up",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "x": "{{x}}",
+          "y": "{{y}}",
+          "button": "{{button}}"
+        }
+      }
+    },
+    "sessions.agent.resume": {
+      "description": "Resume a paused AI agent on a browser session.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Browser session ID."
+          }
+        },
+        "type": "object",
+        "required": [
+          "session_id"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Resume agent",
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "POST",
+        "path": "/v1/sessions/{{session_id}}/agent/resume",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {}
+      }
+    },
+    "sessions.recordings.resume": {
+      "description": "Resume video recording for a browser session.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Session UUID."
+          }
+        },
+        "type": "object",
+        "required": [
+          "session_id"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Resume session recording",
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "POST",
+        "path": "/v1/sessions/{{session_id}}/recordings/resume",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {}
+      }
+    },
+    "tasks.run": {
+      "description": "Execute a legacy v1 task by ID, optionally reusing a session.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "taskId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Task UUID."
+          },
+          "async": {
+            "type": "boolean",
+            "description": "Return immediately instead of waiting for completion."
+          },
+          "inputs": {
+            "type": "object",
+            "description": "Environment variables; keys should start with ANCHOR_."
+          },
+          "version": {
+            "type": "string",
+            "minLength": 1,
+            "description": "draft, latest, or a version number."
+          },
+          "sessionId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Existing session to reuse."
+          },
+          "cleanupSessions": {
+            "type": "boolean",
+            "description": "Cleanup sessions after execution."
+          },
+          "overrideBrowserConfiguration": {
+            "type": "object",
+            "description": "Session configuration overrides."
+          }
+        },
+        "type": "object",
+        "required": [
+          "taskId"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "sideEffect": "write",
+      "timeoutMs": 120000,
+      "title": "Run task",
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "POST",
+        "path": "/v1/task/run",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "taskId": "{{taskId}}",
+          "async": "{{async}}",
+          "inputs": "{{inputs}}",
+          "version": "{{version}}",
+          "sessionId": "{{sessionId}}",
+          "cleanupSessions": "{{cleanupSessions}}",
+          "overrideBrowserConfiguration": "{{overrideBrowserConfiguration}}"
+        }
+      }
+    },
+    "tasks.run_by_name": {
+      "description": "Execute the latest version of a legacy v1 task by name.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "taskName": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Task name."
+          },
+          "inputs": {
+            "type": "object",
+            "description": "Environment variables; keys should start with ANCHOR_."
+          },
+          "sessionId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Existing session to reuse."
+          },
+          "taskSessionId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Optional task-specific session ID."
+          },
+          "overrideBrowserConfiguration": {
+            "type": "object",
+            "description": "Browser configuration override."
+          }
+        },
+        "type": "object",
+        "required": [
+          "taskName"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "sideEffect": "write",
+      "timeoutMs": 120000,
+      "title": "Run task by name",
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "POST",
+        "path": "/v1/task/run/{{taskName}}",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "inputs": "{{inputs}}",
+          "sessionId": "{{sessionId}}",
+          "taskSessionId": "{{taskSessionId}}",
+          "overrideBrowserConfiguration": "{{overrideBrowserConfiguration}}"
+        }
+      }
+    },
+    "tools.screenshot": {
+      "description": "Capture a Chromium screenshot of a URL, optionally inside an existing session.",
+      "enforceOutputSchema": false,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "url": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Fully qualified webpage URL."
+          },
+          "wait": {
+            "type": "integer",
+            "description": "Milliseconds to wait after load.",
+            "minimum": 0
+          },
+          "width": {
+            "type": "integer",
+            "description": "Viewport width in pixels.",
+            "minimum": 1
+          },
+          "height": {
+            "type": "integer",
+            "description": "Viewport height in pixels.",
+            "minimum": 1
+          },
+          "sessionId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Existing session ID."
+          },
+          "image_quality": {
+            "type": "integer",
+            "description": "JPEG/PNG quality 1-100.",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "s3_target_address": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Presigned S3 URL to upload the image."
+          },
+          "scroll_all_content": {
+            "type": "boolean",
+            "description": "Scroll the page before capture to load lazy content."
+          },
+          "capture_full_height": {
+            "type": "boolean",
+            "description": "Capture the full document height."
+          }
+        },
+        "type": "object",
+        "required": [
+          "url"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "sideEffect": "write",
+      "timeoutMs": 60000,
+      "title": "Screenshot webpage",
+      "validationMode": "strict-generated",
+      "request": {
+        "method": "POST",
+        "path": "/v1/tools/screenshot",
+        "success": [
+          200,
+          201
+        ],
+        "query": {
+          "sessionId": "{{sessionId}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "url": "{{url}}",
+          "wait": "{{wait}}",
+          "width": "{{width}}",
+          "height": "{{height}}",
+          "image_quality": "{{image_quality}}",
+          "s3_target_address": "{{s3_target_address}}",
+          "scroll_all_content": "{{scroll_all_content}}",
+          "capture_full_height": "{{capture_full_height}}"
+        }
+      }
+    },
+    "sessions.scroll": {
+      "description": "Scroll at coordinates in a browser session.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "sessionId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Browser session ID."
+          },
+          "x": {
+            "type": "integer",
+            "description": "Horizontal origin in pixels."
+          },
+          "y": {
+            "type": "integer",
+            "description": "Vertical origin in pixels."
+          },
+          "deltaY": {
+            "type": "integer",
+            "description": "Vertical scroll delta in pixels."
+          },
+          "deltaX": {
+            "type": "integer",
+            "description": "Horizontal scroll delta in pixels."
+          },
+          "steps": {
+            "type": "integer",
+            "description": "Intermediate scroll steps.",
+            "minimum": 1
+          },
+          "useOs": {
+            "type": "boolean",
+            "description": "Use OS-level scroll events."
+          }
+        },
+        "type": "object",
+        "required": [
+          "sessionId",
+          "x",
+          "y",
+          "deltaY"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Scroll session",
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "POST",
+        "path": "/v1/sessions/{{sessionId}}/scroll",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "x": "{{x}}",
+          "y": "{{y}}",
+          "deltaY": "{{deltaY}}",
+          "deltaX": "{{deltaX}}",
+          "steps": "{{steps}}",
+          "useOs": "{{useOs}}"
+        }
+      }
+    },
+    "sessions.clipboard.set": {
+      "description": "Set clipboard text in a browser session.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Browser session ID."
+          },
+          "text": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Clipboard text."
+          }
+        },
+        "type": "object",
+        "required": [
+          "session_id",
+          "text"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Set clipboard content",
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "POST",
+        "path": "/v1/sessions/{{session_id}}/clipboard",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "text": "{{text}}"
+        }
+      }
+    },
+    "events.signal": {
+      "description": "Signal a named event with a JSON payload for cross-session coordination.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "event_name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Event name."
+          },
+          "data": {
+            "type": "object",
+            "description": "JSON payload delivered to waiters."
+          }
+        },
+        "type": "object",
+        "required": [
+          "event_name",
+          "data"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Signal event",
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "POST",
+        "path": "/v1/events/{{event_name}}",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "data": "{{data}}"
+        }
+      }
+    },
+    "sessions.create": {
+      "description": "Allocate a new cloud browser session with optional browser, session, identity, and integration configuration.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "browser": {
+            "type": "object",
+            "description": "Browser-level configuration (profile, viewport, feature toggles)."
+          },
+          "session": {
+            "type": "object",
+            "description": "Session-level configuration (recording, proxy, timeouts, live view)."
+          },
+          "identities": {
+            "type": "array",
+            "description": "Previously configured identities.",
+            "items": {
+              "type": "object"
+            }
+          },
+          "integrations": {
+            "type": "array",
+            "description": "Integrations to load (for example 1Password).",
+            "items": {
+              "type": "object"
+            }
+          }
+        },
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Start browser session",
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
       "request": {
         "method": "POST",
         "path": "/v1/sessions",
@@ -259,745 +3460,496 @@
           200,
           201
         ],
-        "body": {},
         "headers": {
           "Content-Type": "application/json"
+        },
+        "body": {
+          "browser": "{{browser}}",
+          "session": "{{session}}",
+          "identities": "{{identities}}",
+          "integrations": "{{integrations}}"
         }
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
+      }
     },
-    "sessions.get": {
-      "kind": "action",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "title": "Get session",
-      "description": "Retrieve one Anchor Browser session by ID.",
+    "sessions.screenshot.get": {
+      "description": "Capture a screenshot of the current page in an existing browser session.",
+      "enforceOutputSchema": false,
       "inputSchema": {
-        "type": "object",
+        "additionalProperties": false,
         "properties": {
-          "sessionId": {
+          "session_id": {
             "type": "string",
             "minLength": 1,
             "description": "Browser session ID."
           }
         },
-        "additionalProperties": false,
-        "required": [
-          "sessionId"
-        ]
-      },
-      "outputSchema": {
         "type": "object",
         "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "GET",
-        "path": "/v1/sessions/{{sessionId}}",
-        "success": [
-          200
+          "session_id"
         ]
       },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "sessions.delete": {
       "kind": "action",
-      "sideEffect": "write",
-      "timeoutMs": 15000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
-      "title": "End session",
-      "description": "End one Anchor Browser session by ID.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "sessionId": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Browser session ID."
-          }
-        },
+      "outputSchema": {
         "additionalProperties": false,
-        "required": [
-          "sessionId"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "DELETE",
-        "path": "/v1/sessions/{{sessionId}}",
-        "success": [
-          200
-        ]
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "sessions.delete-all": {
-      "kind": "action",
-      "sideEffect": "write",
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "title": "End all sessions",
-      "description": "End every active Anchor Browser session for the authenticated project.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {},
-        "additionalProperties": false
-      },
-      "outputSchema": {
-        "type": "object",
         "required": [
           "data"
         ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
+        "type": "object"
       },
-      "request": {
-        "method": "DELETE",
-        "path": "/v1/sessions/all",
-        "success": [
-          200
-        ]
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "sessions.status": {
-      "kind": "action",
       "sideEffect": "read",
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "title": "List session status",
-      "description": "List status for all Anchor Browser sessions.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {},
-        "additionalProperties": false
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
+      "timeoutMs": 60000,
+      "title": "Take screenshot",
+      "validationMode": "strict-generated",
       "request": {
         "method": "GET",
-        "path": "/v1/sessions/all/status",
+        "path": "/v1/sessions/{{session_id}}/screenshot",
         "success": [
           200
         ]
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
+      }
     },
-    "sessions.pages.get": {
-      "kind": "action",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "title": "Get session pages",
-      "description": "List open pages in an Anchor Browser session.",
+    "sessions.keyboard.type": {
+      "description": "Type text into a browser session with an optional inter-key delay.",
+      "enforceOutputSchema": true,
       "inputSchema": {
-        "type": "object",
-        "properties": {
-          "sessionId": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Browser session ID."
-          }
-        },
         "additionalProperties": false,
-        "required": [
-          "sessionId"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
         "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "GET",
-        "path": "/v1/sessions/{{sessionId}}/pages",
-        "success": [
-          200
-        ]
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "sessions.goto": {
-      "kind": "action",
-      "sideEffect": "write",
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "title": "Navigate session",
-      "description": "Navigate an Anchor Browser session to a URL.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "sessionId": {
+          "session_id": {
             "type": "string",
             "minLength": 1,
             "description": "Browser session ID."
           },
-          "url": {
+          "text": {
             "type": "string",
             "minLength": 1,
-            "description": "URL to open."
+            "description": "Text to type."
+          },
+          "delay": {
+            "type": "integer",
+            "description": "Delay between keystrokes in milliseconds.",
+            "minimum": 0
           }
         },
-        "additionalProperties": false,
-        "required": [
-          "sessionId",
-          "url"
-        ]
-      },
-      "outputSchema": {
         "type": "object",
         "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
+          "session_id",
+          "text"
+        ]
       },
-      "request": {
-        "method": "POST",
-        "path": "/v1/sessions/{{sessionId}}/goto",
-        "success": [
-          200
-        ],
-        "body": {
-          "url": "{{url}}"
-        },
-        "headers": {
-          "Content-Type": "application/json"
-        }
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "profiles.list": {
       "kind": "action",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
-      "title": "List profiles",
-      "description": "List saved Anchor Browser profiles.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {},
-        "additionalProperties": false
-      },
       "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "GET",
-        "path": "/v1/profiles",
-        "success": [
-          200
-        ]
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "profiles.get": {
-      "kind": "action",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "title": "Get profile",
-      "description": "Retrieve one Anchor Browser profile by name.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "name": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Profile name."
-          }
-        },
         "additionalProperties": false,
-        "required": [
-          "name"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "additionalProperties": false
+        "required": [
+          "data"
+        ],
+        "type": "object"
       },
-      "request": {
-        "method": "GET",
-        "path": "/v1/profiles/{{name}}",
-        "success": [
-          200
-        ]
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "profiles.create": {
-      "kind": "action",
       "sideEffect": "write",
       "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "title": "Create profile",
-      "description": "Create an Anchor Browser profile.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "name": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Profile name."
-          }
-        },
-        "additionalProperties": false,
-        "required": [
-          "name"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
+      "title": "Type text",
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
       "request": {
         "method": "POST",
-        "path": "/v1/profiles",
+        "path": "/v1/sessions/{{session_id}}/keyboard/type",
         "success": [
           200,
           201
         ],
-        "body": {
-          "name": "{{name}}"
-        },
         "headers": {
           "Content-Type": "application/json"
+        },
+        "body": {
+          "text": "{{text}}",
+          "delay": "{{delay}}"
         }
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
+      }
     },
-    "profiles.delete": {
-      "kind": "action",
-      "sideEffect": "write",
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "title": "Delete profile",
-      "description": "Delete an Anchor Browser profile by name.",
+    "profiles.update": {
+      "description": "Update an existing browser profile from an active session (cookies, local storage, cache).",
+      "enforceOutputSchema": true,
       "inputSchema": {
-        "type": "object",
+        "additionalProperties": false,
         "properties": {
           "name": {
             "type": "string",
             "minLength": 1,
-            "description": "Profile name."
-          }
-        },
-        "additionalProperties": false,
-        "required": [
-          "name"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "DELETE",
-        "path": "/v1/profiles/{{name}}",
-        "success": [
-          200
-        ]
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "recordings.list": {
-      "kind": "action",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "title": "List recordings",
-      "description": "List video recordings for an Anchor Browser session.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "sessionId": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Browser session ID."
-          }
-        },
-        "additionalProperties": false,
-        "required": [
-          "sessionId"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "GET",
-        "path": "/v1/sessions/{{sessionId}}/recordings",
-        "success": [
-          200
-        ]
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "webhooks.list": {
-      "kind": "action",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "title": "List webhooks",
-      "description": "List Anchor Browser webhook subscriptions for the project.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {},
-        "additionalProperties": false
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "GET",
-        "path": "/v1/webhooks",
-        "success": [
-          200
-        ]
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "webhooks.get": {
-      "kind": "action",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "title": "Get webhook",
-      "description": "Retrieve one Anchor Browser webhook subscription by ID.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "webhookId": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Webhook ID."
-          }
-        },
-        "additionalProperties": false,
-        "required": [
-          "webhookId"
-        ]
-      },
-      "outputSchema": {
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "additionalProperties": false
-      },
-      "request": {
-        "method": "GET",
-        "path": "/v1/webhooks/{{webhookId}}",
-        "success": [
-          200
-        ]
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
-    },
-    "webhooks.create": {
-      "kind": "action",
-      "sideEffect": "write",
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "title": "Create webhook",
-      "description": "Create an Anchor Browser webhook subscription.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "url": {
-            "type": "string",
-            "minLength": 1,
-            "description": "HTTPS endpoint that receives events."
+            "description": "Existing profile name."
           },
-          "subscribedEvents": {
-            "type": "array",
-            "minItems": 1,
-            "items": {
-              "type": "string",
-              "minLength": 1
-            },
-            "description": "Event types to subscribe to, for example task.completed."
+          "session_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Active session UUID to snapshot."
+          },
+          "source": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Profile data source.",
+            "enum": [
+              "session"
+            ]
           },
           "description": {
             "type": "string",
-            "description": "Optional human-readable description."
+            "minLength": 1,
+            "description": "Replacement profile description."
           }
         },
-        "additionalProperties": false,
-        "required": [
-          "url",
-          "subscribedEvents"
-        ]
-      },
-      "outputSchema": {
         "type": "object",
         "required": [
-          "data"
-        ],
+          "name",
+          "session_id"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "additionalProperties": false
+        "required": [
+          "data"
+        ],
+        "type": "object"
       },
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Update profile",
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
       "request": {
         "method": "POST",
-        "path": "/v1/webhooks",
+        "path": "/v1/profiles",
         "success": [
           200,
           201
         ],
-        "body": {
-          "url": "{{url}}",
-          "subscribed_events": "{{subscribedEvents}}",
-          "description": "{{description}}"
-        },
         "headers": {
           "Content-Type": "application/json"
+        },
+        "body": {
+          "name": "{{name}}",
+          "session_id": "{{session_id}}",
+          "source": "{{source}}",
+          "description": "{{description}}"
         }
-      },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json"
+      }
     },
-    "webhooks.delete": {
-      "kind": "action",
-      "sideEffect": "write",
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "title": "Delete webhook",
-      "description": "Delete an Anchor Browser webhook subscription by ID.",
+    "tasks.update": {
+      "description": "Update a legacy v1 task name and/or description without changing code.",
+      "enforceOutputSchema": true,
       "inputSchema": {
-        "type": "object",
+        "additionalProperties": false,
         "properties": {
-          "webhookId": {
+          "task_id": {
             "type": "string",
             "minLength": 1,
-            "description": "Webhook ID."
+            "description": "Task UUID."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "New task name."
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "description": "New task description."
           }
         },
-        "additionalProperties": false,
-        "required": [
-          "webhookId"
-        ]
-      },
-      "outputSchema": {
         "type": "object",
         "required": [
-          "data"
-        ],
+          "task_id"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "additionalProperties": false
+        "required": [
+          "data"
+        ],
+        "type": "object"
       },
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Update task metadata",
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
       "request": {
-        "method": "DELETE",
-        "path": "/v1/webhooks/{{webhookId}}",
+        "method": "PUT",
+        "path": "/v1/task/{{task_id}}",
         "success": [
-          200
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "name": "{{name}}",
+          "description": "{{description}}"
+        }
+      }
+    },
+    "extensions.upload": {
+      "description": "Upload a browser extension ZIP as multipart/form-data (file plus name).",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "User-friendly extension name."
+          },
+          "file_name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "ZIP filename when sending file_content_base64."
+          },
+          "file_content_base64": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Base64-encoded ZIP bytes."
+          },
+          "file": {
+            "type": "object",
+            "description": "Composio file object. Use file_content_base64 for direct bytes."
+          }
+        },
+        "type": "object",
+        "required": [
+          "name"
         ]
       },
-      "enforceOutputSchema": true,
+      "kind": "action",
+      "maxInputBytes": 26214400,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "sideEffect": "write",
+      "timeoutMs": 60000,
+      "title": "Upload extension",
       "validationMode": "strict-generated",
       "responseFormat": "json"
     },
-    "extensions.list": {
-      "kind": "action",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "title": "List extensions",
-      "description": "List uploaded Anchor Browser extensions.",
+    "sessions.agent.files.upload": {
+      "description": "Upload a file as an agent resource on a running session (multipart file field).",
+      "enforceOutputSchema": true,
       "inputSchema": {
-        "type": "object",
-        "properties": {},
-        "additionalProperties": false
-      },
-      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Active session UUID."
+          },
+          "file": {
+            "type": "object",
+            "description": "File metadata (name, mimetype)."
+          },
+          "file_content_base64": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Base64-encoded file bytes."
+          },
+          "file_name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filename override."
+          },
+          "content_type": {
+            "type": "string",
+            "minLength": 1,
+            "description": "MIME type override."
+          }
+        },
         "type": "object",
         "required": [
-          "data"
-        ],
+          "session_id",
+          "file"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 26214400,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "additionalProperties": false
+        "required": [
+          "data"
+        ],
+        "type": "object"
       },
-      "request": {
-        "method": "GET",
-        "path": "/v1/extensions",
-        "success": [
-          200
-        ]
-      },
-      "enforceOutputSchema": true,
+      "sideEffect": "write",
+      "timeoutMs": 60000,
+      "title": "Upload agent file",
       "validationMode": "strict-generated",
       "responseFormat": "json"
+    },
+    "sessions.uploads.create": {
+      "description": "Upload a file into a session for web form file inputs (multipart file field).",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Active session ID."
+          },
+          "file": {
+            "type": "object",
+            "description": "File to upload."
+          },
+          "file_content_base64": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Base64-encoded file bytes."
+          },
+          "file_name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filename override."
+          },
+          "content_type": {
+            "type": "string",
+            "minLength": 1,
+            "description": "MIME type override."
+          }
+        },
+        "type": "object",
+        "required": [
+          "session_id",
+          "file"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 26214400,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "sideEffect": "write",
+      "timeoutMs": 60000,
+      "title": "Upload files to session",
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "events.wait": {
+      "description": "Block until a named event is signaled or the timeout expires.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "event_name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Event name to wait for."
+          },
+          "timeoutMs": {
+            "type": "integer",
+            "description": "Wait timeout in milliseconds (max 300000).",
+            "minimum": 1,
+            "maximum": 300000
+          }
+        },
+        "type": "object",
+        "required": [
+          "event_name"
+        ]
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "sideEffect": "write",
+      "timeoutMs": 300000,
+      "title": "Wait for event",
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "POST",
+        "path": "/v1/events/{{event_name}}/wait",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "timeoutMs": "{{timeoutMs}}"
+        }
+      }
     }
   },
   "provenance": {
     "source": {
-      "url": "https://github.com/oomol-lab/open-connector",
-      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
+      "url": "https://github.com/oomol-lab/open-connector"
     }
   },
-  "evidence": {
-    "fixture": {
-      "status": "supplied"
-    },
-    "live": {
-      "status": "unverified"
-    }
-  }
+  "runtime": "bun",
+  "version": "0.2.0",
+  "visibility": "public"
 }

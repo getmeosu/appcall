@@ -1,23 +1,17 @@
 # CircleCI
 
-Read-only international **CircleCI API v2** recipe for `circleci.com`. Create a personal API token at User Settings → Personal API Tokens and store it as `apiKey`. Requests send the `Circle-Token` header plus `Accept: application/json`. API v2 does not accept project tokens.
+International **CircleCI API v2** recipe for `circleci.com`, plus GraphQL-unstable orb/context mutations and the self-hosted runner API at `runner.circleci.com`. Create a personal API token at User Settings → Personal API Tokens and store it as `apiKey`. Requests send the `Circle-Token` header plus `Accept: application/json`. API v2 does not accept project tokens.
 
 ## Operations
 
-- `healthcheck`: `GET /api/v2/me` (cheap authenticated profile read; same path as the pinned credential validator).
-- `projects.get`: `GET /api/v2/project/{projectSlug}`.
-- `pipelines.list`: `GET /api/v2/project/{projectSlug}/pipeline` with optional `branch` and `pageToken`.
-- `pipelines.get`: `GET /api/v2/pipeline/{pipelineId}`.
-- `workflows.list`: `GET /api/v2/pipeline/{pipelineId}/workflow` with optional `pageToken`.
+Runner operations match this recipe one-for-one (66 operations): the original healthcheck / project / pipeline reads, plus the remaining Composio CIRCLECI tools.
 
-`POST /project/{project-slug}/pipeline` (trigger) is omitted as a write. Insights, job, artifact, and env-var reads are omitted. CircleCI Server self-hosted hosts are omitted. Successful responses are raw provider JSON under AppCall `data`.
+- REST v2 lives at `https://circleci.com/api/v2`.
+- GraphQL tools POST to `https://circleci.com/graphql-unstable`.
+- Self-hosted runners use `GET https://runner.circleci.com/api/v3/runner`.
 
-## Adaptations
-
-Pinned source and official docs agree on `https://circleci.com/api/v2` and `Circle-Token`. Official docs also document `Authorization: Bearer`; native keeps the pinned header. `projectSlug` is URL-encoded as one path segment (`gh/org/repo` → `gh%2Forg%2Frepo`), matching the pinned `encodeURIComponent`. Native category is `dev-tools`. Native omits the upstream user-agent.
-
-The January 2023 production secret-exfiltration incident is historical and remediated; it is recorded under the 2026-09-13 waiver.
+`projectSlug` is URL-encoded as one path segment (`gh/org/repo` → `gh%2Forg%2Frepo`).
 
 ## License and evidence
 
-Upstream definitions are attributed to [oomol-lab/open-connector](https://github.com/oomol-lab/open-connector) (Apache-2.0) at `33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a`. Official docs: https://circleci.com/docs/api/v2/. Fixtures are independently derived from official docs plus pinned source and are fixture-only; live smoke is unverified. Configure a personal API token, call `healthcheck` with `{}`, then `projects.get`.
+Upstream definitions are attributed to [oomol-lab/open-connector](https://github.com/oomol-lab/open-connector) (Apache-2.0) at `33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a`. Official docs: https://circleci.com/docs/api/v2/. Fixtures are independently derived and do not represent live provider access. Live smoke remains unverified. The January 2023 production secret-exfiltration incident is historical and remediated under the 2026-09-13 waiver.
