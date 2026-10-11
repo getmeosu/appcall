@@ -301,7 +301,8 @@ export async function executeNotesCreate(
     noteType: string;
     applicationId?: string | number;
     subject?: string;
-    userId?: string | number;
+    /** Note author (Harvest user id). Not `userId` — that key is the injected OAuth `sub` credential. */
+    authorUserId?: string | number;
     emailFrom?: string | string[];
     emailTo?: string | string[];
     emailCc?: string | string[];
@@ -323,8 +324,8 @@ export async function executeNotesCreate(
   };
   const applicationId = optionalId(input.applicationId);
   if (applicationId != null) wire.application_id = applicationId;
-  const userId = optionalId(input.userId);
-  if (userId != null) wire.user_id = userId;
+  const authorUserId = optionalId(input.authorUserId);
+  if (authorUserId != null) wire.user_id = authorUserId;
 
   if (input.noteType === "EMAIL") {
     if (!optionalString(input.subject)) throw new Error("subject is required when noteType is EMAIL");
