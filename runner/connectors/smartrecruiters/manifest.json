@@ -1,7 +1,7 @@
 {
   "key": "smartrecruiters",
   "name": "SmartRecruiters",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "runtime": "bun",
   "categories": [
     "ats-recruitment"
@@ -2436,6 +2436,842 @@
         "properties": {
           "posting": {
             "description": "Normalized posting (raw id, uuid, jobId, title, location, sections, URLs); null when not found."
+          }
+        }
+      }
+    },
+    "interviews.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Create interview",
+      "description": "Schedule an interview via authenticated POST /interviews-api/v201904/interviews (201 Interview). candidateId is sent as candidate.id. Returns the sr-interview:-prefixed interview id plus the normalized interview. Create, so effectPolicy is omitted. OAuth scope interviews_write (declared per operation; not part of the default connect set). API keys need the matching SmartRecruiters user permission.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "candidateId",
+          "jobId",
+          "organizerId",
+          "timezone",
+          "timeslots"
+        ],
+        "properties": {
+          "candidateId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "SmartRecruiters candidate id (raw or sr-candidate:-prefixed)."
+          },
+          "jobId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "SmartRecruiters job id (raw or sr-job:-prefixed)."
+          },
+          "organizerId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "SmartRecruiters user id of the organizer (raw or sr-user:-prefixed)."
+          },
+          "timezone": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100,
+            "description": "TZ database timezone name."
+          },
+          "timeslots": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 50,
+            "description": "Timeslots (1-50).",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "startsOn",
+                "endsOn",
+                "interviewers"
+              ],
+              "properties": {
+                "startsOn": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Slot start (ISO 8601 date-time)."
+                },
+                "endsOn": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Slot end (ISO 8601 date-time)."
+                },
+                "interviewers": {
+                  "type": "array",
+                  "minItems": 1,
+                  "maxItems": 50,
+                  "description": "Interviewers (1-50).",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "id",
+                      "status"
+                    ],
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "SmartRecruiters user id of the interviewer (raw or sr-user:-prefixed)."
+                      },
+                      "status": {
+                        "type": "string",
+                        "enum": [
+                          "accepted",
+                          "declined",
+                          "pending",
+                          "tentative"
+                        ],
+                        "description": "Interviewer attendee status."
+                      }
+                    }
+                  }
+                },
+                "interviewType": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 400,
+                  "description": "Interview type (see interview_types.list)."
+                },
+                "title": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 200,
+                  "description": "Slot title."
+                },
+                "place": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 500,
+                  "description": "Slot place."
+                },
+                "candidateStatus": {
+                  "type": "string",
+                  "enum": [
+                    "accepted",
+                    "declined",
+                    "pending",
+                    "tentative"
+                  ],
+                  "description": "Candidate attendee status for this slot."
+                },
+                "noShow": {
+                  "type": "boolean",
+                  "description": "Candidate no-show flag."
+                }
+              }
+            }
+          },
+          "location": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500,
+            "description": "Address, video link or phone number."
+          },
+          "createdOn": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Creation time (ISO 8601); defaults to now upstream."
+          },
+          "refUrl": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Reference URL in the scheduling system."
+          },
+          "refId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "Reference id in the scheduling system."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "interview"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "sr-interview:-prefixed interview id."
+          },
+          "interview": {
+            "description": "Normalized interview (same shape as interviews.get)."
+          }
+        }
+      }
+    },
+    "interviews.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get interview",
+      "description": "Fetch one interview via authenticated GET /interviews-api/v201904/interviews/{interviewId}. OAuth scope interviews_read (declared per operation; not part of the default connect set). API keys need the matching SmartRecruiters user permission.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "interviewId"
+        ],
+        "properties": {
+          "interviewId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "SmartRecruiters interview id (raw or sr-interview:-prefixed)."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "interview"
+        ],
+        "properties": {
+          "interview": {
+            "description": "Normalized interview; null when the response has no id."
+          }
+        }
+      }
+    },
+    "interviews.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "effectPolicy": "Reconcile",
+      "reconcile": "interviews.get",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Update interview",
+      "description": "Update an interview's location and/or timezone via authenticated PATCH /interviews-api/v201904/interviews/{interviewId} (204). Supported upstream only for interviews created via the Public API. The deprecated candidate.status field is not exposed (use timeslot candidateStatus). EffectPolicy Reconcile observes via interviews.get [interviewId], which returns location and timezone verbatim. OAuth scope interviews_write (declared per operation; not part of the default connect set). API keys need the matching SmartRecruiters user permission.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "interviewId"
+        ],
+        "properties": {
+          "interviewId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "SmartRecruiters interview id (raw or sr-interview:-prefixed)."
+          },
+          "location": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500,
+            "description": "New location."
+          },
+          "timezone": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100,
+            "description": "New TZ database timezone name."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "interview"
+        ],
+        "properties": {
+          "interview": {
+            "description": "Normalized interview after Reconcile via interviews.get; null when not found."
+          }
+        }
+      }
+    },
+    "interviews.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Delete interview",
+      "description": "Delete an interview via authenticated DELETE /interviews-api/v201904/interviews/{interviewId} (204). Supported upstream only for interviews created via the Public API. 404 surfaces as CONNECTOR_UPSTREAM_ERROR. Delete, so effectPolicy is omitted. OAuth scope interviews_write (declared per operation; not part of the default connect set). API keys need the matching SmartRecruiters user permission.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "interviewId"
+        ],
+        "properties": {
+          "interviewId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "SmartRecruiters interview id (raw or sr-interview:-prefixed)."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "ok"
+        ],
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "const": true,
+            "description": "Always true on 204."
+          }
+        }
+      }
+    },
+    "interview_types.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List interview types",
+      "description": "List the company's interview types via authenticated GET /interviews-api/v201904/interview-types. OAuth scope interview_types_read (declared per operation; not part of the default connect set). API keys need the matching SmartRecruiters user permission.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [],
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "types",
+          "total"
+        ],
+        "properties": {
+          "types": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Interview type names."
+          },
+          "total": {
+            "type": "integer",
+            "description": "Number of types."
+          }
+        }
+      }
+    },
+    "messages.share": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Share message",
+      "description": "Post a note / message via authenticated POST /messages/shares (201 MessageDetails). shareWith.users take user ids and shareWith.hiringTeamOf take job ids (raw or prefixed); everyone and openNote are mutually exclusive. Create, so effectPolicy is omitted. OAuth scope messages_write (declared per operation; not part of the default connect set). API keys need the matching SmartRecruiters user permission.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "content"
+        ],
+        "properties": {
+          "content": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 10000,
+            "description": "Message content (1-10000 characters); supports @-mentions and #-tags."
+          },
+          "correlationId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Optional caller reference appended to the note."
+          },
+          "shareWith": {
+            "type": "object",
+            "additionalProperties": false,
+            "description": "Sharing and visibility options.",
+            "properties": {
+              "users": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "SmartRecruiters user id (raw or sr-user:-prefixed)."
+                },
+                "description": "User ids to share with."
+              },
+              "hiringTeamOf": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "SmartRecruiters job id (raw or sr-job:-prefixed)."
+                },
+                "description": "Job ids whose hiring teams see the message."
+              },
+              "everyone": {
+                "type": "boolean",
+                "description": "Visible to everyone in the company."
+              },
+              "openNote": {
+                "type": "boolean",
+                "description": "Visible to everyone with access to the #-tagged candidate."
+              }
+            }
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "shareRequired"
+        ],
+        "properties": {
+          "id": {
+            "description": "Message id; null when absent."
+          },
+          "shareRequired": {
+            "description": "Upstream shareRequired flag; null when absent."
+          }
+        }
+      }
+    },
+    "messages.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List candidate messages",
+      "description": "List messages for a candidate via authenticated GET /messages (first page; the Link next header is not surfaced, pass pageId to continue). ADMINISTRATOR role only upstream. authorId and application candidateId/jobId are sr-user: / sr-candidate: / sr-job:-prefixed. OAuth scope messages_read (declared per operation; not part of the default connect set). API keys need the matching SmartRecruiters user permission.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "candidateId"
+        ],
+        "properties": {
+          "candidateId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "SmartRecruiters candidate id (raw or sr-candidate:-prefixed)."
+          },
+          "jobId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "SmartRecruiters job id (raw or sr-job:-prefixed)."
+          },
+          "pageId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Next-page id."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Page size (1-100)."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "messages",
+          "total"
+        ],
+        "properties": {
+          "messages": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            },
+            "description": "Messages (content, createdOn, visibility, authorId, applications)."
+          },
+          "total": {
+            "type": "integer",
+            "description": "Messages on this page."
+          }
+        }
+      }
+    },
+    "offers.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List application offers",
+      "description": "List offers for a candidate's application via authenticated GET /candidates/{id}/jobs/{jobId}/offers. OAuth scope candidates_offers_read (declared per operation; not part of the default connect set). API keys need the matching SmartRecruiters user permission.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "jobId"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "SmartRecruiters candidate id (raw or sr-candidate:-prefixed)."
+          },
+          "jobId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "SmartRecruiters job id (raw or sr-job:-prefixed)."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "offers",
+          "total"
+        ],
+        "properties": {
+          "offers": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            },
+            "description": "Offers (id, status, createdOn, updatedOn, properties)."
+          },
+          "total": {
+            "type": "integer",
+            "description": "totalFound."
+          }
+        }
+      }
+    },
+    "offers.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get application offer",
+      "description": "Fetch one offer via authenticated GET /candidates/{id}/jobs/{jobId}/offers/{offerId}. OAuth scope candidates_offers_read (declared per operation; not part of the default connect set). API keys need the matching SmartRecruiters user permission.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "jobId",
+          "offerId"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "SmartRecruiters candidate id (raw or sr-candidate:-prefixed)."
+          },
+          "jobId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "SmartRecruiters job id (raw or sr-job:-prefixed)."
+          },
+          "offerId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "SmartRecruiters offer id."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "offer"
+        ],
+        "properties": {
+          "offer": {
+            "description": "Offer (id, status, createdOn, updatedOn, properties); null when the response has no id."
+          }
+        }
+      }
+    },
+    "offers.search": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Search offers",
+      "description": "Search offers across the company via authenticated GET /offers (limit/offset paging). Upstream allows only Extended or Admin system-role credentials. When age is set, createdAfter/createdBefore are ignored upstream. OAuth scope candidates_offers_read (declared per operation; not part of the default connect set). API keys need the matching SmartRecruiters user permission.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [],
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Page size (1-100)."
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Items to skip."
+          },
+          "createdAfter": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Created after (ISO 8601)."
+          },
+          "createdBefore": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Created before (ISO 8601)."
+          },
+          "age": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Word-based offer age, e.g. 10 days."
+          },
+          "status": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string",
+              "enum": [
+                "CREATED",
+                "PENDING_APPROVAL",
+                "APPROVED",
+                "NOT_APPROVED",
+                "PENDING_ACCEPTANCE",
+                "ACCEPTED",
+                "NOT_ACCEPTED",
+                "ABANDONED"
+              ]
+            },
+            "description": "Offer states to include (default all)."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "offers",
+          "total"
+        ],
+        "properties": {
+          "offers": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            },
+            "description": "Offers (id, status, createdOn, updatedOn, properties)."
+          },
+          "total": {
+            "type": "integer",
+            "description": "totalFound."
+          }
+        }
+      }
+    },
+    "reviews.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List reviews",
+      "description": "List reviews (scorecards) for a candidate on a job via authenticated GET /reviews-api/v201910/reviews. candidateId, jobId and reviewerId in the output are sr-candidate: / sr-job: / sr-user:-prefixed. OAuth scope reviews_read (declared per operation; not part of the default connect set). API keys need the matching SmartRecruiters user permission.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "candidateId",
+          "jobId"
+        ],
+        "properties": {
+          "candidateId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "SmartRecruiters candidate id (raw or sr-candidate:-prefixed)."
+          },
+          "jobId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "SmartRecruiters job id (raw or sr-job:-prefixed)."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "reviews",
+          "total"
+        ],
+        "properties": {
+          "reviews": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            },
+            "description": "Reviews (id, candidateId, jobId, reviewerId, overallRating, comment, createdOn, updatedOn)."
+          },
+          "total": {
+            "type": "integer",
+            "description": "Number of reviews."
+          }
+        }
+      }
+    },
+    "reviews.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get review",
+      "description": "Fetch one review via authenticated GET /reviews-api/v201910/reviews/{reviewId}. OAuth scope reviews_read (declared per operation; not part of the default connect set). API keys need the matching SmartRecruiters user permission.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "reviewId"
+        ],
+        "properties": {
+          "reviewId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "SmartRecruiters review id."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "review"
+        ],
+        "properties": {
+          "review": {
+            "description": "Review (same shape as reviews.list rows); null when the response has no id."
+          }
+        }
+      }
+    },
+    "scorecards.criteria.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List job scorecard criteria",
+      "description": "List the scorecard criteria configured for a job via authenticated GET /reviews-api/v201910/jobs/{jobId}/criteria. OAuth scope jobs_read (declared per operation; not part of the default connect set). API keys need the matching SmartRecruiters user permission.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "jobId"
+        ],
+        "properties": {
+          "jobId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "SmartRecruiters job id (raw or sr-job:-prefixed)."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "criteria",
+          "total"
+        ],
+        "properties": {
+          "criteria": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            },
+            "description": "Criteria (name, description, questions, assignedAll, steps)."
+          },
+          "total": {
+            "type": "integer",
+            "description": "Number of criteria."
+          }
+        }
+      }
+    },
+    "users.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get user",
+      "description": "Fetch one user via authenticated GET /user-api/v201804/users/{id}. OAuth scope users_read (declared per operation; not part of the default connect set). API keys need the matching SmartRecruiters user permission.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "SmartRecruiters user id (raw or sr-user:-prefixed)."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "user"
+        ],
+        "properties": {
+          "user": {
+            "description": "Normalized user (same shape as users.list rows); null when the response has no id."
+          }
+        }
+      }
+    },
+    "users.me": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get current user",
+      "description": "Fetch the user that owns the credentials via authenticated GET /user-api/v201804/users/me. OAuth scope user_me_read (declared per operation; not part of the default connect set). API keys need the matching SmartRecruiters user permission.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [],
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "user"
+        ],
+        "properties": {
+          "user": {
+            "description": "Normalized user; null when the response has no id."
           }
         }
       }

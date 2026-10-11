@@ -1243,6 +1243,23 @@ import {
   executeJobsPositionsList as listSmartRecruitersJobPositions,
   executePostingsGet as getSmartRecruitersPosting,
 } from "../../connectors/smartrecruiters/src/g2";
+import {
+  executeInterviewsCreate as createSmartRecruitersInterview,
+  executeInterviewsGet as getSmartRecruitersInterview,
+  executeInterviewsUpdate as updateSmartRecruitersInterview,
+  executeInterviewsDelete as deleteSmartRecruitersInterview,
+  executeInterviewTypesList as listSmartRecruitersInterviewTypes,
+  executeMessagesShare as shareSmartRecruitersMessage,
+  executeMessagesList as listSmartRecruitersMessages,
+  executeOffersList as listSmartRecruitersOffers,
+  executeOffersGet as getSmartRecruitersOffer,
+  executeOffersSearch as searchSmartRecruitersOffers,
+  executeReviewsList as listSmartRecruitersReviews,
+  executeReviewsGet as getSmartRecruitersReview,
+  executeScorecardsCriteriaList as listSmartRecruitersScorecardCriteria,
+  executeUsersGet as getSmartRecruitersUser,
+  executeUsersMe as getSmartRecruitersMe,
+} from "../../connectors/smartrecruiters/src/g3";
 import recruiteeManifest from "../../connectors/recruitee/manifest.json";
 import { healthcheck as recruiteeHealthcheck } from "../../connectors/recruitee/src/healthcheck";
 import {
@@ -3324,6 +3341,21 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
       "jobs.publications.list": listSmartRecruitersJobPublications,
       "jobs.positions.list": listSmartRecruitersJobPositions,
       "postings.get": getSmartRecruitersPosting,
+      "interviews.create": createSmartRecruitersInterview,
+      "interviews.get": getSmartRecruitersInterview,
+      "interviews.update": updateSmartRecruitersInterview,
+      "interviews.delete": deleteSmartRecruitersInterview,
+      "interview_types.list": listSmartRecruitersInterviewTypes,
+      "messages.share": shareSmartRecruitersMessage,
+      "messages.list": listSmartRecruitersMessages,
+      "offers.list": listSmartRecruitersOffers,
+      "offers.get": getSmartRecruitersOffer,
+      "offers.search": searchSmartRecruitersOffers,
+      "reviews.list": listSmartRecruitersReviews,
+      "reviews.get": getSmartRecruitersReview,
+      "scorecards.criteria.list": listSmartRecruitersScorecardCriteria,
+      "users.get": getSmartRecruitersUser,
+      "users.me": getSmartRecruitersMe,
     },
     intercom: {
       "conversations.reply": replyIntercomConversation,
