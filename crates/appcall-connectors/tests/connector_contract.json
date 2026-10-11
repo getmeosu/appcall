@@ -493708,7 +493708,7 @@
     "public": true
   },
   {
-    "digest": "23cddd37663d933684d1bdf92f8b682a2a985f814dc6e12cdb4dbaec26ef44eb",
+    "digest": "1aa5fd9847f36d6639c4ca91e88eb2ab7ec297e8e4a5dac1cec08291eacb996a",
     "egress": true,
     "key": "github",
     "operations": [
@@ -506952,17 +506952,23 @@
       {
         "destructive": false,
         "inputSchema": {
+          "additionalProperties": false,
           "properties": {
             "enterpriseSlug": {
-              "description": "enterpriseSlug",
+              "description": "Enterprise slug.",
               "type": "string"
             },
             "role": {
-              "description": "role",
+              "description": "Administrator role.",
+              "enum": [
+                "BILLING_MANAGER",
+                "OWNER",
+                "UNAFFILIATED"
+              ],
               "type": "string"
             },
             "userLogin": {
-              "description": "userLogin",
+              "description": "Login of the invited user.",
               "type": "string"
             }
           },
@@ -506978,23 +506984,34 @@
         "maxInputBytes": 1048576,
         "maxResponseBytes": 1048576,
         "outputSchema": {
-          "additionalProperties": true,
+          "properties": {
+            "found": {
+              "type": "boolean"
+            },
+            "invitation": {
+              "type": [
+                "object",
+                "null"
+              ]
+            }
+          },
           "type": "object"
         },
-        "read": false,
+        "read": true,
         "timeoutMs": 30000,
         "tool": true
       },
       {
         "destructive": false,
         "inputSchema": {
+          "additionalProperties": false,
           "properties": {
             "enterpriseSlug": {
-              "description": "enterpriseSlug",
+              "description": "Enterprise slug.",
               "type": "string"
             },
             "userLogin": {
-              "description": "userLogin",
+              "description": "Login of the invited user.",
               "type": "string"
             }
           },
@@ -507009,23 +507026,51 @@
         "maxInputBytes": 1048576,
         "maxResponseBytes": 1048576,
         "outputSchema": {
-          "additionalProperties": true,
+          "properties": {
+            "found": {
+              "type": "boolean"
+            },
+            "invitation": {
+              "type": [
+                "object",
+                "null"
+              ]
+            }
+          },
           "type": "object"
         },
-        "read": false,
+        "read": true,
         "timeoutMs": 30000,
         "tool": true
       },
       {
         "destructive": false,
         "inputSchema": {
+          "additionalProperties": false,
           "properties": {
+            "expiry": {
+              "description": "How long the limit lasts.",
+              "enum": [
+                "ONE_DAY",
+                "THREE_DAYS",
+                "ONE_WEEK",
+                "ONE_MONTH",
+                "SIX_MONTHS"
+              ],
+              "type": "string"
+            },
             "limit": {
-              "description": "limit",
+              "description": "Interaction limit.",
+              "enum": [
+                "COLLABORATORS_ONLY",
+                "CONTRIBUTORS_ONLY",
+                "EXISTING_USERS",
+                "NO_LIMIT"
+              ],
               "type": "string"
             },
             "userId": {
-              "description": "userId",
+              "description": "Node id of the user (the viewer).",
               "type": "string"
             }
           },
@@ -507040,7 +507085,20 @@
         "maxInputBytes": 1048576,
         "maxResponseBytes": 1048576,
         "outputSchema": {
-          "additionalProperties": true,
+          "properties": {
+            "limit": {
+              "type": [
+                "object",
+                "null"
+              ]
+            },
+            "user": {
+              "type": [
+                "object",
+                "null"
+              ]
+            }
+          },
           "type": "object"
         },
         "read": false,
@@ -507241,9 +507299,10 @@
       {
         "destructive": false,
         "inputSchema": {
+          "additionalProperties": false,
           "properties": {
             "organizationId": {
-              "description": "organizationId",
+              "description": "Organization node id.",
               "type": "string"
             }
           },
@@ -507257,7 +507316,14 @@
         "maxInputBytes": 1048576,
         "maxResponseBytes": 1048576,
         "outputSchema": {
-          "additionalProperties": true,
+          "properties": {
+            "organization": {
+              "type": [
+                "object",
+                "null"
+              ]
+            }
+          },
           "type": "object"
         },
         "read": false,
@@ -507267,9 +507333,10 @@
       {
         "destructive": false,
         "inputSchema": {
+          "additionalProperties": false,
           "properties": {
             "organizationId": {
-              "description": "organizationId",
+              "description": "Organization node id.",
               "type": "string"
             }
           },
@@ -507283,7 +507350,14 @@
         "maxInputBytes": 1048576,
         "maxResponseBytes": 1048576,
         "outputSchema": {
-          "additionalProperties": true,
+          "properties": {
+            "organization": {
+              "type": [
+                "object",
+                "null"
+              ]
+            }
+          },
           "type": "object"
         },
         "read": false,
@@ -507527,13 +507601,33 @@
       {
         "destructive": false,
         "inputSchema": {
+          "additionalProperties": false,
           "properties": {
+            "after": {
+              "description": "Cursor from pageInfo.endCursor of the previous page.",
+              "type": "string"
+            },
+            "first": {
+              "description": "Page size (1-100, default 10).",
+              "maximum": 100,
+              "minimum": 1,
+              "type": "integer"
+            },
             "query": {
-              "description": "query",
+              "description": "GitHub search query string.",
               "type": "string"
             },
             "type": {
-              "description": "type",
+              "description": "Search type.",
+              "enum": [
+                "DISCUSSION",
+                "ISSUE",
+                "ISSUE_ADVANCED",
+                "ISSUE_HYBRID",
+                "ISSUE_SEMANTIC",
+                "REPOSITORY",
+                "USER"
+              ],
               "type": "string"
             }
           },
@@ -507548,10 +507642,29 @@
         "maxInputBytes": 1048576,
         "maxResponseBytes": 1048576,
         "outputSchema": {
-          "additionalProperties": true,
+          "properties": {
+            "discussionCount": {
+              "type": "integer"
+            },
+            "issueCount": {
+              "type": "integer"
+            },
+            "items": {
+              "type": "array"
+            },
+            "pageInfo": {
+              "type": "object"
+            },
+            "repositoryCount": {
+              "type": "integer"
+            },
+            "userCount": {
+              "type": "integer"
+            }
+          },
           "type": "object"
         },
-        "read": false,
+        "read": true,
         "timeoutMs": 30000,
         "tool": true
       },
@@ -507707,7 +507820,52 @@
       {
         "destructive": false,
         "inputSchema": {
-          "properties": {},
+          "additionalProperties": false,
+          "properties": {
+            "after": {
+              "description": "Cursor from pageInfo.endCursor of the previous page.",
+              "type": "string"
+            },
+            "ecosystem": {
+              "description": "Dependency graph ecosystem filter.",
+              "enum": [
+                "ACTIONS",
+                "COMPOSER",
+                "GO",
+                "MAVEN",
+                "NPM",
+                "NUGET",
+                "PIP",
+                "PUB",
+                "RUBYGEMS",
+                "RUST",
+                "SWIFT"
+              ],
+              "type": "string"
+            },
+            "first": {
+              "description": "Page size (1-100, default 10).",
+              "maximum": 100,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "onlyDependencies": {
+              "description": "Only accounts that maintain dependencies of the viewer (or of orgLoginForDependencies).",
+              "type": "boolean"
+            },
+            "orderDirection": {
+              "description": "Order by login.",
+              "enum": [
+                "ASC",
+                "DESC"
+              ],
+              "type": "string"
+            },
+            "orgLoginForDependencies": {
+              "description": "Organization whose dependencies to use with onlyDependencies.",
+              "type": "string"
+            }
+          },
           "required": [],
           "type": "object"
         },
@@ -507716,10 +507874,20 @@
         "maxInputBytes": 1048576,
         "maxResponseBytes": 1048576,
         "outputSchema": {
-          "additionalProperties": true,
+          "properties": {
+            "items": {
+              "type": "array"
+            },
+            "pageInfo": {
+              "type": "object"
+            },
+            "totalCount": {
+              "type": "integer"
+            }
+          },
           "type": "object"
         },
-        "read": false,
+        "read": true,
         "timeoutMs": 30000,
         "tool": true
       },
@@ -507944,9 +508112,18 @@
       {
         "destructive": false,
         "inputSchema": {
+          "additionalProperties": false,
           "properties": {
+            "description": {
+              "description": "List description.",
+              "type": "string"
+            },
+            "isPrivate": {
+              "description": "Private list (default false).",
+              "type": "boolean"
+            },
             "name": {
-              "description": "name",
+              "description": "List name.",
               "type": "string"
             }
           },
@@ -507960,7 +508137,11 @@
         "maxInputBytes": 1048576,
         "maxResponseBytes": 1048576,
         "outputSchema": {
-          "additionalProperties": true,
+          "properties": {
+            "list": {
+              "type": "object"
+            }
+          },
           "type": "object"
         },
         "read": false,
@@ -507970,9 +508151,10 @@
       {
         "destructive": false,
         "inputSchema": {
+          "additionalProperties": false,
           "properties": {
             "listId": {
-              "description": "listId",
+              "description": "UserList node id.",
               "type": "string"
             }
           },
@@ -507986,7 +508168,20 @@
         "maxInputBytes": 1048576,
         "maxResponseBytes": 1048576,
         "outputSchema": {
-          "additionalProperties": true,
+          "properties": {
+            "deleted": {
+              "type": "boolean"
+            },
+            "listId": {
+              "type": "string"
+            },
+            "user": {
+              "type": [
+                "object",
+                "null"
+              ]
+            }
+          },
           "type": "object"
         },
         "read": false,
@@ -507996,16 +508191,26 @@
       {
         "destructive": false,
         "inputSchema": {
+          "additionalProperties": false,
           "properties": {
             "itemId": {
-              "description": "itemId",
+              "description": "Repository node id.",
               "type": "string"
             },
             "listIds": {
-              "description": "listIds",
+              "description": "UserList node ids that should contain the item.",
               "items": {
                 "type": "string"
               },
+              "maxItems": 100,
+              "type": "array"
+            },
+            "suggestedListIds": {
+              "description": "UserListSuggestion ids to create and add the item to.",
+              "items": {
+                "type": "string"
+              },
+              "maxItems": 100,
               "type": "array"
             }
           },
@@ -508020,7 +508225,17 @@
         "maxInputBytes": 1048576,
         "maxResponseBytes": 1048576,
         "outputSchema": {
-          "additionalProperties": true,
+          "properties": {
+            "item": {
+              "type": [
+                "object",
+                "null"
+              ]
+            },
+            "lists": {
+              "type": "array"
+            }
+          },
           "type": "object"
         },
         "read": false,
@@ -508030,9 +508245,22 @@
       {
         "destructive": false,
         "inputSchema": {
+          "additionalProperties": false,
           "properties": {
+            "description": {
+              "description": "New description.",
+              "type": "string"
+            },
+            "isPrivate": {
+              "description": "Private list.",
+              "type": "boolean"
+            },
             "listId": {
-              "description": "listId",
+              "description": "UserList node id.",
+              "type": "string"
+            },
+            "name": {
+              "description": "New list name.",
               "type": "string"
             }
           },
@@ -508046,7 +508274,11 @@
         "maxInputBytes": 1048576,
         "maxResponseBytes": 1048576,
         "outputSchema": {
-          "additionalProperties": true,
+          "properties": {
+            "list": {
+              "type": "object"
+            }
+          },
           "type": "object"
         },
         "read": false,
@@ -508056,9 +508288,27 @@
       {
         "destructive": false,
         "inputSchema": {
+          "additionalProperties": false,
           "properties": {
+            "emoji": {
+              "description": "Emoji shortcode, e.g. :coffee:.",
+              "type": "string"
+            },
+            "expiresAt": {
+              "description": "ISO 8601 date-time with zone when the status expires.",
+              "format": "date-time",
+              "type": "string"
+            },
+            "limitedAvailability": {
+              "description": "Mark the viewer as having limited availability.",
+              "type": "boolean"
+            },
             "message": {
-              "description": "message",
+              "description": "Status message.",
+              "type": "string"
+            },
+            "organizationId": {
+              "description": "Organization node id to scope the status visibility to.",
               "type": "string"
             }
           },
@@ -508072,7 +508322,14 @@
         "maxInputBytes": 1048576,
         "maxResponseBytes": 1048576,
         "outputSchema": {
-          "additionalProperties": true,
+          "properties": {
+            "status": {
+              "type": [
+                "object",
+                "null"
+              ]
+            }
+          },
           "type": "object"
         },
         "read": false,

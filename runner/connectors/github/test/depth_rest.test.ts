@@ -3,31 +3,20 @@ import manifest from "../manifest.json";
 import coverage from "../fixtures/composio-coverage.json";
 import { compileDeclarativeConnector } from "../../../bun/src/declarative/compile";
 
+// FIX-G12C: the 12 G12 GraphQL ops left this declarative list; they run via src/gap_g12c.ts (test/g12c.test.ts).
 const ADDED = [
   "graphql.discussions.comments.delete",
   "graphql.discussions.delete",
-  "graphql.enterprise.admin_invitation.get",
-  "graphql.enterprise.member_invitation.get",
-  "graphql.interaction_limits.set_user",
   "graphql.migrations.abort",
-  "graphql.organizations.follow",
-  "graphql.organizations.unfollow",
   "graphql.projects_v2.create",
   "graphql.projects_v2.item_field.clear",
   "graphql.query",
-  "graphql.search",
-  "graphql.sponsorables.list",
   "graphql.sponsors.tiers.create",
   "graphql.sponsors.tiers.publish",
   "graphql.sponsors.tiers.retire",
   "graphql.sponsorships.cancel",
   "graphql.sponsorships.create",
   "graphql.subscriptions.update",
-  "graphql.user_lists.create",
-  "graphql.user_lists.delete",
-  "graphql.user_lists.items.update",
-  "graphql.user_lists.update",
-  "graphql.user_status.update",
   "rest.apps.check_token",
   "rest.apps.create_from_manifest",
   "rest.apps.delete_authorization",
@@ -66,7 +55,7 @@ const ADDED = [
 
 describe("github full-depth REST additions", () => {
   test("version and runnable request blocks", () => {
-    expect(manifest.version).toBe("0.80.1");
+    expect(manifest.version).toBe("0.80.2");
     expect(Object.keys(manifest.operations)).toHaveLength(910);
     expect(manifest.network.allowedHosts).toContain("models.github.ai");
     for (const key of ADDED) {

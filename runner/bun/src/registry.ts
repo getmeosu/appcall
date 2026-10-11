@@ -796,6 +796,18 @@ import {
   listGraphqlLicenses as ghListGraphqlLicenses,
   listGraphqlSecurityAdvisories as ghListGraphqlSecurityAdvisories,
   listGraphqlSecurityVulnerabilities as ghListGraphqlSecurityVulnerabilities,
+  searchGraphql as ghSearchGraphql,
+  listGraphqlSponsorables as ghListGraphqlSponsorables,
+  getEnterpriseMemberInvitation as ghGetEnterpriseMemberInvitation,
+  getEnterpriseAdminInvitation as ghGetEnterpriseAdminInvitation,
+  followOrganizationGraphql as ghFollowOrganizationGraphql,
+  unfollowOrganizationGraphql as ghUnfollowOrganizationGraphql,
+  updateUserStatusGraphql as ghUpdateUserStatusGraphql,
+  setUserInteractionLimitGraphql as ghSetUserInteractionLimitGraphql,
+  createUserListGraphql as ghCreateUserListGraphql,
+  updateUserListGraphql as ghUpdateUserListGraphql,
+  deleteUserListGraphql as ghDeleteUserListGraphql,
+  updateUserListsForItemGraphql as ghUpdateUserListsForItemGraphql,
   getProject as ghGetClassicProject,
   updateProject,
   deleteProject,
@@ -2686,6 +2698,18 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
       "graphql.licenses.list": ghListGraphqlLicenses,
       "graphql.security_advisories.list": ghListGraphqlSecurityAdvisories,
       "graphql.security_vulnerabilities.list": ghListGraphqlSecurityVulnerabilities,
+      "graphql.search": ghSearchGraphql,
+      "graphql.sponsorables.list": ghListGraphqlSponsorables,
+      "graphql.enterprise.member_invitation.get": ghGetEnterpriseMemberInvitation,
+      "graphql.enterprise.admin_invitation.get": ghGetEnterpriseAdminInvitation,
+      "graphql.organizations.follow": ghFollowOrganizationGraphql,
+      "graphql.organizations.unfollow": ghUnfollowOrganizationGraphql,
+      "graphql.user_status.update": ghUpdateUserStatusGraphql,
+      "graphql.interaction_limits.set_user": ghSetUserInteractionLimitGraphql,
+      "graphql.user_lists.create": ghCreateUserListGraphql,
+      "graphql.user_lists.update": ghUpdateUserListGraphql,
+      "graphql.user_lists.delete": ghDeleteUserListGraphql,
+      "graphql.user_lists.items.update": ghUpdateUserListsForItemGraphql,
       "projects.get": ghGetClassicProject,
       "projects.update": updateProject,
       "projects.delete": deleteProject,
@@ -4108,6 +4132,12 @@ type OperationSpec = OperationBudgetLike & {
   kind?: string;
   effectPolicy?: string;
   reconcile?: string;
+  /**
+   * Optional observe-key mapping { observeKey: actionKey }. The observe input
+   * receives the action's value under the observe's name, e.g. follow
+   * {organizationId} observes graphql.node.get {id}.
+   */
+  reconcileInput?: Readonly<Record<string, string>>;
   /** Property names declared by the operation's inputSchema (empty when none). */
   inputProperties?: ReadonlySet<string>;
   /** inputSchema.required (empty when none). */
@@ -4145,6 +4175,7 @@ function buildConnectorOperationSpecs(manifests: Array<{ key: string; operations
             maxResponseBytes: typeof spec.maxResponseBytes === "number" ? spec.maxResponseBytes : undefined,
             effectPolicy: typeof spec.effectPolicy === "string" ? spec.effectPolicy : undefined,
             reconcile: typeof spec.reconcile === "string" ? spec.reconcile : undefined,
+            reconcileInput: reconcileInputMap(spec.reconcileInput),
             ...inputSchemaFacts(spec),
           }]];
         }),
@@ -4209,7 +4240,30 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 // but a closed observe (additionalProperties: false) does not declare is
 // dropped, so conversations.close {id, adminId, body} observes
 // conversations.get {id}. Open observes keep the full action input.
+function reconcileInputMap(value: unknown): Readonly<Record<string, string>> | undefined {
+  if (!isRecord(value)) return undefined;
+  const entries = Object.entries(value).filter(
+    (entry): entry is [string, string] => entry[0].length > 0 && typeof entry[1] === "string" && entry[1].length > 0,
+  );
+  return entries.length > 0 ? Object.fromEntries(entries) : undefined;
+}
+
 function projectObserveInput(
+  inputValue: unknown,
+  actionSpec: OperationSpec,
+  observeSpec: OperationSpec | undefined,
+): unknown {
+  const projected = projectObserveInputBySchema(inputValue, actionSpec, observeSpec);
+  const mapping = actionSpec.reconcileInput;
+  if (!mapping || !isRecord(inputValue) || !isRecord(projected)) return projected;
+  const mapped: Record<string, unknown> = { ...projected };
+  for (const [observeKey, actionKey] of Object.entries(mapping)) {
+    if (inputValue[actionKey] !== undefined) mapped[observeKey] = inputValue[actionKey];
+  }
+  return mapped;
+}
+
+function projectObserveInputBySchema(
   inputValue: unknown,
   actionSpec: OperationSpec,
   observeSpec: OperationSpec | undefined,
@@ -4255,6 +4309,8 @@ function assertReconcilePairingsLoadable(
       const supplied = observeKeysSuppliedByPolicy(spec.effectPolicy);
       const actionProps = spec.inputProperties ?? new Set<string>();
       for (const key of observe.inputRequired ?? []) {
+        const mappedFrom = spec.reconcileInput?.[key];
+        if (mappedFrom !== undefined && actionProps.has(mappedFrom)) continue;
         if (!supplied.has(key) && !actionProps.has(key)) {
           throw new Error(
             `${connectorKey}.${operation}: reconcile ${spec.reconcile} requires ${key}, which the action input does not declare.`,
