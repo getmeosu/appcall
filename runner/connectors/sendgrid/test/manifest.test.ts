@@ -4,7 +4,7 @@ import manifest from "../manifest.json";
 describe("sendgrid manifest", () => {
   it("has correct key and version", () => {
     expect(manifest.key).toBe("sendgrid");
-    expect(manifest.version).toBe("0.4.0");
+    expect(manifest.version).toBe("0.4.1");
     expect(manifest.runtime).toBe("bun");
   });
 

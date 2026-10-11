@@ -135,3 +135,37 @@ export function assertSafePathSegment(value: string, field: string): string {
   }
   return trimmed;
 }
+
+/**
+ * assertNoTraversalSegment is the permissive sibling of assertSafePathSegment,
+ * for provider ids whose documented charset is wider than [A-Za-z0-9._-]:
+ * emails ("a+b@x.com"), URNs ("urn:li:sponsoredAccount:1"), base64 ids ("ab+c=="),
+ * Atlassian account ids ("557058:f581..."), and so on. It does not narrow the
+ * charset and does not trim; it rejects only input that can change the request
+ * path once interpolated:
+ *   - empty or whitespace-only values;
+ *   - dot segments, i.e. any value made only of dots (after trimming);
+ *   - the separators "/" and "\";
+ *   - C0/C1 control characters.
+ * Callers MUST still encodeURIComponent the result (or use encodePathSegment):
+ * WHATWG URL parsing treats "%2e%2e" as a dot segment, and encoding turns "%"
+ * into "%25" so a pre-encoded value can never decode back into traversal.
+ * Finite numbers are accepted and stringified.
+ */
+export function assertNoTraversalSegment(value: unknown, field: string): string {
+  let text: string;
+  if (typeof value === "string") text = value;
+  else if (typeof value === "number" && Number.isFinite(value)) text = String(value);
+  else throw new Error(`${field} is required`);
+  const trimmed = text.trim();
+  if (trimmed.length === 0) throw new Error(`${field} is required`);
+  if (/^\.+$/.test(trimmed)) throw new Error(`${field} must not be a dot segment`);
+  if (/[\/\\]/.test(text)) throw new Error(`${field} must not contain path separators`);
+  if (/[\u0000-\u001f\u007f-\u009f]/u.test(text)) throw new Error(`${field} must not contain control characters`);
+  return text;
+}
+
+/** encodePathSegment = encodeURIComponent(assertNoTraversalSegment(value, field)). */
+export function encodePathSegment(value: unknown, field: string): string {
+  return encodeURIComponent(assertNoTraversalSegment(value, field));
+}

@@ -1,14 +1,6 @@
 import { createConnectorHttpClient } from "../../../bun/src/http";
 import manifest from "../manifest.json";
-
-function assertSafePathSegment(value: string, field: string): string {
-  const trimmed = value.trim();
-  if (trimmed.length === 0) throw new Error(`${field} is required`);
-  if (!/^[A-Za-z0-9._-]+$/.test(trimmed)) {
-    throw new Error(`${field} may only contain letters, digits, dots, underscores and hyphens`);
-  }
-  return trimmed;
-}
+import { assertSafePathSegment } from "../../_shared/jobboard";
 
 function upstreamErrorFor(
   provider: string,
