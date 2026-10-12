@@ -56,20 +56,36 @@ export async function source(cfg: HarnessConfig, store: Store, actorId: string, 
   return leads;
 }
 
-export async function enrich(cfg: HarnessConfig, store: Store): Promise<void> {
+export interface EnrichReport { enriched: number; failed: Array<{ lead_id: string; error_code: string }> }
+
+export async function enrich(cfg: HarnessConfig, store: Store): Promise<EnrichReport> {
+  const report: EnrichReport = { enriched: 0, failed: [] };
   const leads = store.readLeads();
   if (leads.length === 0) console.warn("[enrich] no leads in state — seed leads.csv or set APIFY_ACTOR_ID");
   for (const lead of leads) {
     if (lead.stage !== "sourced") continue;
     const r = await mcpCall(cfg, "apollo__people__match", { name: lead.full_name, organization_name: lead.company });
+    lead.last_request_id = r.requestId;
+    if (!r.ok) {
+      // SENA-ERR: an errored match must not advance the lead to enriched.
+      const code = r.errorCode || "UNKNOWN_ERROR";
+      lead.stage = "enrich_failed";
+      lead.error_code = code;
+      report.failed.push({ lead_id: lead.lead_id, error_code: code });
+      console.error(`[enrich] apollo people.match failed for lead_id=${lead.lead_id}: ${code}`);
+      store.appendEvidence({ ts: now(), stage: "enrich", tool: "apollo__people__match", request_id: r.requestId, status: "error", mode: cfg.sendMode });
+      continue;
+    }
     const person: any = (r.output as any)?.person ?? {};
     if (person.email && !lead.email) lead.email = person.email;
     if (person.id) lead.apollo_id = person.id;
     lead.stage = "enriched";
-    lead.last_request_id = r.requestId;
-    store.appendEvidence({ ts: now(), stage: "enrich", tool: "apollo__people__match", request_id: r.requestId, status: r.ok ? "ok" : "error", mode: cfg.sendMode });
+    lead.error_code = "";
+    report.enriched++;
+    store.appendEvidence({ ts: now(), stage: "enrich", tool: "apollo__people__match", request_id: r.requestId, status: "ok", mode: cfg.sendMode });
   }
   store.writeLeads(leads);
+  return report;
 }
 
 export interface ComposedMessage { subject: string; html: string; dm: string; }
