@@ -1,4 +1,4 @@
-import { splitOperationMetadata } from "./operation-metadata";
+import { markOperationMetadata, operationMetadataKeys, splitOperationMetadata } from "./operation-metadata";
 import { withLiveMessageSync } from "./message_sync";
 import { runExecution } from "./execution";
 import {
@@ -3924,11 +3924,14 @@ export function createConnectorRegistry(input: {
         return {
           ok: true,
           output: runExecution(
-            () => enforceCredentialedHealthcheckEvidence(
-              connectorKey,
-              input.manifests,
-              inputValue,
-              boundedOutput(handler(inputValue), operationSpec?.maxResponseBytes),
+            () => normalizeHealthcheckOutput(
+              enforceCredentialedHealthcheckEvidence(
+                connectorKey,
+                input.manifests,
+                inputValue,
+                boundedOutput(handler(inputValue), operationSpec?.maxResponseBytes),
+              ),
+              operationSpec?.outputProperties,
             ),
             operationSpec?.timeoutMs,
           ),
@@ -4015,11 +4018,14 @@ export function createConnectorRegistry(input: {
           return {
             ok: true,
             output: runExecution(
-              () => enforceCredentialedHealthcheckEvidence(
-                connectorKey,
-                input.manifests,
-                inputValue,
-                boundedOutput(handler(inputValue), operationSpec.maxResponseBytes),
+              () => normalizeHealthcheckOutput(
+                enforceCredentialedHealthcheckEvidence(
+                  connectorKey,
+                  input.manifests,
+                  inputValue,
+                  boundedOutput(handler(inputValue), operationSpec.maxResponseBytes),
+                ),
+                operationSpec.outputProperties,
               ),
               operationSpec.timeoutMs,
             ),
@@ -4227,6 +4233,38 @@ function buildConnectorDescriptions(manifests: Manifest[]): Record<string, Recor
 // so reject it at the shared dispatch boundary when credentials are present.
 // This keeps every action-kind healthcheck honest without requiring a bespoke
 // provider probe for connectors that are not ready to implement one yet.
+/**
+ * HC-SCHEMA-1: healthcheck bookkeeping (connector / action / status / source)
+ * is runner metadata, not provider output. Every healthcheck result:
+ * - carries `status` (a resolved handler without one, e.g. a credentialed
+ *   declarative probe returning `{ data }`, is "ok"), which the control plane's
+ *   connector.healthcheck contract requires;
+ * - marks each bookkeeping key the operation's outputSchema does NOT declare as
+ *   injected metadata, so connector.action.execute moves it to the result
+ *   envelope (PLAT-OUT-1) and result.output matches the declared schema.
+ * connector.healthcheck still returns the full object (status/source on top).
+ */
+const HEALTHCHECK_METADATA_KEYS = ["connector", "action", "status", "source"] as const;
+export function normalizeHealthcheckOutput(output: unknown, outputProperties: ReadonlySet<string> | undefined): unknown {
+  if (isPromiseLike(output)) {
+    return Promise.resolve(output).then((resolved) => normalizeHealthcheckOutput(resolved, outputProperties));
+  }
+  if (!isRecord(output)) {
+    return output;
+  }
+  const marked = new Set(operationMetadataKeys(output));
+  const normalized: Record<string, unknown> = { ...output };
+  if (normalized.status === undefined) {
+    normalized.status = "ok";
+  }
+  for (const key of HEALTHCHECK_METADATA_KEYS) {
+    if (Object.hasOwn(normalized, key) && !outputProperties?.has(key)) {
+      marked.add(key);
+    }
+  }
+  return markOperationMetadata(normalized, [...marked]);
+}
+
 function enforceCredentialedHealthcheckEvidence(
   connectorKey: string,
   manifests: Manifest[],
@@ -4285,6 +4323,8 @@ type OperationSpec = OperationBudgetLike & {
   inputRequired?: readonly string[];
   /** inputSchema.additionalProperties === false (closed input surface). */
   inputClosed?: boolean;
+  /** Property names declared by the operation's outputSchema (empty when none). */
+  outputProperties?: ReadonlySet<string>;
 };
 
 function inputSchemaFacts(spec: Record<string, unknown>): Pick<OperationSpec, "inputProperties" | "inputRequired" | "inputClosed"> {
@@ -4318,6 +4358,9 @@ function buildConnectorOperationSpecs(manifests: Array<{ key: string; operations
             reconcile: typeof spec.reconcile === "string" ? spec.reconcile : undefined,
             reconcileInput: reconcileInputMap(spec.reconcileInput),
             ...inputSchemaFacts(spec),
+            outputProperties: new Set(
+              isRecord(spec.outputSchema) && isRecord(spec.outputSchema.properties) ? Object.keys(spec.outputSchema.properties) : [],
+            ),
           }]];
         }),
       );
