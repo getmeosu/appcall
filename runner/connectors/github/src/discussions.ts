@@ -63,8 +63,8 @@ export type NormalizedDiscussionComment = {
   nodeId: string;
   body: string;
   url: string;
-  author: string;
-  replyToId: string;
+  author: string | null;
+  replyToId: string | null;
   createdAt: string;
   updatedAt: string;
   modelVersion: typeof MODEL_VERSION;
@@ -115,8 +115,8 @@ export function normalizeDiscussion(item: Record<string, unknown>): NormalizedDi
 
 export function normalizeDiscussionComment(item: Record<string, unknown>): NormalizedDiscussionComment {
   const nodeId = typeof item.id === "string" ? item.id : "";
-  const author = isRecord(item.author) && typeof item.author.login === "string" ? item.author.login : "";
-  const replyTo = isRecord(item.replyTo) && typeof item.replyTo.id === "string" ? item.replyTo.id : "";
+  const author = isRecord(item.author) && typeof item.author.login === "string" ? item.author.login : null;
+  const replyTo = isRecord(item.replyTo) && typeof item.replyTo.id === "string" ? item.replyTo.id : null;
   return {
     id: `gh-discussion-comment:${nodeId}`,
     provider: "github",

@@ -53,7 +53,7 @@ const runner = {
 
 describe("github card11 runner and social reads", () => {
   test("version stays 0.79.0 and the thirteen reads omit effect fields", () => {
-    expect(manifest.version).toBe("0.89.8");
+    expect(manifest.version).toBe("0.89.9");
     expect(READS).toHaveLength(13);
     expect(Object.keys(manifest.operations)).toHaveLength(860);
     for (const key of READS) {
