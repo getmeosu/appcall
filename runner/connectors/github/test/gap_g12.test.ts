@@ -2,58 +2,25 @@ import { describe, expect, test } from "bun:test";
 import manifest from "../manifest.json";
 import * as actions from "../src/actions";
 import {
-  addProjectCollaborator,
-  addTeamProject,
-  createProjectCard,
   createTeamDiscussion,
-  deleteProjectCard,
   deleteTeamDiscussion,
   getAssignment,
   getClassroom,
-  getProjectCard,
-  getProjectCollaboratorPermission,
   getTeamDiscussion,
-  getTeamProjectPermission,
   listAcceptedAssignments,
   listAssignmentGrades,
   listClassroomAssignments,
   listClassrooms,
-  listProjectCards,
-  listProjectCollaborators,
   listTeamDiscussions,
-  listTeamProjects,
-  moveProjectCard,
-  removeProjectCollaborator,
-  removeTeamProject,
-  updateProjectCard,
   updateTeamDiscussion,
 } from "../src/actions";
 import {
-  validateCreateProjectCardInput,
   validateCreateTeamDiscussionInput,
   validateListClassroomsInput,
-  validateMoveProjectCardInput,
 } from "../src/gap_g12";
 import { createGapG12Client } from "../src/gap_g12";
 
 const PATHS: Record<string, { methodPath: string; sideEffect: "read" | "write" }> = {
-  "projects.cards.list": { methodPath: "GET /projects/columns/{column_id}/cards", sideEffect: "read" },
-  "projects.cards.create": { methodPath: "POST /projects/columns/{column_id}/cards", sideEffect: "write" },
-  "projects.cards.get": { methodPath: "GET /projects/columns/cards/{card_id}", sideEffect: "read" },
-  "projects.cards.update": { methodPath: "PATCH /projects/columns/cards/{card_id}", sideEffect: "write" },
-  "projects.cards.delete": { methodPath: "DELETE /projects/columns/cards/{card_id}", sideEffect: "write" },
-  "projects.cards.move": { methodPath: "POST /projects/columns/cards/{card_id}/moves", sideEffect: "write" },
-  "projects.collaborators.list": { methodPath: "GET /projects/{project_id}/collaborators", sideEffect: "read" },
-  "projects.collaborators.add": { methodPath: "PUT /projects/{project_id}/collaborators/{username}", sideEffect: "write" },
-  "projects.collaborators.remove": { methodPath: "DELETE /projects/{project_id}/collaborators/{username}", sideEffect: "write" },
-  "projects.collaborators.permission.get": {
-    methodPath: "GET /projects/{project_id}/collaborators/{username}/permission",
-    sideEffect: "read",
-  },
-  "orgs.teams.projects.list": { methodPath: "GET /orgs/{org}/teams/{team_slug}/projects", sideEffect: "read" },
-  "orgs.teams.projects.add": { methodPath: "PUT /orgs/{org}/teams/{team_slug}/projects/{project_id}", sideEffect: "write" },
-  "orgs.teams.projects.remove": { methodPath: "DELETE /orgs/{org}/teams/{team_slug}/projects/{project_id}", sideEffect: "write" },
-  "orgs.teams.projects.permission.get": { methodPath: "GET /orgs/{org}/teams/{team_slug}/projects/{project_id}", sideEffect: "read" },
   "classrooms.list": { methodPath: "GET /classrooms", sideEffect: "read" },
   "classrooms.get": { methodPath: "GET /classrooms/{classroom_id}", sideEffect: "read" },
   "classrooms.assignments.list": { methodPath: "GET /classrooms/{classroom_id}/assignments", sideEffect: "read" },
@@ -95,14 +62,11 @@ function empty(status: number) {
   return new Response(null, { status });
 }
 
-const project = { id: 1, name: "Board", body: "b", state: "open", number: 1, html_url: "https://github.com/orgs/o/projects/1" };
-const card = { id: 3, note: "n", column_url: "https://api.github.com/projects/columns/2", archived: false };
-
-describe("github gap G12 classic projects, classroom, and team discussions", () => {
-  test("version is 0.82.0 at 897 ops with the read/write breakdown (PRUNE-1)", () => {
-    expect(manifest.version).toBe("0.82.0");
+describe("github gap G12 classroom and team discussions", () => {
+  test("version is 0.83.0 at 882 ops with the read/write breakdown (PRUNE-2)", () => {
+    expect(manifest.version).toBe("0.83.0");
     const ops = manifest.operations as Record<string, Record<string, unknown>>;
-    expect(Object.keys(ops)).toHaveLength(897);
+    expect(Object.keys(ops)).toHaveLength(882);
     const kinds = { action: 0, sync: 0, webhook: 0 };
     const side = { read: 0, write: 0, absent: 0 };
     for (const spec of Object.values(ops)) {
@@ -113,13 +77,13 @@ describe("github gap G12 classic projects, classroom, and team discussions", () 
         else side.absent += 1;
       }
     }
-    expect(kinds).toEqual({ action: 847, sync: 4, webhook: 46 });
-    expect(side).toEqual({ read: 446, write: 386, absent: 15 });
+    expect(kinds).toEqual({ action: 832, sync: 4, webhook: 46 });
+    expect(side).toEqual({ read: 439, write: 378, absent: 15 });
   });
 
-  test("the twenty-five remaining G12 ops omit effect keys and document their paths", () => {
+  test("the eleven remaining G12 ops omit effect keys and document their paths", () => {
     const ops = manifest.operations as Record<string, Record<string, unknown>>;
-    expect(Object.keys(PATHS)).toHaveLength(25);
+    expect(Object.keys(PATHS)).toHaveLength(11);
     let reads = 0;
     let writes = 0;
     for (const [key, meta] of Object.entries(PATHS)) {
@@ -134,8 +98,8 @@ describe("github gap G12 classic projects, classroom, and team discussions", () 
       if (meta.sideEffect === "read") reads += 1;
       else writes += 1;
     }
-    expect(reads).toBe(14);
-    expect(writes).toBe(11);
+    expect(reads).toBe(8);
+    expect(writes).toBe(3);
   });
 
   test("webhooks keep sideEffect read or absent, never write", () => {
@@ -147,22 +111,7 @@ describe("github gap G12 classic projects, classroom, and team discussions", () 
     }
   });
 
-  test("validators enforce ids, card XOR, and discussion fields", () => {
-    expect(validateCreateProjectCardInput({ columnId: 2, note: "hi" })).toEqual({ columnId: 2, note: "hi" });
-    expect(validateCreateProjectCardInput({ columnId: 2, contentId: 8, contentType: "Issue" })).toEqual({
-      columnId: 2,
-      contentId: 8,
-      contentType: "Issue",
-    });
-    expect(() => validateCreateProjectCardInput({ columnId: 2 })).toThrow(/note or contentId/);
-    expect(() => validateCreateProjectCardInput({ columnId: 2, note: "n", contentId: 1, contentType: "Issue" })).toThrow(
-      /note or contentId/,
-    );
-    expect(validateMoveProjectCardInput({ cardId: 3, position: "top", columnId: 4 })).toEqual({
-      cardId: 3,
-      position: "top",
-      columnId: 4,
-    });
+  test("validators enforce ids and discussion fields", () => {
     expect(validateListClassroomsInput({})).toEqual({});
     expect(validateCreateTeamDiscussionInput({ org: "o", teamSlug: "core", title: "t", body: "b", private: true }))
       .toMatchObject({ private: true });
@@ -170,113 +119,11 @@ describe("github gap G12 classic projects, classroom, and team discussions", () 
   });
 
   test("dry-run wrappers return validated payloads", () => {
-    expect(listProjectCards({ columnId: 2 })).toMatchObject({ action: "projects.cards.list", validated: { columnId: 2 } });
+    expect(getClassroom({ classroomId: 4 })).toMatchObject({ action: "classrooms.get", validated: { classroomId: 4 } });
     expect(listClassrooms({})).toMatchObject({ action: "classrooms.list" });
     expect(createTeamDiscussion({ org: "o", teamSlug: "core", title: "t", body: "b" }))
       .toMatchObject({ action: "teams.discussions.create" });
-    expect(deleteProjectCard({ cardId: 3 })).toMatchObject({ action: "projects.cards.delete" });
-  });
-
-  test("cards encode moves and XOR create bodies", async () => {
-    const cards = recorder([json([card])]);
-    expect(await listProjectCards({ accessToken: "t", fetch: cards.fetch, columnId: 2, archivedState: "all" }))
-      .toMatchObject({ cards: [{ id: 3 }] });
-    expect(cards.seen[0].url).toContain("archived_state=all");
-
-    const note = recorder([json(card, 201)]);
-    expect(await createProjectCard({ accessToken: "t", fetch: note.fetch, columnId: 2, note: "hi" })).toMatchObject({
-      card: { id: 3 },
-    });
-    expect(JSON.parse(note.seen[0].body!)).toEqual({ note: "hi" });
-
-    const content = recorder([json(card, 201)]);
-    expect(await createProjectCard({
-      accessToken: "t",
-      fetch: content.fetch,
-      columnId: 2,
-      contentId: 99,
-      contentType: "Issue",
-    })).toMatchObject({ status: 201 });
-    expect(JSON.parse(content.seen[0].body!)).toEqual({ content_id: 99, content_type: "Issue" });
-
-    const getCard = recorder([json(card)]);
-    expect(await getProjectCard({ accessToken: "t", fetch: getCard.fetch, cardId: 3 })).toMatchObject({ card: { id: 3 } });
-    expect(getCard.seen[0].url).toBe("https://api.github.com/projects/columns/cards/3");
-
-    const updCard = recorder([json(card)]);
-    expect(await updateProjectCard({ accessToken: "t", fetch: updCard.fetch, cardId: 3, archived: true }))
-      .toMatchObject({ card: { archived: false } });
-    expect(JSON.parse(updCard.seen[0].body!)).toEqual({ archived: true });
-
-    const delCard = recorder([empty(204)]);
-    expect(await deleteProjectCard({ accessToken: "t", fetch: delCard.fetch, cardId: 3 })).toMatchObject({ deleted: true });
-
-    const moveCard = recorder([empty(201)]);
-    expect(await moveProjectCard({ accessToken: "t", fetch: moveCard.fetch, cardId: 3, position: "top", columnId: 8 }))
-      .toMatchObject({ moved: true, columnId: 8 });
-    expect(JSON.parse(moveCard.seen[0].body!)).toEqual({ position: "top", column_id: 8 });
-  });
-
-  test("collaborators and team project permission use PUT/DELETE without a body unless permission is set", async () => {
-    const list = recorder([json([{ login: "octocat", id: 1 }])]);
-    expect(await listProjectCollaborators({ accessToken: "t", fetch: list.fetch, projectId: 1 })).toMatchObject({
-      collaborators: [{ login: "octocat" }],
-    });
-
-    const add = recorder([empty(204)]);
-    expect(await addProjectCollaborator({ accessToken: "t", fetch: add.fetch, projectId: 1, username: "octocat" }))
-      .toMatchObject({ added: true });
-    expect(add.seen[0].method).toBe("PUT");
-    expect(add.seen[0].body).toBeUndefined();
-    expect(add.seen[0].contentType).toBeNull();
-
-    const addPerm = recorder([empty(204)]);
-    expect(await addProjectCollaborator({
-      accessToken: "t",
-      fetch: addPerm.fetch,
-      projectId: 1,
-      username: "octocat",
-      permission: "admin",
-    })).toMatchObject({ added: true });
-    expect(addPerm.seen[0].contentType).toBe("application/json");
-    expect(JSON.parse(addPerm.seen[0].body!)).toEqual({ permission: "admin" });
-
-    const remove = recorder([empty(204)]);
-    expect(await removeProjectCollaborator({ accessToken: "t", fetch: remove.fetch, projectId: 1, username: "octocat" }))
-      .toMatchObject({ removed: true });
-    expect(remove.seen[0].method).toBe("DELETE");
-    expect(remove.seen[0].contentType).toBeNull();
-
-    const perm = recorder([json({ permission: "write" })]);
-    expect(await getProjectCollaboratorPermission({
-      accessToken: "t",
-      fetch: perm.fetch,
-      projectId: 1,
-      username: "octocat",
-    })).toMatchObject({ permission: "write" });
-    expect(perm.seen[0].url).toContain("/collaborators/octocat/permission");
-
-    const teamList = recorder([json([project])]);
-    expect(await listTeamProjects({ accessToken: "t", fetch: teamList.fetch, org: "octo", teamSlug: "core" }))
-      .toMatchObject({ projects: [{ id: 1 }] });
-
-    const teamAdd = recorder([empty(204)]);
-    expect(await addTeamProject({ accessToken: "t", fetch: teamAdd.fetch, org: "octo", teamSlug: "core", projectId: 1 }))
-      .toMatchObject({ added: true });
-    expect(teamAdd.seen[0].contentType).toBeNull();
-
-    const teamRemove = recorder([empty(204)]);
-    expect(await removeTeamProject({ accessToken: "t", fetch: teamRemove.fetch, org: "octo", teamSlug: "core", projectId: 1 }))
-      .toMatchObject({ removed: true });
-
-    const teamPerm = recorder([json({ permission: true, state: "write" })]);
-    expect(await getTeamProjectPermission({
-      accessToken: "t",
-      fetch: teamPerm.fetch,
-      org: "octo",
-      teamSlug: "core",
-      projectId: 1,
-    })).toMatchObject({ permission: "read", state: "write" });
+    expect(deleteTeamDiscussion({ org: "o", teamSlug: "core", discussionNumber: 1 })).toMatchObject({ action: "teams.discussions.delete" });
   });
 
   test("classroom reads hit /classrooms and /assignments; team discussions write JSON", async () => {
@@ -363,9 +210,9 @@ describe("github gap G12 classic projects, classroom, and team discussions", () 
     expect(delDisc.seen[0].contentType).toBeNull();
   });
 
-  test("missing classic project card is CONNECTOR_UPSTREAM_ERROR", async () => {
+  test("missing classroom is CONNECTOR_UPSTREAM_ERROR", async () => {
     const missing = recorder([empty(404)]);
-    await expect(getProjectCard({ accessToken: "t", fetch: missing.fetch, cardId: 404 })).rejects.toMatchObject({
+    await expect(getClassroom({ accessToken: "t", fetch: missing.fetch, classroomId: 404 })).rejects.toMatchObject({
       code: "CONNECTOR_UPSTREAM_ERROR",
     });
   });
@@ -393,6 +240,26 @@ const PRUNED_CLASSIC: Record<string, string> = {
   "projects.columns.move": "moveProjectColumn",
 };
 
+// PRUNE-2 (0.83.0): the remaining 14 Projects (classic) card, collaborator and team-project
+// ops (same sunset cite). The 15th PRUNE-2 op, rest.teams.list_members_legacy, is declarative
+// (manifest only) and is guarded in depth_rest.test.ts.
+const PRUNED_CLASSIC_2: Record<string, string> = {
+  "projects.cards.list": "listProjectCards",
+  "projects.cards.create": "createProjectCard",
+  "projects.cards.get": "getProjectCard",
+  "projects.cards.update": "updateProjectCard",
+  "projects.cards.delete": "deleteProjectCard",
+  "projects.cards.move": "moveProjectCard",
+  "projects.collaborators.list": "listProjectCollaborators",
+  "projects.collaborators.add": "addProjectCollaborator",
+  "projects.collaborators.remove": "removeProjectCollaborator",
+  "projects.collaborators.permission.get": "getProjectCollaboratorPermission",
+  "orgs.teams.projects.list": "listTeamProjects",
+  "orgs.teams.projects.add": "addTeamProject",
+  "orgs.teams.projects.remove": "removeTeamProject",
+  "orgs.teams.projects.permission.get": "getTeamProjectPermission",
+};
+
 describe("github PRUNE-1 Projects (classic) sunset removal", () => {
   test("the 15 sunset classic project/column ops are absent everywhere", () => {
     expect(Object.keys(PRUNED_CLASSIC)).toHaveLength(15);
@@ -403,6 +270,21 @@ describe("github PRUNE-1 Projects (classic) sunset removal", () => {
       expect(ops[op], op).toBeUndefined();
       expect(exported[fn], fn).toBeUndefined();
       expect(client[fn], fn).toBeUndefined();
+    }
+  });
+
+  test("PRUNE-2: the 14 remaining classic card/collaborator/team-project ops are absent everywhere", () => {
+    expect(Object.keys(PRUNED_CLASSIC_2)).toHaveLength(14);
+    const ops = manifest.operations as Record<string, unknown>;
+    const exported = actions as Record<string, unknown>;
+    const client = createGapG12Client({ accessToken: "t", fetch: async () => new Response("{}") }) as unknown as Record<string, unknown>;
+    for (const [op, fn] of Object.entries(PRUNED_CLASSIC_2)) {
+      expect(ops[op], op).toBeUndefined();
+      expect(exported[fn], fn).toBeUndefined();
+      expect(client[fn], fn).toBeUndefined();
+    }
+    for (const key of Object.keys(ops)) {
+      expect(key.startsWith("projects."), key).toBe(false);
     }
   });
 });

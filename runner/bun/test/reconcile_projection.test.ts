@@ -333,7 +333,7 @@ describe("effect pairing scan (all connector manifests)", () => {
       }
     }
     // Exact count (linus): 83 pairings across all manifests, 41 of them github (FIX-EFFECTS 0.81.2;
-    // PRUNE-1 0.82.0 removes no paired op). Update this number deliberately when pairings change.
+    // PRUNE-1 0.82.0 and PRUNE-2 0.83.0 remove no paired op). Update this number deliberately when pairings change.
     expect(pairings).toBe(83);
     expect(problems).toEqual([]);
     expect(openGaps.sort()).toEqual([...KNOWN_OPEN_OBSERVE_GAPS].sort());

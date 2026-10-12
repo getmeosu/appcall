@@ -4,6 +4,8 @@ import coverage from "../fixtures/composio-coverage.json";
 import { compileDeclarativeConnector } from "../../../bun/src/declarative/compile";
 
 // FIX-G12C / FIX-G13C: the 12 G12 and 10 G13 GraphQL ops left this declarative list; they run via src/gap_g12c.ts / src/gap_g13c.ts (test/g12c.test.ts, test/g13c.test.ts).
+// PRUNE-2 (0.83.0): rest.teams.list_members_legacy left it (legacy GET /teams/{team_id}/members, closing-down notice
+// https://docs.github.com/rest/teams/members#list-team-members-legacy); teams.members.list is the org-scoped route.
 // FIX-G14C: the 5 GHEC rest.x.* ops (AUDIT, ORG_ROLE_*, ORG_FINE_PERMS) left it too; they run via src/gap_g14c.ts (test/g14c.test.ts).
 const ADDED = [
   "graphql.discussions.comments.delete",
@@ -33,7 +35,6 @@ const ADDED = [
   "rest.orgs.update_pat_access",
   "rest.orgs.update_pat_accesses",
   "rest.packages.list_docker_migration_conflicting_packages_for_user",
-  "rest.teams.list_members_legacy",
   "rest.x.CHAT",
   "rest.x.EMBED",
   "rest.x.MODELS"
@@ -41,8 +42,8 @@ const ADDED = [
 
 describe("github full-depth REST additions", () => {
   test("version and runnable request blocks", () => {
-    expect(manifest.version).toBe("0.82.0");
-    expect(Object.keys(manifest.operations)).toHaveLength(897);
+    expect(manifest.version).toBe("0.83.0");
+    expect(Object.keys(manifest.operations)).toHaveLength(882);
     expect(manifest.network.allowedHosts).toContain("models.github.ai");
     for (const key of ADDED) {
       const op = manifest.operations[key] as Record<string, any>;
@@ -73,6 +74,17 @@ describe("github full-depth REST additions", () => {
       if (op.kind === "webhook") expect(op.sideEffect).toBe("read");
       expect(op.maxResponseBytes >= op.maxInputBytes).toBe(true);
     }
+  });
+
+  test("PRUNE-2: the legacy team-members route is gone and its Composio slug is recorded with the cite", () => {
+    const ops = manifest.operations as Record<string, unknown>;
+    expect(ops["rest.teams.list_members_legacy"]).toBeUndefined();
+    expect(ops["teams.members.list"]).toBeDefined();
+    const mapped = coverage.mapped as Record<string, string>;
+    expect(mapped.GITHUB_GET_TEAM_MEMBERS).toBeUndefined();
+    const entry = (coverage.missing_still as Array<{ slug: string; reason: string }>).find((m) => m.slug === "GITHUB_GET_TEAM_MEMBERS");
+    expect(entry?.reason).toContain("https://docs.github.com/rest/teams/members#list-team-members-legacy");
+    expect(coverage.added as string[]).not.toContain("rest.teams.list_members_legacy");
   });
 
   test("every live Composio tool is mapped or recorded as non-REST", () => {
