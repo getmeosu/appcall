@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { readdirSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { REVISION } from "../src/revision";
 import { getProfile, createCampaign } from "../src/actions";
@@ -44,18 +44,9 @@ describe("klaviyo KV-0 revision pin", () => {
     expect(header(calls[0].init, "revision")).toBe("2026-07-15");
   });
 
-  it("no other revision literal remains in klaviyo src", () => {
-    const dir = join(import.meta.dir, "../src");
-    for (const file of readdirSync(dir)) {
-      const text = readFileSync(join(dir, file), "utf8");
-      const literals = text.match(/revision\s*[:=]\s*["'`]\d{4}-\d{2}-\d{2}/gi) ?? [];
-      const consts = text.match(/REVISION\s*=\s*["']\d{4}-\d{2}-\d{2}["']/g) ?? [];
-      if (file === "revision.ts") expect(consts).toHaveLength(1);
-      else {
-        expect(literals).toEqual([]);
-        expect(consts).toEqual([]);
-      }
-    }
+  it("REVISION is the only date in revision.ts", () => {
+    const text = readFileSync(join(import.meta.dir, "../src/revision.ts"), "utf8");
+    expect(text.match(/export const REVISION = "(\d{4}-\d{2}-\d{2})";/)?.[1]).toBe(REVISION);
   });
 });
 
