@@ -3,6 +3,7 @@
 // and whitespace values before any request, and that percent-encoded dot forms
 // never reach the provider as a dot segment.
 import { expect } from "bun:test";
+import { readFileSync } from "node:fs";
 import { defaultConnectorRegistry } from "../../../bun/src/registry";
 
 type Call = { url: string; method: string };
@@ -246,4 +247,118 @@ export async function outcomeOf(connector: string, op: string, input: Record<str
 
 export async function requestsFor(connector: string, action: string, input: Record<string, unknown>) {
   return (await run(connector, action, input, [])).calls;
+}
+
+// ---------------------------------------------------------------------------
+// SEC-PATH-2d: reachability helpers (additive; the helpers above are unchanged).
+// A deeper input sampler (anyOf/oneOf/allOf merged, required nested properties,
+// minItems, minLength, valid base64 PDF/PNG/CSV payloads, file names) plus
+// message-driven repairs for hand-written validators, so the sweep reaches ops
+// the plain sampler could not ("x or y is required", "exactly one of ...", enum
+// and range hints). Syncs without an inputSchema get the board/site/company and
+// id keys their source reads.
+
+const PNG = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==";
+const PDF = Buffer.from("%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF\n").toString("base64");
+const CSV = Buffer.from("phone_number\n+15550001111\n").toString("base64");
+function merged(s: any): any {
+  if (!s || typeof s !== "object") return s;
+  const alt = s.anyOf ?? s.oneOf;
+  if (Array.isArray(alt) && alt.length) {
+    const first = alt.find((a: any) => a && a.type !== "null") ?? alt[0];
+    return merged({ ...s, anyOf: undefined, oneOf: undefined, ...first, properties: { ...(s.properties ?? {}), ...(first.properties ?? {}) }, required: [...(s.required ?? []), ...(first.required ?? [])] });
+  }
+  if (Array.isArray(s.allOf)) return merged(s.allOf.reduce((a: any, b: any) => ({ ...a, ...b, properties: { ...(a.properties ?? {}), ...(b.properties ?? {}) }, required: [...(a.required ?? []), ...(b.required ?? [])] }), { ...s, allOf: undefined }));
+  return s;
+}
+function deepSample(s0: any, k: string, m: string, depth = 0): unknown {
+  const s = merged(s0);
+  if (!s || typeof s !== "object") return m;
+  if (Array.isArray(s.enum) && s.enum.length) return s.enum[0];
+  if ("const" in s) return s.const;
+  if ("default" in s && s.default !== null && typeof s.default !== "object") return s.default;
+  const t = Array.isArray(s.type) ? s.type.find((x: string) => x !== "null") : s.type ?? (s.properties ? "object" : s.items ? "array" : "string");
+  if (t === "integer" || t === "number") return typeof s.minimum === "number" ? Math.max(s.minimum, typeof s.maximum === "number" ? Math.min(1, s.maximum) : s.minimum < 1 ? 1 : s.minimum) : 1;
+  if (t === "boolean") return true;
+  if (t === "array") { const n = Math.max(1, s.minItems ?? 1); return Array.from({ length: n }, (_, i) => deepSample(s.items, k, `${m}${i ? i : ""}`, depth + 1)); }
+  if (t === "object") {
+    if (depth > 5) return {};
+    const props = s.properties ?? {};
+    const req: string[] = s.required ?? [];
+    const keys = req.length ? req.filter((x) => x in props || true) : [];
+    const out: Record<string, unknown> = {};
+    for (const key of keys) out[key] = deepSample(props[key] ?? { type: "string" }, key, `${m}_${key.replace(/[^A-Za-z0-9]/g, "")}`, depth + 1);
+    return out;
+  }
+  if (/contentBase64|base64|fileBase64|file_base64/i.test(k)) return /csv/i.test(k + m) ? CSV : /image|signature|initials|photo|logo|png/i.test(k + m) ? PNG : PDF;
+  if (/^file_?name$/i.test(k)) return "file1.pdf";
+  if (/mime|content_?type/i.test(k)) return "image/png";
+  if (s.format === "email" || /email/i.test(k)) return `${m.replace(/[^A-Za-z0-9]/g, "")}@example.com`;
+  if (s.format === "date-time" || /(At|Time|_at|Date)$/.test(k)) return "2026-01-01T00:00:00Z";
+  if (s.format === "date") return "2026-01-01";
+  if (s.format === "uri" || /url$/i.test(k)) return `https://example.com/${m}`;
+  let v = m;
+  if (typeof s.minLength === "number" && v.length < s.minLength) v = v.padEnd(s.minLength, "x");
+  if (typeof s.maxLength === "number" && v.length > s.maxLength) v = v.slice(0, s.maxLength);
+  return v;
+}
+
+function repairInput(input: any, msg: string): boolean {
+  let m = /exactly one of ([A-Za-z0-9_, ]+?),? or ([A-Za-z0-9_]+) is required/.exec(msg);
+  if (m) { const ks = [...m[1]!.split(/,\s*/), m[2]!].map((x) => x.trim()); const keep = ks[1] ?? ks[0]; let ch = false; for (const k of ks) if (k !== keep && k in input) { delete input[k]; ch = true; } if (!(keep in input)) { input[keep] = `mkfix${keep}`; ch = true; } return ch; }
+  m = /^([A-Za-z0-9_]+) or ([A-Za-z0-9_]+) is required/.exec(msg);
+  if (m && !(m[1]! in input)) { input[m[1]!] = `mkfix${m[1]}`; return true; }
+  m = /(?:^|: )([A-Za-z0-9_]+) is required/.exec(msg);
+  if (m && !(m[1]! in input)) { input[m[1]!] = `mkfix${m[1]}`; return true; }
+  m = /^([A-Za-z0-9_]+) must be one of: ([A-Za-z0-9_]+)/.exec(msg);
+  if (m && input[m[1]!] !== m[2]) { input[m[1]!] = m[2]; return true; }
+  m = /^([A-Za-z0-9_]+) must be between (\d+) and/.exec(msg);
+  if (m && input[m[1]!] !== Number(m[2])) { input[m[1]!] = Number(m[2]); return true; }
+  m = /^([A-Za-z0-9_]+) must contain between (\d+) and/.exec(msg);
+  if (m) { const n = Number(m[2]); if (!Array.isArray(input[m[1]!]) || input[m[1]!].length < n) { input[m[1]!] = Array.from({ length: n }, (_, i) => `opt${i}`); return true; } }
+  m = /^([A-Za-z0-9_]+) is only supported for/.exec(msg);
+  if (m && m[1]! in input) { delete input[m[1]!]; return true; }
+  if (/must be regular or quiz/.test(msg) && input.type !== "regular") { input.type = "regular"; return true; }
+  { const t = /^([A-Za-z0-9_]+) and ([A-Za-z0-9_]+) cannot be used together/.exec(msg); if (t && t[2]! in input) { delete input[t[2]!]; return true; } }
+  { const t = /^([A-Za-z0-9_]+) must be ([A-Za-z0-9_]+),/.exec(msg); if (t && input[t[1]!] !== t[2]) { input[t[1]!] = t[2]; return true; } }
+  if (/not both/.test(msg) && "url" in input) { delete input.url; return true; }
+  return false;
+}
+
+export function sampleOperationInput(connector: string, op: string, spec: any, creds: Record<string, unknown>, kind: "action" | "sync"): Record<string, unknown> {
+  let props: Record<string, unknown> = merged(spec?.inputSchema)?.properties ?? {};
+  if (kind === "sync" && !spec?.inputSchema) {
+    const src = ["sync.ts", "http.ts"].map((f) => { try { return readFileSync(new URL(`../../${connector}/src/${f}`, import.meta.url), "utf8"); } catch { return ""; } }).join("\n");
+    const keys = new Set<string>();
+    for (const mm of src.matchAll(/config\.([A-Za-z]+)|input\.([A-Za-z]+)/g)) { const k = mm[1] ?? mm[2]!; if (/^(site|company|boardName|id|[a-z][A-Za-z]*Id)$/.test(k)) keys.add(k); }
+    props = Object.fromEntries([...keys].map((k) => [k, { type: "string" }]));
+  }
+  const input: Record<string, unknown> = { ...creds };
+  let j = 0;
+  for (const [k, s] of Object.entries<any>(props)) if (!(k in creds)) input[k] = deepSample(s, k, `mk${j++}x${k.replace(/[^A-Za-z0-9]/g, "")}`);
+  return input;
+}
+
+/**
+ * Runs `op` with a sampled input, repairing it from validator messages, and
+ * returns the first input that reaches the provider (or null with the last
+ * failure). Unsupported-field pruning matches runWithStub above.
+ */
+export async function reachOperation(connector: string, op: string, creds: Record<string, unknown>, kind: "action" | "sync" = "action") {
+  const spec = (await import(`../../${connector}/manifest.json`)).default.operations[op];
+  const input = sampleOperationInput(connector, op, spec, creds, kind);
+  let last: OpOutcome = { calls: [], ok: false };
+  for (let pass = 0; pass < 2; pass++) {
+    if (pass === 1) { let n = 0; for (const k of Object.keys(input)) if (typeof input[k] === "string" && /^mk\d+x/.test(input[k] as string)) input[k] = `77${String(n++).padStart(3, "0")}1`; }
+    for (let n = 0; n < 20; n++) {
+      last = await outcomeOf(connector, op, input, kind);
+      if (last.calls.length > 0) return { input: { ...input }, calls: last.calls, failure: undefined };
+      const msg = String(last.message ?? "");
+      const mm = /Unsupported input field:? ?([A-Za-z0-9_]+)?/.exec(msg);
+      if (mm && mm[1] && mm[1] in input) { delete input[mm[1]]; continue; }
+      if (repairInput(input, msg)) continue;
+      break;
+    }
+  }
+  return { input: null, calls: [], failure: `${last.code ?? ""} ${last.message ?? ""}`.trim() };
 }
