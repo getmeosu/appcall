@@ -111,7 +111,7 @@ describe("TT-0 removed TCM ops", () => {
   // (https://business-api.tiktok.com/portal/docs/tiktok-one-api/v1.3), so they
   // are dropped from the manifest and the action map.
   it("drops tcm.videos.audit_status.get and .update outright", () => {
-    expect(manifest.version).toBe("0.8.1");
+    expect(manifest.version).toBe("0.8.2");
     expect(Object.keys(ops)).toHaveLength(424);
     for (const op of ["tcm.videos.audit_status.get", "tcm.videos.audit_status.update"]) {
       expect(ops[op], op).toBeUndefined();

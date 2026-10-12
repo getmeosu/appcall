@@ -14,7 +14,7 @@ import manifest from "../manifest.json";
 // CONNECTOR_UNAVAILABLE, unexpected body → CONNECTOR_RESPONSE_INVALID.
 
 export type WorkableHealthcheckResult =
-  | { connector: "workable"; status: "ok"; source: "connector" }
+  | { status: "ok"; source: "connector" }
   | { status: "ok"; source: "provider" };
 
 type HealthcheckFailure = { ok: false; code: string; message: string; retryAfterSeconds?: number };
@@ -30,7 +30,7 @@ function fail(code: string, message: string, retryAfterSeconds?: number): Health
 export async function healthcheck(input?: unknown): Promise<WorkableHealthcheckResult> {
   const token = isRecord(input) ? input.accessToken : undefined;
   if (typeof token !== "string" || token.length === 0) {
-    return { connector: "workable", status: "ok", source: "connector" };
+    return { status: "ok", source: "connector" };
   }
   const rawAccount = (input as Record<string, unknown>).account;
   const account = typeof rawAccount === "string" ? rawAccount.trim() : "";
