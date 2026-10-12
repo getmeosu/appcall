@@ -68,7 +68,7 @@ fn health_and_setup_distinguish_timeout_from_dropped_transport() {
                             }
                         }
                     };
-                    let body = serde_json::json!({"id": request["id"], "ok": true, "result": {"status": "ok", "source": "static"}}).to_string();
+                    let body = serde_json::json!({"id": request["id"], "ok": true, "result": {"status": "ok", "source": "provider"}}).to_string();
                     write!(
                         socket,
                         "HTTP/1.1 200 OK\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",

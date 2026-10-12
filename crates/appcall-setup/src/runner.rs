@@ -26,6 +26,8 @@ impl RunnerValidator {
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ValidationEvidence {
+    /// Not produced by the runner connect-time check since CONNECT-SRC-1
+    /// (source:"provider" is required); kept for other validators.
     LocalAccepted,
     ProviderVerified,
 }
@@ -138,6 +140,12 @@ impl RunnerValidator {
             if response.status != "ok" {
                 return Err(Error::ValidationFailed);
             }
+            // CONNECT-SRC-1: a connect-time check must be provider-confirmed.
+            // A connector-owned/static/missing source never accepts credentials,
+            // even when credentials.validate exists (it still has to pass too).
+            if response.source != "provider" {
+                return Err(Error::ValidationFailed);
+            }
             if has_validate && !credentials.fields().is_empty() {
                 let validation = self
                     .client
@@ -169,14 +177,7 @@ impl RunnerValidator {
                     return Err(Error::ValidationFailed);
                 }
             }
-            if response.source != "provider" && (!has_validate || credentials.fields().is_empty()) {
-                return Err(Error::ValidationFailed);
-            }
-            Ok(if response.source == "provider" {
-                ValidationEvidence::ProviderVerified
-            } else {
-                ValidationEvidence::LocalAccepted
-            })
+            Ok(ValidationEvidence::ProviderVerified)
         })
     }
 }

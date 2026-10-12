@@ -84,7 +84,7 @@ fn credential_action_negative_or_malformed_is_not_success() {
         serde_json::json!({"valid":true}),
     ] {
         let expected = if output.get("valid").and_then(serde_json::Value::as_bool) == Some(true) {
-            Ok(ValidationEvidence::LocalAccepted)
+            Ok(ValidationEvidence::ProviderVerified)
         } else {
             Err(Error::ValidationFailed)
         };
@@ -92,7 +92,7 @@ fn credential_action_negative_or_malformed_is_not_success() {
         let url = format!("http://{}", listener.local_addr().unwrap());
         let thread = std::thread::spawn(move || {
             for result in [
-                serde_json::json!({"status":"ok","source":"static"}),
+                serde_json::json!({"status":"ok","source":"provider"}),
                 serde_json::json!({"output":output}),
             ] {
                 let (mut socket, _) = listener.accept().unwrap();
@@ -204,4 +204,74 @@ fn cancellation_after_health_prevents_followup_validation_rpc() {
     let listener = thread.join().unwrap();
     listener.set_nonblocking(true).unwrap();
     assert!(matches!(listener.accept(),Err(error) if error.kind()==std::io::ErrorKind::WouldBlock));
+}
+
+// CONNECT-SRC-1: connect-time acceptance requires source:"provider", even for a
+// connector with credentials.validate; the validate RPC is never reached.
+#[test]
+fn connect_time_check_requires_provider_source_even_with_credentials_validate() {
+    for result in [
+        serde_json::json!({"status":"ok","source":"connector"}),
+        serde_json::json!({"status":"ok","source":"static"}),
+        serde_json::json!({"status":"ok"}),
+    ] {
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let url = format!("http://{}", listener.local_addr().unwrap());
+        let thread = std::thread::spawn(move || {
+            let (mut socket, _) = listener.accept().unwrap();
+            let mut raw = Vec::new();
+            let request = loop {
+                let mut bytes = [0; 4096];
+                let n = socket.read(&mut bytes).unwrap();
+                assert!(n > 0);
+                raw.extend_from_slice(&bytes[..n]);
+                if let Some(end) = raw.windows(4).position(|v| v == b"\r\n\r\n") {
+                    if let Ok(request) =
+                        serde_json::from_slice::<serde_json::Value>(&raw[end + 4..])
+                    {
+                        break request;
+                    }
+                }
+            };
+            assert_eq!(request["method"], "connector.healthcheck");
+            let body =
+                serde_json::json!({"id":request["id"],"ok":true,"result":result}).to_string();
+            write!(
+                socket,
+                "HTTP/1.1 200 OK\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+                body.len(),
+                body
+            )
+            .unwrap();
+            drop(socket);
+            // No credentials.validate RPC may follow.
+            listener.set_nonblocking(true).unwrap();
+            std::thread::sleep(std::time::Duration::from_millis(200));
+            assert!(listener.accept().is_err());
+        });
+        let registry = Arc::new(
+            Registry::from_connectors([Connector::from_bytes(include_bytes!(
+                "../../../runner/connectors/notion/manifest.json"
+            ))
+            .unwrap()])
+            .unwrap(),
+        );
+        let runtime = tokio::runtime::Runtime::new().unwrap();
+        let validator = RunnerValidator::new(
+            Arc::new(RunnerClient::new(&url, "", ClientOptions::default()).unwrap()),
+            registry.clone(),
+            runtime.handle().clone(),
+        );
+        let fields = collect_fields(
+            &registry.connector("notion").unwrap().manifest().auth.setup,
+            "",
+            &BTreeMap::from([("notionToken".into(), "synthetic".into())]),
+        )
+        .unwrap();
+        assert_eq!(
+            validator.check("p", "notion", &fields),
+            Err(Error::ValidationFailed)
+        );
+        thread.join().unwrap();
+    }
 }
