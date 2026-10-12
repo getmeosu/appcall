@@ -1,4 +1,4 @@
-// TT-1 (TT-EFFECTS): the 25 delete ops (19 destructive, 6 write) and their sideEffect decision.
+// TT-1 (TT-EFFECTS): the 25 delete ops (20 destructive, 5 write) and their sideEffect decision.
 // destructive = the deletion is irreversible (the object and its ID are gone).
 // write = the op removes a relationship or list entry that the paired op
 // restores to the same state (see parity-briefs/tiktok-ads-tt1-selflock.md).
@@ -22,13 +22,15 @@ export const TT1_DESTRUCTIVE_OPS = [
   "portfolios.delete",
   "custom_conversions.delete",
   "identities.delete",
+  // linus ruling (#665): bc.partners.add restores membership, not the specific
+  // asset_ids/asset_type shares, and no op re-shares assets to a partner.
+  "bc.partner_assets.delete",
 ] as const;
 
 // Reversible deletes kept as write, with the op that restores the state.
 export const TT1_REVERSIBLE_DELETES: Record<string, string> = {
   "bc.members.delete": "bc.members.invite",
   "bc.partners.delete": "bc.partners.add",
-  "bc.partner_assets.delete": "bc.partners.add",
   "subscriptions.delete": "subscriptions.create",
   "blocked_words.delete": "blocked_words.create",
   // linus ruling: re-adding the keyword restores the state.
