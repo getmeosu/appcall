@@ -37,7 +37,7 @@ function empty(status: number) {
 
 describe("github write card 4 branch protection writes", () => {
   test("version is 0.79.0 at 852 ops with the write breakdown", () => {
-    expect(manifest.version).toBe("0.89.7");
+    expect(manifest.version).toBe("0.89.8");
     const ops = manifest.operations as Record<string, Record<string, unknown>>;
     expect(Object.keys(ops)).toHaveLength(860);
     const kinds = { action: 0, sync: 0, webhook: 0 };

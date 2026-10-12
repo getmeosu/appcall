@@ -35,9 +35,9 @@ export type GitHubHookConfig = {
 };
 
 export type NormalizedHookConfig = {
-  url: string;
-  contentType: string;
-  insecureSsl: string;
+  url: string | null;
+  contentType: string | null;
+  insecureSsl: string | null;
   modelVersion: "2026-05-16";
   raw: Record<string, unknown>;
 };
@@ -45,9 +45,9 @@ export type NormalizedHookConfig = {
 export function normalizeGitHubHookConfig(config: GitHubHookConfig): NormalizedHookConfig {
   const insecure = config.insecure_ssl;
   return {
-    url: typeof config.url === "string" ? config.url : "",
-    contentType: typeof config.content_type === "string" ? config.content_type : "",
-    insecureSsl: insecure === undefined || insecure === null ? "" : String(insecure),
+    url: typeof config.url === "string" ? config.url : null,
+    contentType: typeof config.content_type === "string" ? config.content_type : null,
+    insecureSsl: insecure === undefined || insecure === null ? null : String(insecure),
     modelVersion: "2026-05-16",
     raw: config as unknown as Record<string, unknown>,
   };
