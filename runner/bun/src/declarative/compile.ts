@@ -14,6 +14,7 @@
 
 import { createConnectorHttpClient, ConnectorHttpError } from "../http";
 import { maxOperationResponseBytes } from "../budget";
+import { markOperationMetadata } from "../operation-metadata";
 import { assertSafePathSegment, assertSafePathSegments, isRecord, renderPath, renderTemplate, resolvePath } from "./template";
 import { assertOutputSchema, validateAgainstSchema } from "./validate";
 import { assertStrictSchema, compileStrictValidator } from "./strict-schema";
@@ -305,12 +306,12 @@ async function callProvider(
     try { assertOutputSchema(result, operation.outputSchema!); }
     catch { throw {ok:false,code:"CONNECTOR_RESPONSE_INVALID",message:"Connector response does not match its declared schema."}; }
   }
-  return {
-    connector: manifest.key,
-    action: operationKey,
-    source: "provider",
-    ...(isRecord(result) ? result : { data: result }),
-  };
+  const output: Record<string, unknown> = isRecord(result) ? result : { data: result };
+  const metadata: Record<string, unknown> = { connector: manifest.key, action: operationKey, source: "provider" };
+  // PLAT-OUT-1: the response body wins on key collisions (as before); only the
+  // keys actually injected are marked, so the server strips nothing else.
+  const injected = Object.keys(metadata).filter((key) => !Object.hasOwn(output, key));
+  return markOperationMetadata({ ...metadata, ...output }, injected);
 }
 
 function buildURL(http: DeclarativeHttp, request: DeclarativeRequest, input: Record<string, unknown>): URL {

@@ -6,6 +6,7 @@ import {
 } from "./protocol";
 import { logLine, redactText } from "./redact";
 import { defaultConnectorRegistry } from "./registry";
+import { splitOperationMetadata } from "./operation-metadata";
 import { jsonByteLength, maxOperationTimeoutMs, operationWireResponseLimit, rpcRequestLimitBytes } from "./budget";
 
 export async function handleRPC(request: Request, admittedAt = Date.now()): Promise<Response> {
@@ -149,11 +150,10 @@ async function handleConnectorSyncList(envelope: RequestEnvelope): Promise<Respo
     });
   }
 
-  const operationOutput = {
-    ...(isRecord(output) ? output : {}),
-    connector: connectorKey,
-    sync,
-  };
+  // PLAT-OUT-1: send the bare handler output; runner metadata rides on the
+  // result envelope, never inside the schema-validated output.
+  const split = splitOperationMetadata(output);
+  const operationOutput = isRecord(split.output) ? split.output : {};
   const maxResponseBytes = defaultConnectorRegistry.operationBudget(connectorKey, sync)?.maxResponseBytes;
   if (typeof maxResponseBytes !== "number" || jsonByteLength(operationOutput) > maxResponseBytes) {
     return jsonResponse(502, envelope.id, {
@@ -165,6 +165,9 @@ async function handleConnectorSyncList(envelope: RequestEnvelope): Promise<Respo
     ok: true,
     result: {
       output: operationOutput,
+      connector: connectorKey,
+      sync,
+      ...envelopeSource(split.metadata),
     },
   }, maxResponseBytes);
 }
@@ -222,11 +225,11 @@ async function handleConnectorActionExecute(envelope: RequestEnvelope): Promise<
     });
   }
 
-  const operationOutput = {
-    ...(isRecord(output) ? output : {}),
-    connector: connectorKey,
-    action,
-  };
+  // PLAT-OUT-1: the Rust host validates result.output against the declared
+  // outputSchema; merging connector/action into it broke every op with a
+  // closed schema (ACTION_RESPONSE_INVALID). Metadata goes on the envelope.
+  const split = splitOperationMetadata(output);
+  const operationOutput = isRecord(split.output) ? split.output : {};
   const maxResponseBytes = defaultConnectorRegistry.operationBudget(connectorKey, action)?.maxResponseBytes;
   if (typeof maxResponseBytes !== "number" || jsonByteLength(operationOutput) > maxResponseBytes) {
     return jsonResponse(502, envelope.id, {
@@ -238,6 +241,9 @@ async function handleConnectorActionExecute(envelope: RequestEnvelope): Promise<
     ok: true,
     result: {
       output: operationOutput,
+      connector: connectorKey,
+      action,
+      ...envelopeSource(split.metadata),
     },
   }, maxResponseBytes);
 }
@@ -373,6 +379,12 @@ function readStringParam(envelope: RequestEnvelope, key: string): string | undef
   }
   const value = envelope.params[key];
   return typeof value === "string" ? value : undefined;
+}
+
+// The declarative "source" marker (provider vs connector) travels next to
+// connector/action on the envelope; nothing else from the metadata is needed.
+function envelopeSource(metadata: Record<string, unknown>): { source?: unknown } {
+  return metadata.source === undefined ? {} : { source: metadata.source };
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

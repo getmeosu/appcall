@@ -55,7 +55,7 @@ function formObject(raw: string | null): Record<string, string> {
 describe("stripe manifest", () => {
   test("has bounded host, Bearer secret-key auth, version, and compiles", () => {
     expect(manifest.key).toBe("stripe");
-    expect(manifest.version).toBe("0.2.0");
+    expect(manifest.version).toBe("0.2.1");
     expect(manifest.runtime).toBe("bun");
     expect(manifest.categories).toEqual(["payments"]);
     expect(manifest.network.allowedHosts).toEqual(["api.stripe.com", "files.stripe.com"]);
