@@ -50,10 +50,12 @@ function invalidHref(field: string, detail: string): never {
 /**
  * iCloud serves each account from a numbered partition host. When (and only when)
  * the configured server is caldav.icloud.com, an https href on exactly
- * pN-caldav.icloud.com (1-3 digits) on the default port 443 counts as the same
- * origin. Hard-coded on purpose: no other host, port or scheme is admitted.
+ * pNN-caldav.icloud.com on the default port 443 counts as the same origin, where
+ * NN is exactly two digits 01-99: the same p01..p99 the manifest's network
+ * allowlist names, so the href check admits nothing the allowlist would not.
+ * Hard-coded on purpose: no other host, port or scheme is admitted.
  */
-export const ICLOUD_PARTITION_HOST = /^p[0-9]{1,3}-caldav\.icloud\.com$/;
+export const ICLOUD_PARTITION_HOST = /^p(?:0[1-9]|[1-9][0-9])-caldav\.icloud\.com$/;
 
 function isICloudPartition(resolved: URL, collection: URL): boolean {
   return collection.protocol === "https:" && collection.hostname === "caldav.icloud.com" && collection.port === ""

@@ -16,7 +16,9 @@ const CREDS = { apiKey: "key-us1" };
 const BAD = [
   ".", "..", " . ", "", " ", "%2e", "a.evil.example", "evil.example", "api.mailchimp.com", ".api.mailchimp.com",
   "us1.api.mailchimp.com.evil", "us1.evil.api.mailchimp.com", "-us1.api.mailchimp.com", "us_1.api.mailchimp.com",
-  "https://us1.api.mailchimp.com", "us1.api.mailchimp.com/3.0", "us1.api.mailchimp.com:8443", "user@us1.api.mailchimp.com",
+  "us1.api.mailchimp.com/3.0", "us1.api.mailchimp.com:8443", "user@us1.api.mailchimp.com",
+  "http://us1.api.mailchimp.com", "https://us1.api.mailchimp.com/3.0", "https://user@us1.api.mailchimp.com", "https://us1.api.mailchimp.com:443",
+  "https://", "https:///", "/", "ftp://us1", "//us1.api.mailchimp.com", "https://https://us1.api.mailchimp.com", "us1/3.0", "us_1", "-us1", "https://evil.example/",
   `${"a".repeat(64)}.api.mailchimp.com`,
 ];
 const OPS: Array<[string, Record<string, unknown>]> = [
@@ -38,6 +40,24 @@ describe("mailchimp SEC-PATH-2c-2 host setup field", () => {
         expect(new URL(result.calls[0]!.url).hostname).toBe(host);
       }
     });
+    test(`${op} accepts the stored spellings of a host: bare label, https:// and trailing slash`, async () => {
+      for (const [value, host] of [
+        ["us21", "us21.api.mailchimp.com"],
+        ["US21", "us21.api.mailchimp.com"],
+        ["us21.api.mailchimp.com", "us21.api.mailchimp.com"],
+        ["https://us21.api.mailchimp.com", "us21.api.mailchimp.com"],
+        ["HTTPS://us21.api.mailchimp.com", "us21.api.mailchimp.com"],
+        ["us21.api.mailchimp.com/", "us21.api.mailchimp.com"],
+        ["us21.api.mailchimp.com//", "us21.api.mailchimp.com"],
+        ["https://us21.api.mailchimp.com/", "us21.api.mailchimp.com"],
+        ["https://us21/", "us21.api.mailchimp.com"],
+        ["us21/", "us21.api.mailchimp.com"],
+      ]) {
+        const result = await outcomeOf("mailchimp", op, { ...CREDS, ...extra, host: value });
+        expect(result.calls.length, `${op} ${value}: ${result.code} ${result.message}`).toBeGreaterThan(0);
+        for (const call of result.calls) expect(new URL(call.url).hostname, `${op} ${value}`).toBe(host);
+      }
+    });
     test(`${op} rejects any other host with 0 fetches`, async () => {
       for (const value of BAD) {
         const result = await outcomeOf("mailchimp", op, { ...CREDS, ...extra, host: value });
@@ -56,6 +76,10 @@ describe("mailchimp SEC-PATH-2c-2 host setup field", () => {
     }
     expect(assertMailchimpHost("US3.api.mailchimp.com")).toBe("us3.api.mailchimp.com");
     expect(assertMailchimpHost(" us21.api.mailchimp.com ")).toBe("us21.api.mailchimp.com");
+    expect(assertMailchimpHost("us21")).toBe("us21.api.mailchimp.com");
+    expect(assertMailchimpHost("https://us21.api.mailchimp.com")).toBe("us21.api.mailchimp.com");
+    expect(assertMailchimpHost("us21.api.mailchimp.com/")).toBe("us21.api.mailchimp.com");
+    expect(assertMailchimpHost("Https://US21.api.mailchimp.com//")).toBe("us21.api.mailchimp.com");
   });
 
   // Hand-written handlers do not read `host`; under the other test files'

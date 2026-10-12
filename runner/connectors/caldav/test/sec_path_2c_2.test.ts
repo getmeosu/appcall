@@ -32,6 +32,8 @@ const BAD_ALL = [
   "/1/c/e.ics?x=1", "/1/c/e.ics#f", "/1\\c\\e.ics", "/1/c/e\u0000.ics", "/", "/1/ /c/e.ics", "/1/%20/c/e.ics", "/1/%09/c/e.ics",
   // iCloud partition lookalikes
   "https://p1234-caldav.icloud.com/1/c/e.ics", "https://pX-caldav.icloud.com/1/c/e.ics", "https://p1-caldav.icloud.com.evil/1/c/e.ics",
+  "https://p1-caldav.icloud.com/1/c/e.ics", "https://p0-caldav.icloud.com/1/c/e.ics", "https://p00-caldav.icloud.com/1/c/e.ics",
+  "https://p100-caldav.icloud.com/1/c/e.ics", "https://p001-caldav.icloud.com/1/c/e.ics", "https://p123-caldav.icloud.com/1/c/e.ics",
   "https://p01-caldav.icloud.com:8443/1/c/e.ics", "http://p01-caldav.icloud.com/1/c/e.ics", "https://u@p01-caldav.icloud.com/1/c/e.ics",
   "https://p01-caldav.icloud.com.evil.example/1/c/e.ics", "https://xp01-caldav.icloud.com/1/c/e.ics", "https://p01-caldav.icloud.co/1/c/e.ics",
   "https://p01-caldav.icloud.com/1/../c/e.ics",
@@ -51,7 +53,7 @@ describe("caldav SEC-PATH-2c-2 href resolution", () => {
         const result = await send(op, extra, field, value);
         expect(result.calls.length, `${op} ${field}=${value}: ${result.code} ${result.message}`).toBeGreaterThan(0);
         const url = new URL(result.calls[0]!.url);
-        expect(url.origin).toMatch(/^https:\/\/(?:caldav|p[0-9]{1,3}-caldav)\.icloud\.com$/);
+        expect(url.origin).toMatch(/^https:\/\/(?:caldav|p(?:0[1-9]|[1-9][0-9])-caldav)\.icloud\.com$/);
         expect(url.pathname.startsWith("/1/c")).toBe(true);
       }
     });
@@ -94,8 +96,8 @@ describe("caldav SEC-PATH-2c-2 href resolution", () => {
   });
 
   test("iCloud partitions: the hard-coded allowlist and nothing else", () => {
-    expect(ICLOUD_PARTITION_HOST.source).toBe("^p[0-9]{1,3}-caldav\\.icloud\\.com$");
-    for (const host of ["p1-caldav.icloud.com", "p01-caldav.icloud.com", "p123-caldav.icloud.com", "P7-CALDAV.ICLOUD.COM"]) {
+    expect(ICLOUD_PARTITION_HOST.source).toBe("^p(?:0[1-9]|[1-9][0-9])-caldav\\.icloud\\.com$");
+    for (const host of ["p01-caldav.icloud.com", "p09-caldav.icloud.com", "p10-caldav.icloud.com", "p99-caldav.icloud.com", "P07-CALDAV.ICLOUD.COM"]) {
       expect(resolveCollectionHref(undefined, `https://${host}/1/c/e.ics`, "eventHref", "resource"), host)
         .toBe(`https://${host.toLowerCase()}/1/c/e.ics`);
       expect(resolveCollectionHref(undefined, `https://${host}:443/1/c/e.ics`, "eventHref", "resource")).toBe(`https://${host.toLowerCase()}/1/c/e.ics`);
@@ -105,6 +107,10 @@ describe("caldav SEC-PATH-2c-2 href resolution", () => {
       "https://p1-caldav.icloud.com.evil/1/c/e.ics", "https://p1-caldav.icloud.com./1/c/e.ics", "https://p1-caldav.icloud.com:8443/1/c/e.ics",
       "http://p1-caldav.icloud.com/1/c/e.ics", "https://p1caldav.icloud.com/1/c/e.ics", "https://p1-caldav.icloud.com@evil.example/1/c/e.ics",
       "https://a.p1-caldav.icloud.com/1/c/e.ics", "https://p1-caldav-icloud.com/1/c/e.ics",
+      // Exactly the manifest's p01..p99: one digit, zero, three digits all reject.
+      "https://p1-caldav.icloud.com/1/c/e.ics", "https://p7-caldav.icloud.com/1/c/e.ics", "https://p0-caldav.icloud.com/1/c/e.ics",
+      "https://p00-caldav.icloud.com/1/c/e.ics", "https://p100-caldav.icloud.com/1/c/e.ics", "https://p001-caldav.icloud.com/1/c/e.ics",
+      "https://p123-caldav.icloud.com/1/c/e.ics", "https://p999-caldav.icloud.com/1/c/e.ics",
     ]) {
       expect(() => resolveCollectionHref(undefined, href, "eventHref", "resource"), href).toThrow();
     }
@@ -127,6 +133,30 @@ describe("caldav SEC-PATH-2c-2 href resolution", () => {
       const result = await send("events.create", { summary: "s", uid, ...WHEN }, "calendarHref", "/1/c/");
       expect(result.calls, uid).toEqual([]);
       expect(result.code, uid).toBe("INVALID_ACTION_INPUT");
+    }
+  });
+});
+
+describe("caldav iCloud partition href check matches the network allowlist", () => {
+  test("every partition host the href check admits is in manifest.network.allowedHosts, and vice versa", async () => {
+    const manifest = (await import("../manifest.json")).default as { network: { allowedHosts: string[] } };
+    const listed = manifest.network.allowedHosts.filter((host) => /^p[0-9]+-caldav\.icloud\.com$/.test(host)).sort();
+    const admitted: string[] = [];
+    for (let n = 0; n <= 1000; n++) {
+      for (const digits of new Set([String(n), String(n).padStart(2, "0"), String(n).padStart(3, "0")])) {
+        const host = `p${digits}-caldav.icloud.com`;
+        if (ICLOUD_PARTITION_HOST.test(host)) admitted.push(host);
+      }
+    }
+    expect(admitted.sort()).toEqual(listed);
+    expect(listed).toHaveLength(99);
+  });
+
+  test("p1-, p0-, p00- and p100- are rejected at the href check with 0 fetches", async () => {
+    for (const host of ["p1", "p0", "p00", "p100"]) {
+      const result = await outcomeOf("caldav", "events.get", { ...CREDS, eventHref: `https://${host}-caldav.icloud.com/1/c/e.ics` });
+      expect(result.calls, host).toEqual([]);
+      expect(result.code, host).toBe("INVALID_ACTION_INPUT");
     }
   });
 });
