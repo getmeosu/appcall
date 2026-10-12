@@ -987,7 +987,7 @@ function deepEqual(a: unknown, b: unknown): boolean {
 describe("zendesk manifest", () => {
   test("has subdomain host, API token basic auth, version, and compiles", () => {
     expect(manifest.key).toBe("zendesk");
-    expect(manifest.version).toBe("0.2.0");
+    expect(manifest.version).toBe("0.2.3");
     expect(manifest.runtime).toBe("bun");
     expect(manifest.categories).toEqual(["crm"]);
     expect(manifest.network.allowedHosts).toEqual(["*.zendesk.com"]);
@@ -1138,7 +1138,13 @@ describe("zendesk compiled handlers", () => {
       expect(new URL(requests[0]!.url).pathname.startsWith("/api/v2/"), key).toBe(true);
       expect(requests[0]!.headers.get("authorization"), key).toBe(BASIC);
       expect(requests[0]!.headers.get("accept"), key).toBe("application/json");
-      expect(result).toMatchObject({ connector: "zendesk", action: key, source: "provider" });
+      // tags.delete without tags falls back to the compiled DELETE.
+      if (Object.hasOwn(zendeskActions, key) && !(key.endsWith(".tags.delete") && input.tags === undefined)) {
+        // PLAT-OUT-1: hand-written handlers return only the declared {data}.
+        expect(Object.keys(result as object), key).toEqual(["data"]);
+      } else {
+        expect(result).toMatchObject({ connector: "zendesk", action: key, source: "provider" });
+      }
     }
   });
 

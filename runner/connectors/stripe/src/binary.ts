@@ -76,9 +76,6 @@ export async function createFile(inputValue: unknown): Promise<Record<string, un
   });
   assertSuccess(response.status, response.headers, response.body, apiKey, "files.create");
   return {
-    connector: "stripe",
-    action: "files.create",
-    source: "provider",
     data: parseJson(response.body),
   };
 }
@@ -145,9 +142,6 @@ async function downloadBinary(input: Record<string, unknown>, apiKey: string, hr
     const bodyText = new TextDecoder().decode(bytes);
     assertSuccess(response.status, Object.fromEntries(response.headers.entries()), bodyText, apiKey, action);
     return {
-      connector: "stripe",
-      action,
-      source: "provider",
       contentBase64: Buffer.from(bytes).toString("base64"),
       contentType: response.headers.get("content-type") ?? "application/octet-stream",
     };

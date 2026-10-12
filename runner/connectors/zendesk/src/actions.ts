@@ -21,8 +21,11 @@ function invalidInput(message = "Action input is invalid."): never {
   throw { ok: false, code: "INVALID_ACTION_INPUT", message };
 }
 
-function envelope(action: string, data: unknown): Record<string, unknown> {
-  return { connector: "zendesk", action, source: "provider", data };
+// PLAT-OUT-1: the handler returns only the declared {data}; the runner carries
+// connector/action/source on the result envelope, and these closed output
+// schemas reject any other top-level key.
+function envelope(_action: string, data: unknown): Record<string, unknown> {
+  return { data };
 }
 
 function credentials(input: unknown): { email: string; apiToken: string; subdomain: string } {

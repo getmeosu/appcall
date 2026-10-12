@@ -211,12 +211,12 @@ describe("runner protocol", () => {
     expect(response.status).toBe(200);
     const body = await response.json();
     expect(body.ok).toBe(true);
-    expect(body.result.output.connector).toBe("fake");
-    expect(body.result.output.action).toBe("messages.send");
+    expect(body.result.connector).toBe("fake");
+    expect(body.result.action).toBe("messages.send");
     expect(body.result.output.input.text).toBe("hello");
   });
 
-  test("runner-owned operation identity cannot be overwritten by connector output", async () => {
+  test("runner-owned operation identity is on the envelope and cannot be overwritten by connector output", async () => {
     const originalAction = defaultConnectorRegistry.executeAction;
     const originalSync = defaultConnectorRegistry.executeSync;
     defaultConnectorRegistry.executeAction = () => ({
@@ -239,11 +239,11 @@ describe("runner protocol", () => {
         }),
       );
       const actionBody = await actionResponse.json();
-      expect(actionBody.result.output).toMatchObject({
-        connector: "fake",
-        action: "messages.send",
-        value: "action",
-      });
+      // PLAT-OUT-1: identity lives on the envelope, set by the runner; the
+      // handler output is passed through untouched (it is what gets validated).
+      expect(actionBody.result.connector).toBe("fake");
+      expect(actionBody.result.action).toBe("messages.send");
+      expect(actionBody.result.output).toEqual({ connector: "spoofed", action: "spoofed", value: "action" });
 
       const syncResponse = await handleRPC(
         new Request("http://runner.local/rpc", {
@@ -255,11 +255,9 @@ describe("runner protocol", () => {
         }),
       );
       const syncBody = await syncResponse.json();
-      expect(syncBody.result.output).toMatchObject({
-        connector: "slack",
-        sync: "messages.list",
-        value: "sync",
-      });
+      expect(syncBody.result.connector).toBe("slack");
+      expect(syncBody.result.sync).toBe("messages.list");
+      expect(syncBody.result.output).toEqual({ connector: "spoofed", sync: "spoofed", value: "sync" });
     } finally {
       defaultConnectorRegistry.executeAction = originalAction;
       defaultConnectorRegistry.executeSync = originalSync;
@@ -284,8 +282,8 @@ describe("runner protocol", () => {
     expect(response.status).toBe(200);
     const body = await response.json();
     expect(body.ok).toBe(true);
-    expect(body.result.output.connector).toBe("telegram");
-    expect(body.result.output.action).toBe("messages.send");
+    expect(body.result.connector).toBe("telegram");
+    expect(body.result.action).toBe("messages.send");
     expect(body.result.output.source).toBe("connector");
     expect(body.result.output.validated.chatId).toBe("1001");
   });
@@ -308,8 +306,8 @@ describe("runner protocol", () => {
     expect(response.status).toBe(200);
     const body = await response.json();
     expect(body.ok).toBe(true);
-    expect(body.result.output.connector).toBe("telegram");
-    expect(body.result.output.action).toBe("credentials.validate");
+    expect(body.result.connector).toBe("telegram");
+    expect(body.result.action).toBe("credentials.validate");
     expect(body.result.output.valid).toBe(true);
   });
 
@@ -331,8 +329,8 @@ describe("runner protocol", () => {
     expect(response.status).toBe(200);
     const body = await response.json();
     expect(body.ok).toBe(true);
-    expect(body.result.output.connector).toBe("notion");
-    expect(body.result.output.action).toBe("credentials.validate");
+    expect(body.result.connector).toBe("notion");
+    expect(body.result.action).toBe("credentials.validate");
     expect(body.result.output.validated).toEqual({});
   });
 
@@ -357,8 +355,8 @@ describe("runner protocol", () => {
     expect(response.status).toBe(200);
     const body = await response.json();
     expect(body.ok).toBe(true);
-    expect(body.result.output.connector).toBe("notion");
-    expect(body.result.output.action).toBe("comments.list");
+    expect(body.result.connector).toBe("notion");
+    expect(body.result.action).toBe("comments.list");
     expect(body.result.output.validated).toEqual({
       blockId: "33333333-3333-3333-3333-333333333333",
       pageSize: 25,
@@ -386,8 +384,8 @@ describe("runner protocol", () => {
     expect(response.status).toBe(200);
     const body = await response.json();
     expect(body.ok).toBe(true);
-    expect(body.result.output.connector).toBe("notion");
-    expect(body.result.output.action).toBe("comments.create");
+    expect(body.result.connector).toBe("notion");
+    expect(body.result.action).toBe("comments.create");
     expect(body.result.output.validated).toEqual({
       pageId: "33333333-3333-3333-3333-333333333333",
       text: "Ship the connector.",
@@ -412,8 +410,8 @@ describe("runner protocol", () => {
     expect(response.status).toBe(200);
     const body = await response.json();
     expect(body.ok).toBe(true);
-    expect(body.result.output.connector).toBe("notion");
-    expect(body.result.output.action).toBe("documents.search");
+    expect(body.result.connector).toBe("notion");
+    expect(body.result.action).toBe("documents.search");
     expect(body.result.output.validated).toEqual({
       query: "Appcall",
       pageSize: 20,
@@ -438,8 +436,8 @@ describe("runner protocol", () => {
     expect(response.status).toBe(200);
     const body = await response.json();
     expect(body.ok).toBe(true);
-    expect(body.result.output.connector).toBe("notion");
-    expect(body.result.output.action).toBe("documents.get");
+    expect(body.result.connector).toBe("notion");
+    expect(body.result.action).toBe("documents.get");
     expect(body.result.output.validated).toEqual({
       pageId: "33333333-3333-3333-3333-333333333333",
     });
@@ -466,8 +464,8 @@ describe("runner protocol", () => {
     expect(response.status).toBe(200);
     const body = await response.json();
     expect(body.ok).toBe(true);
-    expect(body.result.output.connector).toBe("notion");
-    expect(body.result.output.action).toBe("documents.create");
+    expect(body.result.connector).toBe("notion");
+    expect(body.result.action).toBe("documents.create");
     expect(body.result.output.validated).toEqual({
       parentPageId: "33333333-3333-3333-3333-333333333333",
       title: "Launch Notes",
@@ -495,8 +493,8 @@ describe("runner protocol", () => {
       expect(response.status).toBe(200);
       const body = await response.json();
       expect(body.ok).toBe(true);
-      expect(body.result.output.connector).toBe("notion");
-      expect(body.result.output.action).toBe(action);
+      expect(body.result.connector).toBe("notion");
+      expect(body.result.action).toBe(action);
       expect(body.result.output.validated).toEqual({
         pageId: "33333333-3333-3333-3333-333333333333",
       });
@@ -523,8 +521,8 @@ describe("runner protocol", () => {
     expect(response.status).toBe(200);
     const body = await response.json();
     expect(body.ok).toBe(true);
-    expect(body.result.output.connector).toBe("notion");
-    expect(body.result.output.action).toBe("databases.get");
+    expect(body.result.connector).toBe("notion");
+    expect(body.result.action).toBe("databases.get");
     expect(body.result.output.validated).toEqual({
       databaseId: "44444444-4444-4444-4444-444444444444",
     });
@@ -551,8 +549,8 @@ describe("runner protocol", () => {
     expect(response.status).toBe(200);
     const body = await response.json();
     expect(body.ok).toBe(true);
-    expect(body.result.output.connector).toBe("notion");
-    expect(body.result.output.action).toBe("databases.items.query");
+    expect(body.result.connector).toBe("notion");
+    expect(body.result.action).toBe("databases.items.query");
     expect(body.result.output.validated).toEqual({
       databaseId: "44444444-4444-4444-4444-444444444444",
       filter: { property: "Status", status: { equals: "Todo" } },
@@ -579,8 +577,8 @@ describe("runner protocol", () => {
     expect(response.status).toBe(200);
     const body = await response.json();
     expect(body.ok).toBe(true);
-    expect(body.result.output.connector).toBe("notion");
-    expect(body.result.output.action).toBe("databases.items.get");
+    expect(body.result.connector).toBe("notion");
+    expect(body.result.action).toBe("databases.items.get");
     expect(body.result.output.validated).toEqual({
       pageId: "66666666-6666-6666-6666-666666666666",
     });
@@ -609,8 +607,8 @@ describe("runner protocol", () => {
     expect(response.status).toBe(200);
     const body = await response.json();
     expect(body.ok).toBe(true);
-    expect(body.result.output.connector).toBe("notion");
-    expect(body.result.output.action).toBe("databases.items.create");
+    expect(body.result.connector).toBe("notion");
+    expect(body.result.action).toBe("databases.items.create");
     expect(body.result.output.validated).toEqual({
       databaseId: "44444444-4444-4444-4444-444444444444",
       properties: {
@@ -642,8 +640,8 @@ describe("runner protocol", () => {
     expect(response.status).toBe(200);
     const body = await response.json();
     expect(body.ok).toBe(true);
-    expect(body.result.output.connector).toBe("notion");
-    expect(body.result.output.action).toBe("databases.items.update");
+    expect(body.result.connector).toBe("notion");
+    expect(body.result.action).toBe("databases.items.update");
     expect(body.result.output.validated).toEqual({
       pageId: "66666666-6666-6666-6666-666666666666",
       properties: {
@@ -673,8 +671,8 @@ describe("runner protocol", () => {
       expect(response.status).toBe(200);
       const body = await response.json();
       expect(body.ok).toBe(true);
-      expect(body.result.output.connector).toBe("notion");
-      expect(body.result.output.action).toBe(action);
+      expect(body.result.connector).toBe("notion");
+      expect(body.result.action).toBe(action);
       expect(body.result.output.validated).toEqual({
         pageId: "66666666-6666-6666-6666-666666666666",
       });
@@ -702,8 +700,8 @@ describe("runner protocol", () => {
     expect(response.status).toBe(200);
     const body = await response.json();
     expect(body.ok).toBe(true);
-    expect(body.result.output.connector).toBe("notion");
-    expect(body.result.output.action).toBe("documents.blocks.list");
+    expect(body.result.connector).toBe("notion");
+    expect(body.result.action).toBe("documents.blocks.list");
     expect(body.result.output.validated).toEqual({
       blockId: "33333333-3333-3333-3333-333333333333",
       pageSize: 50,
@@ -731,8 +729,8 @@ describe("runner protocol", () => {
     expect(response.status).toBe(200);
     const body = await response.json();
     expect(body.ok).toBe(true);
-    expect(body.result.output.connector).toBe("notion");
-    expect(body.result.output.action).toBe("documents.blocks.append");
+    expect(body.result.connector).toBe("notion");
+    expect(body.result.action).toBe("documents.blocks.append");
     expect(body.result.output.validated).toEqual({
       blockId: "33333333-3333-3333-3333-333333333333",
       text: "Append this paragraph.",
@@ -757,8 +755,8 @@ describe("runner protocol", () => {
     expect(response.status).toBe(200);
     const body = await response.json();
     expect(body.ok).toBe(true);
-    expect(body.result.output.connector).toBe("slack");
-    expect(body.result.output.action).toBe("messages.send");
+    expect(body.result.connector).toBe("slack");
+    expect(body.result.action).toBe("messages.send");
     expect(body.result.output.source).toBe("connector");
     expect(body.result.output.validated.channel).toBe("C123");
   });
@@ -781,8 +779,8 @@ describe("runner protocol", () => {
     expect(response.status).toBe(200);
     const body = await response.json();
     expect(body.ok).toBe(true);
-    expect(body.result.output.connector).toBe("whatsapp");
-    expect(body.result.output.action).toBe("messages.send");
+    expect(body.result.connector).toBe("whatsapp");
+    expect(body.result.action).toBe("messages.send");
     expect(body.result.output.source).toBe("connector");
     expect(body.result.output.validated.phoneNumberId).toBe("123456789");
   });
@@ -805,8 +803,8 @@ describe("runner protocol", () => {
     expect(response.status).toBe(200);
     const body = await response.json();
     expect(body.ok).toBe(true);
-    expect(body.result.output.connector).toBe("whatsapp");
-    expect(body.result.output.action).toBe("credentials.validate");
+    expect(body.result.connector).toBe("whatsapp");
+    expect(body.result.action).toBe("credentials.validate");
     expect(body.result.output.valid).toBe(true);
   });
 
@@ -933,8 +931,8 @@ describe("runner protocol", () => {
     const body = await response.json();
     expect(body.id).toBe("req_slack_sync");
     expect(body.ok).toBe(true);
-    expect(body.result.output.connector).toBe("slack");
-    expect(body.result.output.sync).toBe("messages.list");
+    expect(body.result.connector).toBe("slack");
+    expect(body.result.sync).toBe("messages.list");
     expect(body.result.output.provider).toBe("slack");
     expect(body.result.output.items[0].id).toBe("slack:C123:1715680861.000100");
   });
@@ -970,8 +968,8 @@ describe("runner protocol", () => {
     expect(response.status).toBe(200);
     const body = await response.json();
     expect(body.ok).toBe(true);
-    expect(body.result.output.connector).toBe("telegram");
-    expect(body.result.output.sync).toBe("messages.list");
+    expect(body.result.connector).toBe("telegram");
+    expect(body.result.sync).toBe("messages.list");
     expect(body.result.output.provider).toBe("telegram");
     expect(body.result.output.items[0].id).toBe("telegram:1001:42");
   });
@@ -994,8 +992,8 @@ describe("runner protocol", () => {
     expect(response.status).toBe(200);
     const body = await response.json();
     expect(body.ok).toBe(true);
-    expect(body.result.output.connector).toBe("notion");
-    expect(body.result.output.action).toBe("users.list");
+    expect(body.result.connector).toBe("notion");
+    expect(body.result.action).toBe("users.list");
     expect(body.result.output.validated).toEqual({ pageSize: 25 });
   });
 

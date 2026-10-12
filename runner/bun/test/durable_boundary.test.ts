@@ -233,7 +233,8 @@ test('RPC counts operation output separately from envelope overhead',async()=>{
 test('RPC rejects an operation result over its declared response budget',async()=>{
  const original=defaultConnectorRegistry.executeAction;
  const action='actor.run_sync_get_dataset_items'; const maxResponseBytes=50*1024*1024;
- const outputPrefix=new TextEncoder().encode(JSON.stringify({connector:'apify',action,data:''})).byteLength;
+ // PLAT-OUT-1: the budget measures the bare output (connector/action ride on the envelope).
+ const outputPrefix=new TextEncoder().encode(JSON.stringify({data:''})).byteLength;
  defaultConnectorRegistry.executeAction=()=>({ok:true,output:{data:'x'.repeat(maxResponseBytes-outputPrefix+1)}});
  try{
   const response=await handleRPC(new Request('http://local/rpc',{method:'POST',body:JSON.stringify({id:'over-budget',method:'connector.action.execute',params:{connectorKey:'apify',action}})}));
