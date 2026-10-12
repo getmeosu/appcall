@@ -16,9 +16,9 @@ type RoleGet = OrgName & { roleId: number };
 export type NormalizedOrganizationRole = {
   id: number;
   name: string;
-  description: string;
+  description: string | null;
   permissions: string[];
-  source: string;
+  source: string | null;
   baseRole: string;
   createdAt: string;
   updatedAt: string;
@@ -91,9 +91,9 @@ export function normalizeOrganizationRole(item: Record<string, unknown>): Normal
   return {
     id: typeof item.id === "number" ? item.id : 0,
     name: typeof item.name === "string" ? item.name : "",
-    description: typeof item.description === "string" ? item.description : "",
+    description: typeof item.description === "string" ? item.description : null,
     permissions,
-    source: typeof item.source === "string" ? item.source : "",
+    source: typeof item.source === "string" ? item.source : null,
     baseRole: typeof item.base_role === "string" ? item.base_role : "",
     createdAt: typeof item.created_at === "string" ? item.created_at : "",
     updatedAt: typeof item.updated_at === "string" ? item.updated_at : "",

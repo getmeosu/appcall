@@ -19,7 +19,7 @@ export type GitHubGist = {
 export type NormalizedGist = {
   id: string;
   provider: "github";
-  description: string;
+  description: string | null;
   public: boolean;
   url: string;
   gitPullUrl: string;
@@ -36,7 +36,7 @@ export function normalizeGitHubGist(gist: GitHubGist): NormalizedGist {
   return {
     id: `gh-gist:${gist.id}`,
     provider: "github",
-    description: gist.description ?? "",
+    description: gist.description ?? null,
     public: gist.public ?? false,
     url: gist.html_url ?? "",
     gitPullUrl: gist.git_pull_url ?? "",

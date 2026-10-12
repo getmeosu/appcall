@@ -159,11 +159,11 @@ export type NormalizedEvent = {
   id: string;
   provider: "github";
   eventId: string;
-  type: string;
+  type: string | null;
   actor: string;
   repo: string;
   public: boolean;
-  createdAt: string;
+  createdAt: string | null;
   modelVersion: "2026-05-16";
   raw: Record<string, unknown>;
 };
@@ -174,11 +174,11 @@ export function normalizeGitHubEvent(event: GitHubEvent): NormalizedEvent {
     id: `gh-event:${eventId}`,
     provider: "github",
     eventId,
-    type: typeof event.type === "string" ? event.type : "",
+    type: typeof event.type === "string" ? event.type : null,
     actor: typeof event.actor?.login === "string" ? event.actor.login : "",
     repo: typeof event.repo?.name === "string" ? event.repo.name : "",
     public: event.public === true,
-    createdAt: typeof event.created_at === "string" ? event.created_at : "",
+    createdAt: typeof event.created_at === "string" ? event.created_at : null,
     modelVersion: "2026-05-16",
     raw: event as unknown as Record<string, unknown>,
   };
@@ -389,7 +389,7 @@ export type NormalizedEmail = {
   email: string;
   primary: boolean;
   verified: boolean;
-  visibility: string;
+  visibility: string | null;
   modelVersion: "2026-05-16";
   raw: Record<string, unknown>;
 };
@@ -399,7 +399,7 @@ export function normalizeGitHubEmail(item: GitHubEmail): NormalizedEmail {
     email: typeof item.email === "string" ? item.email : "",
     primary: item.primary === true,
     verified: item.verified === true,
-    visibility: typeof item.visibility === "string" ? item.visibility : "",
+    visibility: typeof item.visibility === "string" ? item.visibility : null,
     modelVersion: "2026-05-16",
     raw: item as unknown as Record<string, unknown>,
   };
@@ -438,7 +438,7 @@ export type NormalizedGpgKey = {
   gpgKeyId: number;
   keyId: string;
   publicKey: string;
-  name: string;
+  name: string | null;
   createdAt: string;
   modelVersion: "2026-05-16";
   raw: Record<string, unknown>;
@@ -452,7 +452,7 @@ export function normalizeGitHubGpgKey(key: GitHubGpgKey): NormalizedGpgKey {
     gpgKeyId,
     keyId: typeof key.key_id === "string" ? key.key_id : "",
     publicKey: typeof key.public_key === "string" ? key.public_key : "",
-    name: typeof key.name === "string" ? key.name : "",
+    name: typeof key.name === "string" ? key.name : null,
     createdAt: typeof key.created_at === "string" ? key.created_at : "",
     modelVersion: "2026-05-16",
     raw: key as unknown as Record<string, unknown>,
@@ -477,11 +477,11 @@ export type GitHubMarketplacePurchase = {
 
 export type NormalizedMarketplacePurchase = {
   billingCycle: string;
-  nextBillingDate: string;
+  nextBillingDate: string | null;
   unitCount: number | null;
   onFreeTrial: boolean;
-  freeTrialEndsOn: string;
-  updatedAt: string;
+  freeTrialEndsOn: string | null;
+  updatedAt: string | null;
   accountLogin: string;
   accountId: number;
   accountType: string;
@@ -498,11 +498,11 @@ export function normalizeGitHubMarketplacePurchase(item: GitHubMarketplacePurcha
   const plan = item.plan ?? {};
   return {
     billingCycle: typeof item.billing_cycle === "string" ? item.billing_cycle : "",
-    nextBillingDate: typeof item.next_billing_date === "string" ? item.next_billing_date : "",
+    nextBillingDate: typeof item.next_billing_date === "string" ? item.next_billing_date : null,
     unitCount: typeof item.unit_count === "number" ? item.unit_count : null,
     onFreeTrial: item.on_free_trial === true,
-    freeTrialEndsOn: typeof item.free_trial_ends_on === "string" ? item.free_trial_ends_on : "",
-    updatedAt: typeof item.updated_at === "string" ? item.updated_at : "",
+    freeTrialEndsOn: typeof item.free_trial_ends_on === "string" ? item.free_trial_ends_on : null,
+    updatedAt: typeof item.updated_at === "string" ? item.updated_at : null,
     accountLogin: typeof account.login === "string" ? account.login : "",
     accountId: typeof account.id === "number" ? account.id : 0,
     accountType: typeof account.type === "string" ? account.type : "",

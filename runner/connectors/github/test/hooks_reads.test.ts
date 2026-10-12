@@ -36,7 +36,7 @@ const READS = [
 
 describe("github hook reads", () => {
   test("manifest stays v0.79.0 at 852 ops and these reads omit effect policy", () => {
-    expect(manifest.version).toBe("0.89.3");
+    expect(manifest.version).toBe("0.89.4");
     expect(Object.keys(manifest.operations).length).toBe(860);
     for (const key of READS) {
       const op = manifest.operations[key] as Record<string, unknown>;
@@ -159,7 +159,7 @@ describe("github hook reads", () => {
       status: "OK",
       statusCode: 200,
       event: "push",
-      action: "",
+      action: null, // TR-5c: hook-delivery action is nullable; no fabricated ""
       modelVersion: "2026-05-16",
       raw: deliveryFixture,
     });

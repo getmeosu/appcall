@@ -77,7 +77,7 @@ export type NormalizedHookDelivery = {
   status: string;
   statusCode: number;
   event: string;
-  action: string;
+  action: string | null;
   modelVersion: "2026-05-16";
   raw: GitHubHookDelivery;
 };
@@ -94,7 +94,7 @@ export function normalizeGitHubHookDelivery(delivery: GitHubHookDelivery): Norma
     status: typeof delivery.status === "string" ? delivery.status : "",
     statusCode: typeof delivery.status_code === "number" ? delivery.status_code : 0,
     event: typeof delivery.event === "string" ? delivery.event : "",
-    action: typeof delivery.action === "string" ? delivery.action : "",
+    action: typeof delivery.action === "string" ? delivery.action : null,
     modelVersion: "2026-05-16",
     raw: delivery,
   };
@@ -233,8 +233,8 @@ export type NormalizedInvitation = {
   permissions: string;
   createdAt: string;
   url: string;
-  invitee: string;
-  inviter: string;
+  invitee: string | null;
+  inviter: string | null;
   modelVersion: "2026-05-16";
   raw: GitHubInvitation;
 };
@@ -247,8 +247,8 @@ export function normalizeGitHubInvitation(invitation: GitHubInvitation): Normali
     permissions: invitation.permissions ?? "",
     createdAt: invitation.created_at ?? "",
     url: invitation.html_url ?? invitation.url ?? "",
-    invitee: invitation.invitee?.login ?? "",
-    inviter: invitation.inviter?.login ?? "",
+    invitee: invitation.invitee?.login ?? null,
+    inviter: invitation.inviter?.login ?? null,
     modelVersion: "2026-05-16",
     raw: invitation,
   };
@@ -961,16 +961,16 @@ type GitHubRuleSuite = {
   [key: string]: unknown;
 };
 
-function normalizeRuleSuite(suite: GitHubRuleSuite) {
+export function normalizeRuleSuite(suite: GitHubRuleSuite) {
   return {
     id: `gh-rule-suite:${suite.id}`,
     provider: "github" as const,
     ruleSuiteId: suite.id,
-    actorName: suite.actor_name ?? "",
-    ref: suite.ref ?? "",
-    result: suite.result ?? "",
-    beforeSha: suite.before_sha ?? "",
-    afterSha: suite.after_sha ?? "",
+    actorName: suite.actor_name ?? null,
+    ref: suite.ref ?? null,
+    result: suite.result ?? null,
+    beforeSha: suite.before_sha ?? null,
+    afterSha: suite.after_sha ?? null,
     modelVersion: "2026-05-16" as const,
     raw: suite,
   };

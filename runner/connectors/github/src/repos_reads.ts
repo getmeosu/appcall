@@ -67,7 +67,7 @@ export type NormalizedRepoLicense = {
   sha: string;
   size: number;
   htmlUrl: string;
-  downloadUrl: string;
+  downloadUrl: string | null;
   license: {
     key: string;
     name: string;
@@ -248,7 +248,7 @@ export function normalizeRepoLicense(item: Record<string, unknown>): NormalizedR
     sha: typeof item.sha === "string" ? item.sha : "",
     size: typeof item.size === "number" ? item.size : 0,
     htmlUrl: typeof item.html_url === "string" ? item.html_url : "",
-    downloadUrl: typeof item.download_url === "string" ? item.download_url : "",
+    downloadUrl: typeof item.download_url === "string" ? item.download_url : null,
     license: {
       key: typeof license.key === "string" ? license.key : "",
       name: typeof license.name === "string" ? license.name : "",
@@ -478,7 +478,7 @@ export type NormalizedPublicRepository = {
   fullName: string;
   private: boolean;
   htmlUrl: string;
-  description: string;
+  description: string | null;
 };
 
 export type NormalizedRepoActivity = {
@@ -516,7 +516,7 @@ export function normalizePublicRepository(item: Record<string, unknown>): Normal
     fullName: typeof item.full_name === "string" ? item.full_name : "",
     private: item.private === true,
     htmlUrl: typeof item.html_url === "string" ? item.html_url : "",
-    description: typeof item.description === "string" ? item.description : "",
+    description: typeof item.description === "string" ? item.description : null,
   };
 }
 

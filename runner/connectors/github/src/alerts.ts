@@ -130,34 +130,34 @@ export function validateGetCodeScanningAnalysisInput(input: unknown): GetCodeSca
 export type CodeScanningTool = { name: string | null; version: string | null; guid: string | null };
 
 export type NormalizedCodeScanningInstance = {
-  ref: string;
-  analysisKey: string;
-  environment: string;
-  category: string;
-  state: string;
-  commitSha: string;
-  message: string;
-  path: string;
-  startLine: number;
-  endLine: number;
-  htmlUrl: string;
+  ref: string | null;
+  analysisKey: string | null;
+  environment: string | null;
+  category: string | null;
+  state: string | null;
+  commitSha: string | null;
+  message: string | null;
+  path: string | null;
+  startLine: number | null;
+  endLine: number | null;
+  htmlUrl: string | null;
 };
 
 export function normalizeCodeScanningInstance(item: Record<string, unknown>): NormalizedCodeScanningInstance {
   const message = isRecord(item.message) ? item.message : {};
   const location = isRecord(item.location) ? item.location : {};
   return {
-    ref: typeof item.ref === "string" ? item.ref : "",
-    analysisKey: typeof item.analysis_key === "string" ? item.analysis_key : "",
-    environment: typeof item.environment === "string" ? item.environment : "",
-    category: typeof item.category === "string" ? item.category : "",
-    state: typeof item.state === "string" ? item.state : "",
-    commitSha: typeof item.commit_sha === "string" ? item.commit_sha : "",
-    message: typeof message.text === "string" ? message.text : "",
-    path: typeof location.path === "string" ? location.path : "",
-    startLine: typeof location.start_line === "number" ? location.start_line : 0,
-    endLine: typeof location.end_line === "number" ? location.end_line : 0,
-    htmlUrl: typeof item.html_url === "string" ? item.html_url : "",
+    ref: typeof item.ref === "string" ? item.ref : null,
+    analysisKey: typeof item.analysis_key === "string" ? item.analysis_key : null,
+    environment: typeof item.environment === "string" ? item.environment : null,
+    category: typeof item.category === "string" ? item.category : null,
+    state: typeof item.state === "string" ? item.state : null,
+    commitSha: typeof item.commit_sha === "string" ? item.commit_sha : null,
+    message: typeof message.text === "string" ? message.text : null,
+    path: typeof location.path === "string" ? location.path : null,
+    startLine: typeof location.start_line === "number" ? location.start_line : null,
+    endLine: typeof location.end_line === "number" ? location.end_line : null,
+    htmlUrl: typeof item.html_url === "string" ? item.html_url : null,
   };
 }
 

@@ -11,13 +11,13 @@ type IssueAssignee = Repo & { issueNumber: number; assignee: string };
 type IssueEvent = Repo & { eventId: number };
 type MilestoneLabels = Repo & { milestoneNumber: number };
 
-export type NormalizedGist = { id: string; description: string; public: boolean; owner: string };
+export type NormalizedGist = { id: string; description: string | null; public: boolean; owner: string };
 export type NormalizedGistComment = { id: number; body: string; user: string | null; createdAt: string };
 export type NormalizedGistCommit = { sha: string; user: string; committedAt: string };
 export type NormalizedIssue = { number: number; title: string; state: string };
 export type NormalizedIssueComment = { id: number; body: string; user: string; createdAt: string };
 export type NormalizedIssueEvent = { id: number; event: string; actor: string; createdAt: string };
-export type NormalizedLabel = { name: string; color: string; description: string };
+export type NormalizedLabel = { name: string; color: string; description: string | null };
 
 export function validateCheckGistStarInput(input: unknown): GistId {
   const record = requireObject(input, "gists.star.check");
@@ -207,11 +207,11 @@ function readList<T>(response: { status: number; headers: Record<string, string>
   return mapRateOrUpstream(response, rejected);
 }
 
-function normalizeGist(item: Record<string, unknown>): NormalizedGist {
+export function normalizeGist(item: Record<string, unknown>): NormalizedGist {
   const owner = isRecord(item.owner) ? item.owner : {};
   return {
     id: typeof item.id === "string" ? item.id : "",
-    description: typeof item.description === "string" ? item.description : "",
+    description: typeof item.description === "string" ? item.description : null,
     public: item.public === true,
     owner: typeof owner.login === "string" ? owner.login : "",
   };
@@ -265,11 +265,11 @@ function normalizeIssueEvent(item: Record<string, unknown>): NormalizedIssueEven
   };
 }
 
-function normalizeLabel(item: Record<string, unknown>): NormalizedLabel {
+export function normalizeLabel(item: Record<string, unknown>): NormalizedLabel {
   return {
     name: typeof item.name === "string" ? item.name : "",
     color: typeof item.color === "string" ? item.color : "",
-    description: typeof item.description === "string" ? item.description : "",
+    description: typeof item.description === "string" ? item.description : null,
   };
 }
 
