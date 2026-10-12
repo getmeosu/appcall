@@ -67,9 +67,9 @@ const CREATES = [
 ] as const;
 
 describe("github FIX-EFFECTS: manifest guards", () => {
-  test("version 0.85.0 at 853 ops", () => {
-    expect(manifest.version).toBe("0.85.0");
-    expect(Object.keys(ops)).toHaveLength(853);
+  test("version 0.86.0 at 847 ops", () => {
+    expect(manifest.version).toBe("0.86.0");
+    expect(Object.keys(ops)).toHaveLength(847);
   });
 
   test("no op declares effectPolicy Idempotent, and no description still claims it", () => {
@@ -84,7 +84,7 @@ describe("github FIX-EFFECTS: manifest guards", () => {
 
   test("every DELETE except the exact-observe detach set carries no effect keys", () => {
     const deletes = Object.keys(ops).filter((key) => ops[key]!.kind === "action" && methodOf(ops[key]!) === "DELETE");
-    expect(deletes.length).toBeGreaterThanOrEqual(114); // PRUNE-1 (0.82.0) removed projects.delete + projects.columns.delete (123 -> 121); PRUNE-2 (0.83.0) removed projects.cards.delete, projects.collaborators.remove, orgs.teams.projects.remove (121 -> 118); PRUNE-3 (0.84.0) removed teams.discussions.delete (118 -> 117); PRUNE-4 (0.85.0) removed rest.apps.delete_token, rest.apps.delete_authorization, rest.apps.revoke_installation_access_token (117 -> 114)
+    expect(deletes.length).toBeGreaterThanOrEqual(114); // PRUNE-1 (0.82.0) removed projects.delete + projects.columns.delete (123 -> 121); PRUNE-2 (0.83.0) removed projects.cards.delete, projects.collaborators.remove, orgs.teams.projects.remove (121 -> 118); PRUNE-3 (0.84.0) removed teams.discussions.delete (118 -> 117); PRUNE-4 (0.85.0) removed rest.apps.delete_token, rest.apps.delete_authorization, rest.apps.revoke_installation_access_token (117 -> 114); PRUNE-5 (0.86.0) removes no DELETE (114)
     const offenders = deletes.filter((key) => !(key in RECONCILE_KEEP) && effectKeys(ops[key]!).length > 0);
     expect(offenders).toEqual([]);
     for (const key of STRIPPED_DELETES) {
