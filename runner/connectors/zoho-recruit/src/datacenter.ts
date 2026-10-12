@@ -1,5 +1,5 @@
 /**
- * Zoho Recruit data centres (ZR-0).
+ * Zoho Recruit data centres (ZR-0, corrected in ZR-1).
  *
  * A connection picks its data centre with the connect-time `dataCenter` setup
  * field. The value must be an exact, case-sensitive match for one of the keys
@@ -8,62 +8,63 @@
  * table. An absent value (undefined/null) means "com", so connections created
  * before ZR-0 keep sending exactly the requests they sent before.
  *
- * Sources (official Zoho docs, fetched 2026-10-12):
+ * Sources (official Zoho docs + live probes, 2026-10-12):
  * - Accounts hosts: https://www.zoho.com/recruit/developer-guide/apiv2/access-refresh.html
- *   (US, AU, EU, IN, CA, SA, CN, JP) and https://www.zoho.com/accounts/protocol/oauth/multi-dc.html
- *   (CA = accounts.zohocloud.ca, SA = accounts.zoho.sa; also https://accounts.zoho.com/oauth/serverinfo).
- * - Recruit API host: the token response's api_domain is "Domain name of the API. Use this
- *   domain in your requests to make API calls to Zoho Recruit" (access-refresh.html; US
- *   sample https://www.zohoapis.com). multi-dc.html shows https://www.zohoapis.eu/recruit/v2
- *   and https://www.zohoapis.com.cn/recruit/v2. The per-DC www.zohoapis.<tld> domains for
- *   AU/IN/JP/CA/SA are Zoho's cross-product DC table
- *   (https://www.zoho.com/books/api/v3/introduction/ , https://www.zoho.com/directory/api/v2/introduction/).
- * - US keeps the documented dedicated Recruit domain https://recruit.zoho.com/recruit/v2
- *   (https://www.zoho.com/recruit/developer-guide/apiv2/whats-new.html, get-records.html),
- *   which is what this connector has always called. whats-new.html also documents
- *   recruit.zoho.{eu,com.cn,in,jp}; those are accepted as api_domain values for their DC.
+ *   and https://www.zoho.com/accounts/protocol/oauth/multi-dc.html
+ *   (CA = accounts.zohocloud.ca, SA = accounts.zoho.sa; https://accounts.zoho.com/oauth/serverinfo).
+ * - Recruit API host (ZR-1 correction): Zoho Recruit v2 is served on recruit.<dc>
+ *   (CA: recruit.zohocloud.ca), the host every Recruit API page uses
+ *   (https://www.zoho.com/recruit/developer-guide/apiv2/get-records.html). Live: every
+ *   recruit.<dc>/recruit/v2/users answers Recruit's own 401 AUTHENTICATION_FAILURE JSON,
+ *   while www.zohoapis.{com,eu,in,ca}/recruit/v2/* answers 404 "API endpoint not found".
+ *   ZR-0 routed non-US DCs to www.zohoapis.<dc>, which therefore could not work.
+ * - api_domain (token response) equivalents per DC, accepted by assertApiDomainMatches:
+ *   https://api.zoho.<dc> (developer OAuth docs: "api_domain":"https://api.zoho.com",
+ *   multi-dc-support.html: "https://api.zoho.eu"; CA is api.zohocloud.ca because
+ *   zoho.ca does not exist), https://www.zohoapis.<dc> (multi-dc.html, access-refresh.html)
+ *   and the Recruit host itself. None of them is ever used to build a request URL.
  */
 
 export const ZOHO_RECRUIT_DATA_CENTERS = {
   com: {
     accountsUrl: "https://accounts.zoho.com",
     apiBaseUrl: "https://recruit.zoho.com/recruit/v2",
-    apiDomains: ["https://www.zohoapis.com", "https://recruit.zoho.com"],
+    apiDomains: ["https://www.zohoapis.com", "https://api.zoho.com", "https://recruit.zoho.com"],
   },
   eu: {
     accountsUrl: "https://accounts.zoho.eu",
-    apiBaseUrl: "https://www.zohoapis.eu/recruit/v2",
-    apiDomains: ["https://www.zohoapis.eu", "https://recruit.zoho.eu"],
+    apiBaseUrl: "https://recruit.zoho.eu/recruit/v2",
+    apiDomains: ["https://www.zohoapis.eu", "https://api.zoho.eu", "https://recruit.zoho.eu"],
   },
   in: {
     accountsUrl: "https://accounts.zoho.in",
-    apiBaseUrl: "https://www.zohoapis.in/recruit/v2",
-    apiDomains: ["https://www.zohoapis.in", "https://recruit.zoho.in"],
+    apiBaseUrl: "https://recruit.zoho.in/recruit/v2",
+    apiDomains: ["https://www.zohoapis.in", "https://api.zoho.in", "https://recruit.zoho.in"],
   },
   "com.au": {
     accountsUrl: "https://accounts.zoho.com.au",
-    apiBaseUrl: "https://www.zohoapis.com.au/recruit/v2",
-    apiDomains: ["https://www.zohoapis.com.au"],
+    apiBaseUrl: "https://recruit.zoho.com.au/recruit/v2",
+    apiDomains: ["https://www.zohoapis.com.au", "https://api.zoho.com.au", "https://recruit.zoho.com.au"],
   },
   jp: {
     accountsUrl: "https://accounts.zoho.jp",
-    apiBaseUrl: "https://www.zohoapis.jp/recruit/v2",
-    apiDomains: ["https://www.zohoapis.jp", "https://recruit.zoho.jp"],
+    apiBaseUrl: "https://recruit.zoho.jp/recruit/v2",
+    apiDomains: ["https://www.zohoapis.jp", "https://api.zoho.jp", "https://recruit.zoho.jp"],
   },
   ca: {
     accountsUrl: "https://accounts.zohocloud.ca",
-    apiBaseUrl: "https://www.zohoapis.ca/recruit/v2",
-    apiDomains: ["https://www.zohoapis.ca"],
+    apiBaseUrl: "https://recruit.zohocloud.ca/recruit/v2",
+    apiDomains: ["https://www.zohoapis.ca", "https://api.zohocloud.ca", "https://recruit.zohocloud.ca"],
   },
   sa: {
     accountsUrl: "https://accounts.zoho.sa",
-    apiBaseUrl: "https://www.zohoapis.sa/recruit/v2",
-    apiDomains: ["https://www.zohoapis.sa"],
+    apiBaseUrl: "https://recruit.zoho.sa/recruit/v2",
+    apiDomains: ["https://www.zohoapis.sa", "https://api.zoho.sa", "https://recruit.zoho.sa"],
   },
   "com.cn": {
     accountsUrl: "https://accounts.zoho.com.cn",
-    apiBaseUrl: "https://www.zohoapis.com.cn/recruit/v2",
-    apiDomains: ["https://www.zohoapis.com.cn", "https://recruit.zoho.com.cn"],
+    apiBaseUrl: "https://recruit.zoho.com.cn/recruit/v2",
+    apiDomains: ["https://www.zohoapis.com.cn", "https://api.zoho.com.cn", "https://recruit.zoho.com.cn"],
   },
 } as const;
 
@@ -109,8 +110,19 @@ function normalizedOrigin(value: string): string | null {
   return `${url.protocol}//${url.hostname.toLowerCase()}`;
 }
 
+/** Host of a DC's Recruit API base URL (e.g. "recruit.zohocloud.ca"). */
+export function apiHostFor(dc: ZohoRecruitDataCenter): string {
+  return new URL(dataCenterConfig(dc).apiBaseUrl).hostname;
+}
+
 /**
  * Verify a Zoho token response's api_domain against the chosen data centre.
+ *
+ * Dormant today (ZR-1, documented and tested): the connector reads api_domain /
+ * apiDomain from the operation input, but no platform path supplies it yet. The
+ * OAuth lifecycle resolves a token connection to { accessToken } only and does
+ * not keep api_domain from the token response. Once a platform card stores it,
+ * this check activates with no connector change.
  * Absent (undefined/null) is accepted: nothing to verify. Any present value must
  * normalize to one of the DC's allowlisted API origins; otherwise this throws a
  * CONNECTOR_DATA_CENTER_MISMATCH error. The returned domain is never used to

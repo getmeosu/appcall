@@ -1,7 +1,7 @@
 {
   "key": "zoho-recruit",
   "name": "Zoho Recruit",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "runtime": "bun",
   "categories": [
     "ats-recruitment"
@@ -16,7 +16,7 @@
           "label": "Zoho data centre",
           "required": false,
           "secret": false,
-          "description": "Exactly one of: com (US, default), eu, in, com.au, jp, ca, sa, com.cn. Lowercase, no spaces. Leave unset for the US data centre. Hosts are fixed per data centre; no custom host is accepted."
+          "description": "Exactly one of: com (US, default), eu, in, com.au, jp, ca, sa, com.cn. Lowercase, no spaces. Leave unset for the US data centre. Requests go to the fixed Zoho Recruit host for that data centre (recruit.zoho.<dc>; ca = recruit.zohocloud.ca); no custom host is accepted."
         }
       ]
     }
@@ -24,13 +24,13 @@
   "network": {
     "allowedHosts": [
       "recruit.zoho.com",
-      "www.zohoapis.eu",
-      "www.zohoapis.in",
-      "www.zohoapis.com.au",
-      "www.zohoapis.jp",
-      "www.zohoapis.ca",
-      "www.zohoapis.sa",
-      "www.zohoapis.com.cn"
+      "recruit.zoho.eu",
+      "recruit.zoho.in",
+      "recruit.zoho.com.au",
+      "recruit.zoho.jp",
+      "recruit.zohocloud.ca",
+      "recruit.zoho.sa",
+      "recruit.zoho.com.cn"
     ]
   },
   "operations": {
@@ -40,7 +40,10 @@
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
       "title": "List jobs (legacy)",
-      "description": "List job openings via GET /recruit/v2/Job_Openings mapped into the legacy NormalizedJob shape. Prefer job_openings.list for the dedicated job_opening model."
+      "description": "List job openings via GET /recruit/v2/Job_Openings mapped into the legacy NormalizedJob shape. Prefer job_openings.list for the dedicated job_opening model.",
+      "requiredScopes": [
+        "ZohoRecruit.modules.jobopening.READ"
+      ]
     },
     "candidates.list": {
       "kind": "sync",
@@ -48,7 +51,10 @@
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
       "title": "List candidates",
-      "description": "List candidates via GET /recruit/v2/Candidates. Optional page, perPage, fields, sortBy, and sortOrder."
+      "description": "List candidates via GET /recruit/v2/Candidates. Optional page, perPage, fields, sortBy, and sortOrder. Filters: cvid (custom view id), converted and approved (true, false or both), state (draft or save; sent as $state). per_page is at most 200.",
+      "requiredScopes": [
+        "ZohoRecruit.modules.candidate.READ"
+      ]
     },
     "job_openings.list": {
       "kind": "sync",
@@ -56,7 +62,10 @@
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
       "title": "List job openings",
-      "description": "List job openings via GET /recruit/v2/Job_Openings into NormalizedJobOpening. Optional page, perPage, fields, sortBy, and sortOrder."
+      "description": "List job openings via GET /recruit/v2/Job_Openings into NormalizedJobOpening. Optional page, perPage, fields, sortBy, and sortOrder. Filters: cvid (custom view id), converted and approved (true, false or both), state (draft or save; sent as $state). per_page is at most 200.",
+      "requiredScopes": [
+        "ZohoRecruit.modules.jobopening.READ"
+      ]
     },
     "applications.list": {
       "kind": "sync",
@@ -64,7 +73,10 @@
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
       "title": "List applications",
-      "description": "List applications via GET /recruit/v2/Applications. Optional page, perPage, fields, sortBy, and sortOrder."
+      "description": "List applications via GET /recruit/v2/Applications. Optional page, perPage, fields, sortBy, and sortOrder. Filters: cvid (custom view id), converted and approved (true, false or both), state (draft or save; sent as $state). per_page is at most 200.",
+      "requiredScopes": [
+        "ZohoRecruit.modules.application.READ"
+      ]
     },
     "candidates.get": {
       "kind": "sync",
@@ -72,7 +84,10 @@
       "maxInputBytes": 65536,
       "maxResponseBytes": 1048576,
       "title": "Get candidate",
-      "description": "Fetch a single candidate via GET /recruit/v2/Candidates/{id}. Optional fields."
+      "description": "Fetch a single candidate via GET /recruit/v2/Candidates/{id}. Optional fields.",
+      "requiredScopes": [
+        "ZohoRecruit.modules.candidate.READ"
+      ]
     },
     "candidates.search": {
       "kind": "sync",
@@ -80,7 +95,11 @@
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
       "title": "Search candidates",
-      "description": "Search candidates via GET /recruit/v2/Candidates/search. Optional criteria, email, phone, word, page, perPage, and fields. Zoho prefers one of criteria/email/phone/word at a time."
+      "description": "Search candidates via GET /recruit/v2/Candidates/search. One of criteria, email, phone or word applies (precedence criteria > email > phone > word). Optional converted and approved (true, false or both), page and perPage (max 200). fields is accepted but ignored: it is not a documented search parameter.",
+      "requiredScopes": [
+        "ZohoRecruit.modules.candidate.READ",
+        "ZohoRecruit.search.READ"
+      ]
     },
     "interviews.list": {
       "kind": "sync",
@@ -88,7 +107,10 @@
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
       "title": "List interviews",
-      "description": "List interviews via GET /recruit/v2/Interviews. Optional page, perPage, fields, sortBy, and sortOrder."
+      "description": "List interviews via GET /recruit/v2/Interviews. Optional page, perPage, fields, sortBy, and sortOrder. Filters: cvid (custom view id), converted and approved (true, false or both), state (draft or save; sent as $state). per_page is at most 200.",
+      "requiredScopes": [
+        "ZohoRecruit.modules.interview.READ"
+      ]
     },
     "healthcheck": {
       "kind": "action",
@@ -96,7 +118,10 @@
       "maxInputBytes": 4096,
       "maxResponseBytes": 65536,
       "title": "Healthcheck",
-      "description": "Verify connectivity and credentials for the Zoho Recruit connector. Takes no input and returns the connector health status.",
+      "description": "Verify connectivity and credentials for the Zoho Recruit connector. With an access token it calls GET /recruit/v2/users?type=CurrentUser on the connection's data centre; without one it returns the static connector status.",
+      "requiredScopes": [
+        "ZohoRecruit.users.READ"
+      ],
       "inputSchema": {
         "type": "object",
         "properties": {},

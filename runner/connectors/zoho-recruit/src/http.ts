@@ -5,14 +5,15 @@
  * outbound controls: the manifest host allowlist, blocked redirects, a bounded
  * response size and a request deadline. Auth header is Zoho-oauthtoken.
  *
- * Data centre (ZR-0): the base URL comes only from the allowlisted table in
+ * Data centre (ZR-0/ZR-1): the base URL comes only from the allowlisted table in
  * ./datacenter (connect-time `dataCenter`, default "com" = recruit.zoho.com,
- * unchanged). A token-response api_domain, when present, must match that data
+ * unchanged; other DCs use recruit.<dc>). The client's host allowlist is that
+ * single DC host. A token-response api_domain, when present, must match that data
  * centre before any request is built; it is never used as a request host.
  */
 import { createJobBoardClient, type JobBoardClient } from "../../_shared/jobboard";
 import manifest from "../manifest.json";
-import { assertApiDomainMatches, dataCenterConfig, resolveDataCenter } from "./datacenter";
+import { apiHostFor, assertApiDomainMatches, dataCenterConfig, resolveDataCenter } from "./datacenter";
 
 export interface ZohoRecruitClientConfig {
   accessToken: string;
@@ -45,7 +46,8 @@ export function createClient(config: ZohoRecruitClientConfig): JobBoardClient {
   return createJobBoardClient({
     provider: "Zoho Recruit",
     baseUrl: dataCenterConfig(dc).apiBaseUrl,
-    allowedHosts: manifest.network.allowedHosts,
+    // Narrower than the manifest list: one connection reaches only its own DC.
+    allowedHosts: [apiHostFor(dc)],
     maxResponseBytes: bounds.maxResponseBytes,
     timeoutMs: bounds.timeoutMs,
     headers: {
