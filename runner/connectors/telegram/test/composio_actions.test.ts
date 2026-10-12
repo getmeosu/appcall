@@ -68,7 +68,7 @@ describe("telegram composio mapping", () => {
 
   test("keeps baseline operations and adds the missing Composio tools", () => {
     const operations = Object.keys(manifest.operations);
-    expect(manifest.version).toBe("0.2.0");
+    expect(manifest.version).toBe("0.2.1");
     expect(operations).toContain("messages.list");
     expect(operations).toContain("messages.pin");
     expect(operations).toContain("chats.sendAction");

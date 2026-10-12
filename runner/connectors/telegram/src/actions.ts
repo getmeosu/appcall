@@ -1,3 +1,4 @@
+import { telegramBotToken } from "./token";
 import {
   sendTelegramMessage,
   validateSendMessageInput,
@@ -87,7 +88,7 @@ export function validateCredentials(input: unknown): Record<string, unknown> {
 
 function validateCredentialInput(input: unknown): { botToken: string } {
   if (!isRecord(input)) throw new Error("credentials input must be an object");
-  const botToken = requireString(input.botToken, "botToken").trim();
+  const botToken = telegramBotToken(input.botToken);
   if (botToken.length === 0) throw new Error("botToken is required");
   return { botToken };
 }

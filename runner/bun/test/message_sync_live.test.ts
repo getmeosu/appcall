@@ -93,8 +93,8 @@ test("Microsoft preserves provider next-link paging and normalized conversation"
 });
 
 test("Telegram polling advances past all updates and retains channel-post identity", async () => {
-  const result = await rpcFixture("telegram", { botToken: "stored-token", cursor: "50" }, url => {
-    expect(url.pathname).toBe("/botstored-token/getUpdates");
+  const result = await rpcFixture("telegram", { botToken: "123:stored-token", cursor: "50" }, url => {
+    expect(url.pathname).toBe("/bot123:stored-token/getUpdates");
     expect(url.searchParams.get("offset")).toBe("50");
     return Response.json({ ok: true, result: [{ update_id: 50, channel_post: { message_id: 7, chat: { id: -100 }, sender_chat: { id: -100 }, text: "news" } }, { update_id: 51, callback_query: { id: "ignored" } }] });
   });
@@ -105,7 +105,7 @@ test("Telegram polling advances past all updates and retains channel-post identi
 
 test("malformed pages and provider errors never become empty successes", async () => {
   for (const connector of ["slack", "telegram", "google-workspace", "microsoft-365"]) {
-    const input = { accessToken: "stored", botToken: "stored", channelId: "C1" };
+    const input = { accessToken: "stored", botToken: "123:stored", channelId: "C1" };
     const malformed = await rpcFixture(connector, input, () => Response.json({}));
     expect(malformed.ok).toBe(false);
     const limited = await rpcFixture(connector, input, () => Response.json({}, { status: 429, headers: { "retry-after": "120" } }));

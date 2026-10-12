@@ -570,7 +570,7 @@ describe("telegram getMeAction action", () => {
 
   test("maps 401 to AUTHENTICATION_FAILED", async () => {
     await expect(getMeAction({
-      botToken: "bad:token",
+      botToken: "123:bad-token",
       fetch: async () => new Response(JSON.stringify({
         ok: false, error_code: 401, description: "Unauthorized",
       }), { status: 401 }),

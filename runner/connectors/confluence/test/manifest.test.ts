@@ -137,7 +137,7 @@ describe("confluence manifest", () => {
     for (const key of origin) {
       expect(operations[key], key).toBeDefined();
     }
-    expect(manifest.version).toBe("0.4.0");
+    expect(manifest.version).toBe("0.4.1");
     expect(Object.keys(operations)).toHaveLength(73);
     expect(Object.keys(actionOps)).toHaveLength(69);
   });
@@ -263,7 +263,7 @@ describe("confluence manifest", () => {
 describe("confluence first-slice contract", () => {
   test("has required *.atlassian.net host, Basic email:apiToken, pinned provenance, and compiles", () => {
     expect(manifest.key).toBe("confluence");
-    expect(manifest.version).toBe("0.4.0");
+    expect(manifest.version).toBe("0.4.1");
     expect(manifest.runtime).toBe("bun");
     expect(manifest.http.baseUrl).toBe("https://{{site}}/wiki");
     expect(manifest.network.allowedHosts).toEqual(["{{site}}"]);
@@ -336,7 +336,7 @@ describe("confluence first-slice contract", () => {
     const recipe = await Bun.file(new URL("../../../../scripts/connector-gen/openconnector/recipes/confluence/recipe.json", import.meta.url)).json();
     expect(Object.keys(recipe.manifest.operations).sort()).toEqual(Object.keys(operations).sort());
     expect([...recipe.selection.operations].sort()).toEqual(Object.keys(operations).sort());
-    expect(recipe.manifest.version).toBe("0.4.0");
+    expect(recipe.manifest.version).toBe("0.4.1");
     expect(Object.keys(recipe.manifest.auth).sort()).toEqual(["scopes", "setup", "type"]);
     expect(recipe.manifest.auth.type).toBe("api_key");
     expect(recipe.manifest.auth.scopes).toEqual([]);

@@ -12,6 +12,9 @@ import { healthcheck as slackHealthcheck } from "../../connectors/slack/src/heal
 import { binaryActions } from "../../connectors/stripe/src/binary";
 import { zendeskActions } from "../../connectors/zendesk/src/actions";
 import { workableGuardedActions } from "../../connectors/workable/src/actions";
+import { bamboohrGuardedActions, bamboohrGuardedHealthcheck } from "../../connectors/bamboohr/src/host_guard";
+import { confluenceGuardedActions, confluenceGuardedHealthcheck } from "../../connectors/confluence/src/host_guard";
+import { docusignGuardedActions, docusignGuardedHealthcheck } from "../../connectors/docusign/src/host_guard";
 import { executeMessagesListSync as listSlackMessages } from "../../connectors/slack/src/sync";
 import telegramManifest from "../../connectors/telegram/manifest.json";
 import {
@@ -1705,6 +1708,10 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
     fake: () => ({ connector: "fake", status: "ok" }),
     slack: slackHealthcheck,
     telegram: telegramHealthcheck,
+    // SEC-PATH-2c-3: declarative healthchecks behind the host setup-field checks.
+    bamboohr: bamboohrGuardedHealthcheck,
+    confluence: confluenceGuardedHealthcheck,
+    docusign: docusignGuardedHealthcheck,
     whatsapp: whatsappHealthcheck,
     "google-workspace": googleWorkspaceHealthcheck,
     "microsoft-365": microsoft365Healthcheck,
@@ -1768,6 +1775,11 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
     workable: {
       ...workableGuardedActions,
     },
+    // SEC-PATH-2c-3: declarative actions behind the host setup-field checks
+    // (bamboohr companyDomain label, confluence site, docusign restHost/oauthHost).
+    bamboohr: { ...bamboohrGuardedActions },
+    confluence: { ...confluenceGuardedActions },
+    docusign: { ...docusignGuardedActions },
     shortcut: {
       "files.upload": shortcutUploadFiles,
     },

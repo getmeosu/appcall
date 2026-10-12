@@ -25,7 +25,13 @@ export function withLiveMessageSync(connector: string, normalize: Normalizer): N
     const normalizedInput = connector === "slack" ? withSlackChannelAlias(input) : input;
     const credential = connector === "telegram" ? normalizedInput.botToken : normalizedInput.accessToken;
     if (typeof credential !== "string" || !credential) return normalize(normalizedInput);
-    return fetchPage(connector, normalizedInput, credential, normalize);
+    // SEC-PATH-2c-3: the bot token is a request path segment; trimmed and checked
+    // like telegram/src/token.ts (the value is never echoed).
+    const pathCredential = connector === "telegram" ? credential.trim() : credential;
+    if (connector === "telegram" && !/^\d+:[A-Za-z0-9_-]+$/.test(pathCredential)) {
+      throw failure("INVALID_SYNC_INPUT", "botToken is malformed");
+    }
+    return fetchPage(connector, normalizedInput, pathCredential, normalize);
   };
 }
 

@@ -29,7 +29,7 @@ const nativeHttpHealthchecks: Array<{ name: string; healthcheck: Healthcheck; in
   { name: "saleshandy", healthcheck: saleshandyHealthcheck, input: { apiKey: "test" } },
   { name: "sendgrid", healthcheck: sendgridHealthcheck, input: { apiKey: "test" } },
   { name: "slack", healthcheck: slackHealthcheck, input: { token: "test" } },
-  { name: "telegram", healthcheck: telegramHealthcheck, input: { botToken: "test" } },
+  { name: "telegram", healthcheck: telegramHealthcheck, input: { botToken: "123:test" } },
   { name: "unipile", healthcheck: unipileHealthcheck, input: { apiKey: "test", dsn: "https://api8.unipile.com:13851" } },
   { name: "whatsapp", healthcheck: whatsappHealthcheck, input: { accessToken: "test", phoneNumberId: "123" } },
   { name: "github", healthcheck: githubHealthcheck, input: { accessToken: "test" } },
