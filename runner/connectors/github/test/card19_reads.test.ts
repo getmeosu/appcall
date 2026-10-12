@@ -58,12 +58,12 @@ function json(body: unknown, status = 200) {
 
 describe("github card-19 reads", () => {
   test("version stays 0.79.0 at 852 ops and these reads omit effect policy", () => {
-    expect(manifest.version).toBe("0.83.0");
+    expect(manifest.version).toBe("0.84.0");
     const ops = manifest.operations as Record<string, Record<string, unknown>>;
-    expect(Object.keys(ops).length).toBe(882);
+    expect(Object.keys(ops).length).toBe(867);
     const kinds = { action: 0, sync: 0, webhook: 0 };
     for (const op of Object.values(ops)) kinds[op.kind as keyof typeof kinds] += 1;
-    expect(kinds).toEqual({ action: 832, sync: 4, webhook: 46 });
+    expect(kinds).toEqual({ action: 817, sync: 4, webhook: 46 });
     for (const key of READS) {
       const op = ops[key];
       expect(op.kind).toBe("action");

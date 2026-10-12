@@ -904,20 +904,6 @@ import {
 } from "./gap_g14c";
 
 import {
-  createGapG12Client,
-  validateCreateTeamDiscussionInput,
-  validateDeleteTeamDiscussionInput,
-  validateGetAssignmentInput,
-  validateGetClassroomInput,
-  validateGetTeamDiscussionInput,
-  validateListAcceptedAssignmentsInput,
-  validateListAssignmentGradesInput,
-  validateListClassroomAssignmentsInput,
-  validateListClassroomsInput,
-  validateListTeamDiscussionsInput,
-  validateUpdateTeamDiscussionInput,
-} from "./gap_g12";
-import {
   createReposReadsClient,
   validateGetAutolinkInput,
   validateGetReadmeInput,
@@ -10260,14 +10246,6 @@ export function upsertRepoCodespacesSecret(input: unknown): Record<string, unkno
 
 
 
-function liveGapG12Client(input: Record<string, unknown>, operation: string) {
-  void operation;
-  return createGapG12Client({
-    accessToken: input.accessToken as string,
-    fetch: typeof input.fetch === "function" ? (input.fetch as typeof fetch) : undefined,
-  });
-}
-
 function liveGapG11Client(input: Record<string, unknown>, operation: string) {
   void operation;
   return createGapG11Client({
@@ -10424,116 +10402,6 @@ export function listGraphqlSecurityVulnerabilities(input: unknown): Record<strin
     });
   }
   return { connector: "github", action: "graphql.security_vulnerabilities.list", source: "connector", validated: validateListGraphqlSecurityVulnerabilitiesInput(input) };
-}
-
-export function listClassrooms(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
-  if (isRecord(input) && typeof input.accessToken === "string") {
-    return liveGapG12Client(input, "classrooms.list").listClassrooms(input).then((result) => {
-      if (!result.ok) throwGitHub(result);
-      return { connector: "github", action: "classrooms.list", source: "connector", classrooms: result.items };
-    });
-  }
-  return { connector: "github", action: "classrooms.list", source: "connector", validated: validateListClassroomsInput(input) };
-}
-
-export function getClassroom(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
-  if (isRecord(input) && typeof input.accessToken === "string") {
-    return liveGapG12Client(input, "classrooms.get").getClassroom(input).then((result) => {
-      if (!result.ok) throwGitHub(result);
-      return { connector: "github", action: "classrooms.get", source: "connector", classroom: result.item };
-    });
-  }
-  return { connector: "github", action: "classrooms.get", source: "connector", validated: validateGetClassroomInput(input) };
-}
-
-export function listClassroomAssignments(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
-  if (isRecord(input) && typeof input.accessToken === "string") {
-    return liveGapG12Client(input, "classrooms.assignments.list").listClassroomAssignments(input).then((result) => {
-      if (!result.ok) throwGitHub(result);
-      return { connector: "github", action: "classrooms.assignments.list", source: "connector", assignments: result.items };
-    });
-  }
-  return { connector: "github", action: "classrooms.assignments.list", source: "connector", validated: validateListClassroomAssignmentsInput(input) };
-}
-
-export function getAssignment(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
-  if (isRecord(input) && typeof input.accessToken === "string") {
-    return liveGapG12Client(input, "assignments.get").getAssignment(input).then((result) => {
-      if (!result.ok) throwGitHub(result);
-      return { connector: "github", action: "assignments.get", source: "connector", assignment: result.item };
-    });
-  }
-  return { connector: "github", action: "assignments.get", source: "connector", validated: validateGetAssignmentInput(input) };
-}
-
-export function listAssignmentGrades(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
-  if (isRecord(input) && typeof input.accessToken === "string") {
-    return liveGapG12Client(input, "assignments.grades.list").listAssignmentGrades(input).then((result) => {
-      if (!result.ok) throwGitHub(result);
-      return { connector: "github", action: "assignments.grades.list", source: "connector", grades: result.items };
-    });
-  }
-  return { connector: "github", action: "assignments.grades.list", source: "connector", validated: validateListAssignmentGradesInput(input) };
-}
-
-export function listAcceptedAssignments(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
-  if (isRecord(input) && typeof input.accessToken === "string") {
-    return liveGapG12Client(input, "assignments.accepted.list").listAcceptedAssignments(input).then((result) => {
-      if (!result.ok) throwGitHub(result);
-      return { connector: "github", action: "assignments.accepted.list", source: "connector", accepted: result.items };
-    });
-  }
-  return { connector: "github", action: "assignments.accepted.list", source: "connector", validated: validateListAcceptedAssignmentsInput(input) };
-}
-
-export function listTeamDiscussions(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
-  if (isRecord(input) && typeof input.accessToken === "string") {
-    return liveGapG12Client(input, "teams.discussions.list").listTeamDiscussions(input).then((result) => {
-      if (!result.ok) throwGitHub(result);
-      return { connector: "github", action: "teams.discussions.list", source: "connector", discussions: result.items };
-    });
-  }
-  return { connector: "github", action: "teams.discussions.list", source: "connector", validated: validateListTeamDiscussionsInput(input) };
-}
-
-export function getTeamDiscussion(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
-  if (isRecord(input) && typeof input.accessToken === "string") {
-    return liveGapG12Client(input, "teams.discussions.get").getTeamDiscussion(input).then((result) => {
-      if (!result.ok) throwGitHub(result);
-      return { connector: "github", action: "teams.discussions.get", source: "connector", discussion: result.item };
-    });
-  }
-  return { connector: "github", action: "teams.discussions.get", source: "connector", validated: validateGetTeamDiscussionInput(input) };
-}
-
-export function createTeamDiscussion(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
-  if (isRecord(input) && typeof input.accessToken === "string") {
-    return liveGapG12Client(input, "teams.discussions.create").createTeamDiscussion(input).then((result) => {
-      if (!result.ok) throwGitHub(result);
-      return { connector: "github", action: "teams.discussions.create", source: "connector", discussion: result.item, status: result.status };
-    });
-  }
-  return { connector: "github", action: "teams.discussions.create", source: "connector", validated: validateCreateTeamDiscussionInput(input) };
-}
-
-export function updateTeamDiscussion(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
-  if (isRecord(input) && typeof input.accessToken === "string") {
-    return liveGapG12Client(input, "teams.discussions.update").updateTeamDiscussion(input).then((result) => {
-      if (!result.ok) throwGitHub(result);
-      return { connector: "github", action: "teams.discussions.update", source: "connector", discussion: result.item, status: result.status };
-    });
-  }
-  return { connector: "github", action: "teams.discussions.update", source: "connector", validated: validateUpdateTeamDiscussionInput(input) };
-}
-
-export function deleteTeamDiscussion(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
-  if (isRecord(input) && typeof input.accessToken === "string") {
-    return liveGapG12Client(input, "teams.discussions.delete").deleteTeamDiscussion(input).then((result) => {
-      if (!result.ok) throwGitHub(result);
-      return { connector: "github", action: "teams.discussions.delete", source: "connector", deleted: result.deleted, org: result.org, teamSlug: result.teamSlug, discussionNumber: result.discussionNumber };
-    });
-  }
-  return { connector: "github", action: "teams.discussions.delete", source: "connector", validated: validateDeleteTeamDiscussionInput(input) };
 }
 
 
