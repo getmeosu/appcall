@@ -5,7 +5,7 @@ describe("tiktok-ads manifest", () => {
   it("has correct key and version", () => {
     expect(manifest.key).toBe("tiktok-ads");
     expect(manifest.name).toBe("TikTok Ads");
-    expect(manifest.version).toBe("0.8.1");
+    expect(manifest.version).toBe("0.8.2");
     expect(manifest.runtime).toBe("bun");
   });
 

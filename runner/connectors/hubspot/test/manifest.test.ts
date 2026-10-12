@@ -5,7 +5,7 @@ import dealStageUpdatedWebhookFixture from "../fixtures/webhook_deal_stage_updat
 describe("hubspot manifest", () => {
   it("has correct key and version", () => {
     expect(manifest.key).toBe("hubspot");
-    expect(manifest.version).toBe("0.5.0");
+    expect(manifest.version).toBe("0.5.1");
     expect(manifest.runtime).toBe("bun");
   });
 

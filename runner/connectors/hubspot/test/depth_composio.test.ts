@@ -58,7 +58,7 @@ function dummyInput(schema: { properties?: Record<string, any>; required?: strin
 describe("hubspot 0.5.0 composio deepen", () => {
   test("declares version 0.5.0 and the pinned open-connector revision", () => {
     expect(manifest.key).toBe("hubspot");
-    expect(manifest.version).toBe("0.5.0");
+    expect(manifest.version).toBe("0.5.1");
     expect(manifest.runtime).toBe("bun");
     expect((manifest as { provenance?: { source?: { revision?: string } } }).provenance?.source?.revision).toBe(
       "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
