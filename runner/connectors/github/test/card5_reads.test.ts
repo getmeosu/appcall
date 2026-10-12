@@ -45,7 +45,7 @@ const team = { id: 2, name: "owners", slug: "owners", html_url: "https://github.
 
 describe("github card5 secret, protection, and project field reads", () => {
   test("version is 0.79.0 and the 13 reads omit effect fields", () => {
-    expect(manifest.version).toBe("0.86.0");
+    expect(manifest.version).toBe("0.86.1");
     expect(manifest.version).not.toBe("0.32.0");
     expect(READS).toHaveLength(13);
     expect(Object.keys(manifest.operations)).toHaveLength(847);

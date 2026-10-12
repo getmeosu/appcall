@@ -3,6 +3,7 @@ import manifest from "../manifest.json";
 import listedOps from "./fixtures/seg_dotdot_ops.json";
 import { defaultConnectorRegistry } from "../../../bun/src/registry";
 import { assertSafeRequestPath, requireRefComponents, requireSingleSegment } from "../src/path_segment";
+import { pathIdentityFields } from "../src/path_identity";
 
 // FIX-SEGMENT amend: a generator over every manifest action whose request path carries a
 // top-level input field. Each such field gets "..", "%2e%2e", "\", "" and whitespace (plus
@@ -96,6 +97,7 @@ async function discover(): Promise<Target[]> {
 const BAD = ["..", "%2e%2e", "%2E.", ".", "\\", "a\\b", "", " ", " \t"];
 const SLASH_BAD = ["a/../b", "a/%2e%2e/b", "../a", "a/."];
 const GOOD = ["v1.2", "foo.bar", "a-b_c.d"];
+const LOGIN_GOOD = ["a-b", "Octo-Cat-9"];
 
 describe("FIX-SEGMENT amend: every path param of every op is guarded (generator)", () => {
   let targets: Target[] = [];
@@ -126,7 +128,12 @@ describe("FIX-SEGMENT amend: every path param of every op is guarded (generator)
     const rejected: string[] = [];
     for (const t of targets) {
       for (const field of t.fields) {
-        for (const value of GOOD) {
+        // FIX-SEGMENT-2: login fields (owner/org/username/...) only take GitHub logins, so the
+        // dotted values apply to the other path fields; logins get login-shaped values here and
+        // are covered in full by test/path_identity.test.ts.
+        const cls = pathIdentityFields(t.op)?.[field];
+        const values = cls !== undefined && cls !== "repo" ? LOGIN_GOOD : GOOD;
+        for (const value of values) {
           const c = await call(t.op, { ...t.input, [field]: value });
           if (c.seen.length === 0) rejected.push(`${t.op}.${field}=${value}`);
           else if (!c.seen[0]!.url.includes(value)) rejected.push(`${t.op}.${field}=${value} -> ${c.seen[0]!.url}`);
