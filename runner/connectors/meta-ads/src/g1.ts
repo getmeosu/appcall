@@ -3,12 +3,12 @@
  * ad account get, targeting search). Graph API v26.0 via tip createMetaClient.
  *
  * Effect keys (/workspace/parity-briefs/meta-ads-g1-selflock.md):
- * - campaigns.update → Reconcile → campaigns.get
- * - ad_sets.update → Reconcile → ad_sets.get
- * - ads.update → Reconcile → ads.get
- * - Reconcile observes always use default GET field sets (resolveObserveFields)
+ * - campaigns.update / ad_sets.update / ads.update omit all effect keys
+ *   (FX-meta-1 shape rule: the .get observes return {campaign|adSet|ad}, not the
+ *   updates' {id, success}, and the registry returns the observe's raw output)
+ * - gets keep default GET field sets when handed a non-get input (resolveObserveFields)
  * - ads.create/update omit bidAmount (Ad-level write deprecated; set on ad set)
- * - ad_creatives.get uses resolveObserveFields for G2 Reconcile observe
+ * - ad_creatives.get uses resolveObserveFields
  * - all creates omit effectPolicy/reconcile/observe
  * - Never Idempotent
  */
