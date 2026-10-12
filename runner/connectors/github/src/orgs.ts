@@ -1,6 +1,7 @@
 import { createGitHubClient, parseGitHubRateLimit, type GitHubClient } from "./http";
 import { normalizeGitHubRepo, type GitHubRepo } from "./repos";
 import { normalizeGitHubUser, type GitHubUser, type NormalizedUser } from "./users";
+import { requirePathValue } from "./path_values";
 
 export type GitHubOrg = {
   id: number;
@@ -67,7 +68,7 @@ export function normalizeGitHubOrg(org: GitHubOrg): NormalizedOrg {
 export type GetOrgInput = { org: string };
 export function validateGetOrgInput(input: unknown): GetOrgInput {
   if (!isRecord(input)) throw new Error("orgs.get input must be an object");
-  return { org: requireString(input.org, "org") };
+  return { org: requirePathValue(input.org, "org") };
 }
 
 export type ListOrgsInput = { perPage?: number; page?: number };
@@ -94,7 +95,7 @@ export function validateListOrgMembersInput(input: unknown): ListOrgMembersInput
     throw new Error("role must be all, admin, or member");
   }
   return {
-    org: requireString(input.org, "org"),
+    org: requirePathValue(input.org, "org"),
     role,
     perPage: optionalPage(input.perPage, "perPage"),
     page: optionalPage(input.page, "page", 1_000_000),
@@ -123,7 +124,7 @@ export function validateListOrgReposInput(input: unknown): ListOrgReposInput {
     throw new Error("direction must be asc or desc");
   }
   return {
-    org: requireString(input.org, "org"),
+    org: requirePathValue(input.org, "org"),
     type,
     sort: typeof input.sort === "string" ? input.sort : undefined,
     direction,
@@ -210,11 +211,6 @@ function optionalPage(value: unknown, field: string, max = 100): number | undefi
     throw new Error(`${field} must be an integer between 1 and ${max}`);
   }
   return value;
-}
-
-function requireString(value: unknown, field: string): string {
-  if (typeof value !== "string" || value.trim().length === 0) throw new Error(`${field} is required`);
-  return value.trim();
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

@@ -1,5 +1,6 @@
 import { createGitHubClient, parseGitHubRateLimit, type GitHubClient } from "./http";
 import { normalizeGitHubRepo, type GitHubRepo } from "./repos";
+import { requirePathValue } from "./path_values";
 
 export type GitHubUser = {
   id: number;
@@ -86,7 +87,7 @@ export function validateUsersGetAuthenticatedInput(input: unknown): GetAuthentic
 
 export function validateGetUserByUsernameInput(input: unknown): GetUserByUsernameInput {
   if (!isRecord(input)) throw new Error("users.get_by_username input must be an object");
-  return { username: requireString(input.username, "username") };
+  return { username: requirePathValue(input.username, "username") };
 }
 
 export type ListUserReposInput = {
@@ -112,7 +113,7 @@ export function validateListUserReposInput(input: unknown): ListUserReposInput {
     throw new Error("direction must be asc or desc");
   }
   return {
-    username: requireString(input.username, "username"),
+    username: requirePathValue(input.username, "username"),
     type,
     sort: typeof input.sort === "string" ? input.sort : undefined,
     direction,
@@ -287,7 +288,7 @@ export function validateListUserSshSigningKeysInput(input: unknown): UsernamePag
 export function validateListUserStarredInput(input: unknown): StarredListInput {
   if (!isRecord(input)) throw new Error("users.starred.list input must be an object");
   return {
-    username: requireString(input.username, "username"),
+    username: requirePathValue(input.username, "username"),
     ...validateSortDirection(input),
     perPage: optionalPage(input.perPage, "perPage"),
     page: optionalPage(input.page, "page", 1_000_000),
@@ -348,7 +349,7 @@ export function validateUsersHovercardGetInput(input: unknown): HovercardInput {
     throw new Error("subject_type must be organization, repository, issue, or pull_request");
   }
   return {
-    username: requireString(input.username, "username"),
+    username: requirePathValue(input.username, "username"),
     subject_type: subjectType,
     subject_id: subjectId,
   };
@@ -750,7 +751,7 @@ function pageQuery(payload: { perPage?: number; page?: number; sort?: string; di
 function validateUsernamePage(input: unknown, operation: string): UsernamePageInput {
   if (!isRecord(input)) throw new Error(`${operation} input must be an object`);
   return {
-    username: requireString(input.username, "username"),
+    username: requirePathValue(input.username, "username"),
     perPage: optionalPage(input.perPage, "perPage"),
     page: optionalPage(input.page, "page", 1_000_000),
   };

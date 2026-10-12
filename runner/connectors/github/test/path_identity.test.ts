@@ -258,11 +258,12 @@ describe("FIX-SEGMENT-2: GitHub login and repository-name path fields", () => {
     expect(rejected).toEqual([]);
   }, 600000);
 
-  test("guard: absent / blank values are left to the handler; non-strings are rejected", () => {
+  test("guard: absent / blank values are left to the handler and the FIX-SEGMENT-3 blank guard; non-strings are rejected", () => {
     expect(pathIdentityViolation("repos.get", { owner: "o", repo: "r" })).toBeNull();
     expect(pathIdentityViolation("repos.get", { owner: " ", repo: "r" })).toBeNull();
     expect(pathIdentityViolation("repos.get", { repo: "r" })).toBeNull();
-    expect(pathIdentityViolation("user.blocks.check", { username: " octocat " })).toBeNull();
+    // FIX-SEGMENT-3: no trimming; " octocat " is not a login (and path_values rejects it first at dispatch).
+    expect(String(pathIdentityViolation("user.blocks.check", { username: " octocat " }))).toContain("username must be a GitHub login");
     expect(String(pathIdentityViolation("user.blocks.check", { username: " octo cat " }))).toContain("username must be a GitHub login");
     expect(String(pathIdentityViolation("repos.get", { owner: 7, repo: "r" }))).toContain("owner must be a string");
     expect(String(pathIdentityViolation("repos.get", { owner: "a/b", repo: "r" }))).toContain("owner must be a GitHub login");
