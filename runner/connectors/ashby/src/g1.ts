@@ -11,6 +11,7 @@
  *   (G2 fold-in: source / sourceId / creditedToUserId on observe)
  */
 import { createAuthClient } from "./http";
+import { parseCandidateInfoResponse } from "./objects";
 
 export interface AshbyAuthInput {
   apiKey: string;
@@ -138,9 +139,12 @@ export async function executeCandidatesAddTag(input: ExecuteCandidatesAddTagInpu
   const candidateId = requireNonEmptyString(input.candidateId, "candidateId");
   const tagId = requireNonEmptyString(input.tagId, "tagId");
   const client = authClient(input, "candidates.add_tag");
-  await client.postJSON("/candidate.addTag", { candidateId, tagId });
-  // Runner owns EffectPolicy Reconcile → candidates.get.
-  return { candidate: null };
+  const raw = await client.postJSON("/candidate.addTag", { candidateId, tagId });
+  // candidate.addTag returns the updated Candidate in `results` (official docs).
+  // No effect policy (FX-ashby-1): candidates.get cannot observe tag ids.
+  const { candidate } = parseCandidateInfoResponse(raw);
+  if (candidate == null) throw new Error("Ashby candidate.addTag response is missing results");
+  return { candidate };
 }
 
 // ---------------------------------------------------------------------------

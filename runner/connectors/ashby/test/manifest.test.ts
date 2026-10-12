@@ -6,8 +6,8 @@ describe("Ashby manifest", () => {
     expect(manifest.key).toBe("ashby");
   });
 
-  it("has version 0.11.0", () => {
-    expect(manifest.version).toBe("0.11.0");
+  it("has version 0.11.1", () => {
+    expect(manifest.version).toBe("0.11.1");
   });
 
   it("uses bun runtime", () => {
@@ -240,7 +240,6 @@ describe("Ashby manifest", () => {
 
   it("restores Reconcile on G1 fold-in writes after observe widening", () => {
     for (const [key, observe] of [
-      ["candidates.add_tag", "candidates.get"],
       ["applications.change_source", "applications.get"],
       ["applications.update", "applications.get"],
     ] as const) {
@@ -300,8 +299,9 @@ describe("Ashby manifest", () => {
     }
     expect(manifest.operations["jobs.update"].effectPolicy).toBe("Reconcile");
     expect(manifest.operations["jobs.update"].reconcile).toBe("jobs.get");
-    expect(manifest.operations["jobs.set_status"].effectPolicy).toBe("Reconcile");
-    expect(manifest.operations["jobs.set_status"].reconcile).toBe("jobs.get");
+    // FX-ashby-1: jobs.set_status observe is not exact (close reason not read back).
+    expect(manifest.operations["jobs.set_status"].effectPolicy).toBeUndefined();
+    expect(manifest.operations["jobs.set_status"].reconcile).toBeUndefined();
     expect(manifest.operations["job_postings.update"].effectPolicy).toBe("Reconcile");
     expect(manifest.operations["job_postings.update"].reconcile).toBe("job_postings.get");
     expect(manifest.operations["openings.update"].effectPolicy).toBe("Reconcile");

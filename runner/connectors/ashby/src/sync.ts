@@ -647,7 +647,12 @@ function listBody(input: { limit?: number; cursor?: string; syncToken?: string }
 }
 
 export interface ExecuteJobsGetSyncInput extends AshbyAuthInput {
-  id: string;
+  id?: string;
+  /**
+   * Alias for id (FX-ashby-1). jobs.update's Reconcile observe passes the
+   * action input ({ jobId, ... }) unchanged; id wins when both are present.
+   */
+  jobId?: string;
 }
 
 export interface ExecuteJobsGetSyncOutput {
@@ -657,7 +662,8 @@ export interface ExecuteJobsGetSyncOutput {
 export async function executeJobsGetSync(
   input: ExecuteJobsGetSyncInput,
 ): Promise<ExecuteJobsGetSyncOutput> {
-  const id = requireNonEmptyString(input.id, "id");
+  const hasId = typeof input.id === "string" && input.id.length > 0;
+  const id = requireNonEmptyString(hasId ? input.id : input.jobId, "id");
   const client = createAuthClient({
     apiKey: input.apiKey,
     fetch: input.fetch,

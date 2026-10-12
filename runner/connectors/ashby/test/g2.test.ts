@@ -93,7 +93,7 @@ describe("Ashby G2 jobs list/search/create/update/status", () => {
     expect(result.id).toBe("2cb69137-763a-4d6f-8f17-bbc3564ecb2e");
   });
 
-  test("jobs.update POSTs /job.update and returns null for Reconcile", async () => {
+  test("jobs.update POSTs /job.update and returns the updated job", async () => {
     const { calls, impl } = stubFetch(JSON.stringify(jobUpdated));
     const result = await executeJobsUpdate({
       ...auth,
@@ -106,7 +106,8 @@ describe("Ashby G2 jobs list/search/create/update/status", () => {
       jobId: "job-1",
       title: "Principal Engineer",
     });
-    expect(result.job).toBeNull();
+    expect(result.job.id).toBe("ash-job:2cb69137-763a-4d6f-8f17-bbc3564ecb2e");
+    expect(result.job.title).toBe("Principal Engineer");
   });
 
   test("jobs.update rejects when only jobId provided", async () => {
@@ -117,7 +118,7 @@ describe("Ashby G2 jobs list/search/create/update/status", () => {
     expect(calls).toHaveLength(0);
   });
 
-  test("jobs.set_status POSTs /job.setStatus and returns null for Reconcile", async () => {
+  test("jobs.set_status POSTs /job.setStatus and returns the updated job", async () => {
     const { calls, impl } = stubFetch(JSON.stringify(jobStatusSet));
     const result = await executeJobsSetStatus({
       ...auth,
@@ -132,7 +133,8 @@ describe("Ashby G2 jobs list/search/create/update/status", () => {
       status: "Closed",
       closeReasonId: "cr-1",
     });
-    expect(result.job).toBeNull();
+    expect(result.job.id).toBe("ash-job:2cb69137-763a-4d6f-8f17-bbc3564ecb2e");
+    expect(result.job.status).toBe("Closed");
   });
 });
 
