@@ -25,8 +25,8 @@ const ADDED = [
 
 describe("github full-depth REST additions", () => {
   test("version and runnable request blocks", () => {
-    expect(manifest.version).toBe("0.87.0");
-    expect(Object.keys(manifest.operations)).toHaveLength(851);
+    expect(manifest.version).toBe("0.88.0");
+    expect(Object.keys(manifest.operations)).toHaveLength(855);
     expect(manifest.network.allowedHosts).not.toContain("models.github.ai");
     for (const key of ADDED) {
       const op = manifest.operations[key] as Record<string, any>;
