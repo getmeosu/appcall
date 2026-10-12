@@ -13,9 +13,12 @@ const CHARGES = ["application-charges.create", "recurring-application-charges.cr
   "recurring-application-charges.customize", "usage-charges.create", "app-subscriptions.create",
   "app-subscriptions.update-line-item", "refunds.create", "transactions.create"];
 
+const LISTING_WRITES = ["product-listings.update", "product-listings.delete",
+  "collection-listings.update", "collection-listings.delete"];
+
 describe("shopify SH-0 correctness", () => {
-  test("version 0.4.1 with 468 ops; Checkout API ops (shut down 2025-04-01) removed", () => {
-    expect(manifest.version).toBe("0.4.1");
+  test("version 0.4.2 with 468 ops; Checkout API ops (shut down 2025-04-01) removed", () => {
+    expect(manifest.version).toBe("0.4.2");
     expect(Object.keys(ops)).toHaveLength(468);
     for (const k of REMOVED) expect(ops[k]).toBeUndefined();
     for (const op of Object.values(ops)) expect(op.request?.path ?? "").not.toMatch(/^\/checkouts\/\{\{/);
@@ -76,7 +79,8 @@ describe("shopify SH-0 correctness", () => {
       expect(op.kind).not.toBe("webhook");
       for (const s of op.requiredScopes) {
         expect(s).toMatch(/^(read|write)_[a-z_]+$/);
-        if (op.sideEffect === "read") expect(`${k}:${s}`).toStartWith(`${k}:read_`);
+        // SH-0b: product_listings has only a read scope, which also covers its writes.
+        if (op.sideEffect === "read" || LISTING_WRITES.includes(k)) expect(`${k}:${s}`).toStartWith(`${k}:read_`);
         else expect(`${k}:${s}`).toStartWith(`${k}:write_`);
       }
     }
@@ -109,4 +113,29 @@ describe("shopify SH-0 correctness", () => {
     expect(runs.filter((r) => r.status !== "passed").map((r) => `${r.caseId}:${r.error ?? ""}`)).toEqual([]);
     for (const c of cases) expect(ops[c.operation]).toBeDefined();
   }, 120_000);
+});
+
+describe("shopify SH-0b: product_listings scope remap", () => {
+  test("no op references write_product_listings, and the string is absent from the manifest", () => {
+    for (const [k, op] of Object.entries(ops)) expect(op.requiredScopes ?? [], k).not.toContain("write_product_listings");
+    expect(readFileSync(new URL("../manifest.json", import.meta.url), "utf8")).not.toContain("write_product_listings");
+  });
+
+  test("the 4 listing writes require read_product_listings and cite the docs", () => {
+    for (const k of LISTING_WRITES) {
+      const op = ops[k]!;
+      expect(op.requiredScopes, k).toEqual(["read_product_listings"]);
+      expect(op.sideEffect, k).not.toBe("read");
+      expect(op.description, k).toContain("https://shopify.dev/docs/api/usage/access-scopes");
+      expect(op.description, k).toContain("Requires product_listings access scope");
+      const page = k.startsWith("product-") ? "productlisting" : "collectionlisting";
+      expect(op.description, k).toContain(`https://shopify.dev/docs/api/admin-rest/2026-10/resources/${page}`);
+    }
+  });
+
+  test("every product_listings scope in the manifest is read_product_listings", () => {
+    const listingScopes = Object.values(ops).flatMap((op) => op.requiredScopes ?? []).filter((s) => s.includes("product_listings"));
+    expect(listingScopes.length).toBe(11);
+    expect(new Set(listingScopes)).toEqual(new Set(["read_product_listings"]));
+  });
 });
