@@ -1,4 +1,5 @@
 import { createKlaviyoClient, firstString, parseKlaviyoRateLimit, prop, queryPath, isRecord } from "./http";
+import { encodePathSegment } from "../../_shared/jobboard";
 
 // ─── events.create ────────────────────────────────────────────────────────────
 
@@ -103,7 +104,7 @@ export async function getEventFromClient(
 ): Promise<{ ok: true; event: NormalizedEvent } | { ok: false; error: { code: string; message: string; retryAfterSeconds?: number } }> {
   const payload = validateGetEventInput(input);
   const client = createKlaviyoClient({ apiKey: options.apiKey, fetch: options.fetch, operation: "events.get" });
-  const result = await client.fetchJSON(queryPath(`/events/${payload.eventId}`, input));
+  const result = await client.fetchJSON(queryPath(`/events/${encodePathSegment(payload.eventId, "eventId")}`, input));
   if (result.status === 200) {
     const body = result.body as Record<string, unknown>;
     const data = isRecord(body.data) ? body.data : { id: payload.eventId, attributes: {} };

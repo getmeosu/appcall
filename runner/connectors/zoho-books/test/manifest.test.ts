@@ -3,7 +3,7 @@ import manifest from "../manifest.json";
 
 describe("Zoho Books manifest", () => {
   it("has correct key", () => expect(manifest.key).toBe("zoho-books"));
-  it("has version 0.3.0", () => expect(manifest.version).toBe("0.3.0"));
+  it("has version 0.3.1", () => expect(manifest.version).toBe("0.3.1"));
   it("uses bun runtime", () => expect(manifest.runtime).toBe("bun"));
   it("requires oauth2 auth", () => expect(manifest.auth.type).toBe("oauth2"));
   it("allows the legacy and official Zoho Books hosts", () =>

@@ -1,5 +1,6 @@
 import { createKlaviyoClient, firstString, parseKlaviyoRateLimit, prop, queryPath, isRecord } from "./http";
 import { normalizeList, type NormalizedList } from "./objects";
+import { encodePathSegment } from "../../_shared/jobboard";
 
 // ─── lists.create ─────────────────────────────────────────────────────────────
 
@@ -46,7 +47,7 @@ export async function getListFromClient(
 ): Promise<{ ok: true; list: NormalizedList } | { ok: false; error: { code: string; message: string; retryAfterSeconds?: number } }> {
   const payload = validateGetListInput(input);
   const client = createKlaviyoClient({ apiKey: options.apiKey, fetch: options.fetch, operation: "lists.get" });
-  const result = await client.fetchJSON(queryPath(`/lists/${payload.listId}`, input));
+  const result = await client.fetchJSON(queryPath(`/lists/${encodePathSegment(payload.listId, "listId")}`, input));
   if (result.status === 200) {
     const body = result.body as Record<string, unknown>;
     const data = isRecord(body.data) ? body.data : { id: payload.listId, attributes: {} };

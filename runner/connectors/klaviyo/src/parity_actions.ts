@@ -2,6 +2,7 @@ import { createConnectorHttpClient } from "../../../bun/src/http";
 import manifest from "../manifest.json";
 import { createKlaviyoClient, isRecord, parseKlaviyoRateLimit } from "./http";
 import { REVISION } from "./revision";
+import { encodePathSegment } from "../../_shared/jobboard";
 
 type Failure = { ok: false; code: string; message: string; retryAfterSeconds?: number };
 
@@ -187,7 +188,7 @@ async function tagRelationship(action: string, method: "POST" | "DELETE", input:
   const related = relatedResource(record, TAG_RESOURCES);
   const data = dataArray(record);
   if (typeof record.apiKey !== "string") return validated(action, { id, relatedResource: related, data });
-  return privateJSON(action, action, record.apiKey, fetchImpl(record), `/tags/${encodeURIComponent(id)}/relationships/${related}`, {
+  return privateJSON(action, action, record.apiKey, fetchImpl(record), `/tags/${encodePathSegment(id, "id")}/relationships/${related}`, {
     method,
     body: JSON.stringify({ data }),
   }, [200, 201, 202, 204]);
@@ -218,19 +219,19 @@ async function getRelationship(action: string, input: unknown, allowed: string[]
 }
 
 export function getEventRelationships(input: unknown): Promise<Record<string, unknown>> {
-  return getRelationship("events.relationships.get", input, ["metric", "profile"], (id, related) => `/events/${encodeURIComponent(id)}/relationships/${related}`);
+  return getRelationship("events.relationships.get", input, ["metric", "profile"], (id, related) => `/events/${encodePathSegment(id, "id")}/relationships/${related}`);
 }
 
 export function getSegmentRelationships(input: unknown): Promise<Record<string, unknown>> {
-  return getRelationship("segments.relationships.get", input, ["profiles", "tags"], (id, related) => `/segments/${encodeURIComponent(id)}/relationships/${related}`);
+  return getRelationship("segments.relationships.get", input, ["profiles", "tags"], (id, related) => `/segments/${encodePathSegment(id, "id")}/relationships/${related}`);
 }
 
 export function getTagRelationships(input: unknown): Promise<Record<string, unknown>> {
-  return getRelationship("tags.relationships.get", input, ["campaigns", "flows", "lists", "segments", "tag-group"], (id, related) => `/tags/${encodeURIComponent(id)}/relationships/${related}`);
+  return getRelationship("tags.relationships.get", input, ["campaigns", "flows", "lists", "segments", "tag-group"], (id, related) => `/tags/${encodePathSegment(id, "id")}/relationships/${related}`);
 }
 
 export function getProfileRelationships(input: unknown): Promise<Record<string, unknown>> {
-  return getRelationship("profiles.relationships.get", input, ["lists", "segments"], (id, related) => `/profiles/${encodeURIComponent(id)}/relationships/${related}`);
+  return getRelationship("profiles.relationships.get", input, ["lists", "segments"], (id, related) => `/profiles/${encodePathSegment(id, "id")}/relationships/${related}`);
 }
 
 export async function unsubscribeProfilesBulk(input: unknown): Promise<Record<string, unknown>> {

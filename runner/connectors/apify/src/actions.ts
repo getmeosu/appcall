@@ -1,4 +1,5 @@
 import { createApifyClient, parseApifyRateLimit, isRecord } from "./http";
+import { encodePathSegment } from "../../_shared/jobboard";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -92,7 +93,7 @@ export function createActorsClient(options: { apiKey: string; fetch?: typeof fet
     async get(input: unknown) {
       if (!isRecord(input)) throw new Error("actors.get input must be an object");
       const actorId = requireString(input.actorId, "actorId");
-      const response = await client.fetchJSON(`/acts/${encodeURIComponent(actorId)}`);
+      const response = await client.fetchJSON(`/acts/${encodePathSegment(actorId, "actorId")}`);
       if (response.status === 200) {
         const body = response.body as Record<string, unknown>;
         const actor = isRecord(body.data) ? body.data : body;
@@ -159,7 +160,7 @@ export function createActorRunClient(options: { apiKey: string; fetch?: typeof f
     async run(input: unknown) {
       const payload = validateActorRunInput(input);
       const qs = buildRunQueryParams(payload);
-      const response = await client.fetchJSON(`/acts/${encodeURIComponent(payload.actorId)}/runs${qs}`, {
+      const response = await client.fetchJSON(`/acts/${encodePathSegment(payload.actorId, "actorId")}/runs${qs}`, {
         method: "POST",
         body: JSON.stringify(payload.runInput ?? {}),
       });
@@ -208,7 +209,7 @@ export function createActorRunSyncClient(options: { apiKey: string; fetch?: type
     async runSyncGetItems(input: unknown) {
       const payload = validateActorRunSyncInput(input);
       const qs = buildRunQueryParams(payload);
-      const response = await client.fetchJSON(`/acts/${encodeURIComponent(payload.actorId)}/run-sync-get-dataset-items${qs}`, {
+      const response = await client.fetchJSON(`/acts/${encodePathSegment(payload.actorId, "actorId")}/run-sync-get-dataset-items${qs}`, {
         method: "POST",
         body: JSON.stringify(payload.runInput ?? {}),
       });
@@ -249,7 +250,7 @@ export function createRunsClient(options: { apiKey: string; fetch?: typeof fetch
   return {
     async get(input: unknown) {
       const payload = validateRunsGetInput(input);
-      const response = await client.fetchJSON(`/actor-runs/${encodeURIComponent(payload.runId)}`);
+      const response = await client.fetchJSON(`/actor-runs/${encodePathSegment(payload.runId, "runId")}`);
       if (response.status === 200) {
         const body = response.body as Record<string, unknown>;
         const run = isRecord(body.data) ? body.data : body;
@@ -297,7 +298,7 @@ export function createRunsListClient(options: { apiKey: string; fetch?: typeof f
       const params = new URLSearchParams({ desc: "1" });
       if (payload.limit !== undefined) params.set("limit", String(payload.limit));
       if (payload.offset !== undefined) params.set("offset", String(payload.offset));
-      const response = await client.fetchJSON(`/acts/${encodeURIComponent(payload.actorId)}/runs?${params.toString()}`);
+      const response = await client.fetchJSON(`/acts/${encodePathSegment(payload.actorId, "actorId")}/runs?${params.toString()}`);
       if (response.status === 200) {
         const body = response.body as Record<string, unknown>;
         const data = isRecord(body.data) ? body.data : body;
@@ -342,7 +343,7 @@ export function createRunsAbortClient(options: { apiKey: string; fetch?: typeof 
   return {
     async abort(input: unknown) {
       const payload = validateRunsAbortInput(input);
-      const response = await client.fetchJSON(`/actor-runs/${encodeURIComponent(payload.runId)}/abort`, {
+      const response = await client.fetchJSON(`/actor-runs/${encodePathSegment(payload.runId, "runId")}/abort`, {
         method: "POST",
       });
       if (response.status === 200 || response.status === 201) {
@@ -385,7 +386,7 @@ export function createDatasetsClient(options: { apiKey: string; fetch?: typeof f
   return {
     async get(input: unknown) {
       const payload = validateDatasetsGetInput(input);
-      const response = await client.fetchJSON(`/datasets/${encodeURIComponent(payload.datasetId)}`);
+      const response = await client.fetchJSON(`/datasets/${encodePathSegment(payload.datasetId, "datasetId")}`);
       if (response.status === 200) {
         const body = response.body as Record<string, unknown>;
         const dataset = isRecord(body.data) ? body.data : body;
@@ -433,7 +434,7 @@ export function createDatasetsItemsClient(options: { apiKey: string; fetch?: typ
       const params = new URLSearchParams({ clean: "true", format: "json" });
       if (payload.limit !== undefined) params.set("limit", String(payload.limit));
       if (payload.offset !== undefined) params.set("offset", String(payload.offset));
-      const response = await client.fetchJSON(`/datasets/${encodeURIComponent(payload.datasetId)}/items?${params.toString()}`);
+      const response = await client.fetchJSON(`/datasets/${encodePathSegment(payload.datasetId, "datasetId")}/items?${params.toString()}`);
       if (response.status === 200) {
         // Apify returns items array directly for dataset items endpoint
         const items = Array.isArray(response.body) ? response.body : [];
@@ -535,7 +536,7 @@ export function createTaskRunClient(options: { apiKey: string; fetch?: typeof fe
   return {
     async run(input: unknown) {
       const payload = validateTaskRunInput(input);
-      const response = await client.fetchJSON(`/actor-tasks/${encodeURIComponent(payload.taskId)}/runs`, {
+      const response = await client.fetchJSON(`/actor-tasks/${encodePathSegment(payload.taskId, "taskId")}/runs`, {
         method: "POST",
         body: JSON.stringify(payload.runInput ?? {}),
       });
@@ -582,7 +583,7 @@ export function createTaskRunSyncClient(options: { apiKey: string; fetch?: typeo
   return {
     async runSyncGetItems(input: unknown) {
       const payload = validateTaskRunSyncInput(input);
-      const response = await client.fetchJSON(`/actor-tasks/${encodeURIComponent(payload.taskId)}/run-sync-get-dataset-items`, {
+      const response = await client.fetchJSON(`/actor-tasks/${encodePathSegment(payload.taskId, "taskId")}/run-sync-get-dataset-items`, {
         method: "POST",
         body: JSON.stringify(payload.runInput ?? {}),
       });
@@ -628,7 +629,7 @@ export function createKeyValueStoreClient(options: { apiKey: string; fetch?: typ
   return {
     async getRecord(input: unknown) {
       const payload = validateKeyValueStoreGetRecordInput(input);
-      const response = await client.fetchJSON(`/key-value-stores/${encodeURIComponent(payload.storeId)}/records/${encodeURIComponent(payload.recordKey)}`);
+      const response = await client.fetchJSON(`/key-value-stores/${encodePathSegment(payload.storeId, "storeId")}/records/${encodePathSegment(payload.recordKey, "recordKey")}`);
       if (response.status === 200) {
         return { ok: true as const, value: response.body };
       }
@@ -751,7 +752,7 @@ export function createDatasetsDeleteClient(options: { apiKey: string; fetch?: ty
   return {
     async delete(input: unknown) {
       const payload = validateDatasetsDeleteInput(input);
-      const response = await client.fetchJSON(`/datasets/${encodeURIComponent(payload.datasetId)}`, { method: "DELETE" });
+      const response = await client.fetchJSON(`/datasets/${encodePathSegment(payload.datasetId, "datasetId")}`, { method: "DELETE" });
       if (isSuccessStatus(response.status)) {
         return { ok: true as const, datasetId: payload.datasetId };
       }
@@ -793,7 +794,7 @@ export function createDatasetsPushItemsClient(options: { apiKey: string; fetch?:
   return {
     async push(input: unknown) {
       const payload = validateDatasetsPushItemsInput(input);
-      const response = await client.fetchJSON(`/datasets/${encodeURIComponent(payload.datasetId)}/items`, {
+      const response = await client.fetchJSON(`/datasets/${encodePathSegment(payload.datasetId, "datasetId")}/items`, {
         method: "POST",
         body: JSON.stringify(payload.items),
       });
@@ -879,7 +880,7 @@ export function createKeyValueStoresGetClient(options: { apiKey: string; fetch?:
   return {
     async get(input: unknown) {
       const payload = validateKeyValueStoresGetInput(input);
-      const response = await client.fetchJSON(`/key-value-stores/${encodeURIComponent(payload.storeId)}`);
+      const response = await client.fetchJSON(`/key-value-stores/${encodePathSegment(payload.storeId, "storeId")}`);
       if (response.status === 200) {
         return { ok: true as const, store: unwrapData(response.body) };
       }
@@ -924,7 +925,7 @@ export function createKeyValueStorePutRecordClient(options: { apiKey: string; fe
     async put(input: unknown) {
       const payload = validateKeyValueStorePutRecordInput(input);
       const response = await client.fetchJSON(
-        `/key-value-stores/${encodeURIComponent(payload.storeId)}/records/${encodeURIComponent(payload.recordKey)}`,
+        `/key-value-stores/${encodePathSegment(payload.storeId, "storeId")}/records/${encodePathSegment(payload.recordKey, "recordKey")}`,
         { method: "PUT", body: JSON.stringify(payload.value) },
       );
       if (isSuccessStatus(response.status)) {
@@ -973,7 +974,7 @@ export function createKeyValueStoreListKeysClient(options: { apiKey: string; fet
       if (payload.exclusiveStartKey) params.set("exclusiveStartKey", payload.exclusiveStartKey);
       if (payload.limit !== undefined) params.set("limit", String(payload.limit));
       const qs = params.toString();
-      const response = await client.fetchJSON(`/key-value-stores/${encodeURIComponent(payload.storeId)}/keys${qs ? `?${qs}` : ""}`);
+      const response = await client.fetchJSON(`/key-value-stores/${encodePathSegment(payload.storeId, "storeId")}/keys${qs ? `?${qs}` : ""}`);
       if (response.status === 200) {
         const data = unwrapData(response.body);
         const record = isRecord(data) ? data : {};
@@ -1033,7 +1034,7 @@ export function createKeyValueStoreDeleteRecordClient(options: { apiKey: string;
     async deleteRecord(input: unknown) {
       const payload = validateKeyValueStoreDeleteRecordInput(input);
       const response = await client.fetchJSON(
-        `/key-value-stores/${encodeURIComponent(payload.storeId)}/records/${encodeURIComponent(payload.recordKey)}`,
+        `/key-value-stores/${encodePathSegment(payload.storeId, "storeId")}/records/${encodePathSegment(payload.recordKey, "recordKey")}`,
         { method: "DELETE" },
       );
       if (isSuccessStatus(response.status)) {
@@ -1074,7 +1075,7 @@ export function createTasksGetClient(options: { apiKey: string; fetch?: typeof f
   return {
     async get(input: unknown) {
       const payload = validateTasksGetInput(input);
-      const response = await client.fetchJSON(`/actor-tasks/${encodeURIComponent(payload.taskId)}`);
+      const response = await client.fetchJSON(`/actor-tasks/${encodePathSegment(payload.taskId, "taskId")}`);
       if (response.status === 200) {
         return { ok: true as const, task: unwrapData(response.body) };
       }
@@ -1190,7 +1191,7 @@ export function createRunsLogClient(options: { apiKey: string; fetch?: typeof fe
   return {
     async log(input: unknown) {
       const payload = validateRunsLogInput(input);
-      const response = await client.fetchJSON(`/actor-runs/${encodeURIComponent(payload.runId)}/log`);
+      const response = await client.fetchJSON(`/actor-runs/${encodePathSegment(payload.runId, "runId")}/log`);
       if (response.status === 200) {
         const log = typeof response.body === "string" ? response.body : JSON.stringify(response.body);
         return { ok: true as const, log };

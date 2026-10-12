@@ -1,5 +1,6 @@
 import { createGoogleClient, parseGoogleError, parseGoogleRateLimitMetadata, parseNextPageToken, type ConnectorError } from "./http";
 import type { ConnectorHttpClient } from "../../../bun/src/http";
+import { encodePathSegment } from "../../_shared/jobboard";
 
 export type CalendarEvent = {
   id: string;
@@ -320,7 +321,7 @@ export function createCalendarActionsClient(options: { accessToken: string; fetc
       if (p.location) body.location = p.location;
       if (p.attendees) body.attendees = p.attendees.map((email) => ({ email }));
       const response = await client.fetchText(
-        `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(p.calendarId)}/events`,
+        `https://www.googleapis.com/calendar/v3/calendars/${encodePathSegment(p.calendarId, "calendarId")}/events`,
         { method: "POST", headers: jsonHeaders, body: JSON.stringify(body) },
       );
       const res = await handleCalendarResponse(response);
@@ -338,7 +339,7 @@ export function createCalendarActionsClient(options: { accessToken: string; fetc
       if (p.startDateTime !== undefined) body.start = { dateTime: p.startDateTime, timeZone: p.timeZone ?? "UTC" };
       if (p.endDateTime !== undefined) body.end = { dateTime: p.endDateTime, timeZone: p.timeZone ?? "UTC" };
       const response = await client.fetchText(
-        `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(p.calendarId)}/events/${encodeURIComponent(p.eventId)}`,
+        `https://www.googleapis.com/calendar/v3/calendars/${encodePathSegment(p.calendarId, "calendarId")}/events/${encodePathSegment(p.eventId, "eventId")}`,
         { method: "PATCH", headers: jsonHeaders, body: JSON.stringify(body) },
       );
       const res = await handleCalendarResponse(response);
@@ -350,7 +351,7 @@ export function createCalendarActionsClient(options: { accessToken: string; fetc
     async deleteEvent(input: unknown): Promise<DeleteEventResult> {
       const p = validateDeleteEventInput(input);
       const response = await client.fetchText(
-        `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(p.calendarId)}/events/${encodeURIComponent(p.eventId)}`,
+        `https://www.googleapis.com/calendar/v3/calendars/${encodePathSegment(p.calendarId, "calendarId")}/events/${encodePathSegment(p.eventId, "eventId")}`,
         { method: "DELETE", headers: authHeaders },
       );
       const rateLimit = parseGoogleRateLimitMetadata(response.status, response.headers);
@@ -370,7 +371,7 @@ export function createCalendarActionsClient(options: { accessToken: string; fetc
     async getEvent(input: unknown): Promise<CalendarEventActionResult> {
       const p = validateGetEventInput(input);
       const response = await client.fetchText(
-        `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(p.calendarId)}/events/${encodeURIComponent(p.eventId)}`,
+        `https://www.googleapis.com/calendar/v3/calendars/${encodePathSegment(p.calendarId, "calendarId")}/events/${encodePathSegment(p.eventId, "eventId")}`,
         { headers: authHeaders },
       );
       const res = await handleCalendarResponse(response);
@@ -408,7 +409,7 @@ export function createCalendarActionsClient(options: { accessToken: string; fetc
       if (p.timeMax) params.set("timeMax", p.timeMax);
       const qs = params.toString() ? `?${params}` : "";
       const response = await instancesClient.fetchText(
-        `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(p.calendarId)}/events/${encodeURIComponent(p.eventId)}/instances${qs}`,
+        `https://www.googleapis.com/calendar/v3/calendars/${encodePathSegment(p.calendarId, "calendarId")}/events/${encodePathSegment(p.eventId, "eventId")}/instances${qs}`,
         { headers: authHeaders },
       );
       const res = await handleCalendarResponse(response);
@@ -424,7 +425,7 @@ export function createCalendarActionsClient(options: { accessToken: string; fetc
     async getCalendar(input: unknown): Promise<GetCalendarResult> {
       const p = validateGetCalendarInput(input);
       const response = await getCalendarClient.fetchText(
-        `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(p.calendarId)}`,
+        `https://www.googleapis.com/calendar/v3/calendars/${encodePathSegment(p.calendarId, "calendarId")}`,
         { headers: authHeaders },
       );
       const res = await handleCalendarResponse(response);
@@ -443,7 +444,7 @@ export function createCalendarActionsClient(options: { accessToken: string; fetc
     async listAcl(input: unknown): Promise<ListAclResult> {
       const p = validateListAclInput(input);
       const response = await aclClient.fetchText(
-        `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(p.calendarId)}/acl`,
+        `https://www.googleapis.com/calendar/v3/calendars/${encodePathSegment(p.calendarId, "calendarId")}/acl`,
         { headers: authHeaders },
       );
       const res = await handleCalendarResponse(response);
@@ -467,7 +468,7 @@ export function createCalendarActionsClient(options: { accessToken: string; fetc
       const p = validateMoveEventInput(input);
       const params = new URLSearchParams({ destination: p.destination });
       const response = await moveClient.fetchText(
-        `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(p.calendarId)}/events/${encodeURIComponent(p.eventId)}/move?${params}`,
+        `https://www.googleapis.com/calendar/v3/calendars/${encodePathSegment(p.calendarId, "calendarId")}/events/${encodePathSegment(p.eventId, "eventId")}/move?${params}`,
         { method: "POST", headers: jsonHeaders, body: "{}" },
       );
       const res = await handleCalendarResponse(response);

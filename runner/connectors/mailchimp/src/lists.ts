@@ -2,6 +2,7 @@ import { createHash } from "crypto";
 import { createMailchimpClient, parseMailchimpRateLimit, prop, isRecord } from "./http";
 import { normalizeContact, normalizeAudience, normalizeMemberNote } from "./objects";
 import type { NormalizedContact, NormalizedAudience, NormalizedMemberNote } from "./objects";
+import { encodePathSegment } from "../../_shared/jobboard";
 
 // ─── MD5 subscriber hash helper ──────────────────────────────────────────────
 // Mailchimp identifies members by MD5 hash of lowercased email address.
@@ -142,7 +143,7 @@ export function createListsClient(options: { apiKey: string; fetch?: typeof fetc
     async getMember(input: unknown): Promise<{ ok: true; member: NormalizedContact } | { ok: false; error: { code: string; message: string; retryAfterSeconds?: number } }> {
       const payload = validateGetMemberInput(input);
       const hash = md5Hash(payload.email);
-      const response = await client.fetchJSON(`/lists/${payload.listId}/members/${hash}`);
+      const response = await client.fetchJSON(`/lists/${encodePathSegment(payload.listId, "listId")}/members/${hash}`);
       if (response.status === 200) return { ok: true, member: normalizeContact(response.body as Record<string, unknown>) };
       if (response.status === 404) return { ok: false, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Member not found." } };
       const rl = parseMailchimpRateLimit(response.status, response.headers);
@@ -159,7 +160,7 @@ export function createListsClient(options: { apiKey: string; fetch?: typeof fetc
       if (payload.firstName !== undefined) mergeFields["FNAME"] = payload.firstName;
       if (payload.lastName !== undefined) mergeFields["LNAME"] = payload.lastName;
       if (Object.keys(mergeFields).length > 0) body.merge_fields = mergeFields;
-      const response = await client.fetchJSON(`/lists/${payload.listId}/members/${hash}`, {
+      const response = await client.fetchJSON(`/lists/${encodePathSegment(payload.listId, "listId")}/members/${hash}`, {
         method: "PATCH",
         body: JSON.stringify(body),
       });
@@ -182,7 +183,7 @@ export function createListsClient(options: { apiKey: string; fetch?: typeof fetc
       };
       if (payload.status) body.status = payload.status;
       if (Object.keys(mergeFields).length > 0) body.merge_fields = mergeFields;
-      const response = await client.fetchJSON(`/lists/${payload.listId}/members/${hash}`, {
+      const response = await client.fetchJSON(`/lists/${encodePathSegment(payload.listId, "listId")}/members/${hash}`, {
         method: "PUT",
         body: JSON.stringify(body),
       });
@@ -195,7 +196,7 @@ export function createListsClient(options: { apiKey: string; fetch?: typeof fetc
     async deleteMember(input: unknown): Promise<{ ok: true; deleted: true } | { ok: false; error: { code: string; message: string; retryAfterSeconds?: number } }> {
       const payload = validateDeleteMemberInput(input);
       const hash = md5Hash(payload.email);
-      const response = await client.fetchJSON(`/lists/${payload.listId}/members/${hash}`, { method: "DELETE" });
+      const response = await client.fetchJSON(`/lists/${encodePathSegment(payload.listId, "listId")}/members/${hash}`, { method: "DELETE" });
       if (response.status === 204) return { ok: true, deleted: true };
       if (response.status === 404) return { ok: false, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Member not found." } };
       const rl = parseMailchimpRateLimit(response.status, response.headers);
@@ -207,7 +208,7 @@ export function createListsClient(options: { apiKey: string; fetch?: typeof fetc
       const payload = validateAddMemberTagsInput(input);
       const hash = md5Hash(payload.email);
       const body = { tags: payload.tags.map((name) => ({ name, status: "active" })) };
-      const response = await client.fetchJSON(`/lists/${payload.listId}/members/${hash}/tags`, {
+      const response = await client.fetchJSON(`/lists/${encodePathSegment(payload.listId, "listId")}/members/${hash}/tags`, {
         method: "POST",
         body: JSON.stringify(body),
       });
@@ -245,7 +246,7 @@ export function createListsClient(options: { apiKey: string; fetch?: typeof fetc
 
     async getList(input: unknown): Promise<{ ok: true; audience: NormalizedAudience } | { ok: false; error: { code: string; message: string; retryAfterSeconds?: number } }> {
       const payload = validateGetListInput(input);
-      const response = await client.fetchJSON(`/lists/${payload.listId}`);
+      const response = await client.fetchJSON(`/lists/${encodePathSegment(payload.listId, "listId")}`);
       if (response.status === 200) return { ok: true, audience: normalizeAudience(response.body as Record<string, unknown>) };
       if (response.status === 404) return { ok: false, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "List not found." } };
       const rl = parseMailchimpRateLimit(response.status, response.headers);
@@ -258,7 +259,7 @@ export function createListsClient(options: { apiKey: string; fetch?: typeof fetc
       const body: Record<string, unknown> = {};
       if (payload.name !== undefined) body.name = payload.name;
       if (payload.permissionReminder !== undefined) body.permission_reminder = payload.permissionReminder;
-      const response = await client.fetchJSON(`/lists/${payload.listId}`, { method: "PATCH", body: JSON.stringify(body) });
+      const response = await client.fetchJSON(`/lists/${encodePathSegment(payload.listId, "listId")}`, { method: "PATCH", body: JSON.stringify(body) });
       if (response.status === 200) return { ok: true, audience: normalizeAudience(response.body as Record<string, unknown>) };
       if (response.status === 404) return { ok: false, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "List not found." } };
       const rl = parseMailchimpRateLimit(response.status, response.headers);
@@ -268,7 +269,7 @@ export function createListsClient(options: { apiKey: string; fetch?: typeof fetc
 
     async deleteList(input: unknown): Promise<{ ok: true; deleted: true } | { ok: false; error: { code: string; message: string; retryAfterSeconds?: number } }> {
       const payload = validateDeleteListInput(input);
-      const response = await client.fetchJSON(`/lists/${payload.listId}`, { method: "DELETE" });
+      const response = await client.fetchJSON(`/lists/${encodePathSegment(payload.listId, "listId")}`, { method: "DELETE" });
       if (response.status === 204) return { ok: true, deleted: true };
       if (response.status === 404) return { ok: false, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "List not found." } };
       const rl = parseMailchimpRateLimit(response.status, response.headers);
@@ -279,7 +280,7 @@ export function createListsClient(options: { apiKey: string; fetch?: typeof fetc
     async createMemberNote(input: unknown): Promise<{ ok: true; note: NormalizedMemberNote } | { ok: false; error: { code: string; message: string; retryAfterSeconds?: number } }> {
       const payload = validateCreateMemberNoteInput(input);
       const hash = md5Hash(payload.email);
-      const response = await client.fetchJSON(`/lists/${payload.listId}/members/${hash}/notes`, {
+      const response = await client.fetchJSON(`/lists/${encodePathSegment(payload.listId, "listId")}/members/${hash}/notes`, {
         method: "POST",
         body: JSON.stringify({ note: payload.note }),
       });

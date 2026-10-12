@@ -26,6 +26,7 @@ import {
 import { validateListTemplatesInput, validateGetTemplateInput, createTemplatesClient } from "./templates";
 import { validateCampaignReportInput, createReportsClient } from "./reports";
 import { validateListAutomationsInput, validateGetAutomationInput, createAutomationsClient } from "./automations";
+import { encodePathSegment } from "../../_shared/jobboard";
 
 // ─── Existing: contacts.create ────────────────────────────────────────────────
 
@@ -36,7 +37,7 @@ export function createContact(input: unknown): Record<string, unknown> | Promise
     const payload = validateCreateContactInput(input);
     const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
     return createMailchimpClient({ apiKey: input.apiKey, fetch: fetchFn, operation: "contacts.create" })
-      .fetchJSON(`/lists/${payload.listId}/members`, {
+      .fetchJSON(`/lists/${encodePathSegment(payload.listId, "listId")}/members`, {
         method: "POST",
         body: JSON.stringify({
           email_address: payload.email,

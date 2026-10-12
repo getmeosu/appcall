@@ -5,7 +5,7 @@ describe("googlemeet connector manifest", () => {
   test("declares external_bearer auth and core operations", () => {
     expect(manifest.key).toBe("googlemeet");
     expect(manifest.runtime).toBe("bun");
-    expect(manifest.version).toBe("0.3.0");
+    expect(manifest.version).toBe("0.3.1");
     expect(manifest.auth.type).toBe("external_bearer");
     expect(manifest.auth.setup.mode).toBe("external_bearer");
     expect(manifest.network.allowedHosts).toContain("www.googleapis.com");

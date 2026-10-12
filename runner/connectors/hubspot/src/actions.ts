@@ -15,6 +15,7 @@ import {
   parsePipelinesResponse,
   parseTicketsResponse,
 } from "./objects";
+import { encodePathSegment } from "../../_shared/jobboard";
 
 export type CreateContactInput = { email?: string; firstName?: string; lastName?: string; phone?: string; company?: string; jobTitle?: string };
 export type CreateCompanyInput = { name: string; domain?: string; industry?: string; city?: string; website?: string };
@@ -104,7 +105,7 @@ export function getContact(input: unknown): Record<string, unknown> | Promise<Re
   if (isRecord(input) && typeof input.accessToken === "string") {
     const payload = validateGetContactInput(input);
     return createHubSpotClient({ accessToken: input.accessToken, fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined, operation: "contacts.get" })
-      .fetchJSON(`/crm/v3/objects/contacts/${encodeURIComponent(payload.contactId)}`, { method: "GET" })
+      .fetchJSON(`/crm/v3/objects/contacts/${encodePathSegment(payload.contactId, "contactId")}`, { method: "GET" })
       .then((result) => {
         if (result.status === 200) return { connector: "hubspot", action: "contacts.get", source: "connector", contact: normalizeContact(result.body as any) };
         throw handleError(result);
@@ -118,7 +119,7 @@ export function updateContact(input: unknown): Record<string, unknown> | Promise
     const payload = validateUpdateContactInput(input);
     const { contactId, ...rest } = payload;
     return createHubSpotClient({ accessToken: input.accessToken, fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined, operation: "contacts.update" })
-      .fetchJSON(`/crm/v3/objects/contacts/${encodeURIComponent(contactId)}`, { method: "PATCH", body: JSON.stringify({ properties: toSnakeCaseProps(rest as Record<string, unknown>) }) })
+      .fetchJSON(`/crm/v3/objects/contacts/${encodePathSegment(contactId, "contactId")}`, { method: "PATCH", body: JSON.stringify({ properties: toSnakeCaseProps(rest as Record<string, unknown>) }) })
       .then((result) => {
         if (result.status === 200) return { connector: "hubspot", action: "contacts.update", source: "connector", contact: normalizeContact(result.body as any) };
         throw handleError(result);
@@ -131,7 +132,7 @@ export function deleteContact(input: unknown): Record<string, unknown> | Promise
   if (isRecord(input) && typeof input.accessToken === "string") {
     const payload = validateDeleteContactInput(input);
     return createHubSpotClient({ accessToken: input.accessToken, fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined, operation: "contacts.delete" })
-      .fetchJSON(`/crm/v3/objects/contacts/${encodeURIComponent(payload.contactId)}`, { method: "DELETE" })
+      .fetchJSON(`/crm/v3/objects/contacts/${encodePathSegment(payload.contactId, "contactId")}`, { method: "DELETE" })
       .then((result) => {
         if (result.status === 204) return { connector: "hubspot", action: "contacts.delete", source: "connector", deleted: true };
         throw handleError(result);
@@ -174,7 +175,7 @@ export function getCompany(input: unknown): Record<string, unknown> | Promise<Re
   if (isRecord(input) && typeof input.accessToken === "string") {
     const payload = validateGetCompanyInput(input);
     return createHubSpotClient({ accessToken: input.accessToken, fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined, operation: "companies.get" })
-      .fetchJSON(`/crm/v3/objects/companies/${encodeURIComponent(payload.companyId)}`, { method: "GET" })
+      .fetchJSON(`/crm/v3/objects/companies/${encodePathSegment(payload.companyId, "companyId")}`, { method: "GET" })
       .then((result) => {
         if (result.status === 200) return { connector: "hubspot", action: "companies.get", source: "connector", company: normalizeCompany(result.body as any) };
         throw handleError(result);
@@ -188,7 +189,7 @@ export function updateCompany(input: unknown): Record<string, unknown> | Promise
     const payload = validateUpdateCompanyInput(input);
     const { companyId, ...rest } = payload;
     return createHubSpotClient({ accessToken: input.accessToken, fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined, operation: "companies.update" })
-      .fetchJSON(`/crm/v3/objects/companies/${encodeURIComponent(companyId)}`, { method: "PATCH", body: JSON.stringify({ properties: toSnakeCaseProps(rest as Record<string, unknown>) }) })
+      .fetchJSON(`/crm/v3/objects/companies/${encodePathSegment(companyId, "companyId")}`, { method: "PATCH", body: JSON.stringify({ properties: toSnakeCaseProps(rest as Record<string, unknown>) }) })
       .then((result) => {
         if (result.status === 200) return { connector: "hubspot", action: "companies.update", source: "connector", company: normalizeCompany(result.body as any) };
         throw handleError(result);
@@ -201,7 +202,7 @@ export function deleteCompany(input: unknown): Record<string, unknown> | Promise
   if (isRecord(input) && typeof input.accessToken === "string") {
     const payload = validateDeleteCompanyInput(input);
     return createHubSpotClient({ accessToken: input.accessToken, fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined, operation: "companies.delete" })
-      .fetchJSON(`/crm/v3/objects/companies/${encodeURIComponent(payload.companyId)}`, { method: "DELETE" })
+      .fetchJSON(`/crm/v3/objects/companies/${encodePathSegment(payload.companyId, "companyId")}`, { method: "DELETE" })
       .then((result) => {
         if (result.status === 204) return { connector: "hubspot", action: "companies.delete", source: "connector", deleted: true };
         throw handleError(result);
@@ -214,7 +215,7 @@ export function getDeal(input: unknown): Record<string, unknown> | Promise<Recor
   if (isRecord(input) && typeof input.accessToken === "string") {
     const payload = validateGetDealInput(input);
     return createHubSpotClient({ accessToken: input.accessToken, fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined, operation: "deals.get" })
-      .fetchJSON(`/crm/v3/objects/deals/${encodeURIComponent(payload.dealId)}`, { method: "GET" })
+      .fetchJSON(`/crm/v3/objects/deals/${encodePathSegment(payload.dealId, "dealId")}`, { method: "GET" })
       .then((result) => {
         if (result.status === 200) return { connector: "hubspot", action: "deals.get", source: "connector", deal: normalizeDeal(result.body as any) };
         throw handleError(result);
@@ -234,7 +235,7 @@ export function updateDeal(input: unknown): Record<string, unknown> | Promise<Re
     if (closeDate !== undefined) properties.closedate = closeDate;
     if (pipeline !== undefined) properties.pipeline = pipeline;
     return createHubSpotClient({ accessToken: input.accessToken, fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined, operation: "deals.update" })
-      .fetchJSON(`/crm/v3/objects/deals/${encodeURIComponent(dealId)}`, { method: "PATCH", body: JSON.stringify({ properties }) })
+      .fetchJSON(`/crm/v3/objects/deals/${encodePathSegment(dealId, "dealId")}`, { method: "PATCH", body: JSON.stringify({ properties }) })
       .then((result) => {
         if (result.status === 200) return { connector: "hubspot", action: "deals.update", source: "connector", deal: normalizeDeal(result.body as any) };
         throw handleError(result);
@@ -247,7 +248,7 @@ export function deleteDeal(input: unknown): Record<string, unknown> | Promise<Re
   if (isRecord(input) && typeof input.accessToken === "string") {
     const payload = validateDeleteDealInput(input);
     return createHubSpotClient({ accessToken: input.accessToken, fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined, operation: "deals.delete" })
-      .fetchJSON(`/crm/v3/objects/deals/${encodeURIComponent(payload.dealId)}`, { method: "DELETE" })
+      .fetchJSON(`/crm/v3/objects/deals/${encodePathSegment(payload.dealId, "dealId")}`, { method: "DELETE" })
       .then((result) => {
         if (result.status === 204) return { connector: "hubspot", action: "deals.delete", source: "connector", deleted: true };
         throw handleError(result);
@@ -260,7 +261,7 @@ export function getTicket(input: unknown): Record<string, unknown> | Promise<Rec
   if (isRecord(input) && typeof input.accessToken === "string") {
     const payload = validateGetTicketInput(input);
     return createHubSpotClient({ accessToken: input.accessToken, fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined, operation: "tickets.get" })
-      .fetchJSON(`/crm/v3/objects/tickets/${encodeURIComponent(payload.ticketId)}`, { method: "GET" })
+      .fetchJSON(`/crm/v3/objects/tickets/${encodePathSegment(payload.ticketId, "ticketId")}`, { method: "GET" })
       .then((result) => {
         if (result.status === 200) return { connector: "hubspot", action: "tickets.get", source: "connector", ticket: normalizeTicket(result.body as any) };
         throw handleError(result);
@@ -279,7 +280,7 @@ export function updateTicket(input: unknown): Record<string, unknown> | Promise<
     if (priority !== undefined) properties.hs_ticket_priority = priority.toUpperCase();
     if (category !== undefined) properties.hs_ticket_category = category.toUpperCase();
     return createHubSpotClient({ accessToken: input.accessToken, fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined, operation: "tickets.update" })
-      .fetchJSON(`/crm/v3/objects/tickets/${encodeURIComponent(ticketId)}`, { method: "PATCH", body: JSON.stringify({ properties }) })
+      .fetchJSON(`/crm/v3/objects/tickets/${encodePathSegment(ticketId, "ticketId")}`, { method: "PATCH", body: JSON.stringify({ properties }) })
       .then((result) => {
         if (result.status === 200) return { connector: "hubspot", action: "tickets.update", source: "connector", ticket: normalizeTicket(result.body as any) };
         throw handleError(result);
@@ -483,7 +484,7 @@ export function createAssociation(input: unknown): Record<string, unknown> | Pro
     const category = payload.associationCategory ?? "HUBSPOT_DEFINED";
     return createHubSpotClient({ accessToken: input.accessToken, fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined, operation: "associations.create" })
       .fetchJSON(
-        `/crm/v4/objects/${encodeURIComponent(payload.fromObjectType)}/${encodeURIComponent(payload.fromId)}/associations/${encodeURIComponent(payload.toObjectType)}/${encodeURIComponent(payload.toId)}`,
+        `/crm/v4/objects/${encodePathSegment(payload.fromObjectType, "fromObjectType")}/${encodePathSegment(payload.fromId, "fromId")}/associations/${encodePathSegment(payload.toObjectType, "toObjectType")}/${encodePathSegment(payload.toId, "toId")}`,
         { method: "PUT", body: JSON.stringify([{ associationCategory: category, associationTypeId: payload.associationTypeId }]) },
       )
       .then((result) => {

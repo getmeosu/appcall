@@ -1,6 +1,17 @@
 import { createGoogleClient, parseGoogleError, parseGoogleRateLimitMetadata, type ConnectorError } from "./http";
 import type { ConnectorHttpClient } from "../../../bun/src/http";
 import manifest from "../manifest.json";
+import { encodePathSegment } from "../../_shared/jobboard";
+
+// SEC-PATH-2c: an A1 range may quote any sheet name (including "/", which is
+// percent-encoded), so the shared no-separator guard does not fit. Reject only
+// blank, dot-only and control-character values before encoding.
+function encodeRangeSegment(value: unknown): string {
+  if (typeof value !== "string" || value.trim().length === 0) throw new Error("range is required");
+  if (/^\.+$/.test(value.trim())) throw new Error("range must not be a dot segment");
+  if (/[\u0000-\u001f\u007f-\u009f]/u.test(value)) throw new Error("range must not contain control characters");
+  return encodeURIComponent(value);
+}
 
 export type SheetRow = {
   id: string;
@@ -144,7 +155,7 @@ export function createSheetsClient(options: { accessToken: string; fetch?: typeo
     async getValues(input: unknown): Promise<GetValuesResult> {
       const payload = validateGetValuesInput(input);
       const response = await createHttpClient("sheets.values.get").fetchText(
-        `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(payload.spreadsheetId)}/values/${encodeURIComponent(payload.range)}`,
+        `https://sheets.googleapis.com/v4/spreadsheets/${encodePathSegment(payload.spreadsheetId, "spreadsheetId")}/values/${encodeRangeSegment(payload.range)}`,
         {
           headers: { Authorization: `Bearer ${options.accessToken}` },
         },
@@ -170,7 +181,7 @@ export function createSheetsClient(options: { accessToken: string; fetch?: typeo
       params.set("includeValuesInResponse", "true");
 
       const response = await createHttpClient("sheets.values.append").fetchText(
-        `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(payload.spreadsheetId)}/values/${encodeURIComponent(payload.range)}:append?${params}`,
+        `https://sheets.googleapis.com/v4/spreadsheets/${encodePathSegment(payload.spreadsheetId, "spreadsheetId")}/values/${encodeRangeSegment(payload.range)}:append?${params}`,
         {
           method: "POST",
           headers: { Authorization: `Bearer ${options.accessToken}`, "Content-Type": "application/json" },
@@ -199,7 +210,7 @@ export function createSheetsClient(options: { accessToken: string; fetch?: typeo
       params.set("valueInputOption", payload.valueInputOption ?? "USER_ENTERED");
 
       const response = await createHttpClient("sheets.values.update").fetchText(
-        `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(payload.spreadsheetId)}/values/${encodeURIComponent(payload.range)}?${params}`,
+        `https://sheets.googleapis.com/v4/spreadsheets/${encodePathSegment(payload.spreadsheetId, "spreadsheetId")}/values/${encodeRangeSegment(payload.range)}?${params}`,
         {
           method: "PUT",
           headers: jsonHeaders,
@@ -223,7 +234,7 @@ export function createSheetsClient(options: { accessToken: string; fetch?: typeo
     async clearValues(input: unknown): Promise<ClearValuesResult> {
       const payload = validateClearValuesInput(input);
       const response = await createHttpClient("sheets.values.clear").fetchText(
-        `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(payload.spreadsheetId)}/values/${encodeURIComponent(payload.range)}:clear`,
+        `https://sheets.googleapis.com/v4/spreadsheets/${encodePathSegment(payload.spreadsheetId, "spreadsheetId")}/values/${encodeRangeSegment(payload.range)}:clear`,
         {
           method: "POST",
           headers: jsonHeaders,
@@ -274,7 +285,7 @@ export function createSheetsClient(options: { accessToken: string; fetch?: typeo
       const payload = validateBatchUpdateSpreadsheetInput(input);
       const googleRequests = payload.requests.map(toGoogleBatchUpdateRequest);
       const response = await createHttpClient("sheets.spreadsheets.batchUpdate").fetchText(
-        `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(payload.spreadsheetId)}:batchUpdate`,
+        `https://sheets.googleapis.com/v4/spreadsheets/${encodePathSegment(payload.spreadsheetId, "spreadsheetId")}:batchUpdate`,
         {
           method: "POST",
           headers: jsonHeaders,
@@ -298,7 +309,7 @@ export function createSheetsClient(options: { accessToken: string; fetch?: typeo
       if (payload.includeGridData) params.set("includeGridData", "true");
       const qs = params.toString() ? `?${params}` : "";
       const response = await createHttpClient("sheets.spreadsheets.get").fetchText(
-        `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(payload.spreadsheetId)}${qs}`,
+        `https://sheets.googleapis.com/v4/spreadsheets/${encodePathSegment(payload.spreadsheetId, "spreadsheetId")}${qs}`,
         { headers: authHeaders },
       );
       const respBody = readJsonObject(response.body);
@@ -318,7 +329,7 @@ export function createSheetsClient(options: { accessToken: string; fetch?: typeo
     async batchUpdateValues(input: unknown): Promise<BatchUpdateValuesResult> {
       const payload = validateBatchUpdateValuesInput(input);
       const response = await createHttpClient("sheets.values.batchUpdate").fetchText(
-        `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(payload.spreadsheetId)}/values:batchUpdate`,
+        `https://sheets.googleapis.com/v4/spreadsheets/${encodePathSegment(payload.spreadsheetId, "spreadsheetId")}/values:batchUpdate`,
         {
           method: "POST",
           headers: jsonHeaders,

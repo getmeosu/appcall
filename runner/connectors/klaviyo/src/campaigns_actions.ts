@@ -1,5 +1,6 @@
 import { createKlaviyoClient, firstString, parseKlaviyoRateLimit, prop, queryPath, isRecord } from "./http";
 import { normalizeCampaign, type NormalizedCampaign } from "./objects";
+import { encodePathSegment } from "../../_shared/jobboard";
 
 // ─── campaigns.create ─────────────────────────────────────────────────────────
 
@@ -94,7 +95,7 @@ export async function getCampaignFromClient(
 ): Promise<{ ok: true; campaign: NormalizedCampaign } | { ok: false; error: { code: string; message: string; retryAfterSeconds?: number } }> {
   const payload = validateGetCampaignInput(input);
   const client = createKlaviyoClient({ apiKey: options.apiKey, fetch: options.fetch, operation: "campaigns.get" });
-  const result = await client.fetchJSON(queryPath(`/campaigns/${payload.campaignId}`, input));
+  const result = await client.fetchJSON(queryPath(`/campaigns/${encodePathSegment(payload.campaignId, "campaignId")}`, input));
   if (result.status === 200) {
     const body = result.body as Record<string, unknown>;
     const data = isRecord(body.data) ? body.data : { id: payload.campaignId, attributes: {} };
@@ -114,7 +115,7 @@ export async function updateCampaignFromClient(
   const client = createKlaviyoClient({ apiKey: options.apiKey, fetch: options.fetch, operation: "campaigns.update" });
   const attrs: Record<string, unknown> = {};
   if (payload.name !== undefined) attrs.name = payload.name;
-  const result = await client.fetchJSON(`/campaigns/${payload.campaignId}`, {
+  const result = await client.fetchJSON(`/campaigns/${encodePathSegment(payload.campaignId, "campaignId")}`, {
     method: "PATCH",
     body: JSON.stringify({ data: { type: "campaign", id: payload.campaignId, attributes: attrs } }),
   });

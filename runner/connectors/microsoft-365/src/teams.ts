@@ -1,5 +1,6 @@
 import { createGraphClient, parseGraphRateLimit, type GraphClient } from "./http";
 import { normalizeCalendarEvent, type CalendarEvent } from "./events";
+import { assertNoTraversalSegment, encodePathSegment } from "../../_shared/jobboard";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -59,7 +60,7 @@ export function validateCreateMeetingInput(input: unknown): CreateMeetingInput {
     subject: requireString(input.subject, "subject"),
     startDateTime: requireString(input.startDateTime, "startDateTime"),
     endDateTime: requireString(input.endDateTime, "endDateTime"),
-    userId: typeof input.userId === "string" && input.userId.length > 0 ? input.userId : undefined,
+    userId: optionalUserId(input.userId),
   };
 }
 
@@ -72,7 +73,7 @@ export function validateGetMeetingInput(input: unknown): GetMeetingInput {
   if (!isRecord(input)) throw new Error("get meeting input must be an object");
   return {
     meetingId: requireString(input.meetingId, "meetingId"),
-    userId: typeof input.userId === "string" && input.userId.length > 0 ? input.userId : undefined,
+    userId: optionalUserId(input.userId),
   };
 }
 
@@ -91,7 +92,7 @@ export function validateUpdateMeetingInput(input: unknown): UpdateMeetingInput {
     subject: typeof input.subject === "string" ? input.subject : undefined,
     startDateTime: typeof input.startDateTime === "string" ? input.startDateTime : undefined,
     endDateTime: typeof input.endDateTime === "string" ? input.endDateTime : undefined,
-    userId: typeof input.userId === "string" && input.userId.length > 0 ? input.userId : undefined,
+    userId: optionalUserId(input.userId),
   };
 }
 
@@ -104,7 +105,7 @@ export function validateDeleteMeetingInput(input: unknown): DeleteMeetingInput {
   if (!isRecord(input)) throw new Error("delete meeting input must be an object");
   return {
     meetingId: requireString(input.meetingId, "meetingId"),
-    userId: typeof input.userId === "string" && input.userId.length > 0 ? input.userId : undefined,
+    userId: optionalUserId(input.userId),
   };
 }
 
@@ -117,7 +118,7 @@ export function validateGetMeetingByJoinUrlInput(input: unknown): GetMeetingByJo
   if (!isRecord(input)) throw new Error("get meeting by join URL input must be an object");
   return {
     joinWebUrl: requireString(input.joinWebUrl, "joinWebUrl"),
-    userId: typeof input.userId === "string" && input.userId.length > 0 ? input.userId : undefined,
+    userId: optionalUserId(input.userId),
   };
 }
 
@@ -149,18 +150,26 @@ export function validateCreateCalendarTeamsEventInput(input: unknown): CreateCal
     body: typeof input.body === "string" ? input.body : undefined,
     location: typeof input.location === "string" ? input.location : undefined,
     attendees: Array.isArray(input.attendees) ? (input.attendees as unknown[]).filter((a): a is string => typeof a === "string") : undefined,
-    userId: typeof input.userId === "string" && input.userId.length > 0 ? input.userId : undefined,
+    userId: optionalUserId(input.userId),
   };
 }
 
 // ─── Teams Meetings Client ────────────────────────────────────────────────────
 
+// SEC-PATH-2c: only an omitted userId means the signed-in user (/me). A present
+// value (including "" or whitespace) must be a real user id or UPN; before this,
+// teams_meetings.delete with userId "" acted on the caller's own meetings.
+function optionalUserId(value: unknown): string | undefined {
+  if (value === undefined) return undefined;
+  return assertNoTraversalSegment(value, "userId");
+}
+
 function meetingsBasePath(userId?: string): string {
-  return userId ? `/v1.0/users/${encodeURIComponent(userId)}/onlineMeetings` : "/v1.0/me/onlineMeetings";
+  return userId !== undefined ? `/v1.0/users/${encodePathSegment(userId, "userId")}/onlineMeetings` : "/v1.0/me/onlineMeetings";
 }
 
 function eventsBasePath(userId?: string): string {
-  return userId ? `/v1.0/users/${encodeURIComponent(userId)}/events` : "/v1.0/me/events";
+  return userId !== undefined ? `/v1.0/users/${encodePathSegment(userId, "userId")}/events` : "/v1.0/me/events";
 }
 
 export function createTeamsMeetingsClient(options: { accessToken: string; fetch?: typeof fetch; graphClient?: GraphClient }) {
@@ -197,7 +206,7 @@ export function createTeamsMeetingsClient(options: { accessToken: string; fetch?
       const payload = validateGetMeetingInput(input);
       const basePath = meetingsBasePath(payload.userId);
 
-      const response = await client.fetchJSON(`${basePath}/${encodeURIComponent(payload.meetingId)}`);
+      const response = await client.fetchJSON(`${basePath}/${encodePathSegment(payload.meetingId, "meetingId")}`);
 
       if (response.status === 200) {
         const meeting = parseMeeting(response.body);
@@ -218,7 +227,7 @@ export function createTeamsMeetingsClient(options: { accessToken: string; fetch?
       if (payload.startDateTime !== undefined) body.startDateTime = payload.startDateTime;
       if (payload.endDateTime !== undefined) body.endDateTime = payload.endDateTime;
 
-      const response = await client.fetchJSON(`${basePath}/${encodeURIComponent(payload.meetingId)}`, {
+      const response = await client.fetchJSON(`${basePath}/${encodePathSegment(payload.meetingId, "meetingId")}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
@@ -239,7 +248,7 @@ export function createTeamsMeetingsClient(options: { accessToken: string; fetch?
       const payload = validateDeleteMeetingInput(input);
       const basePath = meetingsBasePath(payload.userId);
 
-      const response = await client.fetchJSON(`${basePath}/${encodeURIComponent(payload.meetingId)}`, {
+      const response = await client.fetchJSON(`${basePath}/${encodePathSegment(payload.meetingId, "meetingId")}`, {
         method: "DELETE",
       });
 

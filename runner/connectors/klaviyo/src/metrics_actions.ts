@@ -1,6 +1,7 @@
 import { createKlaviyoClient, firstString, parseKlaviyoRateLimit, queryPath, isRecord } from "./http";
 import { normalizeMetric, parseMetricsResponse } from "./objects";
 import type { NormalizedMetric } from "./objects";
+import { encodePathSegment } from "../../_shared/jobboard";
 
 export type GetMetricInput = { metricId: string };
 
@@ -33,7 +34,7 @@ export async function getMetricFromClient(
 ): Promise<{ ok: true; metric: NormalizedMetric } | { ok: false; error: { code: string; message: string; retryAfterSeconds?: number } }> {
   const payload = validateGetMetricInput(input);
   const client = createKlaviyoClient({ apiKey: options.apiKey, fetch: options.fetch, operation: "metrics.get" });
-  const result = await client.fetchJSON(queryPath(`/metrics/${payload.metricId}`, input));
+  const result = await client.fetchJSON(queryPath(`/metrics/${encodePathSegment(payload.metricId, "metricId")}`, input));
   if (result.status === 200) {
     const body = result.body as Record<string, unknown>;
     const data = isRecord(body.data) ? body.data : { id: payload.metricId, attributes: {} };

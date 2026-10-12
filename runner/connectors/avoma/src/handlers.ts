@@ -1,5 +1,6 @@
 import { ConnectorHttpError, createConnectorHttpClient } from "../../../bun/src/http";
 import manifest from "../manifest.json";
+import { encodePathSegment } from "../../_shared/jobboard";
 
 const allowedHosts = manifest.network.allowedHosts as string[];
 const analysisOp = (manifest.operations as Record<string, { maxResponseBytes?: number; timeoutMs?: number }>)[
@@ -106,7 +107,8 @@ export function getMeetingAnalysis(inputValue: unknown): unknown {
     }
   }
 
-  const encoded = encodeURIComponent(meetingUuid);
+  // SEC-PATH-2c: meeting_uuid is a path segment; reject blank and dot-only values.
+  const encoded = encodePathSegment(meetingUuid, "meeting_uuid");
   const fetchImpl = typeof inputValue.fetch === "function" ? (inputValue.fetch as FetchFn) : undefined;
 
   return (async () => {

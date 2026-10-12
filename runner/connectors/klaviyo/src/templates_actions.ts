@@ -1,6 +1,7 @@
 import { createKlaviyoClient, firstString, parseKlaviyoRateLimit, queryPath, isRecord } from "./http";
 import { normalizeTemplate, parseTemplatesResponse } from "./objects";
 import type { NormalizedTemplate } from "./objects";
+import { encodePathSegment } from "../../_shared/jobboard";
 
 export type GetTemplateInput = { templateId: string };
 
@@ -33,7 +34,7 @@ export async function getTemplateFromClient(
 ): Promise<{ ok: true; template: NormalizedTemplate } | { ok: false; error: { code: string; message: string; retryAfterSeconds?: number } }> {
   const payload = validateGetTemplateInput(input);
   const client = createKlaviyoClient({ apiKey: options.apiKey, fetch: options.fetch, operation: "templates.get" });
-  const result = await client.fetchJSON(queryPath(`/templates/${payload.templateId}`, input));
+  const result = await client.fetchJSON(queryPath(`/templates/${encodePathSegment(payload.templateId, "templateId")}`, input));
   if (result.status === 200) {
     const body = result.body as Record<string, unknown>;
     const data = isRecord(body.data) ? body.data : { id: payload.templateId, attributes: {} };

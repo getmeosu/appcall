@@ -1,6 +1,7 @@
 import { createMailchimpClient, parseMailchimpRateLimit, isRecord } from "./http";
 import { normalizeCampaign } from "./objects";
 import type { NormalizedCampaign } from "./objects";
+import { encodePathSegment } from "../../_shared/jobboard";
 
 // ─── Input types ─────────────────────────────────────────────────────────────
 
@@ -98,7 +99,7 @@ export function createCampaignsClient(options: { apiKey: string; fetch?: typeof 
 
     async getCampaign(input: unknown): Promise<{ ok: true; campaign: NormalizedCampaign } | { ok: false; error: { code: string; message: string; retryAfterSeconds?: number } }> {
       const payload = validateGetCampaignInput(input);
-      const response = await client.fetchJSON(`/campaigns/${payload.campaignId}`);
+      const response = await client.fetchJSON(`/campaigns/${encodePathSegment(payload.campaignId, "campaignId")}`);
       if (response.status === 200) return { ok: true, campaign: normalizeCampaign(response.body as Record<string, unknown>) };
       if (response.status === 404) return { ok: false, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Campaign not found." } };
       const rl = parseMailchimpRateLimit(response.status, response.headers);
@@ -108,7 +109,7 @@ export function createCampaignsClient(options: { apiKey: string; fetch?: typeof 
 
     async sendCampaign(input: unknown): Promise<{ ok: true; sent: true } | { ok: false; error: { code: string; message: string; retryAfterSeconds?: number } }> {
       const payload = validateSendCampaignInput(input);
-      const response = await client.fetchJSON(`/campaigns/${payload.campaignId}/actions/send`, { method: "POST" });
+      const response = await client.fetchJSON(`/campaigns/${encodePathSegment(payload.campaignId, "campaignId")}/actions/send`, { method: "POST" });
       if (response.status === 204) return { ok: true, sent: true };
       if (response.status === 404) return { ok: false, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Campaign not found." } };
       const rl = parseMailchimpRateLimit(response.status, response.headers);
@@ -118,7 +119,7 @@ export function createCampaignsClient(options: { apiKey: string; fetch?: typeof 
 
     async unscheduleCampaign(input: unknown): Promise<{ ok: true; unscheduled: true } | { ok: false; error: { code: string; message: string; retryAfterSeconds?: number } }> {
       const payload = validateUnscheduleCampaignInput(input);
-      const response = await client.fetchJSON(`/campaigns/${payload.campaignId}/actions/unschedule`, { method: "POST" });
+      const response = await client.fetchJSON(`/campaigns/${encodePathSegment(payload.campaignId, "campaignId")}/actions/unschedule`, { method: "POST" });
       if (response.status === 204) return { ok: true, unscheduled: true };
       if (response.status === 404) return { ok: false, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Campaign not found." } };
       const rl = parseMailchimpRateLimit(response.status, response.headers);
@@ -128,7 +129,7 @@ export function createCampaignsClient(options: { apiKey: string; fetch?: typeof 
 
     async scheduleCampaign(input: unknown): Promise<{ ok: true; scheduled: true } | { ok: false; error: { code: string; message: string; retryAfterSeconds?: number } }> {
       const payload = validateScheduleCampaignInput(input);
-      const response = await client.fetchJSON(`/campaigns/${payload.campaignId}/actions/schedule`, {
+      const response = await client.fetchJSON(`/campaigns/${encodePathSegment(payload.campaignId, "campaignId")}/actions/schedule`, {
         method: "POST",
         body: JSON.stringify({ schedule_time: payload.scheduleTime }),
       });
@@ -141,7 +142,7 @@ export function createCampaignsClient(options: { apiKey: string; fetch?: typeof 
 
     async deleteCampaign(input: unknown): Promise<{ ok: true; deleted: true } | { ok: false; error: { code: string; message: string; retryAfterSeconds?: number } }> {
       const payload = validateDeleteCampaignInput(input);
-      const response = await client.fetchJSON(`/campaigns/${payload.campaignId}`, { method: "DELETE" });
+      const response = await client.fetchJSON(`/campaigns/${encodePathSegment(payload.campaignId, "campaignId")}`, { method: "DELETE" });
       if (response.status === 204) return { ok: true, deleted: true };
       if (response.status === 404) return { ok: false, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Campaign not found." } };
       const rl = parseMailchimpRateLimit(response.status, response.headers);
@@ -151,7 +152,7 @@ export function createCampaignsClient(options: { apiKey: string; fetch?: typeof 
 
     async replicateCampaign(input: unknown): Promise<{ ok: true; campaign: NormalizedCampaign } | { ok: false; error: { code: string; message: string; retryAfterSeconds?: number } }> {
       const payload = validateReplicateCampaignInput(input);
-      const response = await client.fetchJSON(`/campaigns/${payload.campaignId}/actions/replicate`, { method: "POST" });
+      const response = await client.fetchJSON(`/campaigns/${encodePathSegment(payload.campaignId, "campaignId")}/actions/replicate`, { method: "POST" });
       if (response.status === 200) return { ok: true, campaign: normalizeCampaign(response.body as Record<string, unknown>) };
       if (response.status === 404) return { ok: false, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Campaign not found." } };
       const rl = parseMailchimpRateLimit(response.status, response.headers);

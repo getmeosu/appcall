@@ -28,7 +28,7 @@ import manifest from "../manifest.json";
 
 describe("whatsapp depth slice", () => {
   test("bumps the connector to a minor version for the new surface", () => {
-    expect(manifest.version).toBe("0.3.0");
+    expect(manifest.version).toBe("0.3.1");
   });
 
   test("declares the depth-slice action keys with object input schemas", () => {
@@ -64,7 +64,8 @@ describe("whatsapp depth slice", () => {
       },
     });
     const result = await client.getMessage({ phoneNumberId: "123456789", messageId: getMessageFixture.id });
-    expect(requests[0]!.url).toBe(`https://graph.facebook.com/v25.0/${getMessageFixture.id}`);
+    // SEC-PATH-2c: the wamid is one encoded path segment ("=" -> %3D; Graph decodes it).
+    expect(requests[0]!.url).toBe(`https://graph.facebook.com/v25.0/${encodeURIComponent(getMessageFixture.id)}`);
     expect(requests[0]!.method).toBe("GET");
     expect(result.ok).toBe(true);
     if (result.ok) expect(result.message).toEqual(getMessageFixture);

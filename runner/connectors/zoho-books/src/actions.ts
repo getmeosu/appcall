@@ -14,6 +14,7 @@ import {
   parseItemResource,
   parseOrganizationsResponse,
 } from "./objects";
+import { assertSafePathSegment } from "../../_shared/jobboard";
 
 type ActionResult = Record<string, unknown> | Promise<Record<string, unknown>>;
 
@@ -135,7 +136,7 @@ export type ContactsGetInput = { organizationId: string; contactId: string };
 export function getContact(input: unknown): ActionResult {
   const validated = validateContactsGetInput(input);
   if (hasLiveAuth(input)) {
-    return wrap(input, "contacts.get", validated.organizationId, `/contacts/${encodeURIComponent(validated.contactId)}`, { method: "GET" }, (body) => ({
+    return wrap(input, "contacts.get", validated.organizationId, `/contacts/${encodeURIComponent(assertSafePathSegment(String(validated.contactId), "contactId"))}`, { method: "GET" }, (body) => ({
       contact: parseContactResource(body),
     }));
   }
@@ -206,7 +207,7 @@ export function updateContact(input: unknown): ActionResult {
       input,
       "contacts.update",
       validated.organizationId,
-      `/contacts/${encodeURIComponent(validated.contactId)}`,
+      `/contacts/${encodeURIComponent(assertSafePathSegment(String(validated.contactId), "contactId"))}`,
       { method: "PUT", ...jsonStringBody(payload) },
       (body) => ({ contact: parseContactResource(body) }),
     );
@@ -234,7 +235,7 @@ export type ContactsDeleteInput = { organizationId: string; contactId: string };
 export function deleteContact(input: unknown): ActionResult {
   const validated = validateContactsGetInput(input);
   if (hasLiveAuth(input)) {
-    return wrap(input, "contacts.delete", validated.organizationId, `/contacts/${encodeURIComponent(validated.contactId)}`, { method: "DELETE" }, () => ({
+    return wrap(input, "contacts.delete", validated.organizationId, `/contacts/${encodeURIComponent(assertSafePathSegment(String(validated.contactId), "contactId"))}`, { method: "DELETE" }, () => ({
       deleted: true,
     }));
   }
@@ -250,7 +251,7 @@ export type InvoicesGetInput = { organizationId: string; invoiceId: string };
 export function getInvoice(input: unknown): ActionResult {
   const validated = validateInvoicesGetInput(input);
   if (hasLiveAuth(input)) {
-    return wrap(input, "invoices.get", validated.organizationId, `/invoices/${encodeURIComponent(validated.invoiceId)}`, { method: "GET" }, (body) => ({
+    return wrap(input, "invoices.get", validated.organizationId, `/invoices/${encodeURIComponent(assertSafePathSegment(String(validated.invoiceId), "invoiceId"))}`, { method: "GET" }, (body) => ({
       invoice: parseInvoiceResource(body),
     }));
   }
@@ -323,7 +324,7 @@ export function updateInvoice(input: unknown): ActionResult {
       input,
       "invoices.update",
       validated.organizationId,
-      `/invoices/${encodeURIComponent(validated.invoiceId)}`,
+      `/invoices/${encodeURIComponent(assertSafePathSegment(String(validated.invoiceId), "invoiceId"))}`,
       { method: "PUT", ...jsonStringBody(payload) },
       (body) => ({ invoice: parseInvoiceResource(body) }),
     );
@@ -363,7 +364,7 @@ export function emailInvoice(input: unknown): ActionResult {
       input,
       "invoices.email",
       validated.organizationId,
-      `/invoices/${encodeURIComponent(validated.invoiceId)}/email`,
+      `/invoices/${encodeURIComponent(assertSafePathSegment(String(validated.invoiceId), "invoiceId"))}/email`,
       { method: "POST", ...jsonStringBody(payload) },
       () => ({ sent: true }),
     );
@@ -389,7 +390,7 @@ export function voidInvoice(input: unknown): ActionResult {
       input,
       "invoices.void",
       validated.organizationId,
-      `/invoices/${encodeURIComponent(validated.invoiceId)}/status/void`,
+      `/invoices/${encodeURIComponent(assertSafePathSegment(String(validated.invoiceId), "invoiceId"))}/status/void`,
       { method: "POST" },
       () => ({ voided: true }),
     );
@@ -431,7 +432,7 @@ export type BillsGetInput = { organizationId: string; billId: string };
 export function getBill(input: unknown): ActionResult {
   const validated = validateBillsGetInput(input);
   if (hasLiveAuth(input)) {
-    return wrap(input, "bills.get", validated.organizationId, `/bills/${encodeURIComponent(validated.billId)}`, { method: "GET" }, (body) => ({
+    return wrap(input, "bills.get", validated.organizationId, `/bills/${encodeURIComponent(assertSafePathSegment(String(validated.billId), "billId"))}`, { method: "GET" }, (body) => ({
       bill: parseBillResource(body),
     }));
   }
@@ -504,7 +505,7 @@ export type ItemsGetInput = { organizationId: string; itemId: string };
 export function getItem(input: unknown): ActionResult {
   const validated = validateItemsGetInput(input);
   if (hasLiveAuth(input)) {
-    return wrap(input, "items.get", validated.organizationId, `/items/${encodeURIComponent(validated.itemId)}`, { method: "GET" }, (body) => ({
+    return wrap(input, "items.get", validated.organizationId, `/items/${encodeURIComponent(assertSafePathSegment(String(validated.itemId), "itemId"))}`, { method: "GET" }, (body) => ({
       item: parseItemResource(body),
     }));
   }
@@ -561,14 +562,14 @@ export type OrganizationsGetInput = { organizationId?: string };
 export function getOrganizations(input: unknown): ActionResult {
   const validated = validateOrganizationsGetInput(input);
   if (hasLiveAuth(input)) {
-    const path = validated.organizationId
-      ? `/organizations/${encodeURIComponent(validated.organizationId)}`
+    const path = validated.organizationId !== undefined
+      ? `/organizations/${encodeURIComponent(assertSafePathSegment(String(validated.organizationId), "organizationId"))}`
       : "/organizations";
     return wrap(input, "organizations.get", undefined, path, { method: "GET" }, (body) => {
       const organizations = parseOrganizationsResponse(body);
       return {
         organizations,
-        organization: validated.organizationId ? organizations[0] ?? null : undefined,
+        organization: validated.organizationId !== undefined ? organizations[0] ?? null : undefined,
       };
     });
   }
@@ -578,5 +579,11 @@ export function getOrganizations(input: unknown): ActionResult {
 function validateOrganizationsGetInput(input: unknown): OrganizationsGetInput {
   if (input == null) return {};
   if (!isRecord(input)) throw new Error("organizations.get input must be an object");
-  return { organizationId: optionalString(input.organizationId) };
+  // SEC-PATH-2c: only an omitted organizationId lists organizations; a present
+  // value (including "" or whitespace) must be a valid id, never fall back to
+  // the list route.
+  const raw = input.organizationId;
+  if (raw === undefined) return {};
+  if (typeof raw !== "string" && typeof raw !== "number") throw new Error("organizationId must be a string");
+  return { organizationId: assertSafePathSegment(String(raw), "organizationId") };
 }

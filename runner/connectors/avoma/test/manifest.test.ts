@@ -58,7 +58,7 @@ function deepEqual(a: unknown, b: unknown): boolean {
 describe("avoma manifest", () => {
   test("has bounded host, origin auth, version, and compiles", () => {
     expect(manifest.key).toBe("avoma");
-    expect(manifest.version).toBe("0.2.0");
+    expect(manifest.version).toBe("0.2.1");
     expect(manifest.runtime).toBe("bun");
     expect(manifest.categories).toEqual(["scheduling"]);
     expect(manifest.network.allowedHosts).toEqual(["api.avoma.com"]);

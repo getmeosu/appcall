@@ -1,5 +1,7 @@
 import { ConnectorHttpError, createConnectorHttpClient } from "../../../bun/src/http";
 import manifest from "../manifest.json";
+// SEC-PATH-2c: record ids (15/18 alphanumerics) and sObject API names use the strict guard.
+import { assertSafePathSegment } from "../../_shared/jobboard";
 
 export type SalesforceRateLimitResult =
   | { limited: true; retryAfterSeconds: number }
@@ -105,18 +107,18 @@ export function createSalesforceClient(options: SalesforceClientOptions) {
     },
 
     async getRecord(sobject: string, id: string): Promise<{ status: number; headers: Record<string, string>; body: unknown }> {
-      return this.fetchJSON(`/services/data/${API_VERSION}/sobjects/${sobject}/${encodeURIComponent(id)}`);
+      return this.fetchJSON(`/services/data/${API_VERSION}/sobjects/${sobject}/${encodeURIComponent(assertSafePathSegment(id, "id"))}`);
     },
 
     async updateRecord(sobject: string, id: string, data: Record<string, unknown>): Promise<{ status: number; headers: Record<string, string>; body: unknown }> {
-      return this.fetchJSON(`/services/data/${API_VERSION}/sobjects/${sobject}/${encodeURIComponent(id)}`, {
+      return this.fetchJSON(`/services/data/${API_VERSION}/sobjects/${sobject}/${encodeURIComponent(assertSafePathSegment(id, "id"))}`, {
         method: "PATCH",
         body: JSON.stringify(data),
       });
     },
 
     async deleteRecord(sobject: string, id: string): Promise<{ status: number; headers: Record<string, string>; body: unknown }> {
-      return this.fetchJSON(`/services/data/${API_VERSION}/sobjects/${sobject}/${encodeURIComponent(id)}`, {
+      return this.fetchJSON(`/services/data/${API_VERSION}/sobjects/${sobject}/${encodeURIComponent(assertSafePathSegment(id, "id"))}`, {
         method: "DELETE",
       });
     },
@@ -126,7 +128,7 @@ export function createSalesforceClient(options: SalesforceClientOptions) {
     },
 
     async describeSobject(sobject: string): Promise<{ status: number; headers: Record<string, string>; body: unknown }> {
-      return this.fetchJSON(`/services/data/${API_VERSION}/sobjects/${encodeURIComponent(sobject)}/describe`);
+      return this.fetchJSON(`/services/data/${API_VERSION}/sobjects/${encodeURIComponent(assertSafePathSegment(sobject, "sobject"))}/describe`);
     },
 
     async getCurrentUser(): Promise<{ status: number; headers: Record<string, string>; body: unknown }> {

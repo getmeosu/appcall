@@ -1,4 +1,5 @@
 import { createGraphClient, parseGraphRateLimit, type GraphClient } from "./http";
+import { encodePathSegment } from "../../_shared/jobboard";
 
 export type OutlookMessage = {
   id: string;
@@ -122,7 +123,7 @@ export function createGetMessageClient(options: { accessToken: string; fetch?: t
   return {
     async get(input: unknown) {
       const payload = validateGetMessageInput(input);
-      const response = await client.fetchJSON(`/v1.0/me/messages/${encodeURIComponent(payload.messageId)}`);
+      const response = await client.fetchJSON(`/v1.0/me/messages/${encodePathSegment(payload.messageId, "messageId")}`);
       if (response.status === 200) {
         const msg = response.body as OutlookMessage;
         return { ok: true as const, message: normalizeOutlookMessage({ id: requireString((msg as Record<string, unknown>).id, "id"), ...msg as Record<string, unknown> }) };
@@ -154,7 +155,7 @@ export function createReplyMessageClient(options: { accessToken: string; fetch?:
   return {
     async reply(input: unknown) {
       const payload = validateReplyMessageInput(input);
-      const response = await client.fetchJSON(`/v1.0/me/messages/${encodeURIComponent(payload.messageId)}/reply`, {
+      const response = await client.fetchJSON(`/v1.0/me/messages/${encodePathSegment(payload.messageId, "messageId")}/reply`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ comment: payload.comment }),
@@ -187,7 +188,7 @@ export function createMoveMessageClient(options: { accessToken: string; fetch?: 
   return {
     async move(input: unknown) {
       const payload = validateMoveMessageInput(input);
-      const response = await client.fetchJSON(`/v1.0/me/messages/${encodeURIComponent(payload.messageId)}/move`, {
+      const response = await client.fetchJSON(`/v1.0/me/messages/${encodePathSegment(payload.messageId, "messageId")}/move`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ destinationId: payload.destinationId }),
@@ -220,7 +221,7 @@ export function createDeleteMessageClient(options: { accessToken: string; fetch?
   return {
     async delete(input: unknown) {
       const payload = validateDeleteMessageInput(input);
-      const response = await client.fetchJSON(`/v1.0/me/messages/${encodeURIComponent(payload.messageId)}`, {
+      const response = await client.fetchJSON(`/v1.0/me/messages/${encodePathSegment(payload.messageId, "messageId")}`, {
         method: "DELETE",
       });
       if (response.status === 204) return { ok: true as const };
@@ -288,7 +289,7 @@ export function createMailFoldersClient(options: { accessToken: string; fetch?: 
 
     async get(input: unknown) {
       const payload = validateGetMailFolderInput(input);
-      const response = await client.fetchJSON(`/v1.0/me/mailFolders/${encodeURIComponent(payload.folderId)}`);
+      const response = await client.fetchJSON(`/v1.0/me/mailFolders/${encodePathSegment(payload.folderId, "folderId")}`);
       if (response.status === 200) {
         return { ok: true as const, folder: parseMailFolder(response.body) };
       }

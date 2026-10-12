@@ -1,5 +1,6 @@
 import { createGoogleClient, parseGoogleError, parseGoogleRateLimitMetadata, parseNextPageToken, type ConnectorError } from "./http";
 import type { ConnectorHttpClient } from "../../../bun/src/http";
+import { encodePathSegment } from "../../_shared/jobboard";
 
 export type GmailMessage = {
   id: string;
@@ -114,7 +115,7 @@ export function createGmailClient(options: { accessToken: string; fetch?: typeof
       if (payload.format) params.set("format", payload.format);
       const qs = params.toString() ? `?${params}` : "";
       const response = await getClient.fetchText(
-        `https://gmail.googleapis.com/gmail/v1/users/me/messages/${encodeURIComponent(payload.messageId)}${qs}`,
+        `https://gmail.googleapis.com/gmail/v1/users/me/messages/${encodePathSegment(payload.messageId, "messageId")}${qs}`,
         { headers: authHeaders },
       );
       const res = await handleGmailResponse(response);
@@ -138,7 +139,7 @@ export function createGmailClient(options: { accessToken: string; fetch?: typeof
     async modifyMessage(input: unknown): Promise<ModifyMessageResult> {
       const payload = validateModifyMessageInput(input);
       const response = await modifyClient.fetchText(
-        `https://gmail.googleapis.com/gmail/v1/users/me/messages/${encodeURIComponent(payload.messageId)}/modify`,
+        `https://gmail.googleapis.com/gmail/v1/users/me/messages/${encodePathSegment(payload.messageId, "messageId")}/modify`,
         {
           method: "POST",
           headers: jsonHeaders,
@@ -164,7 +165,7 @@ export function createGmailClient(options: { accessToken: string; fetch?: typeof
     async trashMessage(input: unknown): Promise<TrashMessageResult> {
       const payload = validateTrashMessageInput(input);
       const response = await trashClient.fetchText(
-        `https://gmail.googleapis.com/gmail/v1/users/me/messages/${encodeURIComponent(payload.messageId)}/trash`,
+        `https://gmail.googleapis.com/gmail/v1/users/me/messages/${encodePathSegment(payload.messageId, "messageId")}/trash`,
         {
           method: "POST",
           headers: jsonHeaders,
@@ -229,7 +230,7 @@ export function createGmailClient(options: { accessToken: string; fetch?: typeof
     async untrashMessage(input: unknown): Promise<TrashMessageResult> {
       const payload = validateUntrashMessageInput(input);
       const response = await untrashClient.fetchText(
-        `https://gmail.googleapis.com/gmail/v1/users/me/messages/${encodeURIComponent(payload.messageId)}/untrash`,
+        `https://gmail.googleapis.com/gmail/v1/users/me/messages/${encodePathSegment(payload.messageId, "messageId")}/untrash`,
         { method: "POST", headers: jsonHeaders, body: "{}" },
       );
       const res = await handleGmailResponse(response);
@@ -248,7 +249,7 @@ export function createGmailClient(options: { accessToken: string; fetch?: typeof
     async deleteMessage(input: unknown): Promise<DeleteMessageResult> {
       const payload = validateDeleteMessageInput(input);
       const response = await deleteClient.fetchText(
-        `https://gmail.googleapis.com/gmail/v1/users/me/messages/${encodeURIComponent(payload.messageId)}`,
+        `https://gmail.googleapis.com/gmail/v1/users/me/messages/${encodePathSegment(payload.messageId, "messageId")}`,
         { method: "DELETE", headers: authHeaders },
       );
       const rateLimit = parseGoogleRateLimitMetadata(response.status, response.headers);
@@ -266,7 +267,7 @@ export function createGmailClient(options: { accessToken: string; fetch?: typeof
     async getAttachment(input: unknown): Promise<GetAttachmentResult> {
       const payload = validateGetAttachmentInput(input);
       const response = await attachmentClient.fetchText(
-        `https://gmail.googleapis.com/gmail/v1/users/me/messages/${encodeURIComponent(payload.messageId)}/attachments/${encodeURIComponent(payload.attachmentId)}`,
+        `https://gmail.googleapis.com/gmail/v1/users/me/messages/${encodePathSegment(payload.messageId, "messageId")}/attachments/${encodePathSegment(payload.attachmentId, "attachmentId")}`,
         { headers: authHeaders },
       );
       const res = await handleGmailResponse(response);
@@ -313,7 +314,7 @@ export function createGmailClient(options: { accessToken: string; fetch?: typeof
       if (payload.format) params.set("format", payload.format);
       const qs = params.toString() ? `?${params}` : "";
       const response = await threadsGetClient.fetchText(
-        `https://gmail.googleapis.com/gmail/v1/users/me/threads/${encodeURIComponent(payload.threadId)}${qs}`,
+        `https://gmail.googleapis.com/gmail/v1/users/me/threads/${encodePathSegment(payload.threadId, "threadId")}${qs}`,
         { headers: authHeaders },
       );
       const res = await handleGmailResponse(response);
@@ -347,7 +348,7 @@ export function createGmailClient(options: { accessToken: string; fetch?: typeof
     async deleteDraft(input: unknown): Promise<DeleteDraftResult> {
       const payload = validateDeleteDraftInput(input);
       const response = await draftDeleteClient.fetchText(
-        `https://gmail.googleapis.com/gmail/v1/users/me/drafts/${encodeURIComponent(payload.draftId)}`,
+        `https://gmail.googleapis.com/gmail/v1/users/me/drafts/${encodePathSegment(payload.draftId, "draftId")}`,
         { method: "DELETE", headers: authHeaders },
       );
       const rateLimit = parseGoogleRateLimitMetadata(response.status, response.headers);
@@ -386,7 +387,7 @@ export function createGmailClient(options: { accessToken: string; fetch?: typeof
     async getLabel(input: unknown): Promise<GetLabelResult> {
       const payload = validateGetLabelInput(input);
       const response = await labelsGetClient.fetchText(
-        `https://gmail.googleapis.com/gmail/v1/users/me/labels/${encodeURIComponent(payload.labelId)}`,
+        `https://gmail.googleapis.com/gmail/v1/users/me/labels/${encodePathSegment(payload.labelId, "labelId")}`,
         { headers: authHeaders },
       );
       const res = await handleGmailResponse(response);

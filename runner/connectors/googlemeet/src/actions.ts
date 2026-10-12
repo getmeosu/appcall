@@ -1,5 +1,6 @@
 import { createGoogleMeetClient, parseGoogleRateLimit, googleErrorDetail, isRecord, extractFetch } from "./http";
 import { normalizeMeeting, parseMeetingsResponse } from "./objects";
+import { encodePathSegment } from "../../_shared/jobboard";
 
 function requireString(value: unknown, field: string): string {
   if (typeof value !== "string" || value.length === 0) throw new Error(`${field} is required`);
@@ -15,7 +16,8 @@ function fail(status: number, headers: Record<string, string>, body: unknown, fa
 }
 
 function encodeMeetingId(meetingId: string): string {
-  return encodeURIComponent(meetingId);
+  // SEC-PATH-2c: reject blank and dot-only event ids before encoding.
+  return encodePathSegment(meetingId, "meetingId");
 }
 
 // ─── meetings.create ─────────────────────────────────────────────────────────

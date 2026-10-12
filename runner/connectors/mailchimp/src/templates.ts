@@ -1,6 +1,7 @@
 import { createMailchimpClient, parseMailchimpRateLimit, isRecord } from "./http";
 import { normalizeTemplate, parseTemplatesResponse } from "./objects";
 import type { NormalizedTemplate } from "./objects";
+import { encodePathSegment } from "../../_shared/jobboard";
 
 export type ListTemplatesInput = { count?: number; offset?: number };
 export type GetTemplateInput = { templateId: string };
@@ -32,7 +33,7 @@ export function createTemplatesClient(options: { apiKey: string; fetch?: typeof 
 
     async getTemplate(input: unknown): Promise<{ ok: true; template: NormalizedTemplate } | { ok: false; error: { code: string; message: string; retryAfterSeconds?: number } }> {
       const payload = validateGetTemplateInput(input);
-      const response = await client.fetchJSON(`/templates/${payload.templateId}`);
+      const response = await client.fetchJSON(`/templates/${encodePathSegment(payload.templateId, "templateId")}`);
       if (response.status === 200) return { ok: true, template: normalizeTemplate(response.body as Record<string, unknown>) };
       if (response.status === 404) return { ok: false, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Template not found." } };
       const rl = parseMailchimpRateLimit(response.status, response.headers);

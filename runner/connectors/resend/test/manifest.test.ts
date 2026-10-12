@@ -5,7 +5,7 @@ import composioMappings from "../fixtures/composio_tool_mapping.json";
 describe("resend manifest", () => {
   it("has correct key and version", () => {
     expect(manifest.key).toBe("resend");
-    expect(manifest.version).toBe("0.4.0");
+    expect(manifest.version).toBe("0.4.1");
     expect(manifest.runtime).toBe("bun");
   });
 

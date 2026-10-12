@@ -1,4 +1,5 @@
 import { createTypeFormClient, parseTypeFormRateLimit, type TypeFormClient } from "./http";
+import { encodePathSegment } from "../../_shared/jobboard";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -117,7 +118,7 @@ export function createWebhooksClient(options: { accessToken: string; fetch?: typ
       if (payload.verifySsl !== undefined) body.verify_ssl = payload.verifySsl;
       if (payload.secret !== undefined) body.secret = payload.secret;
       if (payload.eventTypes !== undefined) body.event_types = payload.eventTypes;
-      const response = await client.fetchJSON(`/forms/${payload.formId}/webhooks/${payload.tag}`, {
+      const response = await client.fetchJSON(`/forms/${encodePathSegment(payload.formId, "formId")}/webhooks/${encodePathSegment(payload.tag, "tag")}`, {
         method: "PUT",
         body: JSON.stringify(body),
       });
@@ -136,7 +137,7 @@ export function createWebhooksClient(options: { accessToken: string; fetch?: typ
 
     async list(input: unknown) {
       const payload = validateWebhooksListInput(input);
-      const response = await client.fetchJSON(`/forms/${payload.formId}/webhooks`);
+      const response = await client.fetchJSON(`/forms/${encodePathSegment(payload.formId, "formId")}/webhooks`);
       const rateLimit = parseTypeFormRateLimit(response.status, response.headers);
       if (rateLimit.limited) {
         return { ok: false as const, error: { code: "CONNECTOR_RATE_LIMITED", message: "Typeform rate limit exceeded.", retryAfterSeconds: rateLimit.retryAfterSeconds } };
@@ -154,7 +155,7 @@ export function createWebhooksClient(options: { accessToken: string; fetch?: typ
 
     async get(input: unknown) {
       const payload = validateWebhooksGetInput(input);
-      const response = await client.fetchJSON(`/forms/${payload.formId}/webhooks/${payload.tag}`);
+      const response = await client.fetchJSON(`/forms/${encodePathSegment(payload.formId, "formId")}/webhooks/${encodePathSegment(payload.tag, "tag")}`);
       const rateLimit = parseTypeFormRateLimit(response.status, response.headers);
       if (rateLimit.limited) {
         return { ok: false as const, error: { code: "CONNECTOR_RATE_LIMITED", message: "Typeform rate limit exceeded.", retryAfterSeconds: rateLimit.retryAfterSeconds } };
@@ -170,7 +171,7 @@ export function createWebhooksClient(options: { accessToken: string; fetch?: typ
 
     async delete(input: unknown) {
       const payload = validateWebhooksDeleteInput(input);
-      const response = await client.fetchJSON(`/forms/${payload.formId}/webhooks/${payload.tag}`, { method: "DELETE" });
+      const response = await client.fetchJSON(`/forms/${encodePathSegment(payload.formId, "formId")}/webhooks/${encodePathSegment(payload.tag, "tag")}`, { method: "DELETE" });
       const rateLimit = parseTypeFormRateLimit(response.status, response.headers);
       if (rateLimit.limited) {
         return { ok: false as const, error: { code: "CONNECTOR_RATE_LIMITED", message: "Typeform rate limit exceeded.", retryAfterSeconds: rateLimit.retryAfterSeconds } };

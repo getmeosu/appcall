@@ -5,7 +5,7 @@ describe("brevo connector manifest", () => {
   test("declares key, runtime, auth, network, operations, and models", () => {
     expect(manifest.key).toBe("brevo");
     expect(manifest.name).toBe("Brevo");
-    expect(manifest.version).toBe("0.2.0");
+    expect(manifest.version).toBe("0.2.1");
     expect(manifest.runtime).toBe("bun");
   });
 

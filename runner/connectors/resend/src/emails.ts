@@ -1,6 +1,7 @@
 import { createResendClient, parseResendRateLimit, isRecord } from "./http";
 import { isSmtpConfigured, sendSmtpEmail } from "../../_shared/smtp";
 import { normalizeEmail, parseEmailsListResponse } from "./objects";
+import { encodePathSegment } from "../../_shared/jobboard";
 
 export type EmailSendInput = {
   from: string;
@@ -103,7 +104,7 @@ export function getEmail(input: unknown): Record<string, unknown> | Promise<Reco
     const payload = validateEmailGetInput(input);
     const fetchFn = typeof input.fetch === "function" ? (input.fetch as typeof fetch) : undefined;
     return createResendClient({ apiKey: input.apiKey, fetch: fetchFn, operation: "emails.get" })
-      .fetchJSON(`/emails/${encodeURIComponent(payload.id)}`, { method: "GET" })
+      .fetchJSON(`/emails/${encodePathSegment(payload.id, "id")}`, { method: "GET" })
       .then((result) => {
         if (result.status >= 200 && result.status < 300 && isRecord(result.body)) {
           return {
