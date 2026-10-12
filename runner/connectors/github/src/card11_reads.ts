@@ -1,6 +1,6 @@
 import { createGitHubClient, parseGitHubRateLimit, type GitHubClient } from "./http";
-import { normalizeGitHubRepo, type GitHubRepo } from "./repos";
-import { normalizeGitHubUser, type GitHubUser } from "./users";
+import { normalizeGitHubRepoListItem, type GitHubRepo } from "./repos";
+import { normalizeGitHubUserListItem, type GitHubUser } from "./users";
 import { requireSingleSegment as segment } from "./path_segment";
 
 type Page = { perPage?: number; page?: number };
@@ -183,14 +183,14 @@ async function users(client: GitHubClient, path: string, operation: string, miss
   const result = await read(client, path, operation, missing);
   if (!result.ok) return result;
   if (!Array.isArray(result.body)) return upstream(`GitHub rejected the ${operation} request.`);
-  return { ok: true as const, users: result.body.filter(isRecord).map((user) => normalizeGitHubUser(user as GitHubUser)) };
+  return { ok: true as const, users: result.body.filter(isRecord).map((user) => normalizeGitHubUserListItem(user as GitHubUser)) };
 }
 
 async function repos(client: GitHubClient, path: string, operation: string, missing: string) {
   const result = await read(client, path, operation, missing);
   if (!result.ok) return result;
   if (!Array.isArray(result.body)) return upstream(`GitHub rejected the ${operation} request.`);
-  return { ok: true as const, repositories: result.body.filter(isRecord).map((repo) => normalizeGitHubRepo(repo as GitHubRepo)) };
+  return { ok: true as const, repositories: result.body.filter(isRecord).map((repo) => normalizeGitHubRepoListItem(repo as GitHubRepo)) };
 }
 
 async function read(client: GitHubClient, path: string, operation: string, missing: string) {

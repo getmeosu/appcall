@@ -1,5 +1,5 @@
 import { createGitHubClient, parseGitHubRateLimit, type GitHubClient } from "./http";
-import { normalizeGitHubRepo, type GitHubRepo } from "./repos";
+import { normalizeGitHubRepo, normalizeGitHubRepoListItem, type GitHubRepo } from "./repos";
 import { normalizeGitHubTeam, type GitHubTeam } from "./notifications_social";
 import { normalizeGitHubUser, type GitHubUser } from "./users";
 
@@ -749,7 +749,7 @@ export function createGovernanceClient(options: { accessToken: string; fetch?: t
       const client = clientFor(options, base, "teams.repos.list");
       const response = await client.fetchJSON(`/orgs/${encodeURIComponent(payload.org)}/teams/${encodeURIComponent(payload.teamSlug)}/repos${pageQuery(payload.perPage, payload.page)}`);
       if (response.status === 200 && Array.isArray(response.body)) {
-        return { ok: true as const, repositories: (response.body as GitHubRepo[]).map(normalizeGitHubRepo) };
+        return { ok: true as const, repositories: (response.body as GitHubRepo[]).map(normalizeGitHubRepoListItem) };
       }
       return mapError(response.status, response.headers, "teams.repos.list");
     },

@@ -1,6 +1,6 @@
 import { createGitHubClient, parseGitHubRateLimit, type GitHubClient } from "./http";
 import { normalizeGitHubTeam, type GitHubTeam } from "./notifications_social";
-import { normalizeGitHubUser, type GitHubUser } from "./users";
+import { normalizeGitHubUserListItem, type GitHubUser } from "./users";
 import { requireSingleSegment as segment } from "./path_segment";
 
 type Page = { perPage?: number; page?: number };
@@ -131,7 +131,7 @@ export function createCard5ReadsClient(options: { accessToken: string; fetch?: t
       const result = await read(client, `${protection(payload)}/restrictions`, "branches.protection.restrictions.get", "GitHub branch protection restrictions were not found.");
       if (!result.ok) return result;
       if (!isRecord(result.body)) return upstream("GitHub rejected the branches.protection.restrictions.get request.");
-      const users = arrayOf(result.body.users).map((user) => normalizeGitHubUser(user as GitHubUser));
+      const users = arrayOf(result.body.users).map((user) => normalizeGitHubUserListItem(user as GitHubUser));
       const teams = arrayOf(result.body.teams).map((team) => normalizeGitHubTeam(team as GitHubTeam));
       const apps = arrayOf(result.body.apps).map(appIdentity);
       return { ok: true as const, users, teams, apps };
@@ -210,7 +210,7 @@ export function createCard5ReadsClient(options: { accessToken: string; fetch?: t
       const result = await read(client, `${protection(payload)}/restrictions/users${pageQuery(payload)}`, "branches.protection.restrictions.users.list", "GitHub branch restriction users were not found.");
       if (!result.ok) return result;
       if (!Array.isArray(result.body)) return upstream("GitHub rejected the branches.protection.restrictions.users.list request.");
-      return { ok: true as const, users: result.body.filter(isRecord).map((user) => normalizeGitHubUser(user as GitHubUser)) };
+      return { ok: true as const, users: result.body.filter(isRecord).map((user) => normalizeGitHubUserListItem(user as GitHubUser)) };
     },
     async listUserProjectFields(input: unknown) {
       const payload = validateListUserProjectFieldsInput(input);

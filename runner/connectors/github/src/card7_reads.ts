@@ -1,5 +1,5 @@
 import { createGitHubClient, parseGitHubRateLimit, type GitHubClient } from "./http";
-import { normalizeGitHubRepo, type GitHubRepo } from "./repos";
+import { normalizeGitHubRepoListItem, type GitHubRepo } from "./repos";
 import { requireSingleSegment } from "./path_segment";
 
 const FORK_SORTS = ["newest", "oldest", "stargazers", "watchers"] as const;
@@ -130,7 +130,7 @@ export function createCard7ReadsClient(options: { accessToken: string; fetch?: t
         })}`,
       );
       if (response.status === 200 && Array.isArray(response.body)) {
-        const forks = response.body.filter(isRecord).map((item) => normalizeGitHubRepo(item as GitHubRepo));
+        const forks = response.body.filter(isRecord).map((item) => normalizeGitHubRepoListItem(item as GitHubRepo));
         return { ok: true as const, forks };
       }
       if (response.status === 404) return upstream("Repository forks not found.");

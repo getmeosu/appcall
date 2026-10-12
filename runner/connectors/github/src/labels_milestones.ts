@@ -326,18 +326,19 @@ export type NormalizedCollaborator = {
   htmlUrl: string;
   type: string;
   siteAdmin: boolean;
-  permissions: Record<string, boolean>;
+  permissions: Record<string, boolean> | null;
   roleName: string;
   modelVersion: "2026-05-16";
   raw: Record<string, unknown>;
 };
 
 export function normalizeCollaborator(item: Record<string, unknown>): NormalizedCollaborator {
+  // GH-TYPED-READS TR-3: permissions is optional in the spec (collaborator); null when absent, not {}.
   const permissions = isRecord(item.permissions)
     ? Object.fromEntries(
         Object.entries(item.permissions).filter(([, v]) => typeof v === "boolean") as [string, boolean][],
       )
-    : {};
+    : null;
   return {
     id: `gh-user:${typeof item.id === "number" ? item.id : 0}`,
     provider: "github",

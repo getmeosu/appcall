@@ -1,8 +1,8 @@
 import { createGitHubClient, parseGitHubRateLimit, type GitHubClient } from "./http";
 import { normalizeGitHubIssue, type GitHubIssue, type NormalizedIssue } from "./issues";
-import { normalizeGitHubOrg, type GitHubOrg } from "./orgs";
-import { normalizeGitHubRepo, type GitHubRepo } from "./repos";
-import { normalizeGitHubUser, type GitHubUser, type NormalizedUser } from "./users";
+import { normalizeGitHubOrgListItem, type GitHubOrg } from "./orgs";
+import { normalizeGitHubRepoListItem, type GitHubRepo } from "./repos";
+import { normalizeGitHubUserListItem, type GitHubUser, type NormalizedUser } from "./users";
 
 export type SearchIssuesInput = {
   q: string;
@@ -138,7 +138,7 @@ export function validateSearchUsersInput(input: unknown): SearchUsersInput {
 export type SearchUsersResult = {
   totalCount: number;
   incompleteResults: boolean;
-  items: ReturnType<typeof normalizeGitHubUser>[];
+  items: ReturnType<typeof normalizeGitHubUserListItem>[];
 };
 
 
@@ -365,7 +365,7 @@ export function createSearchClient(options: { accessToken: string; fetch?: typeo
       const response = await client.fetchJSON(buildUsersSearchPath(payload));
       if (response.status === 200 && isRecord(response.body)) {
         const itemsRaw = Array.isArray(response.body.items) ? response.body.items : [];
-        const users = itemsRaw.filter(isRecord).map((item) => normalizeGitHubUser(item as GitHubUser));
+        const users = itemsRaw.filter(isRecord).map((item) => normalizeGitHubUserListItem(item as GitHubUser));
         return {
           ok: true as const,
           result: {
@@ -400,13 +400,13 @@ export function createSearchClient(options: { accessToken: string; fetch?: typeo
     async searchRepositories(input: unknown) {
       const payload = validateSearchRepositoriesInput(input);
       const response = await client.fetchJSON(buildQueryPath("/search/repositories", payload, payload.q));
-      return readSearchItems(response, (item) => normalizeGitHubRepo(item as GitHubRepo), "GitHub rejected the search repositories request.");
+      return readSearchItems(response, (item) => normalizeGitHubRepoListItem(item as GitHubRepo), "GitHub rejected the search repositories request.");
     },
 
     async searchOrgs(input: unknown) {
       const payload = validateSearchOrgsInput(input);
       const response = await client.fetchJSON(buildQueryPath("/search/users", payload, buildOrgSearchQuery(payload.q)));
-      return readSearchItems(response, (item) => normalizeGitHubOrg(item as GitHubOrg), "GitHub rejected the search orgs request.");
+      return readSearchItems(response, (item) => normalizeGitHubOrgListItem(item as GitHubOrg), "GitHub rejected the search orgs request.");
     },
   };
 }

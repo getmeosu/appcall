@@ -1,6 +1,6 @@
 import { createGitHubClient, parseGitHubRateLimit, type GitHubClient } from "./http";
-import { normalizeGitHubRepo, type GitHubRepo } from "./repos";
-import { normalizeGitHubUser, type GitHubUser, type NormalizedUser } from "./users";
+import { normalizeGitHubRepoListItem, type GitHubRepo } from "./repos";
+import { normalizeGitHubUserListItem, type GitHubUser, type NormalizedUserListItem } from "./users";
 import { requirePathValue } from "./path_values";
 
 export type GitHubOrg = {
@@ -64,6 +64,22 @@ export function normalizeGitHubOrg(org: GitHubOrg): NormalizedOrg {
     updatedAt: typeof org.updated_at === "string" ? org.updated_at : "",
     modelVersion: "2026-05-16",
     raw: org as unknown as Record<string, unknown>,
+  };
+}
+
+// GH-TYPED-READS TR-3: list endpoints return organization-simple, which has no public_repos,
+// created_at or updated_at. A list item gets null for a missing value instead of 0 / "".
+export type NormalizedOrgListItem = Omit<NormalizedOrg, "publicRepos" | "createdAt" | "updatedAt"> & {
+  publicRepos: number | null; createdAt: string | null; updatedAt: string | null;
+};
+
+export function normalizeGitHubOrgListItem(org: GitHubOrg): NormalizedOrgListItem {
+  const str = (v: unknown) => (typeof v === "string" ? v : null);
+  return {
+    ...normalizeGitHubOrg(org),
+    publicRepos: typeof org.public_repos === "number" ? org.public_repos : null,
+    createdAt: str(org.created_at),
+    updatedAt: str(org.updated_at),
   };
 }
 
@@ -161,7 +177,7 @@ export function createOrgsClient(options: { accessToken: string; fetch?: typeof 
       const rate = parseGitHubRateLimit(response.status, response.headers);
       if (rate.limited) return { ok: false as const, error: { code: "CONNECTOR_RATE_LIMITED", message: "GitHub rate limit exceeded", retryAfterSeconds: rate.retryAfterSeconds } };
       if (response.status === 200 && Array.isArray(response.body)) {
-        return { ok: true as const, organizations: (response.body as GitHubOrg[]).map(normalizeGitHubOrg) };
+        return { ok: true as const, organizations: (response.body as GitHubOrg[]).map(normalizeGitHubOrgListItem) };
       }
       return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: `GitHub orgs.list failed with status ${response.status}`, retryAfterSeconds: undefined as number | undefined } };
     },
@@ -179,7 +195,7 @@ export function createOrgsClient(options: { accessToken: string; fetch?: typeof 
       const rate = parseGitHubRateLimit(response.status, response.headers);
       if (rate.limited) return { ok: false as const, error: { code: "CONNECTOR_RATE_LIMITED", message: "GitHub rate limit exceeded", retryAfterSeconds: rate.retryAfterSeconds } };
       if (response.status === 200 && Array.isArray(response.body)) {
-        const members: NormalizedUser[] = (response.body as GitHubUser[]).map(normalizeGitHubUser);
+        const members: NormalizedUserListItem[] = (response.body as GitHubUser[]).map(normalizeGitHubUserListItem);
         return { ok: true as const, members };
       }
       return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: `GitHub orgs.members.list failed with status ${response.status}`, retryAfterSeconds: undefined as number | undefined } };
@@ -200,7 +216,7 @@ export function createOrgsClient(options: { accessToken: string; fetch?: typeof 
       const rate = parseGitHubRateLimit(response.status, response.headers);
       if (rate.limited) return { ok: false as const, error: { code: "CONNECTOR_RATE_LIMITED", message: "GitHub rate limit exceeded", retryAfterSeconds: rate.retryAfterSeconds } };
       if (response.status === 200 && Array.isArray(response.body)) {
-        return { ok: true as const, repositories: (response.body as GitHubRepo[]).map(normalizeGitHubRepo) };
+        return { ok: true as const, repositories: (response.body as GitHubRepo[]).map(normalizeGitHubRepoListItem) };
       }
       return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: `GitHub orgs.repos.list failed with status ${response.status}`, retryAfterSeconds: undefined as number | undefined } };
     },

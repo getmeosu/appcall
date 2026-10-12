@@ -1,5 +1,5 @@
 import { createGitHubClient, parseGitHubRateLimit, type GitHubClient } from "./http";
-import { normalizeGitHubUser, type GitHubUser } from "./users";
+import { normalizeGitHubUserListItem, type GitHubUser } from "./users";
 
 type SincePage = { since?: number; perPage?: number };
 
@@ -44,7 +44,7 @@ export function createCorrectnessCard18Client(options: {
       if (response.status === 200 && Array.isArray(response.body)) {
         return {
           ok: true as const,
-          users: (response.body as GitHubUser[]).map(normalizeGitHubUser),
+          users: (response.body as GitHubUser[]).map(normalizeGitHubUserListItem),
         };
       }
       if (response.status === 404) {

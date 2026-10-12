@@ -1,5 +1,5 @@
 import { createGitHubClient, parseGitHubRateLimit, type GitHubClient } from "./http";
-import { normalizeGitHubRepo, type GitHubRepo } from "./repos";
+import { normalizeGitHubRepoListItem, type GitHubRepo } from "./repos";
 import { requirePathValue } from "./path_values";
 
 export type GitHubUser = {
@@ -68,6 +68,26 @@ export function normalizeGitHubUser(user: GitHubUser): NormalizedUser {
     avatarUrl: typeof user.avatar_url === "string" ? user.avatar_url : "",
     modelVersion: "2026-05-16",
     raw: user as unknown as Record<string, unknown>,
+  };
+}
+
+// GH-TYPED-READS TR-3: list endpoints return simple-user (or user-search-result-item), which has
+// no public_repos, followers, following, created_at or updated_at. A list item gets null for a
+// missing value instead of 0 / "". Present values are unchanged.
+export type NormalizedUserListItem = Omit<NormalizedUser, "publicRepos" | "followers" | "following" | "createdAt" | "updatedAt"> & {
+  publicRepos: number | null; followers: number | null; following: number | null; createdAt: string | null; updatedAt: string | null;
+};
+
+export function normalizeGitHubUserListItem(user: GitHubUser): NormalizedUserListItem {
+  const str = (v: unknown) => (typeof v === "string" ? v : null);
+  const num = (v: unknown) => (typeof v === "number" ? v : null);
+  return {
+    ...normalizeGitHubUser(user),
+    publicRepos: num(user.public_repos),
+    followers: num(user.followers),
+    following: num(user.following),
+    createdAt: str(user.created_at),
+    updatedAt: str(user.updated_at),
   };
 }
 
@@ -601,7 +621,7 @@ export function createUsersClient(options: { accessToken: string; fetch?: typeof
       const rate = parseGitHubRateLimit(response.status, response.headers);
       if (rate.limited) return { ok: false as const, error: { code: "CONNECTOR_RATE_LIMITED", message: "GitHub rate limit exceeded", retryAfterSeconds: rate.retryAfterSeconds } };
       if (response.status === 200 && Array.isArray(response.body)) {
-        const repos = (response.body as GitHubRepo[]).map(normalizeGitHubRepo);
+        const repos = (response.body as GitHubRepo[]).map(normalizeGitHubRepoListItem);
         return { ok: true as const, repositories: repos };
       }
       return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: `GitHub users.repos.list failed with status ${response.status}`, retryAfterSeconds: undefined as number | undefined } };
@@ -632,14 +652,14 @@ export function createUsersClient(options: { accessToken: string; fetch?: typeof
       const payload = validateListUserStarredInput(input);
       const result = await fetchList(clientFor("users.starred.list"), "users.starred.list", `/users/${encodeURIComponent(payload.username)}/starred${pageQuery(payload)}`);
       if (!result.ok) return result;
-      return { ok: true as const, repositories: (result.body as GitHubRepo[]).map(normalizeGitHubRepo) };
+      return { ok: true as const, repositories: (result.body as GitHubRepo[]).map(normalizeGitHubRepoListItem) };
     },
 
     async listAuthenticatedStarred(input: unknown) {
       const payload = validateListAuthenticatedStarredInput(input);
       const result = await fetchList(clientFor("user.starred.list"), "user.starred.list", `/user/starred${pageQuery(payload)}`);
       if (!result.ok) return result;
-      return { ok: true as const, repositories: (result.body as GitHubRepo[]).map(normalizeGitHubRepo) };
+      return { ok: true as const, repositories: (result.body as GitHubRepo[]).map(normalizeGitHubRepoListItem) };
     },
 
     async listSocialAccounts(input: unknown) {
