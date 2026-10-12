@@ -1012137,7 +1012137,7 @@
     "public": true
   },
   {
-    "digest": "97f5aab36e73edee0ccde0b63dcc58b6feed843548cd7574ceefe3b9d8275d5f",
+    "digest": "5db75b6fe5fcc106bde5e71c55075c84168b17816dd180c43fb3afd2745f5cdb",
     "egress": true,
     "key": "stripe",
     "operations": [
@@ -1021798,11 +1021798,15 @@
               "type": "string"
             },
             "subscription": {
-              "description": "Subscription id (sub_...) to preview.",
+              "description": "Subscription id (sub_...) to preview. Since 2025-03-31.basil a preview needs a specific subscription.",
               "minLength": 1,
               "type": "string"
             }
           },
+          "required": [
+            "customer",
+            "subscription"
+          ],
           "type": "object"
         },
         "key": "invoices.upcoming.get",
@@ -1021821,7 +1021825,7 @@
           ],
           "type": "object"
         },
-        "read": true,
+        "read": false,
         "timeoutMs": 15000,
         "tool": true
       },
@@ -1021835,28 +1021839,16 @@
               "minLength": 1,
               "type": "string"
             },
-            "ending_before": {
-              "description": "A cursor for pagination. object ID that defines your place in the list; fetching ends before this object.",
-              "minLength": 1,
-              "type": "string"
-            },
-            "limit": {
-              "description": "A limit on the number of objects returned. Limit can range between 1 and 100, and the default is 10.",
-              "maximum": 100,
-              "minimum": 1,
-              "type": "integer"
-            },
-            "starting_after": {
-              "description": "A cursor for pagination. object ID that defines your place in the list; fetching starts after this object.",
-              "minLength": 1,
-              "type": "string"
-            },
             "subscription": {
-              "description": "Subscription id (sub_...) to preview.",
+              "description": "Subscription id (sub_...) to preview. Since 2025-03-31.basil a preview needs a specific subscription.",
               "minLength": 1,
               "type": "string"
             }
           },
+          "required": [
+            "customer",
+            "subscription"
+          ],
           "type": "object"
         },
         "key": "invoices.upcoming.lines.list",
@@ -1021882,7 +1021874,7 @@
           ],
           "type": "object"
         },
-        "read": true,
+        "read": false,
         "timeoutMs": 15000,
         "tool": true
       },
@@ -1028038,13 +1028030,18 @@
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
-            "ending_before": {
-              "description": "A cursor for pagination. object ID that defines your place in the list; fetching ends before this object.",
+            "customer": {
+              "description": "Customer id (cus_...).",
               "minLength": 1,
               "type": "string"
             },
-            "item": {
-              "description": "Subscription item id (si_...).",
+            "end_time": {
+              "description": "Exclusive end of the window (Unix time).",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "ending_before": {
+              "description": "A cursor for pagination. object ID that defines your place in the list; fetching ends before this object.",
               "minLength": 1,
               "type": "string"
             },
@@ -1028054,6 +1028051,16 @@
               "minimum": 1,
               "type": "integer"
             },
+            "meter": {
+              "description": "Meter id (mtr_...).",
+              "minLength": 1,
+              "type": "string"
+            },
+            "start_time": {
+              "description": "Inclusive start of the window (Unix time).",
+              "minimum": 0,
+              "type": "integer"
+            },
             "starting_after": {
               "description": "A cursor for pagination. object ID that defines your place in the list; fetching starts after this object.",
               "minLength": 1,
@@ -1028061,7 +1028068,10 @@
             }
           },
           "required": [
-            "item"
+            "meter",
+            "customer",
+            "start_time",
+            "end_time"
           ],
           "type": "object"
         },
@@ -1028097,33 +1028107,36 @@
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
-            "action": {
-              "description": "How to apply the quantity.",
-              "enum": [
-                "increment",
-                "set"
-              ],
-              "type": "string"
-            },
-            "item": {
-              "description": "Subscription item id (si_...).",
+            "customer": {
+              "description": "Customer id (cus_...), sent as payload[stripe_customer_id].",
               "minLength": 1,
               "type": "string"
             },
-            "quantity": {
-              "description": "The usage quantity for the specified timestamp.",
+            "event_name": {
+              "description": "The meter's event_name.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "identifier": {
+              "description": "Unique identifier for the event (deduplication).",
+              "minLength": 1,
+              "type": "string"
+            },
+            "timestamp": {
+              "description": "Unix time of the usage. Defaults to now.",
               "minimum": 0,
               "type": "integer"
             },
-            "timestamp": {
-              "description": "The timestamp for the usage event. Defaults to now.",
+            "value": {
+              "description": "Usage quantity, sent as payload[value].",
               "minimum": 0,
               "type": "integer"
             }
           },
           "required": [
-            "item",
-            "quantity"
+            "event_name",
+            "customer",
+            "value"
           ],
           "type": "object"
         },

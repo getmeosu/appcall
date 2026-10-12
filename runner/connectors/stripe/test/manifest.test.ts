@@ -55,7 +55,7 @@ function formObject(raw: string | null): Record<string, string> {
 describe("stripe manifest", () => {
   test("has bounded host, Bearer secret-key auth, version, and compiles", () => {
     expect(manifest.key).toBe("stripe");
-    expect(manifest.version).toBe("0.2.1");
+    expect(manifest.version).toBe("0.2.2");
     expect(manifest.runtime).toBe("bun");
     expect(manifest.categories).toEqual(["payments"]);
     expect(manifest.network.allowedHosts).toEqual(["api.stripe.com", "files.stripe.com"]);
@@ -197,6 +197,10 @@ describe("stripe compiled handlers", () => {
 
   function dummyResponse(operation: Record<string, unknown>): unknown {
     const blob = JSON.stringify((operation.request as { result?: unknown }).result ?? {});
+    // ST-0: invoices.upcoming.lines.list reads the lines list embedded in a preview invoice.
+    if (blob.includes("response.lines.data")) {
+      return { id: "upcoming_in_x", object: "invoice", lines: { object: "list", data: [{ id: "il_x" }], has_more: false } };
+    }
     if (blob.includes("response.data") || blob.includes("response.has_more")) {
       return { object: "list", data: [{ id: "x" }], has_more: false };
     }

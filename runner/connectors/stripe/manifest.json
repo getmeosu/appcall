@@ -1,7 +1,7 @@
 {
   "key": "stripe",
   "name": "Stripe",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "runtime": "bun",
   "visibility": "public",
   "categories": [
@@ -13814,7 +13814,7 @@
           "display_name": {
             "type": "string",
             "minLength": 1,
-            "description": "The meter\u2019s name."
+            "description": "The meter’s name."
           },
           "event_name": {
             "type": "string",
@@ -13892,7 +13892,7 @@
           "display_name": {
             "type": "string",
             "minLength": 1,
-            "description": "The meter\u2019s name."
+            "description": "The meter’s name."
           }
         },
         "required": [
@@ -22785,9 +22785,9 @@
       "timeoutMs": 15000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
-      "sideEffect": "read",
+      "sideEffect": "write",
       "title": "Retrieve Upcoming Invoice",
-      "description": "Retrieve the upcoming invoice for a customer. Maps to STRIPE_RETRIEVE_UPCOMING_INVOICE. Official GET /v1/invoices/upcoming. Docs: https://docs.stripe.com/api/invoices/upcoming.",
+      "description": "Preview the upcoming invoice for a customer's subscription. Maps to STRIPE_RETRIEVE_UPCOMING_INVOICE. ST-0: GET /v1/invoices/upcoming was removed in 2025-03-31.basil (https://docs.stripe.com/changelog/basil/2025-03-31/invoice-preview-api-deprecations); rerouted to the replacement POST /v1/invoices/create_preview (nothing is created). Docs: https://docs.stripe.com/api/invoices/create_preview.",
       "inputSchema": {
         "type": "object",
         "additionalProperties": false,
@@ -22800,13 +22800,17 @@
           "subscription": {
             "type": "string",
             "minLength": 1,
-            "description": "Subscription id (sub_...) to preview."
+            "description": "Subscription id (sub_...) to preview. Since 2025-03-31.basil a preview needs a specific subscription."
           },
           "automatic_tax_enabled": {
             "type": "boolean",
             "description": "Whether Stripe automatically computes tax on the invoice."
           }
-        }
+        },
+        "required": [
+          "customer",
+          "subscription"
+        ]
       },
       "outputSchema": {
         "type": "object",
@@ -22821,16 +22825,20 @@
         }
       },
       "request": {
-        "method": "GET",
-        "path": "/v1/invoices/upcoming",
+        "method": "POST",
+        "path": "/v1/invoices/create_preview",
         "success": [
           200
         ],
-        "query": {
+        "body": {
           "customer": "{{customer}}",
           "subscription": "{{subscription}}",
           "automatic_tax[enabled]": "{{automatic_tax_enabled}}"
         },
+        "headers": {
+          "Content-Type": "application/x-www-form-urlencoded"
+        },
+        "bodyEncoding": "form",
         "result": {
           "data": "{{response}}"
         }
@@ -22844,9 +22852,9 @@
       "timeoutMs": 15000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
-      "sideEffect": "read",
+      "sideEffect": "write",
       "title": "List Upcoming Invoice Lines",
-      "description": "List line items for the upcoming invoice. Maps to STRIPE_GET_UPCOMING_INVOICE_LINE_ITEMS. Official GET /v1/invoices/upcoming/lines. Docs: https://docs.stripe.com/api/invoices/upcoming_invoice_lines.",
+      "description": "List the line items of the upcoming invoice for a customer's subscription. Maps to STRIPE_GET_UPCOMING_INVOICE_LINE_ITEMS. ST-0: GET /v1/invoices/upcoming/lines was removed in 2025-03-31.basil (https://docs.stripe.com/changelog/basil/2025-03-31/invoice-preview-api-deprecations); rerouted to POST /v1/invoices/create_preview and returns its embedded lines list (first page; create_preview takes no list cursors). Docs: https://docs.stripe.com/api/invoices/create_preview.",
       "inputSchema": {
         "type": "object",
         "additionalProperties": false,
@@ -22859,25 +22867,13 @@
           "subscription": {
             "type": "string",
             "minLength": 1,
-            "description": "Subscription id (sub_...) to preview."
-          },
-          "limit": {
-            "type": "integer",
-            "description": "A limit on the number of objects returned. Limit can range between 1 and 100, and the default is 10.",
-            "minimum": 1,
-            "maximum": 100
-          },
-          "starting_after": {
-            "type": "string",
-            "minLength": 1,
-            "description": "A cursor for pagination. object ID that defines your place in the list; fetching starts after this object."
-          },
-          "ending_before": {
-            "type": "string",
-            "minLength": 1,
-            "description": "A cursor for pagination. object ID that defines your place in the list; fetching ends before this object."
+            "description": "Subscription id (sub_...) to preview. Since 2025-03-31.basil a preview needs a specific subscription."
           }
-        }
+        },
+        "required": [
+          "customer",
+          "subscription"
+        ]
       },
       "outputSchema": {
         "type": "object",
@@ -22899,21 +22895,22 @@
         }
       },
       "request": {
-        "method": "GET",
-        "path": "/v1/invoices/upcoming/lines",
+        "method": "POST",
+        "path": "/v1/invoices/create_preview",
         "success": [
           200
         ],
-        "query": {
-          "limit": "{{limit}}",
-          "starting_after": "{{starting_after}}",
-          "ending_before": "{{ending_before}}",
+        "body": {
           "customer": "{{customer}}",
           "subscription": "{{subscription}}"
         },
+        "headers": {
+          "Content-Type": "application/x-www-form-urlencoded"
+        },
+        "bodyEncoding": "form",
         "result": {
-          "data": "{{response.data}}",
-          "hasMore": "{{response.has_more}}"
+          "data": "{{response.lines.data}}",
+          "hasMore": "{{response.lines.has_more}}"
         }
       },
       "enforceOutputSchema": true,
@@ -24316,38 +24313,41 @@
       "maxResponseBytes": 5242880,
       "sideEffect": "write",
       "title": "Create Usage Record",
-      "description": "Record usage for a subscription item. Maps to STRIPE_CREATE_USAGE_RECORD. Official POST /v1/subscription_items/{{item}}/usage_records. Docs: https://docs.stripe.com/api/usage_records/create.",
+      "description": "Report usage as a billing meter event. Maps to STRIPE_CREATE_USAGE_RECORD. ST-0: usage records (POST /v1/subscription_items/{{item}}/usage_records) were removed in 2025-03-31.basil (https://docs.stripe.com/changelog/basil/2025-03-31/deprecate-legacy-usage-based-billing); rerouted to the replacement POST /v1/billing/meter_events per Stripe's migration guide (https://docs.stripe.com/billing/subscriptions/usage-based-legacy/migration-guide). Usage is keyed by meter event name and customer, not subscription item. Docs: https://docs.stripe.com/api/billing/meter-event/create.",
       "inputSchema": {
         "type": "object",
         "additionalProperties": false,
         "properties": {
-          "item": {
+          "event_name": {
             "type": "string",
             "minLength": 1,
-            "description": "Subscription item id (si_...)."
+            "description": "The meter's event_name."
           },
-          "quantity": {
+          "customer": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Customer id (cus_...), sent as payload[stripe_customer_id]."
+          },
+          "value": {
             "type": "integer",
-            "description": "The usage quantity for the specified timestamp.",
-            "minimum": 0
+            "minimum": 0,
+            "description": "Usage quantity, sent as payload[value]."
           },
           "timestamp": {
             "type": "integer",
-            "description": "The timestamp for the usage event. Defaults to now.",
-            "minimum": 0
+            "minimum": 0,
+            "description": "Unix time of the usage. Defaults to now."
           },
-          "action": {
+          "identifier": {
             "type": "string",
-            "enum": [
-              "increment",
-              "set"
-            ],
-            "description": "How to apply the quantity."
+            "minLength": 1,
+            "description": "Unique identifier for the event (deduplication)."
           }
         },
         "required": [
-          "item",
-          "quantity"
+          "event_name",
+          "customer",
+          "value"
         ]
       },
       "outputSchema": {
@@ -24364,14 +24364,16 @@
       },
       "request": {
         "method": "POST",
-        "path": "/v1/subscription_items/{{item}}/usage_records",
+        "path": "/v1/billing/meter_events",
         "success": [
           200
         ],
         "body": {
-          "quantity": "{{quantity}}",
+          "event_name": "{{event_name}}",
+          "payload[stripe_customer_id]": "{{customer}}",
+          "payload[value]": "{{value}}",
           "timestamp": "{{timestamp}}",
-          "action": "{{action}}"
+          "identifier": "{{identifier}}"
         },
         "headers": {
           "Content-Type": "application/x-www-form-urlencoded"
@@ -24392,15 +24394,30 @@
       "maxResponseBytes": 5242880,
       "sideEffect": "read",
       "title": "List Usage Record Summaries",
-      "description": "List usage record summaries for a subscription item. Maps to STRIPE_LIST_ALL_SUBSCRIPTION_ITEM_PERIOD_SUMMARIES. Official GET /v1/subscription_items/{{item}}/usage_record_summaries. Docs: https://docs.stripe.com/api/usage_records/subscription_item_summary_list.",
+      "description": "List usage summaries from a billing meter for a customer. Maps to STRIPE_LIST_ALL_SUBSCRIPTION_ITEM_PERIOD_SUMMARIES. ST-0: usage record summaries (GET /v1/subscription_items/{{item}}/usage_record_summaries) were removed in 2025-03-31.basil (https://docs.stripe.com/changelog/basil/2025-03-31/deprecate-legacy-usage-based-billing); rerouted to the replacement GET /v1/billing/meters/{{meter}}/event_summaries (https://docs.stripe.com/billing/subscriptions/usage-based-legacy/migration-guide). Docs: https://docs.stripe.com/api/billing/meter/event-summary.",
       "inputSchema": {
         "type": "object",
         "additionalProperties": false,
         "properties": {
-          "item": {
+          "meter": {
             "type": "string",
             "minLength": 1,
-            "description": "Subscription item id (si_...)."
+            "description": "Meter id (mtr_...)."
+          },
+          "customer": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Customer id (cus_...)."
+          },
+          "start_time": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Inclusive start of the window (Unix time)."
+          },
+          "end_time": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Exclusive end of the window (Unix time)."
           },
           "limit": {
             "type": "integer",
@@ -24420,7 +24437,10 @@
           }
         },
         "required": [
-          "item"
+          "meter",
+          "customer",
+          "start_time",
+          "end_time"
         ]
       },
       "outputSchema": {
@@ -24444,11 +24464,14 @@
       },
       "request": {
         "method": "GET",
-        "path": "/v1/subscription_items/{{item}}/usage_record_summaries",
+        "path": "/v1/billing/meters/{{meter}}/event_summaries",
         "success": [
           200
         ],
         "query": {
+          "customer": "{{customer}}",
+          "start_time": "{{start_time}}",
+          "end_time": "{{end_time}}",
           "limit": "{{limit}}",
           "starting_after": "{{starting_after}}",
           "ending_before": "{{ending_before}}"
