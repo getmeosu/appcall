@@ -462,6 +462,10 @@ export function statusForExecutionErrorCode(code: string): number {
       // 422, matching the control plane's MISSING_CREDENTIAL mapping
       // (crates/appcall-api/src/lib.rs): reconnect the connection.
       return 422;
+    case "CONNECTOR_CAPABILITY_MISSING":
+      // 403 Forbidden: the connection lacks a scope/permission the operation
+      // needs (or the op was removed upstream). See capabilityFailureFields.
+      return 403;
     case "CONNECTOR_ACTION_NOT_PERMITTED":
       // 422 Unprocessable: the provider refused this specific action (e.g. invite
       // cooldown). Not a whole-connection failure.
@@ -479,7 +483,7 @@ export function errorResponseForExecutionFailure(
   error: unknown,
   fallbackCode: string,
   fallbackMessage: string,
-): { status: number; error: { code: string; message: string; retryAfterSeconds?: number } } {
+): { status: number; error: { code: string; message: string; retryAfterSeconds?: number } & CapabilityFailureFields } {
   if (isRecord(error) && typeof error.code === "string" && error.code.length > 0) {
     return {
       status: statusForExecutionErrorCode(error.code),
@@ -487,6 +491,7 @@ export function errorResponseForExecutionFailure(
         code: error.code,
         ...(typeof error.retryAfterSeconds === "number" && Number.isSafeInteger(error.retryAfterSeconds) && error.retryAfterSeconds > 0 ? {retryAfterSeconds:error.retryAfterSeconds}:{}),
         message: typeof error.message === "string" ? redactText(error.message) : fallbackMessage,
+        ...(error.code === "CONNECTOR_CAPABILITY_MISSING" ? capabilityFailureFields(error) : {}),
       },
     };
   }
@@ -496,6 +501,31 @@ export function errorResponseForExecutionFailure(
       code: fallbackCode,
       message: error instanceof Error ? redactText(error.message) : fallbackMessage,
     },
+  };
+}
+
+// CapabilityFailureFields are the optional details a connector attaches to a
+// CONNECTOR_CAPABILITY_MISSING failure (meta-ads, linkedin-ads, tiktok-ads):
+// reason (e.g. "permission_missing", "removed_upstream"), the scopes the
+// connection is missing and the op requires, and whether the user must
+// re-consent. Each is passed through only when present and well-typed, and is
+// appended after message so bodies without them stay byte-identical.
+export type CapabilityFailureFields = {
+  reason?: string;
+  missingScopes?: string[];
+  requiredScopes?: string[];
+  reconsentRequired?: boolean;
+};
+
+const isStringList = (value: unknown): value is string[] =>
+  Array.isArray(value) && value.every((item) => typeof item === "string");
+
+export function capabilityFailureFields(error: Record<string, unknown>): CapabilityFailureFields {
+  return {
+    ...(typeof error.reason === "string" && error.reason.length > 0 ? { reason: error.reason } : {}),
+    ...(isStringList(error.missingScopes) ? { missingScopes: [...error.missingScopes] } : {}),
+    ...(isStringList(error.requiredScopes) ? { requiredScopes: [...error.requiredScopes] } : {}),
+    ...(typeof error.reconsentRequired === "boolean" ? { reconsentRequired: error.reconsentRequired } : {}),
   };
 }
 
