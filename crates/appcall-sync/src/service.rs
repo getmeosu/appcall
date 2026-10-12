@@ -1,5 +1,5 @@
 use crate::*;
-use appcall_connectors::{OperationKind, Registry};
+use appcall_connectors::{Operation, OperationKind, Registry};
 use appcall_runner_client::{RequestContext, RunnerClient, SyncListRequest};
 use appcall_store::{AuthType, Connection, Scope, Status, Store};
 use serde_json::{json, Map};
@@ -30,10 +30,22 @@ pub trait CredentialResolver: Send + Sync {
 pub struct Service<C> {
     repository: Arc<Mutex<Repository>>,
     connections: Arc<Mutex<Store>>,
-    registry: Registry,
+    pub(crate) registry: Registry,
     runner: RunnerClient,
     credentials: C,
-    config: Config,
+    pub(crate) config: Config,
+}
+
+/// Inputs for one fenced runner sync call.
+pub(crate) struct SyncCall<'a> {
+    pub(crate) project_id: &'a str,
+    pub(crate) connection_id: &'a str,
+    pub(crate) connection_generation: i64,
+    pub(crate) operation: &'a str,
+    pub(crate) input: &'a Value,
+    pub(crate) cursor: &'a str,
+    pub(crate) leased_until: Option<SystemTime>,
+    pub(crate) request_id: String,
 }
 
 fn claim_policy(config: &Config) -> Value {
@@ -100,7 +112,7 @@ impl<C: CredentialResolver> Service<C> {
             config,
         })
     }
-    async fn db<T: Send + 'static>(
+    pub(crate) async fn db<T: Send + 'static>(
         &self,
         f: impl FnOnce(&mut Repository) -> Result<T> + Send + 'static,
     ) -> Result<T> {
@@ -181,7 +193,34 @@ impl<C: CredentialResolver> Service<C> {
     }
     async fn fetch(&self, j: &Job, cursor: &str) -> Result<(Page, Connection)> {
         validate_input(&j.input)?;
-        let expires = j.leased_until.ok_or(Error::LeaseLost)?;
+        let (output, connection) = self
+            .call_sync(
+                SyncCall {
+                    project_id: &j.project_id,
+                    connection_id: &j.connection_id,
+                    connection_generation: j.connection_generation,
+                    operation: &j.operation,
+                    input: &j.input,
+                    cursor,
+                    leased_until: j.leased_until,
+                    request_id: format!("sync_{}", j.id),
+                },
+                |connector, operation| {
+                    operation.kind == OperationKind::Sync
+                        && appcall_connectors::is_message_sync(connector, &j.operation)
+                },
+            )
+            .await?;
+        Page::decode(output).map(|page| (page, connection))
+    }
+    /// One lease-bounded runner sync call with freshly resolved credentials.
+    /// `admit` decides whether the resolved connector/operation may run here.
+    pub(crate) async fn call_sync(
+        &self,
+        call: SyncCall<'_>,
+        admit: impl Fn(&str, &Operation) -> bool,
+    ) -> Result<(Value, Connection)> {
+        let expires = call.leased_until.ok_or(Error::LeaseLost)?;
         // Leave a small commit window; never let provider work outlive ownership.
         let deadline = expires
             .checked_sub(Duration::from_millis(5))
@@ -190,15 +229,15 @@ impl<C: CredentialResolver> Service<C> {
             return Err(Error::LeaseLost);
         }
         if self
-            .current_generation(&j.project_id, &j.connection_id)
+            .current_generation(call.project_id, call.connection_id)
             .await?
-            != j.connection_generation
+            != call.connection_generation
         {
             return Err(Error::StaleGeneration);
         }
         let connections = self.connections.clone();
-        let project = j.project_id.clone();
-        let id = j.connection_id.clone();
+        let project = call.project_id.to_owned();
+        let id = call.connection_id.to_owned();
         let c = tokio::task::spawn_blocking(move || {
             connections
                 .lock()
@@ -216,13 +255,9 @@ impl<C: CredentialResolver> Service<C> {
         }
         let operation = self
             .registry
-            .operation(&c.connector, &j.operation)
+            .operation(&c.connector, call.operation)
             .map_err(|_| Error::UnsupportedModel)?;
-        if operation.kind != OperationKind::Sync
-            || j.operation != "messages.list"
-            || !["slack", "telegram", "google-workspace", "microsoft-365"]
-                .contains(&c.connector.as_str())
-        {
+        if !admit(&c.connector, operation) {
             return Err(Error::UnsupportedModel);
         }
         let deadline = deadline.min(
@@ -253,17 +288,17 @@ impl<C: CredentialResolver> Service<C> {
         }
         let c = resolved.connection;
         if self
-            .current_generation(&j.project_id, &j.connection_id)
+            .current_generation(call.project_id, call.connection_id)
             .await?
-            != j.connection_generation
+            != call.connection_generation
         {
             return Err(Error::StaleGeneration);
         }
-        let mut input = j.input.as_object().ok_or(Error::InvalidInput)?.clone();
+        let mut input = call.input.as_object().ok_or(Error::InvalidInput)?.clone();
         input.extend(resolved.fields);
         input.remove("cursor");
-        if !cursor.is_empty() {
-            input.insert("cursor".into(), Value::String(cursor.into()));
+        if !call.cursor.is_empty() {
+            input.insert("cursor".into(), Value::String(call.cursor.into()));
         }
         let input = Value::Object(input);
         let input_size = serde_json::to_vec(&input)
@@ -278,7 +313,7 @@ impl<C: CredentialResolver> Service<C> {
             .runner
             .sync_list(
                 &RequestContext {
-                    request_id: format!("sync_{}", j.id),
+                    request_id: call.request_id,
                     deadline_unix_ms: Some(
                         deadline
                             .duration_since(UNIX_EPOCH)
@@ -288,7 +323,7 @@ impl<C: CredentialResolver> Service<C> {
                 },
                 SyncListRequest {
                     connector_key: c.connector.clone(),
-                    sync: j.operation.clone(),
+                    sync: call.operation.to_owned(),
                     input,
                 },
             )
@@ -304,6 +339,6 @@ impl<C: CredentialResolver> Service<C> {
         {
             return Err(Error::InvalidPage);
         }
-        Page::decode(response.output).map(|page| (page, c))
+        Ok((response.output, c))
     }
 }

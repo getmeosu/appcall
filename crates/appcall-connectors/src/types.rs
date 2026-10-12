@@ -514,6 +514,65 @@ pub struct Operation {
     pub side_effect: String,
     pub effect_policy: EffectPolicy,
     pub reconcile: String,
+    /// Opt-in polling for a sync operation (OXIDE-POLL-1). Absent on every
+    /// operation that does not explicitly declare it.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub poll: Option<PollSpec>,
+}
+
+/// Bounds for [`PollSpec`]; validated by `Manifest::validate`.
+pub const POLL_MIN_INTERVAL_SECONDS: u32 = 60;
+pub const POLL_MAX_INTERVAL_SECONDS: u32 = 86_400;
+pub const POLL_MAX_PAGES: u8 = 10;
+pub const POLL_MAX_TRIGGERS: usize = 16;
+pub const POLL_MAX_TRIGGER_LEN: usize = 128;
+
+/// Declares that a sync operation may be polled for new or changed items.
+///
+/// Each page item must be an object carrying `itemKey` (a string or integer).
+/// When `versionKey` is set, its value alone decides whether a known item
+/// changed; otherwise the item's canonical JSON does. Items new to the seen
+/// state emit `onNew` trigger names; changed items emit `onChanged`.
+///
+/// ```
+/// let spec: appcall_connectors::PollSpec = serde_json::from_value(serde_json::json!({
+///     "intervalSeconds": 300, "itemKey": "id", "versionKey": "updatedAt",
+///     "onNew": ["issue.opened"], "onChanged": ["issue.updated"]
+/// })).unwrap();
+/// assert_eq!(spec.max_pages, 1);
+/// ```
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct PollSpec {
+    pub interval_seconds: u32,
+    pub item_key: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub version_key: Option<String>,
+    #[serde(default = "PollSpec::default_max_pages")]
+    pub max_pages: u8,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub on_new: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub on_changed: Vec<String>,
+}
+impl PollSpec {
+    const fn default_max_pages() -> u8 {
+        1
+    }
+    /// Trigger names for a change kind; empty means "do not emit".
+    pub fn triggers(&self, change: PollChange) -> &[String] {
+        match change {
+            PollChange::New => &self.on_new,
+            PollChange::Changed => &self.on_changed,
+        }
+    }
+}
+/// What a poll observed about one item relative to the stored seen state.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum PollChange {
+    New,
+    Changed,
 }
 impl Operation {
     pub fn has_tool_schema(&self) -> bool {

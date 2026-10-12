@@ -111,7 +111,7 @@ async fn daemon(
             match &result {
                 Ok(report) => println!(
                     "{}",
-                    serde_json::json!({"level":if report.job_failures.is_empty()&& !report.secret_cleanup_failed{"info"}else{"error"},"event":"worker_sync_cycle","jobs_processed":report.pages_completed,"jobs_failed":report.job_failures.len(),"secret_envelopes_deleted":report.secret_envelopes_deleted,"secret_cleanup_failed":report.secret_cleanup_failed})
+                    serde_json::json!({"level":if report.job_failures.is_empty()&& !report.secret_cleanup_failed{"info"}else{"error"},"event":"worker_sync_cycle","jobs_processed":report.pages_completed,"jobs_failed":report.job_failures.len(),"polls_processed":report.polls_completed,"poll_events_emitted":report.poll_events_emitted,"polls_failed":report.poll_failures.len(),"secret_envelopes_deleted":report.secret_envelopes_deleted,"secret_cleanup_failed":report.secret_cleanup_failed})
                 ),
                 Err(_) => log("worker_sync_cycle", false),
             }

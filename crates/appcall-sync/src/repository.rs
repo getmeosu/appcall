@@ -264,7 +264,7 @@ fn cancel_stale_jobs<C: GenericClient>(db: &mut C) -> Result<()> {
     Ok(())
 }
 
-fn failure_code(error: Option<&Error>) -> &'static str {
+pub(crate) fn failure_code(error: Option<&Error>) -> &'static str {
     match error {
         Some(Error::InvalidInput) => "INVALID_INPUT",
         Some(Error::InvalidPage) => "INVALID_PAGE",

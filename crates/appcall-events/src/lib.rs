@@ -1,12 +1,14 @@
 //! Durable provider event acceptance/outbox and tenant-scoped replay on existing PG.
 mod cursor;
 mod input;
+mod poll;
 mod store;
 mod types;
 pub use cursor::{
     decode as decode_cursor, history_cursor, stream_cursor, stream_cursor_at, Cursor,
 };
 pub use input::{is_sync_operation, sync_input, validate_parsed};
+pub use poll::{append_polled, PolledEvent};
 pub use store::*;
 pub use types::*;
 pub type Result<T> = std::result::Result<T, Error>;

@@ -588,7 +588,7 @@ struct ConnectionSnapshot {
     generation: Option<i64>,
 }
 
-fn fresh_public_id(tx: &mut Transaction<'_>, project_id: &str) -> Result<String> {
+pub(crate) fn fresh_public_id(tx: &mut Transaction<'_>, project_id: &str) -> Result<String> {
     for _ in 0..8 {
         let id = format!("wh_{}", Uuid::new_v4().simple());
         let exists = tx
