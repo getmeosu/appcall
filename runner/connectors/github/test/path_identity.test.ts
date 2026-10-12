@@ -193,6 +193,7 @@ describe("FIX-SEGMENT-2: GitHub login and repository-name path fields", () => {
       "discussions.update.owner", "discussions.update.repo",
       "graphql.repository.get.owner", "graphql.repository.get.repo",
       "repos.generate.owner",
+      "repos.issues.list.assignee", // D1 (0.87.0): a query filter (login, "none" or "*"), not a path
       "users.projects_v2.items.create.owner", "users.projects_v2.items.create.repo",
     ]);
     // Manifest metadata: every route param of these kinds is in the table under its input name.
@@ -217,11 +218,11 @@ describe("FIX-SEGMENT-2: GitHub login and repository-name path fields", () => {
 
   test("coverage: exact op and field counts", () => {
     const fields = Object.values(TABLE).flatMap((f) => Object.entries(f));
-    expect(Object.keys(TABLE)).toHaveLength(626);
-    expect(fields).toHaveLength(1081);
+    expect(Object.keys(TABLE)).toHaveLength(629); // D1 (0.87.0): +3 (repos.commits/pulls/issues.list), was 626
+    expect(fields).toHaveLength(1087); // D1: +3 owner, +3 repo (was 1081)
     const byClass: Record<string, number> = {};
     for (const [, c] of fields) byClass[c] = (byClass[c] ?? 0) + 1;
-    expect(byClass).toEqual({ owner: 426, org: 155, user: 72, repo: 428 });
+    expect(byClass).toEqual({ owner: 429, org: 155, user: 72, repo: 431 });
     for (const op of Object.keys(TABLE)) expect(ops[op]?.kind, op).toBe("action");
   });
 
@@ -240,7 +241,7 @@ describe("FIX-SEGMENT-2: GitHub login and repository-name path fields", () => {
       }
     }
     expect(leaks).toEqual([]);
-    expect(cases).toBe(13625); // 653 login fields x 13 + 428 repo fields x 12
+    expect(cases).toBe(13700); // 656 login fields x 13 + 431 repo fields x 12 (D1 +75; was 13625)
   }, 600000);
 
   test("valid logins / repo names (39-char login, 100-char repo, EMU, [bot], legacy a--b / a- / -a) still reach GitHub unchanged", async () => {

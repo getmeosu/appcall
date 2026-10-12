@@ -28,14 +28,25 @@ export type TriggerEntry = {
   runtimeServed: false;
   duplicateOf?: string;
   polling?: { readOp: string; proposedSync: string };
+  /** Delivery caveat; informational only, never changes matching. */
+  note?: string;
 };
+
+// GitHub docs (webhook-events-and-payloads, check_run / check_suite): "Repository and organization
+// webhooks only receive payloads for the created and completed event types" (check_run) and "only ...
+// the completed event types" (check_suite). The other actions go only to a GitHub App with write
+// access to Checks.
+const CHECK_RUN_APP_ONLY =
+  "check_run rerequested (and requested_action) is delivered only to GitHub Apps with Checks write access; repository and organization webhooks send only created and completed.";
+const CHECK_SUITE_APP_ONLY =
+  "check_suite requested and rerequested are delivered only to GitHub Apps with Checks write access; repository and organization webhooks send only completed.";
 
 export const GITHUB_TRIGGERS: Record<string, TriggerEntry> = {
   GITHUB_ARTIFACT_CREATED_TRIGGER: { class: "not-named", match: [], status: "missing", runtimeServed: false, polling: { readOp: "actions.artifacts.list", proposedSync: "actions.artifacts.sync" } },
   GITHUB_BRANCH_CHANGED_TRIGGER: { class: "ambiguous", match: [{ event: "push" }, { event: "branch_protection_configuration", actions: ["disabled", "enabled"] }, { event: "branch_protection_rule", actions: ["created", "deleted", "edited"] }], status: "covered", runtimeServed: false },
   GITHUB_BRANCH_CREATED_TRIGGER: { class: "one-event", match: [{ event: "create", where: { kind: "refType", value: "branch" } }], status: "covered", runtimeServed: false },
-  GITHUB_CHECK_RUN_STATUS_CHANGED_TRIGGER: { class: "named", match: [{ event: "check_run", actions: ["completed", "created", "rerequested"] }], status: "covered", runtimeServed: false },
-  GITHUB_CHECK_SUITE_STATUS_CHANGED_TRIGGER: { class: "named", match: [{ event: "check_suite", actions: ["completed", "requested", "rerequested"] }], status: "covered", runtimeServed: false },
+  GITHUB_CHECK_RUN_STATUS_CHANGED_TRIGGER: { class: "named", match: [{ event: "check_run", actions: ["completed", "created", "rerequested"] }], status: "covered", runtimeServed: false, note: CHECK_RUN_APP_ONLY },
+  GITHUB_CHECK_SUITE_STATUS_CHANGED_TRIGGER: { class: "named", match: [{ event: "check_suite", actions: ["completed", "requested", "rerequested"] }], status: "covered", runtimeServed: false, note: CHECK_SUITE_APP_ONLY },
   GITHUB_CODE_SCANNING_ALERT_CREATED_TRIGGER: { class: "named", match: [{ event: "code_scanning_alert", actions: ["created"] }], status: "covered", runtimeServed: false },
   GITHUB_COLLABORATOR_ADDED_TRIGGER: { class: "one-event", match: [{ event: "member", actions: ["added"] }], status: "covered", runtimeServed: false },
   GITHUB_COMMIT_EVENT: { class: "one-event", match: [{ event: "push" }], status: "covered", runtimeServed: false },

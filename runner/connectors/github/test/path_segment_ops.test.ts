@@ -105,7 +105,7 @@ describe("FIX-SEGMENT amend: every path param of every op is guarded (generator)
   test("generator finds the path-param ops and covers all 265 recount ops", async () => {
     targets = await discover();
     const covered = new Set(targets.map((t) => t.op));
-    expect(targets.length).toBeGreaterThanOrEqual(643); // PRUNE-2 (0.83.0): exactly 664; PRUNE-3 (0.84.0): exactly 655; PRUNE-4 (0.85.0): exactly 649; PRUNE-5 (0.86.0): exactly 643 path-param targets (no P2-P5 op is in the 265 recount list)
+    expect(targets.length).toBeGreaterThanOrEqual(646); // D1 (0.87.0): exactly 646 (+3 repo list reads); PRUNE-2 (0.83.0): exactly 664; PRUNE-3 (0.84.0): exactly 655; PRUNE-4 (0.85.0): exactly 649; PRUNE-5 (0.86.0): exactly 643 path-param targets (no P2-P5 op is in the 265 recount list)
     expect((listedOps as string[]).length).toBe(265);
     expect((listedOps as string[]).filter((op) => !covered.has(op))).toEqual([]);
   }, 120000);

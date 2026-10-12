@@ -1,4 +1,10 @@
 import {
+  createRepoListsClient,
+  validateListRepoCommitsInput,
+  validateListRepoIssuesInput,
+  validateListRepoPullsInput,
+} from "./repo_lists";
+import {
   createIssuesClient,
   validateCreateIssueInput,
   validateCreateCommentInput,
@@ -10719,4 +10725,44 @@ export function listIssueCommentEdits(input: unknown): Record<string, unknown> |
     });
   }
   return { connector: "github", action: "issues.comments.edits.list", source: "connector", validated: validateListCommentEditsInput(input) };
+}
+
+// GitHub D1 (v0.87.0): repository list reads as action tools (see src/repo_lists.ts).
+function liveRepoListsClient(input: Record<string, unknown>, operation: string) {
+  const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
+  return createRepoListsClient({
+    accessToken: input.accessToken as string,
+    fetch: fetchFn,
+    githubClient: createGitHubClient({ accessToken: input.accessToken as string, fetch: fetchFn, operation }),
+  });
+}
+
+export function listRepoCommits(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveRepoListsClient(input, "repos.commits.list").listCommits(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "repos.commits.list", source: "connector", commits: result.commits };
+    });
+  }
+  return { connector: "github", action: "repos.commits.list", source: "connector", validated: validateListRepoCommitsInput(input) };
+}
+
+export function listRepoPulls(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveRepoListsClient(input, "repos.pulls.list").listPulls(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "repos.pulls.list", source: "connector", pullRequests: result.pullRequests };
+    });
+  }
+  return { connector: "github", action: "repos.pulls.list", source: "connector", validated: validateListRepoPullsInput(input) };
+}
+
+export function listRepoIssues(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveRepoListsClient(input, "repos.issues.list").listIssues(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "repos.issues.list", source: "connector", issues: result.issues };
+    });
+  }
+  return { connector: "github", action: "repos.issues.list", source: "connector", validated: validateListRepoIssuesInput(input) };
 }

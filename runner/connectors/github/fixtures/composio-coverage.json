@@ -179,8 +179,6 @@
     "GITHUB_DELETE_DEPLOY_KEY": "repos.keys.delete",
     "GITHUB_DELETE_DEPLOYMENT": "deployments.delete",
     "GITHUB_DELETE_DEPLOYMENT_BRANCH_POLICY": "deployments.branch_policies.delete",
-    "GITHUB_DELETE_DISCUSSION": "graphql.discussions.delete",
-    "GITHUB_DELETE_DISCUSSION_COMMENT": "graphql.discussions.comments.delete",
     "GITHUB_DELETE_EMAIL_ADDRESS": "user.emails.delete",
     "GITHUB_DELETE_ENVIRONMENT": "environments.delete",
     "GITHUB_DELETE_ENVIRONMENT_SECRET": "repos.environments.secrets.delete",
@@ -377,7 +375,7 @@
     "GITHUB_GET_PUBLIC_KEY_FOR_SECRET_ENCRYPTION": "actions.org_secrets.public_key.get",
     "GITHUB_GET_PUBLIC_KEY_FOR_THE_AUTHENTICATED_USER": "user.codespaces.secrets.public_key.get",
     "GITHUB_GET_PULL_REQUEST_REVIEW_PROTECTION": "branches.protection.required_pull_request_reviews.get",
-    "GITHUB_GET_PULL_REQUESTS": "pull_requests.list",
+    "GITHUB_GET_PULL_REQUESTS": "repos.pulls.list",
     "GITHUB_GET_RATE_LIMIT_STATUS_FOR_THE_AUTHENTICATED_USER": "rate_limit.get",
     "GITHUB_GET_RAW_REPOSITORY_CONTENT": "repos.contents.get",
     "GITHUB_GET_REPO_ALLOWED_ACTIONS": "actions.permissions.selected_actions.get",
@@ -447,7 +445,7 @@
     "GITHUB_LIST_COMMENTS_FOR_A_PULL_REQUEST_REVIEW": "pull_requests.reviews.comments.list",
     "GITHUB_LIST_COMMIT_COMMENTS": "commits.comments.list",
     "GITHUB_LIST_COMMIT_COMMENTS_FOR_A_REPOSITORY": "repos.comments.list",
-    "GITHUB_LIST_COMMITS": "commits.list",
+    "GITHUB_LIST_COMMITS": "repos.commits.list",
     "GITHUB_LIST_COMMITS_ON_A_PULL_REQUEST": "pull_requests.commits.list",
     "GITHUB_LIST_COMMONLY_USED_LICENSES": "licenses.list",
     "GITHUB_LIST_CUSTOM_PROPERTIES_FOR_AN_ORGANIZATION": "orgs.properties.schema.list",
@@ -545,7 +543,7 @@
     "GITHUB_LIST_PUBLIC_ORGANIZATION_EVENTS": "orgs.events.list",
     "GITHUB_LIST_PUBLIC_ORGANIZATION_MEMBERS": "orgs.public_members.list",
     "GITHUB_LIST_PUBLIC_REPOSITORIES": "repos.public.list",
-    "GITHUB_LIST_PULL_REQUESTS": "pull_requests.list",
+    "GITHUB_LIST_PULL_REQUESTS": "repos.pulls.list",
     "GITHUB_LIST_PULL_REQUESTS_ASSOCIATED_WITH_A_COMMIT": "commits.pulls.list",
     "GITHUB_LIST_PULL_REQUESTS_FILES": "pull_requests.list_files",
     "GITHUB_LIST_REACTIONS_FOR_A_COMMIT_COMMENT": "commits.comments.reactions.list",
@@ -575,7 +573,7 @@
     "GITHUB_LIST_REPOSITORY_DEPENDABOT_ALERTS": "dependabot.alerts.list",
     "GITHUB_LIST_REPOSITORY_EVENTS": "repos.events.list",
     "GITHUB_LIST_REPOSITORY_INVITATIONS": "repos.invitations.list",
-    "GITHUB_LIST_REPOSITORY_ISSUES": "issues.list",
+    "GITHUB_LIST_REPOSITORY_ISSUES": "repos.issues.list",
     "GITHUB_LIST_REPOSITORY_LANGUAGES": "repos.languages.list",
     "GITHUB_LIST_REPOSITORY_ORGANIZATION_SECRETS": "actions.organization_secrets.list",
     "GITHUB_LIST_REPOSITORY_ORGANIZATION_VARIABLES": "actions.org_variables.list_for_repo",
@@ -904,6 +902,14 @@
       "reason": "Tag protection REST was removed; repository rulesets replaced it."
     },
     {
+      "slug": "GITHUB_DELETE_DISCUSSION",
+      "reason": "Composio's tool targets TEAM discussions: inputs org + team_slug + discussion_number (docs.composio.dev/toolkits/github, toolkit 20261007_00; tags 'teams'). Team discussions REST was sunset (https://github.blog/changelog/2023-02-08-sunset-notice-team-discussions/) and is absent from rest-api-description 58b1e0c0; PRUNE-3 (0.84.0) removed teams.discussions.*. graphql.discussions.delete / .comments.delete are REPO discussions (deleteDiscussion / deleteDiscussionComment) and do not serve this slug (audit C11; D1 0.87.0 unmapped)."
+    },
+    {
+      "slug": "GITHUB_DELETE_DISCUSSION_COMMENT",
+      "reason": "Composio's tool targets TEAM discussions: inputs org + team_slug + discussion_number + comment_number (docs.composio.dev/toolkits/github, toolkit 20261007_00; tags 'teams'). Team discussions REST was sunset (https://github.blog/changelog/2023-02-08-sunset-notice-team-discussions/) and is absent from rest-api-description 58b1e0c0; PRUNE-3 (0.84.0) removed teams.discussions.*. graphql.discussions.delete / .comments.delete are REPO discussions (deleteDiscussion / deleteDiscussionComment) and do not serve this slug (audit C11; D1 0.87.0 unmapped)."
+    },
+    {
       "slug": "GITHUB_DELETE_PROJECT",
       "reason": "Classic Projects delete REST was removed. Projects (classic) REST sunset 2025-04-01 (https://github.blog/changelog/2024-05-23-sunset-notice-projects-classic/); PRUNE-1 (0.82.0) removed projects.delete."
     },
@@ -1137,7 +1143,10 @@
     "rest.x.ORG_FINE_PERMS",
     "rest.x.ORG_ROLE_CREATE",
     "rest.x.ORG_ROLE_DELETE",
-    "rest.x.ORG_ROLE_UPDATE"
+    "rest.x.ORG_ROLE_UPDATE",
+    "repos.commits.list",
+    "repos.pulls.list",
+    "repos.issues.list"
   ],
   "triggers": {
     "_note": "TRIG-2: Composio's 46 GitHub triggers (locked map: parity-briefs github-trigger-gap.md / github-trigger-actions.md). Counted separately from the 846 action-tool gate. status = webhook op present in the manifest (covered / partial / missing); runtimeServed = a delivery actually reaches the stream (false for all until OXIDE-WH-1 / OXIDE-POLL-1, see github-trig-0-trace.md). Duplicate pairs (same event and action): GITHUB_ISSUE_ADDED_EVENT = GITHUB_ISSUE_CREATED_TRIGGER (issues.opened), GITHUB_STAR_ADDED_EVENT = GITHUB_NEW_STARGAZER_ADDED_TRIGGER (star.created); both slugs count toward 46, the duplicate carries duplicateOf. Source of truth for filters: src/trigger_map.ts. TRIG-4 (v0.86.11): added webhook.branch_protection_configuration, BRANCH_CHANGED partial -> covered (37/0/9).",

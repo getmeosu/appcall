@@ -1,7 +1,7 @@
 {
   "key": "github",
   "name": "GitHub",
-  "version": "0.86.11",
+  "version": "0.87.0",
   "runtime": "bun",
   "categories": [
     "dev-tools"
@@ -27502,6 +27502,527 @@
         }
       }
     },
+    "repos.commits.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "List Repository Commits",
+      "description": "GET /repos/{owner}/{repo}/commits. Lists commits on the default branch, or on sha. Items use the commits.list sync record shape. A 404 or 409 (empty repository) is CONNECTOR_UPSTREAM_ERROR. Read only. No effectPolicy and no reconcile.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "sha": {
+            "type": "string",
+            "minLength": 1,
+            "description": "SHA or branch to start listing commits from. Default: the repository's default branch."
+          },
+          "path": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Only commits containing this file path."
+          },
+          "author": {
+            "type": "string",
+            "minLength": 1,
+            "description": "GitHub login or email address to filter by commit author."
+          },
+          "committer": {
+            "type": "string",
+            "minLength": 1,
+            "description": "GitHub login or email address to filter by commit committer."
+          },
+          "since": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Only commits after this ISO 8601 timestamp."
+          },
+          "until": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Only commits before this ISO 8601 timestamp."
+          },
+          "perPage": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Results per page, from 1 to 100."
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Page number, starting at 1."
+          }
+        },
+        "required": [
+          "owner",
+          "repo"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "commits": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "provider": {
+                  "type": "string",
+                  "enum": [
+                    "github"
+                  ]
+                },
+                "sha": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                },
+                "author": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "authorEmail": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "committer": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "committerEmail": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "url": {
+                  "type": "string"
+                },
+                "authoredAt": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "committedAt": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "modelVersion": {
+                  "type": "string",
+                  "enum": [
+                    "2026-05-16"
+                  ]
+                },
+                "raw": {
+                  "type": "object",
+                  "description": "Unmodified upstream GitHub body (passthrough; not normalized)."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "repos.pulls.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "List Repository Pull Requests",
+      "description": "GET /repos/{owner}/{repo}/pulls. Lists pull requests (pull-request-simple). Items use the pull_requests.list sync record shape. A 404 is CONNECTOR_UPSTREAM_ERROR. Read only. No effectPolicy and no reconcile.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "open",
+              "closed",
+              "all"
+            ],
+            "description": "Pull request state. Default: open."
+          },
+          "head": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by head user or organization and branch, as user:ref-name."
+          },
+          "base": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by base branch name."
+          },
+          "sort": {
+            "type": "string",
+            "enum": [
+              "created",
+              "updated",
+              "popularity",
+              "long-running"
+            ],
+            "description": "Sort order. Default: created."
+          },
+          "direction": {
+            "type": "string",
+            "enum": [
+              "asc",
+              "desc"
+            ],
+            "description": "Sort direction."
+          },
+          "perPage": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Results per page, from 1 to 100."
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Page number, starting at 1."
+          }
+        },
+        "required": [
+          "owner",
+          "repo"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "pullRequests": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "provider": {
+                  "type": "string",
+                  "enum": [
+                    "github"
+                  ]
+                },
+                "providerPullRequestId": {
+                  "type": "integer"
+                },
+                "number": {
+                  "type": "integer"
+                },
+                "title": {
+                  "type": "string"
+                },
+                "body": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "state": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "isOpen": {
+                  "type": "boolean"
+                },
+                "isDraft": {
+                  "type": [
+                    "boolean",
+                    "null"
+                  ]
+                },
+                "isMerged": {
+                  "type": "boolean"
+                },
+                "url": {
+                  "type": "string"
+                },
+                "headBranch": {
+                  "type": "string"
+                },
+                "baseBranch": {
+                  "type": "string"
+                },
+                "headSha": {
+                  "type": "string"
+                },
+                "headRepo": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "baseRepo": {
+                  "type": "string"
+                },
+                "repositoryUrl": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "author": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "createdAt": {
+                  "type": "string"
+                },
+                "updatedAt": {
+                  "type": "string"
+                },
+                "mergedAt": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "closedAt": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "modelVersion": {
+                  "type": "string",
+                  "enum": [
+                    "2026-05-16"
+                  ]
+                },
+                "raw": {
+                  "type": "object",
+                  "description": "Unmodified upstream GitHub body (passthrough; not normalized)."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "repos.issues.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "List Repository Issues",
+      "description": "GET /repos/{owner}/{repo}/issues. Lists issues. GitHub also returns pull requests on this route; they are left out (same as the issues.list sync op), so a page can hold fewer than perPage items. Use repos.pulls.list for pull requests. A 404 or 301 is CONNECTOR_UPSTREAM_ERROR. Read only. No effectPolicy and no reconcile.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "milestone": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Milestone number, or * (any) or none."
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "open",
+              "closed",
+              "all"
+            ],
+            "description": "Issue state. Default: open."
+          },
+          "assignee": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Assignee login, or none or *."
+          },
+          "type": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Issue type name, or none or *."
+          },
+          "creator": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Login of the issue creator."
+          },
+          "mentioned": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Login of a user mentioned in the issue."
+          },
+          "labels": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Comma-separated label names."
+          },
+          "sort": {
+            "type": "string",
+            "enum": [
+              "created",
+              "updated",
+              "comments"
+            ],
+            "description": "Sort order. Default: created."
+          },
+          "direction": {
+            "type": "string",
+            "enum": [
+              "asc",
+              "desc"
+            ],
+            "description": "Sort direction. Default: desc."
+          },
+          "since": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Only issues updated at or after this ISO 8601 timestamp."
+          },
+          "perPage": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Results per page, from 1 to 100."
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Page number, starting at 1."
+          }
+        },
+        "required": [
+          "owner",
+          "repo"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "issues": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "provider": {
+                  "type": "string",
+                  "enum": [
+                    "github"
+                  ]
+                },
+                "providerIssueId": {
+                  "type": "integer"
+                },
+                "number": {
+                  "type": "integer"
+                },
+                "title": {
+                  "type": "string"
+                },
+                "body": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "state": {
+                  "type": "string"
+                },
+                "isOpen": {
+                  "type": "boolean"
+                },
+                "url": {
+                  "type": "string"
+                },
+                "repositoryUrl": {
+                  "type": "string"
+                },
+                "labels": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "author": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "assignee": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "createdAt": {
+                  "type": "string"
+                },
+                "updatedAt": {
+                  "type": "string"
+                },
+                "closedAt": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "modelVersion": {
+                  "type": "string",
+                  "enum": [
+                    "2026-05-16"
+                  ]
+                },
+                "raw": {
+                  "type": "object",
+                  "description": "Unmodified upstream GitHub body (passthrough; not normalized)."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "repos.issues.comments.list": {
       "kind": "action",
       "timeoutMs": 15000,
@@ -47028,7 +47549,7 @@
       "maxResponseBytes": 1048576,
       "sideEffect": "destructive",
       "title": "Delete a discussion",
-      "description": "POST /graphql - Delete a discussion. Public GitHub GraphQL. Composio: GITHUB_DELETE_DISCUSSION.",
+      "description": "POST /graphql - Delete a discussion. Public GitHub GraphQL. Repository discussion (not a team discussion).",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -47075,7 +47596,7 @@
       "maxResponseBytes": 1048576,
       "sideEffect": "destructive",
       "title": "Delete a discussion comment",
-      "description": "POST /graphql - Delete a discussion comment. Public GitHub GraphQL. Composio: GITHUB_DELETE_DISCUSSION_COMMENT.",
+      "description": "POST /graphql - Delete a discussion comment. Public GitHub GraphQL. Repository discussion (not a team discussion).",
       "inputSchema": {
         "type": "object",
         "properties": {

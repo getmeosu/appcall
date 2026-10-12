@@ -93,12 +93,12 @@ describe("TRIG-2: the trigger map and the coverage map", () => {
 });
 
 describe("TRIG-2: op accounting (actions and triggers counted separately)", () => {
-  test("v0.86.11: 797 actions + 47 webhook ops + 4 sync = 848 ops (46 Composio triggers)", () => {
-    expect(manifest.version).toBe("0.86.11");
+  test("v0.87.0: 797 actions + 47 webhook ops + 4 sync = 848 ops (46 Composio triggers)", () => {
+    expect(manifest.version).toBe("0.87.0");
     const kinds: Record<string, number> = {};
     for (const op of Object.values(ops)) kinds[op.kind] = (kinds[op.kind] ?? 0) + 1;
-    expect(kinds).toEqual({ action: 797, webhook: 47, sync: 4 });
-    expect(Object.keys(ops)).toHaveLength(848);
+    expect(kinds).toEqual({ action: 800, webhook: 47, sync: 4 });
+    expect(Object.keys(ops)).toHaveLength(851);
   });
 });
 
@@ -157,5 +157,18 @@ describe("TRIG-2: matchesTrigger", () => {
       expect(m!.actions, slug).toBeUndefined();
       expect(matchesTrigger(slug, m!.event, { action: "anything" }), slug).toBe(true);
     }
+  });
+  test("check_run / check_suite carry the GitHub-App-only delivery note; nothing else does", () => {
+    const noted = entries.filter(([, e]) => e.note !== undefined).map(([s]) => s);
+    expect(noted).toEqual(["GITHUB_CHECK_RUN_STATUS_CHANGED_TRIGGER", "GITHUB_CHECK_SUITE_STATUS_CHANGED_TRIGGER"]);
+    const run = GITHUB_TRIGGERS.GITHUB_CHECK_RUN_STATUS_CHANGED_TRIGGER!;
+    const suite = GITHUB_TRIGGERS.GITHUB_CHECK_SUITE_STATUS_CHANGED_TRIGGER!;
+    expect(run.note).toContain("rerequested");
+    expect(run.note).toContain("GitHub Apps");
+    expect(suite.note).toContain("requested and rerequested");
+    expect(suite.note).toContain("GitHub Apps");
+    // The note is informational: the action lists stay as mapped.
+    expect(run.match).toEqual([{ event: "check_run", actions: ["completed", "created", "rerequested"] }]);
+    expect(suite.match).toEqual([{ event: "check_suite", actions: ["completed", "requested", "rerequested"] }]);
   });
 });
