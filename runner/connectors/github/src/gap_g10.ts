@@ -1,4 +1,5 @@
 import { createGitHubClient, parseGitHubRateLimit, type GitHubClient } from "./http";
+import { requireSingleSegment as segment } from "./path_segment";
 
 // G10: Dependabot secrets (repo + org + selected repos) + repo Codespaces secrets public key/list/upsert.
 // 15 ops. All omit effectPolicy/reconcile/effect. No G11.
@@ -584,14 +585,6 @@ function requireIdList(value: unknown, field: string): number[] {
 
 function requireNonEmpty(value: unknown, field: string): string {
   if (typeof value !== "string" || value.length === 0) throw new Error(`${field} is required`);
-  return value;
-}
-
-function segment(value: unknown, field: string): string {
-  if (typeof value !== "string" || value.length === 0) throw new Error(`${field} is required`);
-  if (value.includes("/") || value.includes("?") || value.includes("#")) {
-    throw new Error(`${field} must be a single path segment`);
-  }
   return value;
 }
 

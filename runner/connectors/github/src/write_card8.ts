@@ -1,4 +1,5 @@
 import { createGitHubClient, parseGitHubRateLimit, type GitHubClient } from "./http";
+import { requireSingleSegment, rejectDotComponents } from "./path_segment";
 
 const PACKAGE_TYPES = new Set(["npm", "maven", "rubygems", "docker", "nuget", "container"]);
 
@@ -200,19 +201,11 @@ function packageRef(input: Record<string, unknown>): PackageRef {
   if (packageName.includes("?") || packageName.includes("#")) {
     throw new Error("packageName must not include a query or fragment");
   }
-  return { packageType, packageName };
+  return { packageType, packageName: rejectDotComponents(packageName, "packageName") };
 }
 
 function seg(value: string): string {
   return encodeURIComponent(value);
-}
-
-function requireSingleSegment(value: unknown, field: string): string {
-  if (typeof value !== "string" || value.length === 0) throw new Error(`${field} is required`);
-  if (value.includes("/") || value.includes("?") || value.includes("#")) {
-    throw new Error(`${field} must be a single path segment`);
-  }
-  return value;
 }
 
 function requireId(value: unknown, field: string): number {

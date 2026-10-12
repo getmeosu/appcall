@@ -1,4 +1,5 @@
 import { createGitHubClient, parseGitHubRateLimit, type GitHubClient } from "./http";
+import { requireSingleSegment } from "./path_segment";
 
 type ProjectItem = { username: string; projectNumber: number; itemId: number };
 type CheckSuiteCreate = { owner: string; repo: string; headSha: string };
@@ -162,14 +163,6 @@ function mapRateOrUpstream(response: { status: number; headers: Record<string, s
 
 function requireThreadId(input: Record<string, unknown>): string {
   return requireSingleSegment(input.threadId ?? input.thread_id, "threadId");
-}
-
-function requireSingleSegment(value: unknown, field: string): string {
-  if (typeof value !== "string" || value.length === 0) throw new Error(`${field} is required`);
-  if (value.includes("/") || value.includes("?") || value.includes("#")) {
-    throw new Error(`${field} must be a single path segment`);
-  }
-  return value;
 }
 
 function requireId(value: unknown, field: string): number {

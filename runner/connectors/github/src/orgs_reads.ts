@@ -1,6 +1,7 @@
 import { createGitHubClient, parseGitHubRateLimit, type GitHubClient } from "./http";
 import { normalizeGitHubOrg, type GitHubOrg } from "./orgs";
 import { normalizeGitHubEvent, normalizeGitHubUser, type GitHubEvent, type GitHubUser } from "./users";
+import { requireSingleSegment as segment } from "./path_segment";
 
 type OrgName = { org: string };
 type OrgUser = OrgName & { username: string };
@@ -278,14 +279,6 @@ function qs(params: URLSearchParams): string {
 
 function enc(value: string): string {
   return encodeURIComponent(value);
-}
-
-function segment(value: unknown, field: string): string {
-  if (typeof value !== "string" || value.length === 0) throw new Error(`${field} is required`);
-  if (value.includes("/") || value.includes("?") || value.includes("#")) {
-    throw new Error(`${field} must be a single path segment`);
-  }
-  return value;
 }
 
 function positiveInt(value: unknown, field: string): number {

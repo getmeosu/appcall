@@ -1,4 +1,5 @@
 import { createGitHubClient, parseGitHubRateLimit, type GitHubClient } from "./http";
+import { requireSingleSegment, rejectDotComponents } from "./path_segment";
 
 const PACKAGE_TYPES = new Set(["npm", "maven", "rubygems", "docker", "nuget", "container"]);
 const FIELD_DATA_TYPES = new Set(["text", "number", "date", "single_select", "iteration"]);
@@ -554,7 +555,7 @@ function packageRef(input: Record<string, unknown>): { packageType: string; pack
   if (packageName.includes("?") || packageName.includes("#")) {
     throw new Error("packageName must not include a query or fragment");
   }
-  return { packageType, packageName };
+  return { packageType, packageName: rejectDotComponents(packageName, "packageName") };
 }
 
 function projectScope(input: Record<string, unknown>): ProjectScope {
@@ -578,14 +579,6 @@ function requireIdList(value: unknown, field: string): number[] {
 
 function seg(value: string): string {
   return encodeURIComponent(value);
-}
-
-function requireSingleSegment(value: unknown, field: string): string {
-  if (typeof value !== "string" || value.length === 0) throw new Error(`${field} is required`);
-  if (value.includes("/") || value.includes("?") || value.includes("#")) {
-    throw new Error(`${field} must be a single path segment`);
-  }
-  return value;
 }
 
 function requireNonEmpty(value: unknown, field: string): string {

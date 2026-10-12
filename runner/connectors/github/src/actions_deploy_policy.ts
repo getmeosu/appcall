@@ -1,3 +1,4 @@
+import { assertSafeRequestPath } from "./path_segment";
 import { createGitHubClient, parseGitHubRateLimit, type GitHubClient } from "./http";
 import { executionContext } from "../../../bun/src/execution";
 import manifest from "../manifest.json";
@@ -402,6 +403,7 @@ export function createActionsDeployPolicyClient(options: { accessToken: string; 
 
 
 async function postPolicy(fetchImpl: typeof fetch, accessToken: string, path: string, body: Record<string, unknown>) {
+  assertSafeRequestPath(path); // FIX-SEGMENT: validate before any listener or fetch.
   const spec = (manifest.operations as Record<string, { timeoutMs?: number }>)["deployments.branch_policies.create"];
   const timeoutMs = spec?.timeoutMs ?? 15000;
   const controller = new AbortController();

@@ -1,3 +1,4 @@
+import { assertSafeRequestPath } from "./path_segment";
 import { createGitHubClient, parseGitHubRateLimit, type GitHubClient } from "./http";
 import { createConnectorHttpClient } from "../../../bun/src/http";
 import manifest from "../manifest.json";
@@ -525,7 +526,7 @@ export function createReleasesClient(options: { accessToken: string; fetch?: typ
         timeoutMs: spec?.timeoutMs ?? 15000,
         fetch: options.fetch,
       });
-      const response = await http.fetchText(url, {
+      const response = await http.fetchText(assertSafeRequestPath(url), {
         method: "POST",
         headers: {
           Authorization: `Bearer ${options.accessToken}`,

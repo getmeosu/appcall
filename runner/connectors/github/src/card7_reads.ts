@@ -1,5 +1,6 @@
 import { createGitHubClient, parseGitHubRateLimit, type GitHubClient } from "./http";
 import { normalizeGitHubRepo, type GitHubRepo } from "./repos";
+import { requireSingleSegment } from "./path_segment";
 
 const FORK_SORTS = ["newest", "oldest", "stargazers", "watchers"] as const;
 const LABEL_SORTS = ["created", "updated"] as const;
@@ -224,14 +225,6 @@ function mapRateOrUpstream(response: { status: number; headers: Record<string, s
     };
   }
   return upstream(message);
-}
-
-function requireSingleSegment(value: unknown, field: string): string {
-  const text = requireString(value, field);
-  if (text.includes("/") || text.includes("?") || text.includes("#")) {
-    throw new Error(`${field} must be a single path segment`);
-  }
-  return text;
 }
 
 function requireId(value: unknown, field: string): number {

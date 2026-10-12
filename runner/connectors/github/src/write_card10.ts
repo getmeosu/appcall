@@ -1,4 +1,5 @@
 import { createGitHubClient, parseGitHubRateLimit, type GitHubClient } from "./http";
+import { requireSingleSegment } from "./path_segment";
 
 const REACTION_CONTENTS = new Set(["+1", "-1", "laugh", "confused", "heart", "hooray", "rocket", "eyes"]);
 const RELEASE_REACTION_CONTENTS = new Set(["+1", "laugh", "heart", "hooray", "rocket", "eyes"]);
@@ -452,14 +453,6 @@ function requireStringList(value: unknown, field: string): string[] {
 
 function seg(value: string): string {
   return encodeURIComponent(value);
-}
-
-function requireSingleSegment(value: unknown, field: string): string {
-  if (typeof value !== "string" || value.length === 0) throw new Error(`${field} is required`);
-  if (value.includes("/") || value.includes("?") || value.includes("#")) {
-    throw new Error(`${field} must be a single path segment`);
-  }
-  return value;
 }
 
 function requireNonEmpty(value: unknown, field: string): string {

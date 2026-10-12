@@ -2,6 +2,7 @@ import { createGitHubClient, parseGitHubRateLimit, type GitHubClient } from "./h
 import { executionContext } from "../../../bun/src/execution";
 import { normalizeRefPath } from "./git";
 import manifest from "../manifest.json";
+import { requireSingleSegment, assertSafeRequestPath } from "./path_segment";
 
 type RepoScope = { owner: string; repo: string };
 type RoleUsers = { org: string; roleId: number; perPage?: number; page?: number };
@@ -161,6 +162,7 @@ async function captureArchive(fetchImpl: typeof fetch, accessToken: string, path
 }
 
 async function fetchManual(fetchImpl: typeof fetch, accessToken: string, path: string, operation: string, readBody = true) {
+  assertSafeRequestPath(path); // FIX-SEGMENT: validate before any listener or fetch.
   const spec = (manifest.operations as Record<string, { timeoutMs?: number; maxResponseBytes?: number }>)[operation];
   const timeoutMs = spec?.timeoutMs ?? 15000;
   const maxResponseBytes = spec?.maxResponseBytes ?? 1048576;
@@ -287,14 +289,6 @@ function requireRef(value: unknown): string {
   }
   for (const segment of normalized.split("/")) {
     if (segment.length === 0 || segment === "." || segment === "..") throw new Error("ref must be a relative ref");
-  }
-  return text;
-}
-
-function requireSingleSegment(value: unknown, field: string): string {
-  const text = requireString(value, field);
-  if (text.includes("/") || text.includes("?") || text.includes("#")) {
-    throw new Error(`${field} must be a single path segment`);
   }
   return text;
 }

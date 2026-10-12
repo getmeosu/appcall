@@ -1,4 +1,5 @@
 import { createGitHubClient, parseGitHubRateLimit, type GitHubClient } from "./http";
+import { requireSingleSegment as segment, rejectDotComponents } from "./path_segment";
 
 // G9: Pages update, private vuln reporting, SARIF upload, attestations, org issues/packages,
 // public members conceal, user interaction/starred/packages. 12 ops.
@@ -542,7 +543,7 @@ function packageRef(input: Record<string, unknown>): { packageType: string; pack
   if (packageName.includes("?") || packageName.includes("#")) {
     throw new Error("packageName must not include a query or fragment");
   }
-  return { packageType, packageName };
+  return { packageType, packageName: rejectDotComponents(packageName, "packageName") };
 }
 
 function optionalState(input: Record<string, unknown>): { state?: string } {
@@ -585,14 +586,6 @@ function requireId(value: unknown, field: string): number {
 
 function requireNonEmpty(value: unknown, field: string): string {
   if (typeof value !== "string" || value.length === 0) throw new Error(`${field} is required`);
-  return value;
-}
-
-function segment(value: unknown, field: string): string {
-  if (typeof value !== "string" || value.length === 0) throw new Error(`${field} is required`);
-  if (value.includes("/") || value.includes("?") || value.includes("#")) {
-    throw new Error(`${field} must be a single path segment`);
-  }
   return value;
 }
 

@@ -1,4 +1,5 @@
 import { createGitHubClient, parseGitHubRateLimit, type GitHubClient } from "./http";
+import { requireSingleSegment, rejectDotComponents } from "./path_segment";
 
 type OwnerRepo = { owner: string; repo: string };
 type BranchScope = OwnerRepo & { branch: string };
@@ -277,18 +278,11 @@ function mapRateOrUpstream(response: { status: number; headers: Record<string, s
   return upstream(message);
 }
 
-function requireSingleSegment(value: unknown, field: string): string {
-  if (typeof value !== "string" || value.length === 0) throw new Error(`${field} is required`);
-  if (value.includes("/") || value.includes("?") || value.includes("#")) {
-    throw new Error(`${field} must be a single path segment`);
-  }
-  return value;
-}
-
 function requirePathText(value: unknown, field: string): string {
   if (typeof value !== "string" || value.length === 0) throw new Error(`${field} is required`);
   if (value.includes("?") || value.includes("#")) throw new Error(`${field} must not include a query or fragment`);
-  return value;
+  // FIX-SEGMENT: branch / environment names may contain "/", but no component may be "." or "..".
+  return rejectDotComponents(value, field);
 }
 
 function requireStringList(value: unknown, field: string): string[] {

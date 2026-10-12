@@ -18,7 +18,7 @@ const READS = ["repos.forks.list", "search.topics.list", "search.labels.list"] a
 
 describe("github card-7 reads", () => {
   test("manifest stays v0.79.0 at 852 ops and these reads omit effect policy", () => {
-    expect(manifest.version).toBe("0.81.0");
+    expect(manifest.version).toBe("0.81.1");
     expect(manifest.version).not.toBe("0.35.0");
     expect(Object.keys(manifest.operations).length).toBe(912);
     for (const key of READS) {

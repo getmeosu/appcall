@@ -1,4 +1,5 @@
 import { createGitHubClient, parseGitHubRateLimit, type GitHubClient } from "./http";
+import { requireSingleSegment as segment } from "./path_segment";
 
 const PACKAGE_TYPES = ["npm", "maven", "rubygems", "docker", "nuget", "container"] as const;
 type PackageType = (typeof PACKAGE_TYPES)[number];
@@ -164,14 +165,6 @@ function packageType(value: unknown): PackageType {
     throw new Error("packageType must be npm, maven, rubygems, docker, nuget, or container");
   }
   return value as PackageType;
-}
-
-function segment(value: unknown, field: string): string {
-  const text = requiredText(value, field);
-  if (text.includes("/") || text.includes("?") || text.includes("#")) {
-    throw new Error(`${field} must be a single path segment`);
-  }
-  return text;
 }
 
 function requiredText(value: unknown, field: string): string {

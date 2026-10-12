@@ -5,6 +5,7 @@ import { normalizeRunnerLabel } from "./card10_reads";
 import { normalizeActionsSecretName } from "./card5_reads";
 import { normalizeGitHubNotification, type GitHubNotification } from "./notifications_social";
 import { normalizeGitHubIssue, type GitHubIssue } from "./issues";
+import { requireSingleSegment as segment, rejectDotComponents } from "./path_segment";
 
 // G2: fifteen GitHub reads (option C). Classroom REST dropped (removed 2026-08-28);
 // refill #1–6 are the former G3 organization reads. All omit effectPolicy/reconcile/effect.
@@ -495,19 +496,12 @@ function requireId(value: unknown, field: string): number {
   return value;
 }
 
-function segment(value: unknown, field: string): string {
-  if (typeof value !== "string" || value.length === 0) throw new Error(`${field} is required`);
-  if (value.includes("/") || value.includes("?") || value.includes("#")) {
-    throw new Error(`${field} must be a single path segment`);
-  }
-  return value;
-}
-
 function branchSegment(value: unknown, field: string): string {
   // Branch names may contain slashes; encodeURIComponent handles them in the path.
   if (typeof value !== "string" || value.length === 0) throw new Error(`${field} is required`);
   if (value.includes("?") || value.includes("#")) throw new Error(`${field} must not contain ? or #`);
-  return value;
+  // FIX-SEGMENT: "/" stays allowed, but no "/"-separated component may be "." or "..".
+  return rejectDotComponents(value, field);
 }
 
 function enc(value: string): string {

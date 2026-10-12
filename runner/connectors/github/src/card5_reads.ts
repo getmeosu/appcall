@@ -1,6 +1,7 @@
 import { createGitHubClient, parseGitHubRateLimit, type GitHubClient } from "./http";
 import { normalizeGitHubTeam, type GitHubTeam } from "./notifications_social";
 import { normalizeGitHubUser, type GitHubUser } from "./users";
+import { requireSingleSegment as segment } from "./path_segment";
 
 type Page = { perPage?: number; page?: number };
 type Repo = { owner: string; repo: string };
@@ -357,14 +358,6 @@ function pageOf(input: Record<string, unknown>): Page {
     perPage: optionalPage(input.perPage, "perPage"),
     page: optionalPage(input.page, "page", 1_000_000),
   };
-}
-
-function segment(value: unknown, field: string): string {
-  const text = requiredText(value, field);
-  if (text.includes("/") || text.includes("?") || text.includes("#")) {
-    throw new Error(`${field} must be a single path segment`);
-  }
-  return text;
 }
 
 function requiredText(value: unknown, field: string): string {

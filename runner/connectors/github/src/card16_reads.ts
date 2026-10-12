@@ -1,4 +1,5 @@
 import { createGitHubClient, parseGitHubRateLimit, type GitHubClient } from "./http";
+import { requireSingleSegment } from "./path_segment";
 
 type Page = { perPage?: number; page?: number };
 
@@ -434,14 +435,6 @@ function requireGhsaId(value: unknown, field: string): string {
   const text = requireString(value, field);
   if (!/^GHSA-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}$/i.test(text)) {
     throw new Error(`${field} must be a GHSA id`);
-  }
-  return text;
-}
-
-function requireSingleSegment(value: unknown, field: string): string {
-  const text = requireString(value, field);
-  if (text.includes("/") || text.includes("?") || text.includes("#")) {
-    throw new Error(`${field} must be a single path segment`);
   }
   return text;
 }

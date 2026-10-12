@@ -1,5 +1,6 @@
 import { createGitHubClient, parseGitHubRateLimit, type GitHubClient } from "./http";
 import { normalizeActionsSecretName } from "./card5_reads";
+import { requireSingleSegment as segment } from "./path_segment";
 
 // G3: nine organization/actions reads + six writes. All omit effectPolicy/reconcile/effect.
 // selected_actions.set omits Reconcile even though selected_actions.get ships in this card (lock).
@@ -665,14 +666,6 @@ function optionalPage(value: unknown, field: string, max = 100): number | undefi
 function requireId(value: unknown, field: string): number {
   if (typeof value !== "number" || !Number.isInteger(value) || value < 1) {
     throw new Error(`${field} must be a positive integer`);
-  }
-  return value;
-}
-
-function segment(value: unknown, field: string): string {
-  if (typeof value !== "string" || value.length === 0) throw new Error(`${field} is required`);
-  if (value.includes("/") || value.includes("?") || value.includes("#")) {
-    throw new Error(`${field} must be a single path segment`);
   }
   return value;
 }

@@ -1,4 +1,5 @@
 import { createGitHubClient, parseGitHubRateLimit, type GitHubClient } from "./http";
+import { requireSingleSegment, rejectDotComponents } from "./path_segment";
 
 const PACKAGE_TYPES = new Set(["npm", "maven", "rubygems", "docker", "nuget", "container"]);
 const ACCESS_VISIBILITY = new Set([
@@ -375,7 +376,7 @@ function packageRef(input: Record<string, unknown>): PackageRef {
   if (packageName.includes("?") || packageName.includes("#")) {
     throw new Error("packageName must not include a query or fragment");
   }
-  return { packageType, packageName };
+  return { packageType, packageName: rejectDotComponents(packageName, "packageName") };
 }
 
 function codespaceOpts(input: Record<string, unknown>): CodespaceOpts {
@@ -404,23 +405,12 @@ function requireUsernames(value: unknown): string[] {
   if (!Array.isArray(value) || value.length === 0) throw new Error("selectedUsernames must be a non-empty array");
   return value.map((item, index) => {
     if (typeof item !== "string" || item.length === 0) throw new Error(`selectedUsernames[${index}] must be a string`);
-    if (item.includes("/") || item.includes("?") || item.includes("#")) {
-      throw new Error(`selectedUsernames[${index}] must be a single path segment`);
-    }
-    return item;
+    return requireSingleSegment(item, `selectedUsernames[${index}]`);
   });
 }
 
 function seg(value: string): string {
   return encodeURIComponent(value);
-}
-
-function requireSingleSegment(value: unknown, field: string): string {
-  if (typeof value !== "string" || value.length === 0) throw new Error(`${field} is required`);
-  if (value.includes("/") || value.includes("?") || value.includes("#")) {
-    throw new Error(`${field} must be a single path segment`);
-  }
-  return value;
 }
 
 function requireId(value: unknown, field: string): number {

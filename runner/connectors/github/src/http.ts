@@ -1,3 +1,4 @@
+import { assertSafeRequestPath } from "./path_segment";
 import { createConnectorHttpClient } from "../../../bun/src/http";
 import manifest from "../manifest.json";
 
@@ -64,7 +65,7 @@ export function createGitHubClient(options: GitHubClientOptions) {
 
   return {
     async fetchJSON(path: string, init: RequestInit = {}): Promise<{ status: number; headers: Record<string, string>; body: unknown }> {
-      const response = await httpClient.fetchText(`https://api.github.com${path}`, {
+      const response = await httpClient.fetchText(`https://api.github.com${assertSafeRequestPath(path)}`, {
         ...init,
         headers: {
           Authorization: `Bearer ${options.accessToken}`,

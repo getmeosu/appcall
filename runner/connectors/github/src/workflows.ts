@@ -1,3 +1,4 @@
+import { assertSafeRequestPath } from "./path_segment";
 import { createGitHubClient, parseGitHubRateLimit, type GitHubClient } from "./http";
 import { executionContext } from "../../../bun/src/execution";
 import manifest from "../manifest.json";
@@ -887,7 +888,7 @@ export function createWorkflowsClient(options: {
      */
     async getJobLogs(input: unknown) {
       const payload = validateGetJobLogsInput(input);
-      const url = `https://api.github.com/repos/${payload.owner}/${payload.repo}/actions/jobs/${payload.jobId}/logs`;
+      const url = assertSafeRequestPath(`https://api.github.com/repos/${payload.owner}/${payload.repo}/actions/jobs/${payload.jobId}/logs`);
       const response = await fetchImpl(url, {
         method: "GET",
         redirect: "manual",
@@ -962,7 +963,7 @@ export function createWorkflowsClient(options: {
 
     async downloadRunLogs(input: unknown) {
       const payload = validateDownloadRunLogsInput(input);
-      const url = `https://api.github.com/repos/${payload.owner}/${payload.repo}/actions/runs/${payload.runId}/logs`;
+      const url = assertSafeRequestPath(`https://api.github.com/repos/${payload.owner}/${payload.repo}/actions/runs/${payload.runId}/logs`);
       const captured = await captureRedirect(url, "workflow run logs");
       if (!captured.ok) return captured;
       return {
@@ -973,7 +974,7 @@ export function createWorkflowsClient(options: {
 
     async downloadArtifact(input: unknown) {
       const payload = validateDownloadArtifactInput(input);
-      const url = `https://api.github.com/repos/${payload.owner}/${payload.repo}/actions/artifacts/${payload.artifactId}/zip`;
+      const url = assertSafeRequestPath(`https://api.github.com/repos/${payload.owner}/${payload.repo}/actions/artifacts/${payload.artifactId}/zip`);
       const captured = await captureRedirect(url, "artifact archive");
       if (!captured.ok) return captured;
       return {
@@ -1126,7 +1127,7 @@ export function createWorkflowsClient(options: {
 
     async downloadAttemptLogs(input: unknown) {
       const payload = validateRunAttemptInput(input);
-      const url = `https://api.github.com/repos/${payload.owner}/${payload.repo}/actions/runs/${payload.runId}/attempts/${payload.attemptNumber}/logs`;
+      const url = assertSafeRequestPath(`https://api.github.com/repos/${payload.owner}/${payload.repo}/actions/runs/${payload.runId}/attempts/${payload.attemptNumber}/logs`);
       const captured = await captureRedirect(url, "workflow run attempt logs");
       if (!captured.ok) return captured;
       return {

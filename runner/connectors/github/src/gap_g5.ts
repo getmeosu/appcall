@@ -1,4 +1,5 @@
 import { createGitHubClient, parseGitHubRateLimit, type GitHubClient } from "./http";
+import { requireSingleSegment as segment } from "./path_segment";
 
 // G5: user codespaces get/update + email delete/visibility + org memberships list (5 ops).
 // All omit effectPolicy/reconcile/effect. update omits Reconcile: PATCH machine is string,
@@ -293,14 +294,6 @@ function stringList(value: unknown, field: string): string[] {
 
 function requireNonEmpty(value: unknown, field: string): string {
   if (typeof value !== "string" || value.length === 0) throw new Error(`${field} is required`);
-  return value;
-}
-
-function segment(value: unknown, field: string): string {
-  if (typeof value !== "string" || value.length === 0) throw new Error(`${field} is required`);
-  if (value.includes("/") || value.includes("?") || value.includes("#")) {
-    throw new Error(`${field} must be a single path segment`);
-  }
   return value;
 }
 

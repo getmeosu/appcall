@@ -2,6 +2,7 @@ import { createGitHubClient, parseGitHubRateLimit, type GitHubClient } from "./h
 import { executionContext } from "../../../bun/src/execution";
 import { hostIsAllowed } from "../../../bun/src/http";
 import manifest from "../manifest.json";
+import { requireSingleSegment, assertSafeRequestPath } from "./path_segment";
 
 type Repo = { owner: string; repo: string };
 type Page = { perPage?: number; page?: number };
@@ -240,7 +241,6 @@ export function createCard19ReadsClient(options: {
   };
 }
 
-
 const SBOM_MAX_POLLS = 15;
 const SBOM_SLEEP_MS = 2000;
 
@@ -279,7 +279,7 @@ async function sleepMs(ms: number): Promise<void> {
 
 async function fetchSbomReport(fetchImpl: typeof fetch, accessToken: string, path: string) {
   // redirect:manual — HTTP boundary would throw OUTBOUND_REDIRECT_BLOCKED on 302.
-  return fetchManualJson(fetchImpl, `https://api.github.com${path}`, {
+  return fetchManualJson(fetchImpl, `https://api.github.com${assertSafeRequestPath(path)}`, {
     Authorization: `Bearer ${accessToken}`,
     Accept: "application/vnd.github+json",
     "X-GitHub-Api-Version": "2022-11-28",
@@ -344,6 +344,7 @@ async function fetchManualJson(
 }
 
 async function fetchZipRedirect(fetchImpl: typeof fetch, accessToken: string, path: string, operation: string) {
+  assertSafeRequestPath(path); // FIX-SEGMENT: validate before any listener or fetch.
   const spec = (manifest.operations as Record<string, { timeoutMs?: number; maxResponseBytes?: number }>)[operation];
   const timeoutMs = spec?.timeoutMs ?? 15000;
   const maxResponseBytes = spec?.maxResponseBytes ?? 1048576;
@@ -450,14 +451,6 @@ function mapRateOrUpstream(response: { status: number; headers: Record<string, s
     };
   }
   return upstream(message);
-}
-
-function requireSingleSegment(value: unknown, field: string): string {
-  if (typeof value !== "string" || value.length === 0) throw new Error(`${field} is required`);
-  if (value.includes("/") || value.includes("?") || value.includes("#")) {
-    throw new Error(`${field} must be a single path segment`);
-  }
-  return value;
 }
 
 function requireId(value: unknown, field: string): number {
