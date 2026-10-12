@@ -40,6 +40,7 @@ const WEBHOOK_KEYS = [
   "webhook.projects_v2_item",
   "webhook.discussion",
   "webhook.discussion_comment",
+  "webhook.branch_protection_configuration",
   "webhook.branch_protection_rule",
   "webhook.secret_scanning_alert",
   "webhook.code_scanning_alert",
@@ -51,12 +52,12 @@ const WEBHOOK_KEYS = [
 ] as const;
 
 describe("github composio-class webhook triggers", () => {
-  test("manifest has exactly the 46 webhook keys", () => {
+  test("manifest has exactly the 47 webhook keys", () => {
     const webhookKeys = Object.entries(manifest.operations)
       .filter(([, spec]) => (spec as Record<string, unknown>).kind === "webhook")
       .map(([key]) => key)
       .sort();
-    expect(WEBHOOK_KEYS).toHaveLength(46);
+    expect(WEBHOOK_KEYS).toHaveLength(47);
     expect(webhookKeys).toEqual([...WEBHOOK_KEYS].sort());
   });
 
@@ -96,7 +97,7 @@ describe("github composio-class webhook triggers", () => {
   });
 
   test("version and operation count match 0.79.0 / 685", () => {
-    expect(manifest.version).toBe("0.86.10");
-    expect(Object.keys(manifest.operations)).toHaveLength(847);
+    expect(manifest.version).toBe("0.86.11");
+    expect(Object.keys(manifest.operations)).toHaveLength(848);
   });
 });

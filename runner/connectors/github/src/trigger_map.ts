@@ -32,7 +32,7 @@ export type TriggerEntry = {
 
 export const GITHUB_TRIGGERS: Record<string, TriggerEntry> = {
   GITHUB_ARTIFACT_CREATED_TRIGGER: { class: "not-named", match: [], status: "missing", runtimeServed: false, polling: { readOp: "actions.artifacts.list", proposedSync: "actions.artifacts.sync" } },
-  GITHUB_BRANCH_CHANGED_TRIGGER: { class: "ambiguous", match: [{ event: "push" }, { event: "branch_protection_configuration", actions: ["disabled", "enabled"] }, { event: "branch_protection_rule", actions: ["created", "deleted", "edited"] }], status: "partial", runtimeServed: false },
+  GITHUB_BRANCH_CHANGED_TRIGGER: { class: "ambiguous", match: [{ event: "push" }, { event: "branch_protection_configuration", actions: ["disabled", "enabled"] }, { event: "branch_protection_rule", actions: ["created", "deleted", "edited"] }], status: "covered", runtimeServed: false },
   GITHUB_BRANCH_CREATED_TRIGGER: { class: "one-event", match: [{ event: "create", where: { kind: "refType", value: "branch" } }], status: "covered", runtimeServed: false },
   GITHUB_CHECK_RUN_STATUS_CHANGED_TRIGGER: { class: "named", match: [{ event: "check_run", actions: ["completed", "created", "rerequested"] }], status: "covered", runtimeServed: false },
   GITHUB_CHECK_SUITE_STATUS_CHANGED_TRIGGER: { class: "named", match: [{ event: "check_suite", actions: ["completed", "requested", "rerequested"] }], status: "covered", runtimeServed: false },

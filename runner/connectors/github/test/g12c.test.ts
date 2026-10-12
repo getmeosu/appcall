@@ -81,9 +81,9 @@ function call(op: string, input: Record<string, unknown>) {
 const opsOf = manifest.operations as Record<string, Record<string, any>>;
 
 describe("github FIX-G12C: G12 GraphQL ops via gqlRequest", () => {
-  test("version 0.86.10 at 847 ops; auth.scopes unchanged (per-op scopes only)", () => {
-    expect(manifest.version).toBe("0.86.10");
-    expect(Object.keys(opsOf)).toHaveLength(847);
+  test("version 0.86.11 at 848 ops; auth.scopes unchanged (per-op scopes only)", () => {
+    expect(manifest.version).toBe("0.86.11");
+    expect(Object.keys(opsOf)).toHaveLength(848);
     expect(manifest.auth.scopes).toEqual(["repo", "read:org", "admin:repo_hook", "admin:org_hook", "gist", "notifications", "admin:org"]);
     expect(manifest.auth.scopes).not.toContain("user");
     expect(manifest.auth.scopes).not.toContain("read:enterprise");

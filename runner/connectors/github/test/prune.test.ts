@@ -114,9 +114,9 @@ function expectGone(table: Record<string, string | null>) {
 }
 
 describe("github PRUNE chain", () => {
-  test("version 0.86.10 at 847 ops", () => {
-    expect(manifest.version).toBe("0.86.10");
-    expect(Object.keys(manifest.operations)).toHaveLength(847);
+  test("version 0.86.11 at 848 ops", () => {
+    expect(manifest.version).toBe("0.86.11");
+    expect(Object.keys(manifest.operations)).toHaveLength(848);
   });
 
   test("PRUNE-1: 15 Projects (classic) project/column ops are gone", () => {
