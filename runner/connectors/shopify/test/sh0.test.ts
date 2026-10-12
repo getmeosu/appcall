@@ -18,7 +18,7 @@ const LISTING_WRITES = ["product-listings.update", "product-listings.delete",
 
 describe("shopify SH-0 correctness", () => {
   test("version 0.4.2 with 468 ops; Checkout API ops (shut down 2025-04-01) removed", () => {
-    expect(manifest.version).toBe("0.4.2");
+    expect(manifest.version).toBe("0.4.3");
     expect(Object.keys(ops)).toHaveLength(468);
     for (const k of REMOVED) expect(ops[k]).toBeUndefined();
     for (const op of Object.values(ops)) expect(op.request?.path ?? "").not.toMatch(/^\/checkouts\/\{\{/);

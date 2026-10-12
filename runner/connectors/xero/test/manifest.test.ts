@@ -43,7 +43,7 @@ describe("xero connector manifest", () => {
     const operations = manifest.operations as Record<string, { kind: string; request?: unknown }>;
     expect(Object.keys(operations)).toHaveLength(57);
     expect(Object.keys(operations).filter((key) => key.startsWith("xero."))).toHaveLength(53);
-    expect(manifest.version).toBe("0.2.0");
+    expect(manifest.version).toBe("0.2.1");
     expect(manifest.http.baseUrl).toBe("https://api.xero.com/api.xro/2.0");
     expect(manifest.auth.scopes).toContain("accounting.settings");
     expect(manifest.auth.scopes).toContain("accounting.reports.read");

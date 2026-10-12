@@ -145,7 +145,7 @@ describe("xero Composio tool parity", () => {
     expect(manifest.operations["contacts.list"].kind).toBe("sync");
     expect(manifest.operations["bank_transactions.list"].kind).toBe("sync");
     expect(manifest.operations.healthcheck.kind).toBe("action");
-    expect(manifest.version).toBe("0.2.0");
+    expect(manifest.version).toBe("0.2.1");
   });
 
   it("does not compile the original syncs into HTTP handlers", () => {
