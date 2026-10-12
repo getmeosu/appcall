@@ -12,7 +12,7 @@ const CHECK_DESCRIPTION = "GET /repos/{owner}/{repo}/assignees/{assignee}. A 204
 
 describe("github card-6 reads", () => {
   test("version stays 0.79.0 at 852 ops and the new reads omit effect policy", () => {
-    expect(manifest.version).toBe("0.86.2");
+    expect(manifest.version).toBe("0.86.3");
     expect(Object.keys(manifest.operations).length).toBe(847);
     for (const key of READS) {
       const op = manifest.operations[key] as Record<string, unknown>;

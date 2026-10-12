@@ -67,8 +67,8 @@ const CREATES = [
 ] as const;
 
 describe("github FIX-EFFECTS: manifest guards", () => {
-  test("version 0.86.2 at 847 ops", () => {
-    expect(manifest.version).toBe("0.86.2");
+  test("version 0.86.3 at 847 ops", () => {
+    expect(manifest.version).toBe("0.86.3");
     expect(Object.keys(ops)).toHaveLength(847);
   });
 
@@ -314,14 +314,17 @@ function schemaErrors(value: unknown, schema: any, path = "$"): string[] {
       if (v === undefined) errors.push(`${path}.${key}: missing`);
       else errors.push(...schemaErrors(v, sub, `${path}.${key}`));
     }
+    if (schema.additionalProperties === false) {
+      for (const key of Object.keys(value as Record<string, unknown>)) if (!(key in schema.properties)) errors.push(`${path}.${key}: not declared`);
+    }
   }
   if (kind === "array" && schema.items) (value as unknown[]).forEach((v, i) => errors.push(...schemaErrors(v, schema.items, `${path}[${i}]`)));
   return errors;
 }
 
 describe("github FIX-EFFECTS: each kept Reconcile projects onto the op's own output schema", () => {
-  test("the kept table is 40 ops (FIX-EFFECTS-b dropped orgs.teams.update)", () => {
-    expect(Object.keys(RECONCILE_KEEP)).toHaveLength(40);
+  test("the kept table is 27 ops (FIX-EFFECTS-b dropped orgs.teams.update; FIX-EFFECTS-c dropped 13)", () => {
+    expect(Object.keys(RECONCILE_KEEP)).toHaveLength(27);
   });
   for (const [key, observe] of Object.entries(RECONCILE_KEEP)) {
     test(`${key} -> ${observe}`, async () => {
@@ -382,5 +385,163 @@ describe("github FIX-EFFECTS-b: orgs.teams.update stays effect-free", () => {
     const output = (await Promise.resolve(result.output)) as Record<string, unknown>;
     expect(calls).toEqual(["PATCH https://api.github.com/orgs/octo-org/teams/t"]);
     expect(output.action).toBe("orgs.teams.update");
+  });
+});
+
+// FIX-EFFECTS-c (0.86.3): linus's rule for the flagged kept-Reconcile ops. Keep only if the observe
+// reads back every field the op can write on the same id (a renamed field needs a mapping test) and
+// the output validates against the op's own schema. Write-only fields (hook secret) and partial
+// observes omit. The untyped `raw` passthrough does not count as reading a field back.
+const KEPT_EXACT: Readonly<Record<string, string>> = {
+  "actions.oidc.customization.sub.set": "actions.oidc.customization.sub.get",
+  "actions.permissions.access.set": "actions.permissions.access.get",
+  "actions.permissions.selected_actions.set": "actions.permissions.selected_actions.get",
+  "actions.permissions.set": "actions.permissions.get",
+  "actions.permissions.workflow.set": "actions.permissions.workflow.get",
+  "branches.protection.update": "branches.protection.get",
+  "deployments.branch_policies.update": "deployments.branch_policies.get",
+  "discussions.update": "discussions.get",
+  "gists.comments.update": "gists.comments.get",
+  "gists.star": "gists.star.check",
+  "issues.comments.update": "issues.comments.get",
+  "milestones.update": "milestones.get",
+  "notifications.threads.subscription.set": "notifications.threads.subscription.get",
+  "orgs.actions.oidc.customization.sub.set": "orgs.actions.oidc.customization.sub.get",
+  "orgs.actions.permissions.set": "orgs.actions.permissions.get",
+  "orgs.actions.permissions.workflow.set": "orgs.actions.permissions.workflow.get",
+  "pull_requests.convert_to_draft": "pull_requests.get",
+  "pull_requests.mark_ready": "pull_requests.get",
+  "pull_requests.reviews.submit": "pull_requests.reviews.get",
+  "pull_requests.reviews.update": "pull_requests.reviews.get",
+  "releases.assets.update": "releases.assets.get",
+  "releases.update": "releases.get",
+  "repos.interaction_limits.set": "repos.interaction_limits.get",
+  "repos.rulesets.update": "repos.rulesets.get",
+  "repos.star": "user.starred.check",
+  "repos.subscription.set": "repos.subscription.get",
+  "repos.unstar": "user.starred.check",
+};
+const EFFECTS_C_OMIT = [
+  "code_scanning.alerts.update", "gists.update", "issues.assignees.add", "issues.assignees.remove",
+  "orgs.hooks.update", "repos.hooks.update", "orgs.hooks.config.update", "repos.hooks.config.update",
+  "orgs.update", "pull_requests.requested_reviewers.add", "pull_requests.requested_reviewers.remove",
+  "repos.update", "user.update",
+];
+
+describe("github FIX-EFFECTS-c: kept set is exactly 27", () => {
+  test("RECONCILE_KEEP and the manifest's effect-key ops equal the literal kept set", () => {
+    expect(Object.keys(KEPT_EXACT)).toHaveLength(27);
+    expect({ ...RECONCILE_KEEP }).toEqual({ ...KEPT_EXACT });
+    const withKeys = Object.keys(ops).filter((key) => effectKeys(ops[key]!).length > 0).sort();
+    expect(withKeys).toEqual(Object.keys(KEPT_EXACT).sort());
+    for (const [key, observe] of Object.entries(KEPT_EXACT)) {
+      expect(ops[key]!.effectPolicy, key).toBe("Reconcile");
+      expect(ops[key]!.reconcile, key).toBe(observe);
+    }
+  });
+  test("the 13 omitted ops carry no effect keys and say why", () => {
+    expect(EFFECTS_C_OMIT).toHaveLength(13);
+    for (const key of EFFECTS_C_OMIT) {
+      expect(effectKeys(ops[key]!), key).toEqual([]);
+      expect(key in RECONCILE_KEEP, key).toBe(false);
+      expect(String(ops[key]!.description), key).toContain("No effectPolicy and no reconcile");
+      expect(String(ops[key]!.description), key).not.toMatch(/effectPolicy Reconcile/i);
+    }
+  });
+  test("every hooks update/config op accepts the write-only secret (reason for omit)", () => {
+    for (const key of ["orgs.hooks.update", "repos.hooks.update", "orgs.hooks.config.update", "repos.hooks.config.update"]) {
+      expect(Object.keys(ops[key]!.inputSchema.properties), key).toContain("secret");
+    }
+  });
+});
+
+describe("github FIX-EFFECTS-c: kept-op field mappings (observe reads back every writable field)", () => {
+  // GitHub review state after a submit event (REST "Submit a review for a pull request"):
+  // APPROVE -> APPROVED, REQUEST_CHANGES -> CHANGES_REQUESTED, COMMENT -> COMMENTED.
+  const EVENT_STATE: Record<string, string> = { APPROVE: "APPROVED", REQUEST_CHANGES: "CHANGES_REQUESTED", COMMENT: "COMMENTED" };
+  test("pull_requests.reviews.submit writes event + body; reviews.get reads them back as state + body on the same reviewId", async () => {
+    expect(Object.keys(ops["pull_requests.reviews.submit"]!.inputSchema.properties).sort()).toEqual(["body", "event", "owner", "pullNumber", "repo", "reviewId"]);
+    expect(ops["pull_requests.reviews.submit"]!.inputSchema.properties.event.enum).toEqual(Object.keys(EVENT_STATE));
+    for (const [event, state] of Object.entries(EVENT_STATE)) {
+      const calls: string[] = [];
+      let sent: Record<string, unknown> = {};
+      const review = { id: 55, state, body: `body-${event}`, user: { login: "rev" }, html_url: "https://h", submitted_at: "2026-01-01T00:00:00Z" };
+      const fetch = (async (url: unknown, init?: RequestInit) => {
+        const method = init?.method ?? "GET";
+        calls.push(`${method} ${String(url)}`);
+        if (method === "POST") sent = JSON.parse(String(init?.body));
+        return Response.json(review);
+      }) as unknown as typeof globalThis.fetch;
+      const result = defaultConnectorRegistry.executeAction("github", "pull_requests.reviews.submit", { owner: "o", repo: "r", pullNumber: 3, reviewId: 55, event, body: `body-${event}`, accessToken: "t", fetch });
+      if (!result.ok) throw new Error(JSON.stringify(result));
+      const output = (await Promise.resolve(result.output)) as { action: string; review: { state: string; body: string; providerReviewId: number } };
+      expect(calls).toEqual([
+        "POST https://api.github.com/repos/o/r/pulls/3/reviews/55/events",
+        "GET https://api.github.com/repos/o/r/pulls/3/reviews/55",
+      ]);
+      expect(sent).toEqual({ event, body: `body-${event}` });
+      expect(output.action).toBe("pull_requests.reviews.get");
+      expect(output.review.providerReviewId).toBe(55);
+      expect(output.review.state).toBe(EVENT_STATE[sent.event as string]);
+      expect(output.review.body).toBe(sent.body);
+      expect(schemaErrors(output, ops["pull_requests.reviews.submit"]!.outputSchema)).toEqual([]);
+    }
+  });
+  test("releases.update writes 6 fields; releases.get reads all 6 back (targetCommitish -> targetBranch) on the same releaseId", async () => {
+    const writable = Object.keys(ops["releases.update"]!.inputSchema.properties).filter((k) => !["owner", "repo", "releaseId"].includes(k)).sort();
+    expect(writable).toEqual(["body", "draft", "name", "prerelease", "tagName", "targetCommitish"]);
+    const input = { tagName: "v9.9.9", name: "Nine", body: "notes", draft: true, prerelease: true, targetCommitish: "release/9" };
+    const calls: string[] = [];
+    let sent: Record<string, unknown> = {};
+    const fetch = (async (url: unknown, init?: RequestInit) => {
+      const method = init?.method ?? "GET";
+      calls.push(`${method} ${String(url)}`);
+      if (method === "PATCH") sent = JSON.parse(String(init?.body));
+      return Response.json({ id: 77, html_url: "https://h", default_branch: "main", ...sent });
+    }) as unknown as typeof globalThis.fetch;
+    const result = defaultConnectorRegistry.executeAction("github", "releases.update", { owner: "o", repo: "r", releaseId: 77, ...input, accessToken: "t", fetch });
+    if (!result.ok) throw new Error(JSON.stringify(result));
+    const output = (await Promise.resolve(result.output)) as { action: string; release: Record<string, unknown> };
+    expect(calls).toEqual(["PATCH https://api.github.com/repos/o/r/releases/77", "GET https://api.github.com/repos/o/r/releases/77"]);
+    expect(sent).toEqual({ tag_name: "v9.9.9", name: "Nine", body: "notes", draft: true, prerelease: true, target_commitish: "release/9" });
+    expect(output.action).toBe("releases.get");
+    expect(output.release.providerReleaseId).toBe(77);
+    const readBack: Record<string, string> = { tagName: "tagName", name: "name", body: "body", draft: "draft", prerelease: "prerelease", targetCommitish: "targetBranch" };
+    expect(Object.keys(readBack).sort()).toEqual(writable);
+    for (const [field, outKey] of Object.entries(readBack)) expect(output.release[outKey], field).toEqual(input[field as keyof typeof input]);
+    expect(schemaErrors(output, ops["releases.update"]!.outputSchema)).toEqual([]);
+    // FIX-EFFECTS-c amend (linus): read-backs are judged from the DECLARED output schemas. Close
+    // `release` (additionalProperties:false) on copies of the releases.get and releases.update
+    // schemas and validate the release restricted to the declared keys plus every read-back key
+    // (and providerReleaseId, the same-id check): an undeclared read-back key fails as "not
+    // declared", a declared key the handler does not return fails as "missing".
+    const direct = defaultConnectorRegistry.executeAction("github", "releases.get", { owner: "o", repo: "r", releaseId: 77, accessToken: "t", fetch });
+    if (!direct.ok) throw new Error(JSON.stringify(direct));
+    const observed = (await Promise.resolve(direct.output)) as { release: Record<string, unknown> };
+    const mustDeclare = [...Object.values(readBack), "providerReleaseId"];
+    for (const op of ["releases.get", "releases.update"]) {
+      const closed = structuredClone(ops[op]!.outputSchema);
+      closed.properties.release.additionalProperties = false;
+      const declared = Object.keys(closed.properties.release.properties);
+      expect(declared, op).toEqual(expect.arrayContaining(mustDeclare));
+      for (const release of [output.release, observed.release]) {
+        const keys = [...new Set([...declared, ...mustDeclare])];
+        const projected = { release: Object.fromEntries(keys.map((k) => [k, release[k]])) };
+        expect(schemaErrors(projected, closed), op).toEqual([]);
+      }
+    }
+    expect(ops["releases.get"]!.outputSchema.properties.release.properties).toEqual(ops["releases.update"]!.outputSchema.properties.release.properties);
+    expect(ops["releases.get"]!.outputSchema.properties.release.properties).toMatchObject({
+      providerReleaseId: { type: "number" }, body: { type: "string" }, draft: { type: "boolean" }, prerelease: { type: "boolean" }, targetBranch: { type: "string" },
+    });
+  });
+
+  test("releases normalizer returns the declared types even for a malformed upstream body", async () => {
+    const fetch = (async () => Response.json({ id: "77", body: null, draft: "yes", prerelease: 1, target_commitish: 5, tag_name: "v1", html_url: "https://h" })) as unknown as typeof globalThis.fetch;
+    const r = defaultConnectorRegistry.executeAction("github", "releases.get", { owner: "o", repo: "r", releaseId: 77, accessToken: "t", fetch });
+    if (!r.ok) throw new Error(JSON.stringify(r));
+    const out = (await Promise.resolve(r.output)) as { release: Record<string, unknown> };
+    expect(schemaErrors(out, ops["releases.get"]!.outputSchema)).toEqual([]);
+    expect([out.release.providerReleaseId, out.release.body, out.release.draft, out.release.prerelease, out.release.targetBranch]).toEqual([0, "", false, false, "main"]);
   });
 });

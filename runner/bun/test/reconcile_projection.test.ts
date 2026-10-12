@@ -345,12 +345,13 @@ describe("effect pairing scan (all connector manifests)", () => {
         else openGaps.push(line);
       }
     }
-    // Exact count (linus): 82 pairings across all manifests, 40 of them github. FIX-EFFECTS 0.81.2
+    // Exact count (linus): 69 pairings across all manifests, 27 of them github. FIX-EFFECTS 0.81.2
     // left 83 / 41 (PRUNE-1 0.82.0 .. PRUNE-5 0.86.0 and FIX-SEGMENT-2 0.86.1 remove no paired op);
-    // FIX-EFFECTS-b 0.86.2 drops orgs.teams.update -> orgs.teams.get (83 -> 82, github 41 -> 40).
+    // FIX-EFFECTS-b 0.86.2 drops orgs.teams.update -> orgs.teams.get (83 -> 82, github 41 -> 40);
+    // FIX-EFFECTS-c 0.86.3 drops 13 inexact github pairings (82 -> 69, github 40 -> 27).
     // Update these numbers deliberately when pairings change.
-    expect(pairings).toBe(82);
-    expect(githubPairings).toBe(40);
+    expect(pairings).toBe(69);
+    expect(githubPairings).toBe(27);
     expect(problems).toEqual([]);
     expect(KNOWN_OPEN_OBSERVE_GAPS).toHaveLength(1);
     expect(openGaps).toHaveLength(KNOWN_OPEN_OBSERVE_GAPS.length);

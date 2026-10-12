@@ -46,7 +46,7 @@ const OMIT = [
   "users.projects_v2.items.update",
 ] as const;
 
-const RECONCILE = {
+const CONFIG_OBSERVE = {
   "orgs.hooks.config.update": "orgs.hooks.config.get",
   "repos.hooks.config.update": "repos.hooks.config.get",
 } as const;
@@ -61,7 +61,7 @@ function json(status: number, body: unknown) {
 
 describe("github write card 17 fuzzy writes", () => {
   test("version is 0.79.0 at 852 ops with the write breakdown", () => {
-    expect(manifest.version).toBe("0.86.2");
+    expect(manifest.version).toBe("0.86.3");
     const ops = manifest.operations as Record<string, Record<string, unknown>>;
     expect(Object.keys(ops)).toHaveLength(847);
     const kinds = { action: 0, sync: 0, webhook: 0 };
@@ -88,11 +88,12 @@ describe("github write card 17 fuzzy writes", () => {
       expect(op.reconcile).toBeUndefined();
       expect(op.effect).toBeUndefined();
     }
-    for (const [key, reconcile] of Object.entries(RECONCILE)) {
-      expect(ops[key].effectPolicy).toBe("Reconcile");
-      expect(ops[key].reconcile).toBe(reconcile);
+    // FIX-EFFECTS-c (0.86.3): the write-only secret makes the config observe inexact, so no effect keys.
+    for (const [key, observe] of Object.entries(CONFIG_OBSERVE)) {
+      expect(ops[key].effectPolicy).toBeUndefined();
+      expect(ops[key].reconcile).toBeUndefined();
       expect(ops[key].effect).toBeUndefined();
-      expect(String(ops[key].description)).toContain("Secret is kept out of the Reconcile compare");
+      expect(String(ops[key].description)).toContain(`the op accepts secret, which is write-only and never read back, so ${observe} is not an exact observe`);
       expect(ops[key].inputSchema.properties.insecureSsl).toBeDefined();
       expect(ops[key].inputSchema.properties.secret).toBeDefined();
     }
