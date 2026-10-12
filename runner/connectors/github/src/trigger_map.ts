@@ -4,11 +4,10 @@
 // Composio narrows to, and any field filter. Every action is checked against the pinned spec's
 // webhook-<event>-<action> schemas (fixtures/trigger_actions_spec.json).
 //
-// runtimeServed is false for every slug: GitHub has no webhook handler in the runner registry yet,
-// and the platform's parse step does not receive headers (X-GitHub-Event / X-GitHub-Delivery) or
-// the raw body + secret for X-Hub-Signature-256 (see parity-briefs/github-trig-0-trace.md,
-// OXIDE-WH-1). Until then consumers filter with matchesTrigger(). The 9 "not-named" slugs have no
-// webhook event and need polling (OXIDE-POLL-1, TRIG-3a/3b).
+// runtimeServed is true only for the 9 poll-tagged slugs proven by
+// crates/appcall-api/tests/github_poll_e2e.rs (fixtures/runtime-served.json). Webhook slugs stay
+// false until WH-1 has its own e2e (see parity-briefs/github-trig-0-trace.md). The 9 "not-named"
+// slugs have no webhook event and are served by TRIG-3a/3b polling.
 //
 // Duplicates: GITHUB_ISSUE_ADDED_EVENT = GITHUB_ISSUE_CREATED_TRIGGER (issues.opened) and
 // GITHUB_STAR_ADDED_EVENT = GITHUB_NEW_STARGAZER_ADDED_TRIGGER (star.created). Composio names
@@ -25,7 +24,7 @@ export type TriggerEntry = {
   class: TriggerClass;
   match: readonly EventMatch[];
   status: "covered" | "partial" | "missing";
-  runtimeServed: false;
+  runtimeServed: boolean;
   duplicateOf?: string;
   polling?: { readOp: string; proposedSync: string };
   /** Delivery caveat; informational only, never changes matching. */
@@ -42,7 +41,7 @@ const CHECK_SUITE_APP_ONLY =
   "check_suite requested and rerequested are delivered only to GitHub Apps with Checks write access; repository and organization webhooks send only completed.";
 
 export const GITHUB_TRIGGERS: Record<string, TriggerEntry> = {
-  GITHUB_ARTIFACT_CREATED_TRIGGER: { class: "not-named", match: [], status: "missing", runtimeServed: false, polling: { readOp: "actions.artifacts.list", proposedSync: "actions.artifacts.sync" } },
+  GITHUB_ARTIFACT_CREATED_TRIGGER: { class: "not-named", match: [], status: "covered", runtimeServed: true, polling: { readOp: "actions.artifacts.list", proposedSync: "actions.artifacts.sync" } },
   GITHUB_BRANCH_CHANGED_TRIGGER: { class: "ambiguous", match: [{ event: "push" }, { event: "branch_protection_configuration", actions: ["disabled", "enabled"] }, { event: "branch_protection_rule", actions: ["created", "deleted", "edited"] }], status: "covered", runtimeServed: false },
   GITHUB_BRANCH_CREATED_TRIGGER: { class: "one-event", match: [{ event: "create", where: { kind: "refType", value: "branch" } }], status: "covered", runtimeServed: false },
   GITHUB_CHECK_RUN_STATUS_CHANGED_TRIGGER: { class: "named", match: [{ event: "check_run", actions: ["completed", "created", "rerequested"] }], status: "covered", runtimeServed: false, note: CHECK_RUN_APP_ONLY },
@@ -51,9 +50,9 @@ export const GITHUB_TRIGGERS: Record<string, TriggerEntry> = {
   GITHUB_COLLABORATOR_ADDED_TRIGGER: { class: "one-event", match: [{ event: "member", actions: ["added"] }], status: "covered", runtimeServed: false },
   GITHUB_COMMIT_EVENT: { class: "one-event", match: [{ event: "push" }], status: "covered", runtimeServed: false },
   GITHUB_DEPLOYMENT_CREATED_TRIGGER: { class: "named", match: [{ event: "deployment", actions: ["created"] }], status: "covered", runtimeServed: false },
-  GITHUB_DEPLOYMENT_STATE_CHANGED_TRIGGER: { class: "not-named", match: [], status: "missing", runtimeServed: false, polling: { readOp: "deployments.list", proposedSync: "deployments.sync" } },
+  GITHUB_DEPLOYMENT_STATE_CHANGED_TRIGGER: { class: "not-named", match: [], status: "covered", runtimeServed: true, polling: { readOp: "deployments.list", proposedSync: "deployments.sync" } },
   GITHUB_DEPLOYMENT_STATUS_CREATED: { class: "named", match: [{ event: "deployment_status", actions: ["created"] }], status: "covered", runtimeServed: false },
-  GITHUB_FOLLOWER_EVENT: { class: "not-named", match: [], status: "missing", runtimeServed: false, polling: { readOp: "user.followers.list", proposedSync: "user.followers.sync" } },
+  GITHUB_FOLLOWER_EVENT: { class: "not-named", match: [], status: "covered", runtimeServed: true, polling: { readOp: "user.followers.list", proposedSync: "user.followers.sync" } },
   GITHUB_GIT_REFERENCE_CREATED_TRIGGER: { class: "one-event", match: [{ event: "create", where: { kind: "refPrefix" } }], status: "covered", runtimeServed: false },
   GITHUB_ISSUE_ADDED_EVENT: { class: "one-event", match: [{ event: "issues", actions: ["opened"] }], status: "covered", runtimeServed: false, duplicateOf: "GITHUB_ISSUE_CREATED_TRIGGER" },
   GITHUB_ISSUE_ASSIGNED_TO_ME_TRIGGER: { class: "one-event", match: [{ event: "issues", actions: ["assigned"], where: { kind: "assigneeIsViewer" } }], status: "covered", runtimeServed: false },
@@ -74,18 +73,18 @@ export const GITHUB_TRIGGERS: Record<string, TriggerEntry> = {
   GITHUB_PULL_REQUEST_REVIEW_SUBMITTED_TRIGGER: { class: "named", match: [{ event: "pull_request_review", actions: ["submitted"] }], status: "covered", runtimeServed: false },
   GITHUB_PULL_REQUEST_STATE_CHANGED_TRIGGER: { class: "named", match: [{ event: "pull_request", actions: ["assigned", "closed", "converted_to_draft", "demilestoned", "edited", "labeled", "locked", "milestoned", "ready_for_review", "reopened", "review_request_removed", "review_requested", "unassigned", "unlabeled", "unlocked"] }], status: "covered", runtimeServed: false },
   GITHUB_PULL_REQUEST_UPDATED: { class: "named", match: [{ event: "pull_request", actions: ["assigned", "closed", "converted_to_draft", "demilestoned", "edited", "labeled", "milestoned", "ready_for_review", "reopened", "review_request_removed", "review_requested", "unassigned", "unlabeled"] }], status: "covered", runtimeServed: false },
-  GITHUB_README_CHANGED_TRIGGER: { class: "not-named", match: [], status: "missing", runtimeServed: false, polling: { readOp: "repos.readme.get", proposedSync: "repos.readme.sync" } },
-  GITHUB_RELEASE_ASSET_ADDED_TRIGGER: { class: "not-named", match: [], status: "missing", runtimeServed: false, polling: { readOp: "releases.list", proposedSync: "releases.assets.sync" } },
+  GITHUB_README_CHANGED_TRIGGER: { class: "not-named", match: [], status: "covered", runtimeServed: true, polling: { readOp: "repos.readme.get", proposedSync: "repos.readme.sync" } },
+  GITHUB_RELEASE_ASSET_ADDED_TRIGGER: { class: "not-named", match: [], status: "covered", runtimeServed: true, polling: { readOp: "releases.list", proposedSync: "releases.assets.sync" } },
   GITHUB_RELEASE_STATE_CHANGED_TRIGGER: { class: "named", match: [{ event: "release", actions: ["edited", "prereleased", "published", "released", "unpublished"] }], status: "covered", runtimeServed: false },
-  GITHUB_REPOSITORY_CONTENT_CHANGED_TRIGGER: { class: "not-named", match: [], status: "missing", runtimeServed: false, polling: { readOp: "repos.contents.get", proposedSync: "repos.contents.sync" } },
-  GITHUB_REPOSITORY_NOTIFICATION_RECEIVED_TRIGGER: { class: "not-named", match: [], status: "missing", runtimeServed: false, polling: { readOp: "repos.notifications.list", proposedSync: "repos.notifications.sync" } },
+  GITHUB_REPOSITORY_CONTENT_CHANGED_TRIGGER: { class: "not-named", match: [], status: "covered", runtimeServed: true, polling: { readOp: "repos.contents.get", proposedSync: "repos.contents.sync" } },
+  GITHUB_REPOSITORY_NOTIFICATION_RECEIVED_TRIGGER: { class: "not-named", match: [], status: "covered", runtimeServed: true, polling: { readOp: "repos.notifications.list", proposedSync: "repos.notifications.sync" } },
   GITHUB_REPOSITORY_TAG_CREATED_TRIGGER: { class: "ambiguous", match: [{ event: "create", where: { kind: "refType", value: "tag" } }, { event: "push", where: { kind: "tagPushCreated" } }], status: "covered", runtimeServed: false },
   GITHUB_SECRET_SCANNING_ALERT_DETECTED_TRIGGER: { class: "named", match: [{ event: "secret_scanning_alert", actions: ["created"] }], status: "covered", runtimeServed: false },
   GITHUB_STAR_ADDED_EVENT: { class: "named", match: [{ event: "star", actions: ["created"] }], status: "covered", runtimeServed: false, duplicateOf: "GITHUB_NEW_STARGAZER_ADDED_TRIGGER" },
-  GITHUB_WORKFLOW_ADDED_TRIGGER: { class: "not-named", match: [], status: "missing", runtimeServed: false, polling: { readOp: "actions.workflows.list", proposedSync: "actions.workflows.sync" } },
+  GITHUB_WORKFLOW_ADDED_TRIGGER: { class: "not-named", match: [], status: "covered", runtimeServed: true, polling: { readOp: "actions.workflows.list", proposedSync: "actions.workflows.sync" } },
   GITHUB_WORKFLOW_JOB_ADDED_TRIGGER: { class: "named", match: [{ event: "workflow_job", actions: ["queued"] }], status: "covered", runtimeServed: false },
   GITHUB_WORKFLOW_JOB_STATE_CHANGED: { class: "named", match: [{ event: "workflow_job" }], status: "covered", runtimeServed: false },
-  GITHUB_WORKFLOW_RUN_ARTIFACT_ADDED: { class: "not-named", match: [], status: "missing", runtimeServed: false, polling: { readOp: "actions.artifacts.list", proposedSync: "actions.artifacts.sync" } },
+  GITHUB_WORKFLOW_RUN_ARTIFACT_ADDED: { class: "not-named", match: [], status: "covered", runtimeServed: true, polling: { readOp: "actions.artifacts.list", proposedSync: "actions.artifacts.sync" } },
   GITHUB_WORKFLOW_RUN_CREATED: { class: "named", match: [{ event: "workflow_run", actions: ["requested"] }], status: "covered", runtimeServed: false },
   GITHUB_WORKFLOW_RUN_STATE_CHANGED_TRIGGER: { class: "named", match: [{ event: "workflow_run", actions: ["completed", "in_progress"] }], status: "covered", runtimeServed: false },
 };

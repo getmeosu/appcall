@@ -16,7 +16,6 @@ import {
   executePullRequestsListSync,
   executeRepositoriesListSync,
   executeWorkflowsSync,
-  matchesPolledTrigger,
 } from "../src/sync";
 import { defaultConnectorRegistry } from "../../../bun/src/registry";
 
@@ -44,13 +43,15 @@ const POLLING = {
 
 describe("TRIG-3a manifest", () => {
   test("version and op counts", () => {
-    expect(manifest.version).toBe("0.88.0");
+    expect(manifest.version).toBe("0.89.0");
     const kinds = Object.values(ops).map((op) => op.kind);
-    expect([kinds.filter((k) => k === "action").length, kinds.filter((k) => k === "webhook").length, kinds.filter((k) => k === "sync").length]).toEqual([800, 47, 8]);
+    expect([kinds.filter((k) => k === "action").length, kinds.filter((k) => k === "webhook").length, kinds.filter((k) => k === "sync").length]).toEqual([800, 47, 12]);
   });
 
   test("exactly the four TRIG-3a syncs declare poll, with the audit's triggers", () => {
-    const polled = Object.entries(ops).filter(([, op]) => op.poll !== undefined).map(([key]) => key).sort();
+    // TRIG-3b (v0.89.0) adds four more polled syncs; trig3b_sync.test.ts covers them.
+    const TRIG_3B = ["releases.assets.sync", "repos.contents.sync", "repos.notifications.sync", "repos.readme.sync"];
+    const polled = Object.entries(ops).filter(([key, op]) => op.poll !== undefined && !TRIG_3B.includes(key)).map(([key]) => key).sort();
     expect(polled).toEqual(Object.keys(POLLING).sort());
     for (const [key, want] of Object.entries(POLLING)) {
       const op = ops[key];
@@ -73,7 +74,7 @@ describe("TRIG-3a manifest", () => {
 
   test("the TS registry loads the poll blocks and dispatches the syncs", async () => {
     const described = defaultConnectorRegistry.describe("github") as { version: string; operations: Record<string, Record<string, unknown>> };
-    expect(described.version).toBe("0.88.0");
+    expect(described.version).toBe("0.89.0");
     for (const key of Object.keys(POLLING)) expect(described.operations[key].poll).toEqual(ops[key].poll);
     const { calls, fetchFn } = mockFetch(artifactsFixture);
     const result = defaultConnectorRegistry.executeSync("github", "actions.artifacts.sync", { owner: "octo-org", repo: "octo-docs", accessToken: "t", fetch: fetchFn, cursor: "3" });
@@ -157,11 +158,13 @@ describe("TRIG-3a syncs reuse the read actions", () => {
     const { fetchFn } = mockFetch(artifactsFixture);
     const page = await executeArtifactsSync({ owner: "octo-org", repo: "octo-docs", accessToken: "t", fetch: fetchFn });
     const [a, b] = page.items;
-    expect(matchesPolledTrigger("GITHUB_WORKFLOW_RUN_ARTIFACT_ADDED", a, { runId: 2332938 })).toBe(true);
-    expect(matchesPolledTrigger("GITHUB_WORKFLOW_RUN_ARTIFACT_ADDED", b, { runId: 2332938 })).toBe(false);
-    expect(matchesPolledTrigger("GITHUB_WORKFLOW_RUN_ARTIFACT_ADDED", a, {})).toBe(false);
-    expect(matchesPolledTrigger("GITHUB_WORKFLOW_RUN_ARTIFACT_ADDED", a, { runId: "2332938" })).toBe(false);
-    expect(matchesPolledTrigger("GITHUB_ARTIFACT_CREATED_TRIGGER", b)).toBe(true);
+    // The run filter is declarative (poll.triggerFilters) and applied by the platform emit path;
+    // the item field it reads is the normalized runId.
+    expect(a.runId).toBe(2332938);
+    expect(b.runId).not.toBe(2332938);
+    expect((ops["actions.artifacts.sync"].poll as Record<string, unknown>).triggerFilters).toEqual({
+      GITHUB_WORKFLOW_RUN_ARTIFACT_ADDED: { itemField: "runId", inputField: "runId" },
+    });
   });
 
   test("an item without a provider id fails instead of polling on a defaulted id", async () => {

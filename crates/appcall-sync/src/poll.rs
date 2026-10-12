@@ -579,7 +579,7 @@ impl Repository {
                 Some(_) => continue,
             };
             report.changed += 1;
-            let triggers = spec.triggers(change);
+            let triggers = spec.triggers_for(change, &item.item, &claim.input);
             if !claim.seeded || triggers.is_empty() {
                 continue;
             }
@@ -605,7 +605,7 @@ impl Repository {
                     "revision": revision,
                     "item": item.item,
                 }),
-                triggers: triggers.to_vec(),
+                triggers,
             };
             match append_polled(&mut tx, &event) {
                 Ok(Some(_)) => report.emitted += 1,
