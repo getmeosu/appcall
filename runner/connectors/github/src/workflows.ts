@@ -43,14 +43,14 @@ export type NormalizedWorkflowRun = {
   id: string;
   provider: "github";
   providerRunId: number;
-  name: string;
-  headBranch: string;
+  name: string | null;
+  headBranch: string | null;
   headSha: string;
   path: string;
   runNumber: number;
   event: string;
-  status: string;
-  conclusion: string;
+  status: string | null;
+  conclusion: string | null;
   workflowId: number;
   url: string;
   htmlUrl: string;
@@ -58,8 +58,8 @@ export type NormalizedWorkflowRun = {
   runAttempt: number;
   createdAt: string;
   updatedAt: string;
-  runStartedAt: string;
-  actor: string;
+  runStartedAt: string | null;
+  actor: string | null;
   modelVersion: "2026-05-16";
   raw: Record<string, unknown>;
 };
@@ -70,14 +70,14 @@ export function normalizeWorkflowRun(item: Record<string, unknown>): NormalizedW
     id: `gh-run:${typeof item.id === "number" ? item.id : 0}`,
     provider: "github",
     providerRunId: typeof item.id === "number" ? item.id : 0,
-    name: typeof item.name === "string" ? item.name : "",
-    headBranch: typeof item.head_branch === "string" ? item.head_branch : "",
+    name: typeof item.name === "string" ? item.name : null,
+    headBranch: typeof item.head_branch === "string" ? item.head_branch : null,
     headSha: typeof item.head_sha === "string" ? item.head_sha : "",
     path: typeof item.path === "string" ? item.path : "",
     runNumber: typeof item.run_number === "number" ? item.run_number : 0,
     event: typeof item.event === "string" ? item.event : "",
-    status: typeof item.status === "string" ? item.status : "",
-    conclusion: typeof item.conclusion === "string" ? item.conclusion : "",
+    status: typeof item.status === "string" ? item.status : null,
+    conclusion: typeof item.conclusion === "string" ? item.conclusion : null,
     workflowId: typeof item.workflow_id === "number" ? item.workflow_id : 0,
     url: typeof item.url === "string" ? item.url : "",
     htmlUrl: typeof item.html_url === "string" ? item.html_url : "",
@@ -85,8 +85,8 @@ export function normalizeWorkflowRun(item: Record<string, unknown>): NormalizedW
     runAttempt: typeof item.run_attempt === "number" ? item.run_attempt : 1,
     createdAt: typeof item.created_at === "string" ? item.created_at : "",
     updatedAt: typeof item.updated_at === "string" ? item.updated_at : "",
-    runStartedAt: typeof item.run_started_at === "string" ? item.run_started_at : "",
-    actor: typeof actor.login === "string" ? actor.login : "",
+    runStartedAt: typeof item.run_started_at === "string" ? item.run_started_at : null,
+    actor: typeof actor.login === "string" ? actor.login : null,
     modelVersion: "2026-05-16",
     raw: item,
   };
@@ -99,14 +99,14 @@ export type NormalizedWorkflowJob = {
   runId: number;
   name: string;
   status: string;
-  conclusion: string;
+  conclusion: string | null;
   headSha: string;
-  headBranch: string;
+  headBranch: string | null;
   url: string;
-  htmlUrl: string;
+  htmlUrl: string | null;
   labels: string[];
   startedAt: string;
-  completedAt: string;
+  completedAt: string | null;
   createdAt: string;
   modelVersion: "2026-05-16";
   raw: Record<string, unknown>;
@@ -123,14 +123,14 @@ export function normalizeWorkflowJob(item: Record<string, unknown>): NormalizedW
     runId: typeof item.run_id === "number" ? item.run_id : 0,
     name: typeof item.name === "string" ? item.name : "",
     status: typeof item.status === "string" ? item.status : "",
-    conclusion: typeof item.conclusion === "string" ? item.conclusion : "",
+    conclusion: typeof item.conclusion === "string" ? item.conclusion : null,
     headSha: typeof item.head_sha === "string" ? item.head_sha : "",
-    headBranch: typeof item.head_branch === "string" ? item.head_branch : "",
+    headBranch: typeof item.head_branch === "string" ? item.head_branch : null,
     url: typeof item.url === "string" ? item.url : "",
-    htmlUrl: typeof item.html_url === "string" ? item.html_url : "",
+    htmlUrl: typeof item.html_url === "string" ? item.html_url : null,
     labels,
     startedAt: typeof item.started_at === "string" ? item.started_at : "",
-    completedAt: typeof item.completed_at === "string" ? item.completed_at : "",
+    completedAt: typeof item.completed_at === "string" ? item.completed_at : null,
     createdAt: typeof item.created_at === "string" ? item.created_at : "",
     modelVersion: "2026-05-16",
     raw: item,
@@ -146,10 +146,10 @@ export type NormalizedArtifact = {
   url: string;
   archiveDownloadUrl: string;
   expired: boolean;
-  createdAt: string;
-  updatedAt: string;
-  expiresAt: string;
-  runId: number;
+  createdAt: string | null;
+  updatedAt: string | null;
+  expiresAt: string | null;
+  runId: number | null;
   modelVersion: "2026-05-16";
   raw: Record<string, unknown>;
 };
@@ -165,30 +165,30 @@ export function normalizeArtifact(item: Record<string, unknown>): NormalizedArti
     url: typeof item.url === "string" ? item.url : "",
     archiveDownloadUrl: typeof item.archive_download_url === "string" ? item.archive_download_url : "",
     expired: item.expired === true,
-    createdAt: typeof item.created_at === "string" ? item.created_at : "",
-    updatedAt: typeof item.updated_at === "string" ? item.updated_at : "",
-    expiresAt: typeof item.expires_at === "string" ? item.expires_at : "",
-    runId: typeof run.id === "number" ? run.id : 0,
+    createdAt: typeof item.created_at === "string" ? item.created_at : null,
+    updatedAt: typeof item.updated_at === "string" ? item.updated_at : null,
+    expiresAt: typeof item.expires_at === "string" ? item.expires_at : null,
+    runId: typeof run.id === "number" ? run.id : null,
     modelVersion: "2026-05-16",
     raw: item,
   };
 }
 
 
-function normalizePendingDeployment(item: Record<string, unknown>) {
+export function normalizePendingDeployment(item: Record<string, unknown>) {
   const environment = isRecord(item.environment) ? item.environment : {};
   return {
-    environmentId: typeof environment.id === "number" ? environment.id : 0,
-    environment: typeof environment.name === "string" ? environment.name : "",
+    environmentId: typeof environment.id === "number" ? environment.id : null,
+    environment: typeof environment.name === "string" ? environment.name : null,
     currentUserCanApprove: item.current_user_can_approve === true,
     waitTimer: typeof item.wait_timer === "number" ? item.wait_timer : 0,
-    waitTimerStartedAt: typeof item.wait_timer_started_at === "string" ? item.wait_timer_started_at : "",
+    waitTimerStartedAt: typeof item.wait_timer_started_at === "string" ? item.wait_timer_started_at : null,
     modelVersion: "2026-05-16" as const,
     raw: item,
   };
 }
 
-function normalizeRunApproval(item: Record<string, unknown>) {
+export function normalizeRunApproval(item: Record<string, unknown>) {
   const user = isRecord(item.user) ? item.user : {};
   const environments = Array.isArray(item.environments) ? item.environments.filter(isRecord) : [];
   return {
@@ -199,7 +199,7 @@ function normalizeRunApproval(item: Record<string, unknown>) {
       id: typeof env.id === "number" ? env.id : 0,
       name: typeof env.name === "string" ? env.name : "",
     })),
-    createdAt: typeof item.created_at === "string" ? item.created_at : "",
+    createdAt: typeof item.created_at === "string" ? item.created_at : null,
     modelVersion: "2026-05-16" as const,
     raw: item,
   };
