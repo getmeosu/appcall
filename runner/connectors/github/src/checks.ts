@@ -8,12 +8,12 @@ export type GitHubCheckRun = {
   status?: string;
   conclusion?: string | null;
   head_sha?: string;
-  html_url?: string;
-  details_url?: string;
-  started_at?: string;
+  html_url?: string | null;
+  details_url?: string | null;
+  started_at?: string | null;
   completed_at?: string | null;
   check_suite?: { id?: number };
-  app?: { name?: string; slug?: string };
+  app?: { name?: string; slug?: string } | null;
   [key: string]: unknown;
 };
 
@@ -21,14 +21,14 @@ export type NormalizedCheckRun = {
   id: number;
   name: string;
   status: string;
-  conclusion: string;
+  conclusion: string | null;
   headSha: string;
-  url: string;
-  detailsUrl: string;
-  startedAt: string;
-  completedAt: string;
+  url: string | null;
+  detailsUrl: string | null;
+  startedAt: string | null;
+  completedAt: string | null;
   checkSuiteId: number | null;
-  appName: string;
+  appName: string | null;
   modelVersion: "2026-05-16";
   raw: GitHubCheckRun;
 };
@@ -38,14 +38,14 @@ export function normalizeGitHubCheckRun(run: GitHubCheckRun): NormalizedCheckRun
     id: run.id,
     name: run.name ?? "",
     status: run.status ?? "",
-    conclusion: run.conclusion ?? "",
+    conclusion: typeof run.conclusion === "string" ? run.conclusion : null,
     headSha: run.head_sha ?? "",
-    url: run.html_url ?? "",
-    detailsUrl: run.details_url ?? "",
-    startedAt: run.started_at ?? "",
-    completedAt: run.completed_at ?? "",
+    url: typeof run.html_url === "string" ? run.html_url : null,
+    detailsUrl: typeof run.details_url === "string" ? run.details_url : null,
+    startedAt: typeof run.started_at === "string" ? run.started_at : null,
+    completedAt: typeof run.completed_at === "string" ? run.completed_at : null,
     checkSuiteId: typeof run.check_suite?.id === "number" ? run.check_suite.id : null,
-    appName: run.app?.name ?? run.app?.slug ?? "",
+    appName: appName(run.app),
     modelVersion: "2026-05-16",
     raw: run,
   };
@@ -53,36 +53,43 @@ export function normalizeGitHubCheckRun(run: GitHubCheckRun): NormalizedCheckRun
 
 export type GitHubCheckSuite = {
   id: number;
-  status?: string;
   conclusion?: string | null;
   head_sha?: string;
   head_branch?: string | null;
-  url?: string;
-  app?: { name?: string; slug?: string };
+  url?: string | null;
+  status?: string | null;
+  app?: { name?: string; slug?: string } | null;
   [key: string]: unknown;
 };
 
 export type NormalizedCheckSuite = {
   id: number;
-  status: string;
-  conclusion: string;
+  status: string | null;
+  conclusion: string | null;
   headSha: string;
-  headBranch: string;
-  url: string;
-  appName: string;
+  headBranch: string | null;
+  url: string | null;
+  appName: string | null;
   modelVersion: "2026-05-16";
   raw: GitHubCheckSuite;
 };
 
+// TR-5a: `app` is nullable upstream (check-run / check-suite); no app name is null, not "".
+function appName(app: { name?: string; slug?: string } | null | undefined): string | null {
+  if (typeof app?.name === "string") return app.name;
+  if (typeof app?.slug === "string") return app.slug;
+  return null;
+}
+
 export function normalizeGitHubCheckSuite(suite: GitHubCheckSuite): NormalizedCheckSuite {
   return {
     id: suite.id,
-    status: suite.status ?? "",
-    conclusion: suite.conclusion ?? "",
+    status: typeof suite.status === "string" ? suite.status : null,
+    conclusion: typeof suite.conclusion === "string" ? suite.conclusion : null,
     headSha: suite.head_sha ?? "",
-    headBranch: suite.head_branch ?? "",
-    url: suite.url ?? "",
-    appName: suite.app?.name ?? suite.app?.slug ?? "",
+    headBranch: typeof suite.head_branch === "string" ? suite.head_branch : null,
+    url: typeof suite.url === "string" ? suite.url : null,
+    appName: appName(suite.app),
     modelVersion: "2026-05-16",
     raw: suite,
   };
@@ -246,8 +253,8 @@ export type NormalizedCheckAnnotation = {
   path: string;
   startLine: number | null;
   endLine: number | null;
-  annotationLevel: string;
-  message: string;
+  annotationLevel: string | null;
+  message: string | null;
   modelVersion: "2026-05-16";
   raw: Record<string, unknown>;
 };
@@ -257,8 +264,8 @@ export function normalizeCheckAnnotation(item: Record<string, unknown>): Normali
     path: typeof item.path === "string" ? item.path : "",
     startLine: typeof item.start_line === "number" ? item.start_line : null,
     endLine: typeof item.end_line === "number" ? item.end_line : null,
-    annotationLevel: typeof item.annotation_level === "string" ? item.annotation_level : "",
-    message: typeof item.message === "string" ? item.message : "",
+    annotationLevel: typeof item.annotation_level === "string" ? item.annotation_level : null,
+    message: typeof item.message === "string" ? item.message : null,
     modelVersion: "2026-05-16",
     raw: item,
   };
