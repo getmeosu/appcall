@@ -43,9 +43,9 @@ const callFn = (fn: keyof typeof actions, input: Record<string, unknown>) =>
   Promise.resolve((actions[fn] as (i: unknown) => Record<string, unknown> | Promise<Record<string, unknown>>)(input));
 
 describe("github FIX-G14C: manifest", () => {
-  test("version 0.82.0 at 897 ops (+graphql.mutate, +issues.comments.edits.list); auth.scopes unchanged", () => {
-    expect(manifest.version).toBe("0.82.0");
-    expect(Object.keys(opsOf)).toHaveLength(897);
+  test("version 0.83.0 at 882 ops (+graphql.mutate, +issues.comments.edits.list); auth.scopes unchanged", () => {
+    expect(manifest.version).toBe("0.83.0");
+    expect(Object.keys(opsOf)).toHaveLength(882);
     expect(manifest.auth.scopes).toEqual(["repo", "read:org", "admin:repo_hook", "admin:org_hook", "gist", "notifications", "admin:org"]);
     expect(manifest.auth.scopes).not.toContain("read:audit_log");
   });
@@ -125,7 +125,7 @@ describe("github FIX-G14C: manifest", () => {
     expect(mapped.GITHUB_RUN_GRAPH_QL_RELAY_QUERY).toBe("graphql.query");
     expect((coverage.missing_still as Array<{ slug: string }>).map((m) => m.slug)).not.toContain("GITHUB_RUN_GRAPH_QL_RELAY_QUERY");
     expect(Object.keys(mapped).length + coverage.missing_still.length).toBe(897);
-    expect(Object.keys(mapped)).toHaveLength(861);
+    expect(Object.keys(mapped)).toHaveLength(860); // PRUNE-2: GITHUB_GET_TEAM_MEMBERS moved to missing_still (legacy route removed)
   });
 });
 
