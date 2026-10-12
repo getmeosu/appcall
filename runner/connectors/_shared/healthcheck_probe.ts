@@ -32,6 +32,9 @@ export type ProbeOptions = {
   maxResponseBytes: number;
   input: unknown;
   defaultRetryAfterSeconds?: number;
+  // Optional provider-specific mapping of a non-2xx response (e.g. Graph API
+  // in-body error codes). Return undefined to fall through to the defaults.
+  classifyError?: (status: number, body: string, headers: Record<string, string>) => HealthcheckFailure | undefined;
 };
 
 export async function probeProvider(options: ProbeOptions): Promise<unknown> {
@@ -50,6 +53,10 @@ export async function probeProvider(options: ProbeOptions): Promise<unknown> {
     if (err instanceof ConnectorHttpError) throw err;
     const message = err instanceof Error ? err.message : String(err);
     throw healthFail("CONNECTOR_UNAVAILABLE", `${provider} could not be reached: ${message}`);
+  }
+  if ((response.status < 200 || response.status >= 300) && options.classifyError) {
+    const mapped = options.classifyError(response.status, response.body, response.headers);
+    if (mapped) throw mapped;
   }
   if (response.status === 401 || response.status === 403) {
     throw healthFail("CONNECTOR_UPSTREAM_ERROR", `${provider} rejected the credentials (HTTP ${response.status}).`);

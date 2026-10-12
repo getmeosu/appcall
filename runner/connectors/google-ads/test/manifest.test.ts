@@ -5,7 +5,7 @@ describe("google-ads connector manifest", () => {
   test("manifest declares key, runtime, auth, and version 0.4.1", () => {
     expect(manifest.key).toBe("google-ads");
     expect(manifest.runtime).toBe("bun");
-    expect(manifest.version).toBe("0.4.1");
+    expect(manifest.version).toBe("0.4.2");
     expect(manifest.auth.type).toBe("oauth2");
     expect(manifest.auth.scopes).toContain("https://www.googleapis.com/auth/adwords");
     const fields = manifest.auth.setup.fields as Array<{ key: string; required: boolean }>;
