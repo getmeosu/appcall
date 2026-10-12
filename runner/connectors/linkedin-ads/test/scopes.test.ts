@@ -61,8 +61,8 @@ async function dispatchFailure(item: Case, status: number, body: unknown): Promi
 }
 
 describe("LI-SCOPES manifest contract", () => {
-  it("is v0.7.0 with 47 ops (+0)", () => {
-    expect(manifest.version).toBe("0.7.0");
+  it("is v0.7.x with 47 ops (+0); LI-G1b is 0.7.1", () => {
+    expect(manifest.version).toBe("0.7.1");
     expect(Object.keys(operations)).toHaveLength(47);
   });
 

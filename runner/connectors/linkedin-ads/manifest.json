@@ -1,7 +1,7 @@
 {
   "key": "linkedin-ads",
   "name": "LinkedIn Ads",
-  "version": "0.7.0",
+  "version": "0.7.1",
   "runtime": "bun",
   "categories": [
     "ads"
@@ -3770,7 +3770,71 @@
           },
           "targetingCriteria": {
             "type": "object",
-            "description": "LinkedIn targetingCriteria JSON ({include:{and:[{or:{facetUrn:[valueUrn]}}]}, exclude?}). Must include urn:li:adTargetingFacet:interfaceLocales."
+            "description": "LinkedIn targetingCriteria object: {include:{and:[{or:{facetUrn:[valueUrn]}}]}, exclude?:{or:{facetUrn:[valueUrn]}}}. Must include the urn:li:adTargetingFacet:interfaceLocales facet; use Bing geo URNs for locations. Structure and rules: https://learn.microsoft.com/en-us/linkedin/shared/references/v2/ads/targeting-criteria?view=li-lms-2026-09 Facets: https://learn.microsoft.com/en-us/linkedin/marketing/integrations/ads/advertising-targeting/ads-targeting?view=li-lms-2026-09",
+            "required": [
+              "include"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "include": {
+                "type": "object",
+                "description": "Members to target. Holds a single \"and\" array and cannot be empty; it is evaluated before exclude.",
+                "required": [
+                  "and"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "and": {
+                    "type": "array",
+                    "minItems": 1,
+                    "description": "AND of clauses. Each element is one {\"or\":{facetUrn:[values]}} clause.",
+                    "items": {
+                      "type": "object",
+                      "required": [
+                        "or"
+                      ],
+                      "additionalProperties": false,
+                      "properties": {
+                        "or": {
+                          "type": "object",
+                          "minProperties": 1,
+                          "description": "OR of adTargetingFacets: keys are facet URNs (urn:li:adTargetingFacet:{facet}, e.g. locations, profileLocations, interfaceLocales, industries, seniorities, jobFunctions, titles, skills, employers, staffCountRanges, segments, audienceMatchingSegments, memberBehaviors, buyerGroups), values are arrays of entity URNs. Facet keys are not restricted here; LinkedIn validates them.",
+                          "additionalProperties": {
+                            "type": "array",
+                            "minItems": 1,
+                            "items": {
+                              "type": "string",
+                              "minLength": 1
+                            },
+                            "description": "Values for one adTargetingFacet (standardized entity URNs, e.g. urn:li:geo:103644278, urn:li:locale:en_US, urn:li:industry:8, urn:li:adSegment:259144). Values within one facet are OR'd. Discover them with targeting.facets.list and targeting.entities.list."
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "exclude": {
+                "type": "object",
+                "description": "Members to filter out of the include set. Holds a single \"or\" object (no \"and\"); may be omitted.",
+                "additionalProperties": false,
+                "properties": {
+                  "or": {
+                    "type": "object",
+                    "description": "OR of adTargetingFacets to exclude: keys are facet URNs (urn:li:adTargetingFacet:{facet}), values are arrays of entity URNs. Facet keys are not restricted here; LinkedIn validates them.",
+                    "additionalProperties": {
+                      "type": "array",
+                      "minItems": 1,
+                      "items": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "description": "Values for one adTargetingFacet (standardized entity URNs, e.g. urn:li:geo:103644278, urn:li:locale:en_US, urn:li:industry:8, urn:li:adSegment:259144). Values within one facet are OR'd. Discover them with targeting.facets.list and targeting.entities.list."
+                    }
+                  }
+                }
+              }
+            }
           },
           "status": {
             "type": "string",
@@ -4124,6 +4188,10 @@
       },
       "outputSchema": {
         "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "campaignGroup"
+        ],
         "properties": {
           "connector": {
             "type": "string"
@@ -4138,7 +4206,8 @@
             "type": [
               "object",
               "null"
-            ]
+            ],
+            "description": "The campaign group as re-read by campaign_groups.get (LinkedIn's default field set). null on the direct handler result and on a dry run."
           },
           "updated": {
             "type": "array",
@@ -4146,6 +4215,10 @@
               "type": "string"
             },
             "description": "Fields sent in the patch. Only present on the direct handler result; registry dispatch returns the reconciled get."
+          },
+          "validated": {
+            "type": "object",
+            "description": "Present only when no access token is supplied (validation-only dry run, nothing is sent)."
           }
         }
       },
@@ -4282,7 +4355,71 @@
           },
           "targetingCriteria": {
             "type": "object",
-            "description": "Full replacement targetingCriteria JSON; must include urn:li:adTargetingFacet:interfaceLocales."
+            "description": "Full replacement targetingCriteria (the whole object is $set, not merged). LinkedIn targetingCriteria object: {include:{and:[{or:{facetUrn:[valueUrn]}}]}, exclude?:{or:{facetUrn:[valueUrn]}}}. Must include the urn:li:adTargetingFacet:interfaceLocales facet; use Bing geo URNs for locations. Structure and rules: https://learn.microsoft.com/en-us/linkedin/shared/references/v2/ads/targeting-criteria?view=li-lms-2026-09 Facets: https://learn.microsoft.com/en-us/linkedin/marketing/integrations/ads/advertising-targeting/ads-targeting?view=li-lms-2026-09",
+            "required": [
+              "include"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "include": {
+                "type": "object",
+                "description": "Members to target. Holds a single \"and\" array and cannot be empty; it is evaluated before exclude.",
+                "required": [
+                  "and"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "and": {
+                    "type": "array",
+                    "minItems": 1,
+                    "description": "AND of clauses. Each element is one {\"or\":{facetUrn:[values]}} clause.",
+                    "items": {
+                      "type": "object",
+                      "required": [
+                        "or"
+                      ],
+                      "additionalProperties": false,
+                      "properties": {
+                        "or": {
+                          "type": "object",
+                          "minProperties": 1,
+                          "description": "OR of adTargetingFacets: keys are facet URNs (urn:li:adTargetingFacet:{facet}, e.g. locations, profileLocations, interfaceLocales, industries, seniorities, jobFunctions, titles, skills, employers, staffCountRanges, segments, audienceMatchingSegments, memberBehaviors, buyerGroups), values are arrays of entity URNs. Facet keys are not restricted here; LinkedIn validates them.",
+                          "additionalProperties": {
+                            "type": "array",
+                            "minItems": 1,
+                            "items": {
+                              "type": "string",
+                              "minLength": 1
+                            },
+                            "description": "Values for one adTargetingFacet (standardized entity URNs, e.g. urn:li:geo:103644278, urn:li:locale:en_US, urn:li:industry:8, urn:li:adSegment:259144). Values within one facet are OR'd. Discover them with targeting.facets.list and targeting.entities.list."
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "exclude": {
+                "type": "object",
+                "description": "Members to filter out of the include set. Holds a single \"or\" object (no \"and\"); may be omitted.",
+                "additionalProperties": false,
+                "properties": {
+                  "or": {
+                    "type": "object",
+                    "description": "OR of adTargetingFacets to exclude: keys are facet URNs (urn:li:adTargetingFacet:{facet}), values are arrays of entity URNs. Facet keys are not restricted here; LinkedIn validates them.",
+                    "additionalProperties": {
+                      "type": "array",
+                      "minItems": 1,
+                      "items": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "description": "Values for one adTargetingFacet (standardized entity URNs, e.g. urn:li:geo:103644278, urn:li:locale:en_US, urn:li:industry:8, urn:li:adSegment:259144). Values within one facet are OR'd. Discover them with targeting.facets.list and targeting.entities.list."
+                    }
+                  }
+                }
+              }
+            }
           },
           "audienceExpansionEnabled": {
             "type": "boolean"
@@ -4299,6 +4436,10 @@
       },
       "outputSchema": {
         "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "campaign"
+        ],
         "properties": {
           "connector": {
             "type": "string"
@@ -4313,7 +4454,8 @@
             "type": [
               "object",
               "null"
-            ]
+            ],
+            "description": "The campaign as re-read and normalized by campaigns.get. null on the direct handler result and on a dry run."
           },
           "updated": {
             "type": "array",
@@ -4321,6 +4463,10 @@
               "type": "string"
             },
             "description": "Fields sent in the patch. Only present on the direct handler result; registry dispatch returns the reconciled get."
+          },
+          "validated": {
+            "type": "object",
+            "description": "Present only when no access token is supplied (validation-only dry run, nothing is sent)."
           }
         }
       },
@@ -4401,7 +4547,8 @@
             "type": [
               "object",
               "null"
-            ]
+            ],
+            "description": "The creative as re-read and normalized by creatives.get. null on the direct handler result and on a dry run."
           },
           "updated": {
             "type": "array",
@@ -4409,14 +4556,16 @@
               "type": "string"
             },
             "description": "Fields sent in the patch. Only present on the direct handler result; registry dispatch returns the reconciled get."
+          },
+          "validated": {
+            "type": "object",
+            "description": "Present only when no access token is supplied (validation-only dry run, nothing is sent)."
           }
         },
         "required": [
-          "connector",
-          "action",
-          "source",
           "creative"
-        ]
+        ],
+        "additionalProperties": false
       },
       "request": {
         "method": "POST",
@@ -4484,7 +4633,8 @@
             "type": [
               "string",
               "null"
-            ]
+            ],
+            "description": "Status read before deleting (null if LinkedIn returned none). Absent on a dry run (no access token)."
           },
           "method": {
             "type": "string",
@@ -4492,21 +4642,22 @@
               "DELETE",
               "PENDING_DELETION",
               "NONE"
-            ]
+            ],
+            "description": "How the delete was done: DELETE (DRAFT), PENDING_DELETION (PARTIAL_UPDATE) or NONE (already deleted). Absent on a dry run."
           },
           "status": {
-            "type": "string"
+            "type": "string",
+            "description": "Resulting status: DELETED, PENDING_DELETION, or the unchanged PENDING_DELETION/REMOVED. Absent on a dry run."
+          },
+          "validated": {
+            "type": "object",
+            "description": "Present only when no access token is supplied (validation-only dry run, nothing is read or deleted)."
           }
         },
         "required": [
-          "connector",
-          "action",
-          "source",
-          "campaignGroupId",
-          "previousStatus",
-          "method",
-          "status"
-        ]
+          "campaignGroupId"
+        ],
+        "additionalProperties": false
       },
       "request": {
         "method": "DELETE",
@@ -4568,7 +4719,8 @@
             "type": [
               "string",
               "null"
-            ]
+            ],
+            "description": "Status read before deleting (null if LinkedIn returned none). Absent on a dry run (no access token)."
           },
           "method": {
             "type": "string",
@@ -4576,21 +4728,22 @@
               "DELETE",
               "PENDING_DELETION",
               "NONE"
-            ]
+            ],
+            "description": "How the delete was done: DELETE (DRAFT), PENDING_DELETION (PARTIAL_UPDATE) or NONE (already deleted). Absent on a dry run."
           },
           "status": {
-            "type": "string"
+            "type": "string",
+            "description": "Resulting status: DELETED, PENDING_DELETION, or the unchanged PENDING_DELETION/REMOVED. Absent on a dry run."
+          },
+          "validated": {
+            "type": "object",
+            "description": "Present only when no access token is supplied (validation-only dry run, nothing is read or deleted)."
           }
         },
         "required": [
-          "connector",
-          "action",
-          "source",
-          "campaignId",
-          "previousStatus",
-          "method",
-          "status"
-        ]
+          "campaignId"
+        ],
+        "additionalProperties": false
       },
       "request": {
         "method": "DELETE",
@@ -4652,7 +4805,8 @@
             "type": [
               "string",
               "null"
-            ]
+            ],
+            "description": "Status read before deleting (null if LinkedIn returned none). Absent on a dry run (no access token)."
           },
           "method": {
             "type": "string",
@@ -4660,21 +4814,22 @@
               "DELETE",
               "PENDING_DELETION",
               "NONE"
-            ]
+            ],
+            "description": "How the delete was done: DELETE (DRAFT), PENDING_DELETION (PARTIAL_UPDATE) or NONE (already deleted). Absent on a dry run."
           },
           "status": {
-            "type": "string"
+            "type": "string",
+            "description": "Resulting status: DELETED, PENDING_DELETION, or the unchanged PENDING_DELETION/REMOVED. Absent on a dry run."
+          },
+          "validated": {
+            "type": "object",
+            "description": "Present only when no access token is supplied (validation-only dry run, nothing is read or deleted)."
           }
         },
         "required": [
-          "connector",
-          "action",
-          "source",
-          "creativeId",
-          "previousStatus",
-          "method",
-          "status"
-        ]
+          "creativeId"
+        ],
+        "additionalProperties": false
       },
       "request": {
         "method": "DELETE",

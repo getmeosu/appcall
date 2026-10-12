@@ -146,7 +146,28 @@ function interfaceLocalesPresent(criteria: Input): boolean {
   return JSON.stringify(criteria).includes("urn:li:adTargetingFacet:interfaceLocales");
 }
 
-/** targetingCriteria body object (campaigns.create / update). Bing geo only; interfaceLocales required. */
+/**
+ * One "or" facet map: keys are adTargetingFacet URNs, values are non-empty arrays of
+ * entity URN strings. Facet keys are not restricted (LinkedIn validates them).
+ */
+function facetMap(value: unknown, field: string, allowEmpty: boolean): void {
+  if (!isRecord(value)) throw new Error(`${field} must be an object of facet URN -> value URNs`);
+  const entries = Object.entries(value);
+  if (!allowEmpty && entries.length === 0) throw new Error(`${field} must name at least one facet`);
+  for (const [facet, values] of entries) {
+    if (!Array.isArray(values) || values.length === 0 || values.some((item) => typeof item !== "string" || item === "")) {
+      throw new Error(`${field}.${facet} must be a non-empty array of URN strings`);
+    }
+  }
+}
+
+/**
+ * targetingCriteria body object (campaigns.create / update). Bing geo only; interfaceLocales required.
+ * Structure per the targetingCriteria reference (li-lms-2026-09): include holds a single "and"
+ * array of {or:{facet:[values]}} clauses and cannot be empty; exclude holds a single "or" object
+ * and may be empty. Mirrors the manifest inputSchema so direct calls get the same checks.
+ * https://learn.microsoft.com/en-us/linkedin/shared/references/v2/ads/targeting-criteria?view=li-lms-2026-09
+ */
 function targetingCriteriaBody(value: unknown, field = "targetingCriteria", required = false): Input | undefined {
   if (value === undefined) {
     if (required) throw new Error(`${field} is required`);
@@ -156,6 +177,20 @@ function targetingCriteriaBody(value: unknown, field = "targetingCriteria", requ
   const encoded = JSON.stringify(value);
   if (encoded.length > 32_000) throw new Error(`${field} is too large`);
   if (!interfaceLocalesPresent(value)) throw new Error(`${field} must include the urn:li:adTargetingFacet:interfaceLocales facet`);
+  for (const key of Object.keys(value)) if (key !== "include" && key !== "exclude") throw new Error(`${field}.${key} is not a targetingCriteria field (include, exclude)`);
+  const include = value.include as Input;
+  for (const key of Object.keys(include)) if (key !== "and") throw new Error(`${field}.include only holds an "and" array`);
+  if (!Array.isArray(include.and) || include.and.length === 0) throw new Error(`${field}.include.and must contain at least one clause`);
+  include.and.forEach((clause, index) => {
+    const path = `${field}.include.and[${index}]`;
+    if (!isRecord(clause) || Object.keys(clause).some((key) => key !== "or") || clause.or === undefined) throw new Error(`${path} must be {"or": {facetUrn: [values]}}`);
+    facetMap(clause.or, `${path}.or`, false);
+  });
+  if (value.exclude !== undefined) {
+    const exclude = value.exclude;
+    if (!isRecord(exclude) || Object.keys(exclude).some((key) => key !== "or")) throw new Error(`${field}.exclude only holds an "or" object`);
+    if (exclude.or !== undefined) facetMap(exclude.or, `${field}.exclude.or`, true);
+  }
   return value;
 }
 
