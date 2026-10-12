@@ -1,6 +1,7 @@
 import { compileDeclarativeConnector } from "../../../bun/src/declarative/compile";
 import { ConnectorHttpError, createConnectorHttpClient, hostIsAllowed } from "../../../bun/src/http";
 import manifest from "../manifest.json";
+import { assertSafePathSegment } from "../../_shared/jobboard";
 
 const compiled = compileDeclarativeConnector(manifest as never);
 const allowedHosts = ["*.zendesk.com"];
@@ -46,12 +47,13 @@ function requireId(value: unknown, name: string): string {
   if (typeof value !== "number" || !Number.isInteger(value) || value < 1 || value > Number.MAX_SAFE_INTEGER) {
     invalidInput(`${name} is required`);
   }
-  return String(value);
+  return assertSafePathSegment(String(value), name);
 }
 
 function requireToken(value: unknown, name: string): string {
   if (typeof value !== "string" || !/^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/.test(value)) invalidInput(`${name} is required`);
-  return value;
+  // Path ids also pass the shared guard (SEC-PATH-2); the local regex is narrower.
+  return assertSafePathSegment(value, name);
 }
 
 function requireFilename(value: unknown): string {

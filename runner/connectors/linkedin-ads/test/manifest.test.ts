@@ -4,7 +4,7 @@ import manifest from "../manifest.json";
 describe("linkedin-ads manifest", () => {
   it("has correct key and version", () => {
     expect(manifest.key).toBe("linkedin-ads");
-    expect(manifest.version).toBe("0.5.0");
+    expect(manifest.version).toBe("0.5.1");
     expect(manifest.runtime).toBe("bun");
   });
 

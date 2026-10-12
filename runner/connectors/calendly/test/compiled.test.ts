@@ -154,9 +154,9 @@ function dummyInput(schema: { properties?: Record<string, any>; required?: strin
 }
 
 describe("calendly depth manifest", () => {
-  test("keeps origin auth, host, and version 0.3.0", () => {
+  test("keeps origin auth, host, and version 0.3.1", () => {
     expect(manifest.key).toBe("calendly");
-    expect(manifest.version).toBe("0.3.0");
+    expect(manifest.version).toBe("0.3.1");
     expect(manifest.runtime).toBe("bun");
     expect(manifest.auth.type).toBe("external_bearer");
     expect(manifest.network.allowedHosts).toEqual(["api.calendly.com"]);

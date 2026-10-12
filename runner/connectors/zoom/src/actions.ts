@@ -1,4 +1,5 @@
-import { createZoomClient, parseZoomRateLimit, isRecord, requireField, fieldString, fieldNumber, fieldValue } from "./http";
+import { createZoomClient, parseZoomRateLimit, isRecord, requireField, fieldString, fieldNumber, fieldValue, assertZoomRawSegment, optionalZoomSegment } from "./http";
+import { assertNoTraversalSegment, encodePathSegment } from "../../_shared/jobboard";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -132,7 +133,7 @@ export function validateMeetingsCreateInput(input: unknown): MeetingsCreateInput
   const settings = { ...(isRecord(input.settings) ? input.settings : {}), ...collectPrefixedObject(input, "settings__") };
   const recurrence = collectPrefixedObject(input, "recurrence__");
   const payload: MeetingsCreateInput = {
-    userId: fieldString(input, "userId", "user_id"),
+    userId: optionalZoomSegment(input, "userId", "user_id"),
     topic: requireString(input.topic, "topic"),
     type: fieldNumber(input, "type"),
     start_time: fieldString(input, "start_time"),
@@ -162,7 +163,7 @@ export function createMeetingsClient(options: { accessToken: string; fetch?: typ
       if (payload.settings) body.settings = payload.settings;
       const recurrence = (payload as Record<string, unknown>).recurrence;
       if (isRecord(recurrence)) body.recurrence = recurrence;
-      const response = await client.fetchJSON(`/v2/users/${userId}/meetings`, {
+      const response = await client.fetchJSON(`/v2/users/${zoomUserSegment(userId)}/meetings`, {
         method: "POST",
         body: JSON.stringify(body),
       });
@@ -194,8 +195,8 @@ export type MeetingsListInput = { userId?: string; type?: string; page_size?: nu
 export function validateMeetingsListInput(input: unknown): MeetingsListInput {
   if (!isRecord(input)) throw new Error("meetings.list input must be an object");
   const payload: MeetingsListInput = {};
-  const userId = fieldString(input, "userId", "user_id");
-  if (userId) payload.userId = userId;
+  const userId = optionalZoomSegment(input, "userId", "user_id");
+  if (userId !== undefined) payload.userId = userId;
   const type = fieldString(input, "type");
   if (type) payload.type = type;
   const pageSize = fieldNumber(input, "page_size", "pageSize");
@@ -216,7 +217,7 @@ export function createMeetingsListClient(options: { accessToken: string; fetch?:
       if (payload.page_size !== undefined) params.set("page_size", String(payload.page_size));
       if (payload.next_page_token) params.set("next_page_token", payload.next_page_token);
       const query = params.toString();
-      const response = await client.fetchJSON(`/v2/users/${userId}/meetings${query ? `?${query}` : ""}`);
+      const response = await client.fetchJSON(`/v2/users/${zoomUserSegment(userId)}/meetings${query ? `?${query}` : ""}`);
       if (response.status === 200) {
         const body = response.body as Record<string, unknown>;
         const meetings = Array.isArray(body.meetings) ? body.meetings : [];
@@ -254,7 +255,7 @@ export function createMeetingsGetClient(options: { accessToken: string; fetch?: 
   return {
     async get(input: unknown) {
       const payload = validateMeetingsGetInput(input);
-      const response = await client.fetchJSON(`/v2/meetings/${payload.meetingId}`);
+      const response = await client.fetchJSON(`/v2/meetings/${zoomIdSegment(payload.meetingId, "meetingId")}`);
       if (response.status === 200) {
         return { ok: true as const, meeting: response.body as Record<string, unknown> };
       }
@@ -327,7 +328,7 @@ export function createMeetingsUpdateClient(options: { accessToken: string; fetch
       if (payload.password !== undefined) body.password = payload.password;
       if (payload.agenda !== undefined) body.agenda = payload.agenda;
       if (payload.settings !== undefined) body.settings = payload.settings;
-      const response = await client.fetchJSON(`/v2/meetings/${payload.meetingId}`, {
+      const response = await client.fetchJSON(`/v2/meetings/${zoomIdSegment(payload.meetingId, "meetingId")}`, {
         method: "PATCH",
         body: JSON.stringify(body),
       });
@@ -368,7 +369,7 @@ export function createMeetingsDeleteClient(options: { accessToken: string; fetch
   return {
     async delete(input: unknown) {
       const payload = validateMeetingsDeleteInput(input);
-      const response = await client.fetchJSON(`/v2/meetings/${payload.meetingId}`, { method: "DELETE" });
+      const response = await client.fetchJSON(`/v2/meetings/${zoomIdSegment(payload.meetingId, "meetingId")}`, { method: "DELETE" });
       // Zoom DELETE returns 204 on success with empty body
       if (response.status === 204 || response.status === 200) {
         return { ok: true as const, deleted: true };
@@ -416,7 +417,7 @@ export function createMeetingsRegistrantsClient(options: { accessToken: string; 
       if (payload.page_size !== undefined) params.set("page_size", String(payload.page_size));
       if (payload.next_page_token) params.set("next_page_token", payload.next_page_token);
       const query = params.toString();
-      const response = await client.fetchJSON(`/v2/meetings/${payload.meetingId}/registrants${query ? `?${query}` : ""}`);
+      const response = await client.fetchJSON(`/v2/meetings/${zoomIdSegment(payload.meetingId, "meetingId")}/registrants${query ? `?${query}` : ""}`);
       if (response.status === 200) {
         const body = response.body as Record<string, unknown>;
         const registrants = Array.isArray(body.registrants) ? body.registrants : [];
@@ -442,7 +443,7 @@ export function createMeetingsRegistrantsClient(options: { accessToken: string; 
       const occurrenceIds = fieldString(input, "occurrence_ids");
       if (occurrenceIds) params.set("occurrence_ids", occurrenceIds);
       const query = params.toString();
-      const response = await client.fetchJSON(`/v2/meetings/${payload.meetingId}/registrants${query ? `?${query}` : ""}`, {
+      const response = await client.fetchJSON(`/v2/meetings/${zoomIdSegment(payload.meetingId, "meetingId")}/registrants${query ? `?${query}` : ""}`, {
         method: "POST",
         body: JSON.stringify(body),
       });
@@ -493,6 +494,26 @@ export function addMeetingRegistrant(input: unknown): Record<string, unknown> | 
   return { connector: "zoom", action: "meetings.add_registrant", source: "connector", validated: validateMeetingsAddRegistrantInput(input) };
 }
 
+// SEC-PATH-2: Zoom meeting/webinar/recording ids may be raw UUIDs, which are
+// base64 and can contain "/", "+" and "=". Zoom documents single URL-encoding,
+// and double encoding when the UUID begins with "/" or contains "//". The
+// encoded segment then passes the shared no-traversal guard, which rejects
+// "." and ".." (encodeURIComponent leaves them intact) and empty values.
+// SEC-PATH-2b: the raw value is guarded first (empty/whitespace/backslash/
+// control/dot-only), then encoded, then re-checked after encoding.
+function zoomIdSegment(value: string, field: string): string {
+  const raw = assertZoomRawSegment(value, field);
+  const encoded = encodeURIComponent(raw);
+  const segment = raw.startsWith("/") || raw.includes("//") ? encodeURIComponent(encoded) : encoded;
+  return assertNoTraversalSegment(segment, field);
+}
+
+// Zoom userId is a user id, an email address or "me": never contains "/", so
+// the raw value must also pass the shared no-traversal guard before encoding.
+function zoomUserSegment(value: string): string {
+  return encodePathSegment(assertZoomRawSegment(value, "userId"), "userId");
+}
+
 // ─── past_meetings.participants ───────────────────────────────────────────────
 
 export type PastMeetingParticipantsInput = { meetingUUID: string; page_size?: number; next_page_token?: string };
@@ -533,7 +554,7 @@ export function createPastMeetingsClient(options: { accessToken: string; fetch?:
       const pathUUID = payload.meetingUUID.startsWith("/") || payload.meetingUUID.includes("//")
         ? encodeURIComponent(encodedUUID)
         : encodedUUID;
-      const response = await client.fetchJSON(`/v2/past_meetings/${pathUUID}/participants${query ? `?${query}` : ""}`);
+      const response = await client.fetchJSON(`/v2/past_meetings/${assertNoTraversalSegment(pathUUID, "meetingUUID")}/participants${query ? `?${query}` : ""}`);
       if (response.status === 200) {
         const body = response.body as Record<string, unknown>;
         const participants = Array.isArray(body.participants) ? body.participants : [];
@@ -577,7 +598,7 @@ export type WebinarsCreateInput = {
 export function validateWebinarsCreateInput(input: unknown): WebinarsCreateInput {
   if (!isRecord(input)) throw new Error("webinars.create input must be an object");
   return {
-    userId: fieldString(input, "userId", "user_id"),
+    userId: optionalZoomSegment(input, "userId", "user_id"),
     topic: requireString(input.topic, "topic"),
     type: fieldNumber(input, "type"),
     start_time: fieldString(input, "start_time"),
@@ -601,7 +622,7 @@ export function createWebinarsClient(options: { accessToken: string; fetch?: typ
       if (payload.timezone) body.timezone = payload.timezone;
       if (payload.agenda) body.agenda = payload.agenda;
       if (payload.password) body.password = payload.password;
-      const response = await client.fetchJSON(`/v2/users/${userId}/webinars`, {
+      const response = await client.fetchJSON(`/v2/users/${zoomUserSegment(userId)}/webinars`, {
         method: "POST",
         body: JSON.stringify(body),
       });
@@ -613,14 +634,14 @@ export function createWebinarsClient(options: { accessToken: string; fetch?: typ
 
     async list(input: unknown) {
       if (!isRecord(input)) throw new Error("webinars.list input must be an object");
-      const userId = fieldString(input, "userId", "user_id") ?? "me";
+      const userId = optionalZoomSegment(input, "userId", "user_id") ?? "me";
       const params = new URLSearchParams();
       const pageSize = fieldNumber(input, "page_size", "pageSize");
       if (pageSize !== undefined) params.set("page_size", String(pageSize));
       const nextPageToken = fieldString(input, "next_page_token", "nextPageToken");
       if (nextPageToken) params.set("next_page_token", nextPageToken);
       const query = params.toString();
-      const response = await client.fetchJSON(`/v2/users/${userId}/webinars${query ? `?${query}` : ""}`);
+      const response = await client.fetchJSON(`/v2/users/${zoomUserSegment(userId)}/webinars${query ? `?${query}` : ""}`);
       if (response.status === 200) {
         const body = response.body as Record<string, unknown>;
         const webinars = Array.isArray(body.webinars) ? body.webinars : [];
@@ -636,8 +657,8 @@ export function createWebinarsClient(options: { accessToken: string; fetch?: typ
 export function validateWebinarsListInput(input: unknown): { userId?: string; page_size?: number; next_page_token?: string } {
   if (!isRecord(input)) throw new Error("webinars.list input must be an object");
   const payload: { userId?: string; page_size?: number; next_page_token?: string } = {};
-  const userId = fieldString(input, "userId", "user_id");
-  if (userId) payload.userId = userId;
+  const userId = optionalZoomSegment(input, "userId", "user_id");
+  if (userId !== undefined) payload.userId = userId;
   const pageSize = fieldNumber(input, "page_size", "pageSize");
   if (pageSize !== undefined) payload.page_size = pageSize;
   const nextPageToken = fieldString(input, "next_page_token", "nextPageToken");
@@ -683,7 +704,7 @@ export function createUsersGetClient(options: { accessToken: string; fetch?: typ
   return {
     async get(input: unknown) {
       const payload = validateUsersGetInput(input);
-      const response = await client.fetchJSON(`/v2/users/${payload.userId}`);
+      const response = await client.fetchJSON(`/v2/users/${zoomUserSegment(payload.userId)}`);
       if (response.status === 200) {
         return { ok: true as const, user: response.body as Record<string, unknown> };
       }
@@ -715,8 +736,8 @@ export type RecordingsListInput = { userId?: string; from: string; to?: string; 
 export function validateRecordingsListInput(input: unknown): RecordingsListInput {
   if (!isRecord(input)) throw new Error("recordings.list input must be an object");
   const payload: RecordingsListInput = { from: requireString(input.from, "from") };
-  const userId = fieldString(input, "userId", "user_id");
-  if (userId) payload.userId = userId;
+  const userId = optionalZoomSegment(input, "userId", "user_id");
+  if (userId !== undefined) payload.userId = userId;
   const to = fieldString(input, "to");
   if (to) payload.to = to;
   const pageSize = fieldNumber(input, "page_size", "pageSize");
@@ -737,7 +758,7 @@ export function createRecordingsListClient(options: { accessToken: string; fetch
       if (payload.to) params.set("to", payload.to);
       if (payload.page_size !== undefined) params.set("page_size", String(payload.page_size));
       if (payload.next_page_token) params.set("next_page_token", payload.next_page_token);
-      const response = await client.fetchJSON(`/v2/users/${userId}/recordings?${params.toString()}`);
+      const response = await client.fetchJSON(`/v2/users/${zoomUserSegment(userId)}/recordings?${params.toString()}`);
       if (response.status === 200) {
         const body = response.body as Record<string, unknown>;
         const meetings = Array.isArray(body.meetings) ? body.meetings : [];
@@ -775,7 +796,7 @@ export function createRecordingsGetClient(options: { accessToken: string; fetch?
   return {
     async get(input: unknown) {
       const payload = validateRecordingsGetInput(input);
-      const response = await client.fetchJSON(`/v2/meetings/${payload.meetingId}/recordings`);
+      const response = await client.fetchJSON(`/v2/meetings/${zoomIdSegment(payload.meetingId, "meetingId")}/recordings`);
       if (response.status === 200) {
         return { ok: true as const, recording: response.body as Record<string, unknown> };
       }
@@ -805,8 +826,10 @@ export function getRecording(input: unknown): Record<string, unknown> | Promise<
 export function validateRecordingsDeleteInput(input: unknown): { meetingId: string; recordingId?: string } {
   if (!isRecord(input)) throw new Error("recordings.delete input must be an object");
   const payload: { meetingId: string; recordingId?: string } = { meetingId: requireField(input, "meetingId", "meeting_id") };
-  const recordingId = fieldString(input, "recordingId", "recording_id");
-  if (recordingId) payload.recordingId = recordingId;
+  // SEC-PATH-2b: only an omitted recordingId selects the meeting-wide route;
+  // "" or whitespace must never collapse into DELETE .../recordings (all files).
+  const recordingId = optionalZoomSegment(input, "recordingId", "recording_id");
+  if (recordingId !== undefined) payload.recordingId = recordingId;
   return payload;
 }
 
@@ -815,9 +838,9 @@ export function createRecordingsDeleteClient(options: { accessToken: string; fet
   return {
     async delete(input: unknown) {
       const payload = validateRecordingsDeleteInput(input);
-      const path = payload.recordingId
-        ? `/v2/meetings/${payload.meetingId}/recordings/${payload.recordingId}`
-        : `/v2/meetings/${payload.meetingId}/recordings`;
+      const path = payload.recordingId !== undefined
+        ? `/v2/meetings/${zoomIdSegment(payload.meetingId, "meetingId")}/recordings/${zoomIdSegment(payload.recordingId, "recordingId")}`
+        : `/v2/meetings/${zoomIdSegment(payload.meetingId, "meetingId")}/recordings`;
       const response = await client.fetchJSON(path, { method: "DELETE" });
       if (response.status === 204 || response.status === 200) {
         return { ok: true as const, deleted: true };
@@ -855,7 +878,7 @@ export function createWebinarsGetClient(options: { accessToken: string; fetch?: 
   return {
     async get(input: unknown) {
       const payload = validateWebinarsGetInput(input);
-      const response = await client.fetchJSON(`/v2/webinars/${payload.webinarId}`);
+      const response = await client.fetchJSON(`/v2/webinars/${zoomIdSegment(payload.webinarId, "webinarId")}`);
       if (response.status === 200) {
         return { ok: true as const, webinar: response.body as Record<string, unknown> };
       }

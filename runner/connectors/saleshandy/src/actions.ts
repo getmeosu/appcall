@@ -1,4 +1,5 @@
 import { createSaleshandyClient, parseSaleshandyRateLimit, isRecord } from "./http";
+import { encodePathSegment } from "../../_shared/jobboard";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -36,19 +37,19 @@ function extractPayload(body: unknown): { data: unknown; meta: unknown } {
 // Envelope: { message: string, payload: { ... } }
 const PATHS = {
   SEQUENCES_LIST:                    "/v1/sequences",
-  SEQUENCES_GET:                     (id: string) => `/v1/sequences/${id}`,
+  SEQUENCES_GET:                     (id: string) => `/v1/sequences/${encodePathSegment(id, "sequenceId")}`,
   SEQUENCES_CREATE:                  "/v1/sequences",
-  SEQUENCES_PAUSE:                   (id: string) => `/v1/sequences/${id}/pause`,
-  SEQUENCES_RESUME:                  (id: string) => `/v1/sequences/${id}/resume`,
-  SEQUENCE_STEPS_LIST:               (id: string) => `/v1/sequences/${id}/steps`,
+  SEQUENCES_PAUSE:                   (id: string) => `/v1/sequences/${encodePathSegment(id, "sequenceId")}/pause`,
+  SEQUENCES_RESUME:                  (id: string) => `/v1/sequences/${encodePathSegment(id, "sequenceId")}/resume`,
+  SEQUENCE_STEPS_LIST:               (id: string) => `/v1/sequences/${encodePathSegment(id, "sequenceId")}/steps`,
   // Real API: import prospects to a sequence step via POST /v1/prospects/import
   // The stepId identifies which sequence + step to add prospects to.
   PROSPECTS_IMPORT:                  "/v1/prospects/import",
   // Real API: GET /v1/prospects for listing
   PROSPECTS_LIST:                    "/v1/prospects",
-  PROSPECTS_GET:                     (id: string) => `/v1/prospects/${id}`,
+  PROSPECTS_GET:                     (id: string) => `/v1/prospects/${encodePathSegment(id, "prospectId")}`,
   // Real API: POST /v1/prospects/{id}/attribute for updating prospect fields
-  PROSPECTS_UPDATE_ATTRIBUTE:        (id: string) => `/v1/prospects/${id}/attribute`,
+  PROSPECTS_UPDATE_ATTRIBUTE:        (id: string) => `/v1/prospects/${encodePathSegment(id, "prospectId")}/attribute`,
   // Real API: PATCH /v1/prospects/status for pause/resume/unsubscribe
   PROSPECTS_STATUS:                  "/v1/prospects/status",
   // Real API: POST /v1/email-accounts for fetching (POST with filter body)

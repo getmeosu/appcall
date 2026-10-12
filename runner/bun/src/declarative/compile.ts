@@ -447,7 +447,8 @@ function renderRequestPath(
       (candidate) => candidate.inputName === expression || candidate.wireName === expression,
     );
     const value = parameter ? parameterInput(parameter, input) : resolvePath(expression, input);
-    if (value === undefined || value === null || value === "") {
+    // SEC-PATH-2b: a whitespace-only id is never a valid path segment.
+    if (value === undefined || value === null || value === "" || (typeof value === "string" && value.trim() === "")) {
       throw new Error(`${lastParameterSegment(parameter?.inputName ?? expression)} is required`);
     }
     const rendered = parameter ? serializePathParameter(parameter, value) : encodeURIComponent(String(value));

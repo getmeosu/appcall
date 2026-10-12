@@ -2,6 +2,7 @@ import { compileDeclarativeConnector } from "../../../bun/src/declarative/compil
 import { createConnectorHttpClient, ConnectorHttpError } from "../../../bun/src/http";
 import type { CompiledHandler } from "../../../bun/src/declarative/types";
 import manifest from "../manifest.json";
+import { encodePathSegment } from "../../_shared/jobboard";
 
 const compiled = compileDeclarativeConnector(manifest as never);
 const operationSchemas = manifest.operations as Record<string, { inputSchema?: { properties?: Record<string, unknown> } }>;
@@ -102,7 +103,7 @@ export function createAttachment(inputValue: unknown): Promise<Record<string, un
     form.append("file", new Blob([input.file], { type: input.contentType }), input.fileName);
     return postMultipart({
       action: "attachments.create",
-      path: `/shots/${input.shotId}/attachments`,
+      path: `/shots/${encodePathSegment(input.shotId, "shotId")}/attachments`,
       success: [202, 201, 200],
       form,
       input,

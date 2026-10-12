@@ -16,6 +16,7 @@ import {
   normalizeAdCreativeObject,
   type MetaAuthInput,
 } from "./g1";
+import { encodePathSegment } from "../../_shared/jobboard";
 
 type ActionResult = Record<string, unknown> | Promise<Record<string, unknown>>;
 
@@ -191,7 +192,7 @@ export function deleteCampaign(input: unknown): ActionResult {
   const accessToken = requireAccessToken(input);
   const campaignId = requireString(input.campaignId, "campaignId");
   const auth: MetaAuthInput = { accessToken, fetch: input.fetch as typeof fetch | undefined };
-  return graphDelete(auth, "campaigns.delete", `/${campaignId}`).then((body) => {
+  return graphDelete(auth, "campaigns.delete", `/${encodePathSegment(campaignId, "campaignId")}`).then((body) => {
     const success = isRecord(body) && body.success === true;
     return {
       connector: "meta-ads",
@@ -209,7 +210,7 @@ export function deleteAdSet(input: unknown): ActionResult {
   const accessToken = requireAccessToken(input);
   const adSetId = requireString(input.adSetId, "adSetId");
   const auth: MetaAuthInput = { accessToken, fetch: input.fetch as typeof fetch | undefined };
-  return graphDelete(auth, "ad_sets.delete", `/${adSetId}`).then((body) => {
+  return graphDelete(auth, "ad_sets.delete", `/${encodePathSegment(adSetId, "adSetId")}`).then((body) => {
     const success = isRecord(body) && body.success === true;
     return {
       connector: "meta-ads",
@@ -227,7 +228,7 @@ export function deleteAd(input: unknown): ActionResult {
   const accessToken = requireAccessToken(input);
   const adId = requireString(input.adId, "adId");
   const auth: MetaAuthInput = { accessToken, fetch: input.fetch as typeof fetch | undefined };
-  return graphDelete(auth, "ads.delete", `/${adId}`).then((body) => {
+  return graphDelete(auth, "ads.delete", `/${encodePathSegment(adId, "adId")}`).then((body) => {
     const success = isRecord(body) && body.success === true;
     return {
       connector: "meta-ads",
@@ -260,7 +261,7 @@ export function updateAdCreative(input: unknown): ActionResult {
     throw new Error("ad_creatives.update requires at least one mutable field");
   }
 
-  return graphPostForm(auth, "ad_creatives.update", `/${creativeId}`, fields).then((body) => {
+  return graphPostForm(auth, "ad_creatives.update", `/${encodePathSegment(creativeId, "creativeId")}`, fields).then((body) => {
     const success = isRecord(body) && body.success === true;
     return {
       connector: "meta-ads",
@@ -283,7 +284,7 @@ export function previewAdCreative(input: unknown): ActionResult {
   const creativeId = requireString(input.creativeId, "creativeId");
   const adFormat = requireString(input.adFormat, "adFormat");
   const auth: MetaAuthInput = { accessToken, fetch: input.fetch as typeof fetch | undefined };
-  return graphGet(auth, "ad_creatives.preview", `/${creativeId}/previews`, {
+  return graphGet(auth, "ad_creatives.preview", `/${encodePathSegment(creativeId, "creativeId")}/previews`, {
     ad_format: adFormat,
   }).then((body) => {
     return {
@@ -312,7 +313,7 @@ export function listAdImages(input: unknown): ActionResult {
   if (after) query.after = after;
   if (Array.isArray(input.hashes)) query.hashes = JSON.stringify(input.hashes);
 
-  return graphGet(auth, "ad_images.list", `/${adAccountId}/adimages`, query).then((body) => {
+  return graphGet(auth, "ad_images.list", `/${encodePathSegment(adAccountId, "adAccountId")}/adimages`, query).then((body) => {
     // Live list returns data[] of image objects; some hashes lookups return { data: { hash: {...} } }.
     let images: Record<string, unknown>[] = [];
     if (isRecord(body) && isRecord(body.data) && !Array.isArray(body.data)) {
@@ -348,7 +349,7 @@ export function uploadAdImage(input: unknown): ActionResult {
   const name = optionalString(input.name);
   if (name) fields.name = name;
 
-  return graphPostForm(auth, "ad_images.upload", `/${adAccountId}/adimages`, fields).then((body) => {
+  return graphPostForm(auth, "ad_images.upload", `/${encodePathSegment(adAccountId, "adAccountId")}/adimages`, fields).then((body) => {
     // Live create returns { images: { <filename>: { hash, url, ... } } }
     let hash = "";
     let image: Record<string, unknown> | null = null;
@@ -388,7 +389,7 @@ export function createAdVideo(input: unknown): ActionResult {
   if (description) fields.description = description;
   if (!fileUrl) throw new Error("ad_videos.create requires fileUrl (multipart file upload not supported in this op)");
 
-  return graphPostForm(auth, "ad_videos.create", `/${adAccountId}/advideos`, fields).then((body) => {
+  return graphPostForm(auth, "ad_videos.create", `/${encodePathSegment(adAccountId, "adAccountId")}/advideos`, fields).then((body) => {
     const id = isRecord(body) && typeof body.id === "string" ? body.id : "";
     return { connector: "meta-ads", action: "ad_videos.create", source: "connector", id, raw: body };
   });
@@ -400,7 +401,7 @@ export function getAdVideo(input: unknown): ActionResult {
   const videoId = requireString(input.videoId, "videoId");
   const fields = optionalString(input.fields) ?? VIDEO_GET_FIELDS;
   const auth: MetaAuthInput = { accessToken, fetch: input.fetch as typeof fetch | undefined };
-  return graphGet(auth, "ad_videos.get", `/${videoId}`, { fields }).then((body) => {
+  return graphGet(auth, "ad_videos.get", `/${encodePathSegment(videoId, "videoId")}`, { fields }).then((body) => {
     if (!isRecord(body) || typeof body.id !== "string") {
       return { connector: "meta-ads", action: "ad_videos.get", source: "connector", video: null };
     }
@@ -429,7 +430,7 @@ export function listCustomAudiences(input: unknown): ActionResult {
   const after = optionalString(input.after);
   if (after) query.after = after;
 
-  return graphGet(auth, "custom_audiences.list", `/${adAccountId}/customaudiences`, query).then((body) => {
+  return graphGet(auth, "custom_audiences.list", `/${encodePathSegment(adAccountId, "adAccountId")}/customaudiences`, query).then((body) => {
     return {
       connector: "meta-ads",
       action: "custom_audiences.list",
@@ -446,7 +447,7 @@ export function getCustomAudience(input: unknown): ActionResult {
   const audienceId = requireString(input.audienceId, "audienceId");
   const fields = optionalString(input.fields) ?? AUDIENCE_GET_FIELDS;
   const auth: MetaAuthInput = { accessToken, fetch: input.fetch as typeof fetch | undefined };
-  return graphGet(auth, "custom_audiences.get", `/${audienceId}`, { fields }).then((body) => {
+  return graphGet(auth, "custom_audiences.get", `/${encodePathSegment(audienceId, "audienceId")}`, { fields }).then((body) => {
     if (!isRecord(body) || typeof body.id !== "string") {
       return { connector: "meta-ads", action: "custom_audiences.get", source: "connector", audience: null };
     }
@@ -472,7 +473,7 @@ export function createCustomAudience(input: unknown): ActionResult {
   const customerFileSource = optionalString(input.customerFileSource);
   if (customerFileSource) fields.customer_file_source = customerFileSource;
 
-  return graphPostForm(auth, "custom_audiences.create", `/${adAccountId}/customaudiences`, fields).then(
+  return graphPostForm(auth, "custom_audiences.create", `/${encodePathSegment(adAccountId, "adAccountId")}/customaudiences`, fields).then(
     (body) => {
       const id = isRecord(body) && typeof body.id === "string" ? body.id : "";
       return {
@@ -511,7 +512,7 @@ export function createAsyncInsights(input: unknown): ActionResult {
   if (Array.isArray(input.breakdowns)) fields.breakdowns = input.breakdowns;
   if (Array.isArray(input.filtering)) fields.filtering = input.filtering;
 
-  return graphPostForm(auth, "insights.async.create", `/${pathObject}/insights`, fields).then((body) => {
+  return graphPostForm(auth, "insights.async.create", `/${encodePathSegment(pathObject, "pathObject")}/insights`, fields).then((body) => {
     const reportRunId =
       (isRecord(body) && typeof body.report_run_id === "string" && body.report_run_id) ||
       (isRecord(body) && typeof body.id === "string" && body.id) ||
@@ -532,7 +533,7 @@ export function getAsyncInsights(input: unknown): ActionResult {
   const reportRunId = requireString(input.reportRunId, "reportRunId");
   const fields = optionalString(input.fields) ?? REPORT_RUN_FIELDS;
   const auth: MetaAuthInput = { accessToken, fetch: input.fetch as typeof fetch | undefined };
-  return graphGet(auth, "insights.async.get", `/${reportRunId}`, { fields }).then((body) => {
+  return graphGet(auth, "insights.async.get", `/${encodePathSegment(reportRunId, "reportRunId")}`, { fields }).then((body) => {
     if (!isRecord(body)) {
       return {
         connector: "meta-ads",
@@ -574,7 +575,7 @@ export function getReachEstimate(input: unknown): ActionResult {
   const objectStoreUrl = optionalString(input.objectStoreUrl);
   if (objectStoreUrl) query.object_store_url = objectStoreUrl;
 
-  return graphGet(auth, "reach_estimate.get", `/${adAccountId}/reachestimate`, query).then((body) => {
+  return graphGet(auth, "reach_estimate.get", `/${encodePathSegment(adAccountId, "adAccountId")}/reachestimate`, query).then((body) => {
     // Live shape: { data: { users_lower_bound, users_upper_bound, estimate_ready } }
     // or sometimes flat bounds on the root.
     const data = isRecord(body) && isRecord(body.data) ? body.data : isRecord(body) ? body : {};

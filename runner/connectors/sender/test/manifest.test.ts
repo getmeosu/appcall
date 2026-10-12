@@ -35,7 +35,7 @@ function dummyInput(schema: { properties?: Record<string, any>; required?: strin
 describe("sender manifest", () => {
   test("has bounded host, origin auth, version, and compiles", () => {
     expect(manifest.key).toBe("sender");
-    expect(manifest.version).toBe("0.2.0");
+    expect(manifest.version).toBe("0.2.1");
     expect(manifest.runtime).toBe("bun");
     expect(manifest.categories).toEqual(["email-marketing"]);
     expect(manifest.network.allowedHosts).toEqual(["api.sender.net"]);

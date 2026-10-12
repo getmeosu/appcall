@@ -3,6 +3,7 @@ import { isRecord } from "../../../bun/src/declarative/template";
 import { validateStrictInput } from "../../../bun/src/declarative/strict-schema";
 import type { JSONSchema } from "../../../bun/src/declarative/validate";
 import manifest from "../manifest.json";
+import { encodePathSegment } from "../../_shared/jobboard";
 
 type FetchFn = typeof fetch;
 
@@ -131,7 +132,7 @@ export function createField(inputValue: unknown): Promise<Record<string, unknown
 
 export function updateSubscriber(inputValue: unknown): Promise<Record<string, unknown>> {
   const input = validate("subscribers.update", inputValue);
-  const subscriberId = encodeURIComponent(String(input.subscriber_id));
+  const subscriberId = encodePathSegment(input.subscriber_id, "subscriber_id");
   return sendJson(
     "subscribers.update",
     "PATCH",

@@ -16,7 +16,7 @@ function requestOf(key: string): Record<string, unknown> {
 describe("dribbble manifest", () => {
   test("has bounded host, origin auth, version, and compiles", () => {
     expect(manifest.key).toBe("dribbble");
-    expect(manifest.version).toBe("0.2.0");
+    expect(manifest.version).toBe("0.2.1");
     expect(manifest.runtime).toBe("bun");
     expect(manifest.categories).toEqual(["social"]);
     expect(manifest.network.allowedHosts).toEqual(["api.dribbble.com"]);

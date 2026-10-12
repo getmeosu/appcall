@@ -28,6 +28,7 @@ import {
   normalizeAd,
   normalizeAdAccount,
 } from "./objects";
+import { encodePathSegment } from "../../_shared/jobboard";
 
 export { META_GRAPH_API_VERSION };
 
@@ -211,7 +212,7 @@ export function getCampaign(input: unknown): ActionResult {
   const campaignId = requireString(input.campaignId, "campaignId");
   const fields = resolveObserveFields(input, CAMPAIGN_GET_FIELDS, ["campaignId"]);
   const auth: MetaAuthInput = { accessToken, fetch: input.fetch as typeof fetch | undefined };
-  return graphGet(auth, "campaigns.get", `/${campaignId}`, { fields }).then((body) => {
+  return graphGet(auth, "campaigns.get", `/${encodePathSegment(campaignId, "campaignId")}`, { fields }).then((body) => {
     if (!isRecord(body) || typeof body.id !== "string") {
       return { connector: "meta-ads", action: "campaigns.get", source: "connector", campaign: null };
     }
@@ -254,7 +255,7 @@ export function createCampaign(input: unknown): ActionResult {
   const sharing = optionalBool(input.isAdsetBudgetSharingEnabled);
   if (sharing != null) fields.is_adset_budget_sharing_enabled = sharing;
 
-  return graphPostForm(auth, "campaigns.create", `/${adAccountId}/campaigns`, fields).then((body) => {
+  return graphPostForm(auth, "campaigns.create", `/${encodePathSegment(adAccountId, "adAccountId")}/campaigns`, fields).then((body) => {
     const id = isRecord(body) && typeof body.id === "string" ? body.id : "";
     return { connector: "meta-ads", action: "campaigns.create", source: "connector", id, raw: body };
   });
@@ -285,7 +286,7 @@ export function updateCampaign(input: unknown): ActionResult {
   if (Array.isArray(input.specialAdCategories)) fields.special_ad_categories = input.specialAdCategories;
   if (Object.keys(fields).length === 0) throw new Error("campaigns.update requires at least one mutable field");
 
-  return graphPostForm(auth, "campaigns.update", `/${campaignId}`, fields).then((body) => {
+  return graphPostForm(auth, "campaigns.update", `/${encodePathSegment(campaignId, "campaignId")}`, fields).then((body) => {
     const success = isRecord(body) && body.success === true;
     return {
       connector: "meta-ads",
@@ -308,7 +309,7 @@ export function getAdSet(input: unknown): ActionResult {
   const adSetId = requireString(input.adSetId, "adSetId");
   const fields = resolveObserveFields(input, ADSET_GET_FIELDS, ["adSetId", "adsetId"]);
   const auth: MetaAuthInput = { accessToken, fetch: input.fetch as typeof fetch | undefined };
-  return graphGet(auth, "ad_sets.get", `/${adSetId}`, { fields }).then((body) => {
+  return graphGet(auth, "ad_sets.get", `/${encodePathSegment(adSetId, "adSetId")}`, { fields }).then((body) => {
     if (!isRecord(body) || typeof body.id !== "string") {
       return { connector: "meta-ads", action: "ad_sets.get", source: "connector", adSet: null };
     }
@@ -358,7 +359,7 @@ export function createAdSet(input: unknown): ActionResult {
   if (endTime) fields.end_time = endTime;
   if (isRecord(input.promotedObject)) fields.promoted_object = input.promotedObject;
 
-  return graphPostForm(auth, "ad_sets.create", `/${adAccountId}/adsets`, fields).then((body) => {
+  return graphPostForm(auth, "ad_sets.create", `/${encodePathSegment(adAccountId, "adAccountId")}/adsets`, fields).then((body) => {
     const id = isRecord(body) && typeof body.id === "string" ? body.id : "";
     return { connector: "meta-ads", action: "ad_sets.create", source: "connector", id, raw: body };
   });
@@ -389,7 +390,7 @@ export function updateAdSet(input: unknown): ActionResult {
   if (endTime) fields.end_time = endTime;
   if (Object.keys(fields).length === 0) throw new Error("ad_sets.update requires at least one mutable field");
 
-  return graphPostForm(auth, "ad_sets.update", `/${adSetId}`, fields).then((body) => {
+  return graphPostForm(auth, "ad_sets.update", `/${encodePathSegment(adSetId, "adSetId")}`, fields).then((body) => {
     const success = isRecord(body) && body.success === true;
     return {
       connector: "meta-ads",
@@ -412,7 +413,7 @@ export function getAd(input: unknown): ActionResult {
   const adId = requireString(input.adId, "adId");
   const fields = resolveObserveFields(input, AD_GET_FIELDS, ["adId"]);
   const auth: MetaAuthInput = { accessToken, fetch: input.fetch as typeof fetch | undefined };
-  return graphGet(auth, "ads.get", `/${adId}`, { fields }).then((body) => {
+  return graphGet(auth, "ads.get", `/${encodePathSegment(adId, "adId")}`, { fields }).then((body) => {
     if (!isRecord(body) || typeof body.id !== "string") {
       return { connector: "meta-ads", action: "ads.get", source: "connector", ad: null };
     }
@@ -449,7 +450,7 @@ export function createAd(input: unknown): ActionResult {
   // Fold-in from G2: drop bidAmount from ads.create (already dropped from ads.update in G1).
   if (Array.isArray(input.trackingSpecs)) fields.tracking_specs = input.trackingSpecs;
 
-  return graphPostForm(auth, "ads.create", `/${adAccountId}/ads`, fields).then((body) => {
+  return graphPostForm(auth, "ads.create", `/${encodePathSegment(adAccountId, "adAccountId")}/ads`, fields).then((body) => {
     const id = isRecord(body) && typeof body.id === "string" ? body.id : "";
     return { connector: "meta-ads", action: "ads.create", source: "connector", id, raw: body };
   });
@@ -476,7 +477,7 @@ export function updateAd(input: unknown): ActionResult {
   // Please set bid_amount for the ad set.") Dropped from ads.update; keep on ad_sets.
   if (Object.keys(fields).length === 0) throw new Error("ads.update requires at least one mutable field");
 
-  return graphPostForm(auth, "ads.update", `/${adId}`, fields).then((body) => {
+  return graphPostForm(auth, "ads.update", `/${encodePathSegment(adId, "adId")}`, fields).then((body) => {
     const success = isRecord(body) && body.success === true;
     return {
       connector: "meta-ads",
@@ -505,7 +506,7 @@ export function listAdCreatives(input: unknown): ActionResult {
   const after = optionalString(input.after);
   if (after) query.after = after;
 
-  return graphGet(auth, "ad_creatives.list", `/${adAccountId}/adcreatives`, query).then((body) => {
+  return graphGet(auth, "ad_creatives.list", `/${encodePathSegment(adAccountId, "adAccountId")}/adcreatives`, query).then((body) => {
     const creatives = dataArray(body).map((row) => normalizeAdCreativeObject(row as MetaCreativeObject));
     return {
       connector: "meta-ads",
@@ -527,7 +528,7 @@ export function getAdCreative(input: unknown): ActionResult {
   const creativeId = requireString(input.creativeId, "creativeId");
   const fields = resolveObserveFields(input, CREATIVE_GET_FIELDS, ["creativeId"]);
   const auth: MetaAuthInput = { accessToken, fetch: input.fetch as typeof fetch | undefined };
-  return graphGet(auth, "ad_creatives.get", `/${creativeId}`, { fields }).then((body) => {
+  return graphGet(auth, "ad_creatives.get", `/${encodePathSegment(creativeId, "creativeId")}`, { fields }).then((body) => {
     if (!isRecord(body) || typeof body.id !== "string") {
       return { connector: "meta-ads", action: "ad_creatives.get", source: "connector", creative: null };
     }
@@ -572,7 +573,7 @@ export function createAdCreative(input: unknown): ActionResult {
   const linkUrl = optionalString(creative.linkUrl ?? input.linkUrl);
   if (linkUrl) fields.link_url = linkUrl;
 
-  return graphPostForm(auth, "ad_creatives.create", `/${adAccountId}/adcreatives`, fields).then((resp) => {
+  return graphPostForm(auth, "ad_creatives.create", `/${encodePathSegment(adAccountId, "adAccountId")}/adcreatives`, fields).then((resp) => {
     const id = isRecord(resp) && typeof resp.id === "string" ? resp.id : "";
     return { connector: "meta-ads", action: "ad_creatives.create", source: "connector", id, raw: resp };
   });
@@ -609,7 +610,7 @@ export function getInsights(input: unknown): ActionResult {
   const after = optionalString(input.after);
   if (after) query.after = after;
 
-  return graphGet(auth, "insights.get", `/${pathObject}/insights`, query).then((body) => {
+  return graphGet(auth, "insights.get", `/${encodePathSegment(pathObject, "pathObject")}/insights`, query).then((body) => {
     return {
       connector: "meta-ads",
       action: "insights.get",
@@ -630,7 +631,7 @@ export function getAdAccount(input: unknown): ActionResult {
   const adAccountId = actPath(requireString(input.adAccountId, "adAccountId"));
   const fields = optionalString(input.fields) ?? ACCOUNT_GET_FIELDS;
   const auth: MetaAuthInput = { accessToken, fetch: input.fetch as typeof fetch | undefined };
-  return graphGet(auth, "ad_accounts.get", `/${adAccountId}`, { fields }).then((body) => {
+  return graphGet(auth, "ad_accounts.get", `/${encodePathSegment(adAccountId, "adAccountId")}`, { fields }).then((body) => {
     if (!isRecord(body) || typeof body.id !== "string") {
       return { connector: "meta-ads", action: "ad_accounts.get", source: "connector", adAccount: null };
     }

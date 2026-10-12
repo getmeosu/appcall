@@ -1,4 +1,5 @@
-import { createZoomClient, parseZoomRateLimit, isRecord, fieldString, fieldValue, queryValue } from "./http";
+import { createZoomClient, parseZoomRateLimit, isRecord, fieldString, fieldValue, queryValue, assertZoomRawSegment, optionalZoomSegment } from "./http";
+import { assertNoTraversalSegment } from "../../_shared/jobboard";
 
 export type DepthPathParam = { name: string; aliases: string[] };
 export type DepthOpSpec = {
@@ -30,8 +31,10 @@ export function validateDepthInput(spec: DepthOpSpec, input: unknown): Record<st
   if (!isRecord(input)) throw new Error(`${spec.action} input must be an object`);
   const validated: Record<string, unknown> = {};
   for (const param of spec.pathParams) {
+    // SEC-PATH-2b: only an omitted value takes the documented default; a
+    // present "" or whitespace value is rejected instead of becoming "me".
     const fallback = spec.defaults[param.name];
-    const value = fieldString(input, ...param.aliases) ?? fallback;
+    const value = optionalZoomSegment(input, param.name, ...param.aliases) ?? fallback;
     if (spec.required.includes(param.name) && !value) throw new Error(`${param.name} is required`);
     if (value) validated[param.name] = value;
   }
@@ -52,15 +55,19 @@ export function validateDepthInput(spec: DepthOpSpec, input: unknown): Record<st
   return validated;
 }
 
-function encodePathValue(value: string): string {
-  return encodeURIComponent(value);
+// SEC-PATH-2: Zoom path values can be raw base64 UUIDs, so "/" is encoded rather
+// than rejected; the encoded segment then passes the shared no-traversal guard,
+// which rejects "." and ".." (encodeURIComponent leaves them intact).
+function encodePathValue(value: string, name: string): string {
+  // SEC-PATH-2b: guard the raw value before encoding (" " was sent as %20).
+  return assertNoTraversalSegment(encodeURIComponent(assertZoomRawSegment(value, name)), name);
 }
 
 function buildPath(spec: DepthOpSpec, validated: Record<string, unknown>): string {
   return spec.path.replace(/\{([a-zA-Z0-9_]+)\}/g, (_match, name: string) => {
     const value = validated[name];
     if (typeof value !== "string" || value.length === 0) throw new Error(`${name} is required`);
-    return encodePathValue(value);
+    return encodePathValue(value, name);
   });
 }
 

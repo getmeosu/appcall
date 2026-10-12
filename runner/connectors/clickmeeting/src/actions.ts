@@ -1,6 +1,7 @@
 import { compileDeclarativeConnector } from "../../../bun/src/declarative/compile";
 import { ConnectorHttpError, createConnectorHttpClient } from "../../../bun/src/http";
 import manifest from "../manifest.json";
+import { encodePathSegment } from "../../_shared/jobboard";
 
 const compiled = compileDeclarativeConnector(manifest as never);
 const API = "https://api.clickmeeting.com/v1";
@@ -312,7 +313,7 @@ async function updateConference(input: unknown): Promise<Record<string, unknown>
   const roomId = requirePositive(aliased, "room_id");
   const body = conferenceForm(aliased);
   if (!body) throw { ok: false, code: "INVALID_ACTION_INPUT", message: "at least one ClickMeeting room field is required for update" };
-  return sendForm(aliased, "PUT", `${API}/conferences/${roomId}`, body);
+  return sendForm(aliased, "PUT", `${API}/conferences/${encodePathSegment(roomId, "room_id")}`, body);
 }
 
 async function createContact(input: unknown): Promise<Record<string, unknown>> {
@@ -345,7 +346,7 @@ async function registerParticipant(input: unknown): Promise<Record<string, unkno
     entries.push(["confirmation_email[enabled]", aliased.confirmation_email.enabled]);
     entries.push(["confirmation_email[lang]", aliased.confirmation_email.lang]);
   }
-  return sendForm(aliased, "POST", `${API}/conferences/${roomId}/registration`, formFrom(entries));
+  return sendForm(aliased, "POST", `${API}/conferences/${encodePathSegment(roomId, "room_id")}/registration`, formFrom(entries));
 }
 
 async function sendInvitation(input: unknown): Promise<Record<string, unknown>> {
@@ -357,7 +358,7 @@ async function sendInvitation(input: unknown): Promise<Record<string, unknown>> 
   const attendees = Array.isArray(aliased.attendees) ? aliased.attendees : [];
   if (attendees.length === 0) throw { ok: false, code: "INVALID_ACTION_INPUT", message: "attendees is required" };
   const entries: Array<[string, unknown]> = [["attendees", attendees], ["template", aliased.template], ["role", aliased.role]];
-  return sendForm(aliased, "POST", `${API}/conferences/${conferenceId}/invitation/email/${encodeURIComponent(lang)}`, formFrom(entries));
+  return sendForm(aliased, "POST", `${API}/conferences/${encodePathSegment(conferenceId, "conference_id")}/invitation/email/${encodePathSegment(lang, "lang")}`, formFrom(entries));
 }
 
 function decodeBase64(value: string): Uint8Array {
@@ -385,7 +386,7 @@ async function uploadFile(input: unknown): Promise<Record<string, unknown>> {
   const form = new FormData();
   form.append("uploaded", new Blob([new Uint8Array(bytes)], { type: mime }), name);
   const roomId = present(record.room_id) ? requirePositive(record, "room_id") : null;
-  const url = roomId ? `${API}/file-library/conferences/${roomId}` : `${API}/file-library`;
+  const url = roomId ? `${API}/file-library/conferences/${encodePathSegment(roomId, "room_id")}` : `${API}/file-library`;
   const response = await requestJson(record, url, {
     method: "POST",
     headers: { Accept: "application/json", "X-Api-Key": String(record.apiKey) },
@@ -410,7 +411,7 @@ async function downloadFile(input: unknown): Promise<Record<string, unknown>> {
   const aliased = aliasClickMeetingInput(input, schemaKeys("download_file"));
   const record = requireApiKey(aliased);
   const fileId = requirePositive(record, "file_id");
-  const response = await requestJson(record, `${API}/file-library/${fileId}/download`, {
+  const response = await requestJson(record, `${API}/file-library/${encodePathSegment(fileId, "file_id")}/download`, {
     method: "GET",
     headers: authHeaders(String(record.apiKey)),
   }, 15000, 10485760);
@@ -480,7 +481,7 @@ function matchPoll(polls: Array<Record<string, unknown>>, id: unknown): Record<s
 async function getAttendeesPayload(input: Record<string, unknown>): Promise<unknown> {
   const conferenceId = requirePositive(input, "conference_id");
   const sessionId = requirePositive(input, "session_id");
-  const response = await requestJson(input, `${API}/conferences/${conferenceId}/sessions/${sessionId}/attendees`, {
+  const response = await requestJson(input, `${API}/conferences/${encodePathSegment(conferenceId, "conference_id")}/sessions/${encodePathSegment(sessionId, "session_id")}/attendees`, {
     method: "GET",
     headers: authHeaders(String(input.apiKey)),
   });
@@ -519,14 +520,14 @@ async function getChatDetails(input: unknown): Promise<Record<string, unknown>> 
   const aliased = aliasClickMeetingInput(input, schemaKeys("get_chat_details"));
   if (!isRecord(aliased) || typeof aliased.apiKey !== "string") return compiled.actions.get_chat_details!(aliased) as Promise<Record<string, unknown>>;
   const sessionId = requirePositive(aliased, "session_id");
-  return getMaybeBinary(aliased, "get_chat_details", `/chats/${sessionId}`);
+  return getMaybeBinary(aliased, "get_chat_details", `/chats/${encodePathSegment(sessionId, "session_id")}`);
 }
 
 async function getSessionQaHistory(input: unknown): Promise<Record<string, unknown>> {
   const aliased = aliasClickMeetingInput(input, schemaKeys("get_session_qa_history"));
   if (!isRecord(aliased) || typeof aliased.apiKey !== "string") return compiled.actions.get_session_qa_history!(aliased) as Promise<Record<string, unknown>>;
   const sessionId = requirePositive(aliased, "session_id");
-  return getMaybeBinary(aliased, "get_session_qa_history", `/chats/${sessionId}`);
+  return getMaybeBinary(aliased, "get_session_qa_history", `/chats/${encodePathSegment(sessionId, "session_id")}`);
 }
 
 const HANDWRITTEN: Record<string, (input: unknown) => unknown> = {
