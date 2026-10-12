@@ -23,10 +23,14 @@ async function main() {
     console.warn("[sena-e2e] APIFY_ACTOR_ID unset — skipping source; seed leads.csv manually for P1");
   }
 
-  await enrich(cfg, store);
+  const enrichReport = await enrich(cfg, store);
   await booking(cfg, store, conn);
   await send(cfg, store, conn);
 
+  if (enrichReport.failed.length > 0) {
+    // SENA-ERR: an enrichment error fails the run instead of being logged and dropped.
+    throw new Error(`enrich failed for ${enrichReport.failed.length} lead(s): ${enrichReport.failed.map((f) => `${f.lead_id}=${f.error_code}`).join(", ")}`);
+  }
   console.log(`[sena-e2e] done. State in ${cfg.stateDir}/leads.csv and evidence.jsonl`);
 }
 

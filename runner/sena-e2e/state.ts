@@ -5,7 +5,9 @@ import { appendFileSync, mkdirSync, readFileSync, writeFileSync, existsSync } fr
 import { join } from "node:path";
 
 // compose runs inline in the send stage (composeFor); there is no separate composed stage.
-export type Stage = "sourced" | "enriched" | "booking_ready" | "sent";
+// enrich_failed: apollo people.match returned an error; error_code records why
+// and later stages skip the lead (SENA-ERR).
+export type Stage = "sourced" | "enriched" | "enrich_failed" | "booking_ready" | "sent";
 
 export interface Lead {
   lead_id: string;
@@ -19,11 +21,12 @@ export interface Lead {
   channel: string;
   booking_url: string;
   last_request_id: string;
+  error_code?: string;
 }
 
 const COLUMNS: (keyof Lead)[] = [
   "lead_id", "full_name", "title", "company", "linkedin_url", "email",
-  "apollo_id", "stage", "channel", "booking_url", "last_request_id",
+  "apollo_id", "stage", "channel", "booking_url", "last_request_id", "error_code",
 ];
 
 function escape(v: string): string {
@@ -64,6 +67,8 @@ export function parseLeads(csv: string): Lead[] {
     const cells = splitCsvLine(line);
     const lead: Record<string, string> = {};
     COLUMNS.forEach((c, i) => { lead[c] = cells[i] ?? ""; });
+    // error_code is optional (older leads.csv files have no such column).
+    if (!lead.error_code) delete lead.error_code;
     return lead as unknown as Lead;
   });
 }
