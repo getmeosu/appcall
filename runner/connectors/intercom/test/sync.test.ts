@@ -21,6 +21,8 @@ import conversationGetFixture from "../fixtures/conversation_get.json";
 import conversationReplyFixture from "../fixtures/conversation_reply.json";
 import conversationReplyPrimaryFixture from "../fixtures/conversation_reply_primary.json";
 import tagAttachedFixture from "../fixtures/tag_attached.json";
+import conversationClosePostFixture from "../fixtures/conversation_close_post.json";
+import conversationAssignPostFixture from "../fixtures/conversation_assign_post.json";
 import contactGetFixture from "../fixtures/contact_get.json";
 import conversationsSearchFixture from "../fixtures/conversations_search.json";
 
@@ -235,7 +237,7 @@ describe("Intercom conversations.get sync", () => {
 });
 
 describe("Intercom conversations.reply sync", () => {
-  test("POSTs /conversations/{id}/reply and returns raw Conversation with top-level id", async () => {
+  test("POSTs /conversations/{id}/reply and returns {data: Conversation} (FX-intercom-2)", async () => {
     const { calls, impl } = stubFetch(JSON.stringify(conversationReplyPrimaryFixture));
 
     const result = await executeConversationsReplySync({
@@ -263,9 +265,9 @@ describe("Intercom conversations.reply sync", () => {
       admin_id: "991",
       body: "Thanks — updated your plan.",
     });
-    // Idempotent: raw primary with top-level id (no normalize / no in-handler GET)
-    expect(result.id).toBe("147");
-    expect((result as { conversation?: unknown }).conversation).toBeUndefined();
+    // FX-intercom-2: declared closed outputSchema {data}; raw Conversation, no in-handler GET.
+    expect(result).toEqual({ data: conversationReplyPrimaryFixture });
+    expect(result.data.id).toBe("147");
   });
 
   test("allows id=last as a safe path segment", async () => {
@@ -348,9 +350,9 @@ describe("Intercom conversations.reply sync", () => {
   });
 });
 
-describe("Intercom conversations.close (Reconcile; POST-only)", () => {
-  test("POSTs /conversations/{id}/parts message_type close — conversation null", async () => {
-    const { calls, impl } = stubFetch(JSON.stringify(conversationGetFixture));
+describe("Intercom conversations.close (POST-only, {data: Conversation})", () => {
+  test("POSTs /conversations/{id}/parts message_type close — returns {data: Conversation}", async () => {
+    const { calls, impl } = stubFetch(JSON.stringify(conversationClosePostFixture));
 
     const result = await executeConversationsCloseSync({
       ...auth,
@@ -371,7 +373,8 @@ describe("Intercom conversations.close (Reconcile; POST-only)", () => {
       admin_id: "991",
       body: "Closing — resolved.",
     });
-    expect(result.conversation).toBeNull();
+    expect(result).toEqual({ data: conversationClosePostFixture });
+    expect(result.data.state).toBe("closed");
   });
 
   test("rejects missing adminId before fetch", async () => {
@@ -383,9 +386,9 @@ describe("Intercom conversations.close (Reconcile; POST-only)", () => {
   });
 });
 
-describe("Intercom conversations.assign (Reconcile; POST-only)", () => {
+describe("Intercom conversations.assign (POST-only, {data: Conversation})", () => {
   test("POSTs parts with message_type assignment + assignee_id", async () => {
-    const { calls, impl } = stubFetch(JSON.stringify(conversationGetFixture));
+    const { calls, impl } = stubFetch(JSON.stringify(conversationAssignPostFixture));
 
     const result = await executeConversationsAssignSync({
       ...auth,
@@ -407,12 +410,12 @@ describe("Intercom conversations.assign (Reconcile; POST-only)", () => {
       assignee_id: "530165",
       body: "Reassigning",
     });
-    expect(result.conversation).toBeNull();
+    expect(result).toEqual({ data: conversationAssignPostFixture });
   });
 });
 
-describe("Intercom conversations.tag (Reconcile; discard Tag)", () => {
-  test("POSTs /conversations/{id}/tags — conversation null even if tag returned", async () => {
+describe("Intercom conversations.tag (POST-only, {data: Tag})", () => {
+  test("POSTs /conversations/{id}/tags — returns {data: Tag} (Intercom returns the Tag, not the Conversation)", async () => {
     const { calls, impl } = stubFetch(JSON.stringify(tagAttachedFixture));
 
     const result = await executeConversationsTagSync({
@@ -428,7 +431,8 @@ describe("Intercom conversations.tag (Reconcile; discard Tag)", () => {
     expect(url.pathname).toBe("/conversations/147/tags");
     const body = JSON.parse(await calls[0].text());
     expect(body).toEqual({ id: "7522907", admin_id: "991" });
-    expect(result.conversation).toBeNull();
+    expect(result).toEqual({ data: tagAttachedFixture });
+    expect(result.data.type).toBe("tag");
   });
 });
 
