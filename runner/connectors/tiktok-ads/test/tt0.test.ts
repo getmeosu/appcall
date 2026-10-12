@@ -5,6 +5,7 @@ import { describe, expect, it } from "bun:test";
 import { readFileSync } from "node:fs";
 import { wrapActions, requiredScopesFor, classifyTikTokResponse } from "../src/runtime.ts";
 import { getCampaign } from "../src/actions.ts";
+import { TT1_DESTRUCTIVE } from "./destructive-set.ts";
 
 const manifest = JSON.parse(readFileSync(new URL("../manifest.json", import.meta.url), "utf8")) as any;
 const ops = manifest.operations as Record<string, any>;
@@ -86,7 +87,7 @@ describe("TT-0 fixed dead ops (live-shaped fixtures)", () => {
       expect(calls[0]!.url.pathname).toBe(V13 + path);
       expect(calls[0]!.body).toEqual(body);
       expect(result.data.code).toBe(0);
-      expect(ops[op].sideEffect).toBe("write");
+      expect(ops[op].sideEffect).toBe(TT1_DESTRUCTIVE.has(op) ? "destructive" : "write");
     });
   }
 
@@ -110,7 +111,7 @@ describe("TT-0 removed TCM ops", () => {
   // (https://business-api.tiktok.com/portal/docs/tiktok-one-api/v1.3), so they
   // are dropped from the manifest and the action map.
   it("drops tcm.videos.audit_status.get and .update outright", () => {
-    expect(manifest.version).toBe("0.8.0");
+    expect(manifest.version).toBe("0.8.1");
     expect(Object.keys(ops)).toHaveLength(424);
     for (const op of ["tcm.videos.audit_status.get", "tcm.videos.audit_status.update"]) {
       expect(ops[op], op).toBeUndefined();
