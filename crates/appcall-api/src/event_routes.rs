@@ -6,14 +6,62 @@ use appcall_runner_client::{
     RequestContext, RunnerClient, WebhookParseRequest, WebhookVerifyRequest,
 };
 use appcall_store::{Scope, Status, Store};
+use base64::{engine::general_purpose::STANDARD, Engine};
 use serde_json::Value;
 use std::{
     collections::BTreeMap,
     sync::{Arc, Mutex},
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
+use zeroize::Zeroizing;
 
 pub const STREAM_PAGE_SIZE: usize = 16;
+
+/// Credential-bundle key holding a connection's provider webhook signing
+/// secret. Absent means unsigned deliveries; connectors that require a
+/// signature reject the delivery (fail closed) in their verifier.
+pub const WEBHOOK_SECRET_FIELD: &str = "webhookSecret";
+
+/// Reads only the webhook signing secret from the connection's encrypted
+/// credential bundle. Load or decode failures yield `None` so the verifier
+/// fails closed; the secret is never logged or returned in a response.
+pub(crate) fn webhook_secret_from_bundle(raw: &[u8]) -> Option<Zeroizing<String>> {
+    let mut bundle: Value = serde_json::from_slice(raw).ok()?;
+    let secret = match bundle.get_mut(WEBHOOK_SECRET_FIELD)?.take() {
+        Value::String(secret) => Zeroizing::new(secret),
+        _ => return None,
+    };
+    zeroize_value(&mut bundle);
+    (!secret.is_empty()).then_some(secret)
+}
+fn zeroize_value(value: &mut Value) {
+    use zeroize::Zeroize;
+    match value {
+        Value::String(text) => text.zeroize(),
+        Value::Array(items) => items.iter_mut().for_each(zeroize_value),
+        Value::Object(map) => map.values_mut().for_each(zeroize_value),
+        _ => {}
+    }
+}
+/// A runner that rejects the signature (fail closed) is a forged or
+/// misconfigured delivery, not an ingest failure; anything else is.
+pub(crate) fn verify_error(error: appcall_runner_client::Error) -> ApiError {
+    match error.code.as_deref() {
+        Some("WEBHOOK_SIGNATURE_INVALID") => ApiError::new("WEBHOOK_SIGNATURE_INVALID"),
+        _ => ApiError::new("WEBHOOK_INGEST_FAILED"),
+    }
+}
+fn connection_webhook_secret(
+    store: &mut Store,
+    project: &str,
+    secret_ref_id: &str,
+) -> Option<Zeroizing<String>> {
+    if secret_ref_id.is_empty() {
+        return None;
+    }
+    let raw = store.load_secret(project, secret_ref_id).ok()?;
+    webhook_secret_from_bundle(raw.as_bytes())
+}
 
 fn ingest_path(method: &str, path: &str) -> Option<(String, String)> {
     let parts: Vec<_> = path.strip_prefix('/')?.split('/').collect();
@@ -236,7 +284,7 @@ impl EventRoutes {
         }
         let p = principal.cloned();
         let scope_claims = claims.clone();
-        let (expected, expected_revision) = self
+        let ((expected, expected_revision), webhook_secret) = self
             .database(move |db| {
                 let scope = Scope::new(&scope_claims.project_id, None)
                     .map_err(|_| ApiError::new("UNAUTHORIZED"))?;
@@ -255,7 +303,12 @@ impl EventRoutes {
                 }) {
                     return Err(ApiError::new("FORBIDDEN"));
                 }
-                Ok(c)
+                let secret = connection_webhook_secret(
+                    &mut db.connections,
+                    &scope_claims.project_id,
+                    &c.0.secret_ref_id,
+                );
+                Ok((c, secret))
             })
             .await?;
         let payload: Value = serde_json::from_slice(&request.body)
@@ -282,12 +335,14 @@ impl EventRoutes {
                 &context,
                 WebhookVerifyRequest {
                     connector_key: claims.connector.clone(),
-                    headers,
+                    headers: headers.clone(),
                     payload: payload.clone(),
+                    raw_body_base64: Some(STANDARD.encode(&request.body)),
+                    secret: webhook_secret.as_ref().map(|secret| secret.to_string()),
                 },
             )
             .await
-            .map_err(|_| ApiError::new("WEBHOOK_INGEST_FAILED"))?;
+            .map_err(crate::event_routes::verify_error)?;
         if !verified.verified {
             return Err(ApiError::new("WEBHOOK_SIGNATURE_INVALID"));
         }
@@ -297,6 +352,7 @@ impl EventRoutes {
                 &context,
                 WebhookParseRequest {
                     connector_key: claims.connector.clone(),
+                    headers,
                     payload,
                 },
             )
@@ -310,6 +366,7 @@ impl EventRoutes {
                         idempotency_key: parsed.idempotency_key,
                         operation: parsed.operation,
                         sanitized: parsed.sanitized,
+                        triggers: parsed.triggers,
                     },
                     &expected,
                     expected_revision,
@@ -360,11 +417,53 @@ impl EventRoutes {
                         connection_id: filters.connection_id,
                         connector: filters.connector,
                         operation: filters.operation,
+                        trigger: filters.trigger,
                     },
                 )
                 .map(|page| page.events)
                 .map_err(crate::data_routes::event_error)
         })
         .await
+    }
+}
+
+#[cfg(test)]
+mod webhook_secret_tests {
+    use super::*;
+
+    #[test]
+    fn only_a_non_empty_string_webhook_secret_is_read_from_the_bundle() {
+        let secret =
+            webhook_secret_from_bundle(br#"{"accessToken":"t","webhookSecret":"s3cret"}"#).unwrap();
+        assert_eq!(secret.as_str(), "s3cret");
+        for bundle in [
+            br#"{"accessToken":"t"}"#.as_slice(),
+            br#"{"webhookSecret":""}"#,
+            br#"{"webhookSecret":7}"#,
+            br#"not json"#,
+            br#"[]"#,
+        ] {
+            assert!(webhook_secret_from_bundle(bundle).is_none());
+        }
+    }
+
+    #[test]
+    fn runner_signature_rejections_stay_distinct_from_ingest_failures() {
+        let error = |code: Option<&str>| appcall_runner_client::Error {
+            kind: appcall_runner_client::ErrorKind::HttpStatus,
+            outcome: appcall_runner_client::DispatchOutcome::ResponseReceived,
+            code: code.map(str::to_owned),
+            retry_after_seconds: None,
+            message: String::new(),
+        };
+        assert_eq!(
+            verify_error(error(Some("WEBHOOK_SIGNATURE_INVALID"))).code,
+            "WEBHOOK_SIGNATURE_INVALID"
+        );
+        assert_eq!(
+            verify_error(error(Some("WEBHOOK_VERIFY_FAILED"))).code,
+            "WEBHOOK_INGEST_FAILED"
+        );
+        assert_eq!(verify_error(error(None)).code, "WEBHOOK_INGEST_FAILED");
     }
 }

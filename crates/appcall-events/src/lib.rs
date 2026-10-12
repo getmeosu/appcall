@@ -7,7 +7,9 @@ mod types;
 pub use cursor::{
     decode as decode_cursor, history_cursor, stream_cursor, stream_cursor_at, Cursor,
 };
-pub use input::{is_sync_operation, sync_input, validate_parsed};
+pub use input::{
+    is_sync_operation, sync_input, valid_triggers, validate_parsed, MAX_TRIGGERS, MAX_TRIGGER_LEN,
+};
 pub use poll::{append_polled, PolledEvent};
 pub use store::*;
 pub use types::*;

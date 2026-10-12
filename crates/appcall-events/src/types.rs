@@ -1,7 +1,7 @@
 use crate::Result;
 use chrono::{DateTime, Utc};
 use postgres::Transaction;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 /// Produced only by a trusted provider parser after signature verification.
@@ -11,8 +11,11 @@ pub struct ParsedWebhook {
     pub idempotency_key: String,
     pub operation: String,
     pub sanitized: Value,
+    /// Trigger names derived by the provider parser (for example
+    /// `issues.opened`). Empty when the connector derives none.
+    pub triggers: Vec<String>,
 }
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Event {
     pub id: String,
@@ -24,6 +27,10 @@ pub struct Event {
     pub payload: Value,
     pub created_at: DateTime<Utc>,
     pub stream_position: i64,
+    /// Rows and serialized events written before triggers existed read as
+    /// empty.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub triggers: Vec<String>,
 }
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -38,6 +45,8 @@ pub struct ListRequest {
     pub connection_id: String,
     pub connector: String,
     pub operation: String,
+    /// When non-empty, only events whose `triggers` contain this name.
+    pub trigger: String,
 }
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]

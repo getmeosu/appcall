@@ -1597,6 +1597,7 @@ import { withDeclarativeConnectors } from "./declarative/loader";
 import { buildInputValidators, validateDispatchInput } from "./input_schema";
 import { heyzineWriteHandlers } from "../../connectors/heyzine/src/writes";
 import { parseWebhook as heyzineParseWebhook } from "../../connectors/heyzine/src/webhook";
+import { parseWebhook as githubParseWebhook, verifyWebhookRaw as githubVerifyWebhookRaw } from "../../connectors/github/src/webhook";
 
 type Manifest = {
   key: string;
@@ -1618,9 +1619,17 @@ type HealthcheckHandler = (input?: unknown) => unknown;
 // A webhook parser turns a raw inbound payload into the platform's
 // { idempotencyKey, operation?, sanitized } shape; a verifier proves the
 // delivery is authentic given the payload and request headers.
-type WebhookParser = (payload: unknown) => unknown;
+// verifyRaw is for providers that sign the exact request bytes with a
+// per-connection secret (for example GitHub X-Hub-Signature-256); when present
+// it replaces verify. Parsers also receive the lower-cased request headers.
+type WebhookParser = (payload: unknown, headers: Record<string, string>) => unknown;
 type WebhookVerifier = (payload: unknown, headers: Record<string, string>) => boolean;
-type WebhookHandlers = { parse: WebhookParser; verify?: WebhookVerifier };
+export type WebhookRawVerification = { rawBody?: Uint8Array; headers: Record<string, string>; secret?: string };
+type WebhookRawVerifier = (input: WebhookRawVerification) => boolean;
+type WebhookHandlers = { parse: WebhookParser; verify?: WebhookVerifier; verifyRaw?: WebhookRawVerifier };
+// Raw-body verification material forwarded by the control plane. The secret
+// and signature are never logged or included in an error message.
+export type WebhookVerifyMaterial = { rawBody?: Uint8Array; secret?: string };
 
 export type RegistryFailure = {
   ok: false;
@@ -1650,8 +1659,13 @@ export type ConnectorRegistry = {
   healthcheck(connectorKey: string, input?: unknown): RegistryHealthcheckResult | undefined;
   executeAction(connectorKey: string, action: string, input: unknown): RegistryActionResult;
   executeSync(connectorKey: string, sync: string, input: unknown): RegistryActionResult;
-  parseWebhook(connectorKey: string, payload: unknown): RegistryActionResult;
-  verifyWebhook(connectorKey: string, payload: unknown, headers: Record<string, string>): RegistryActionResult;
+  parseWebhook(connectorKey: string, payload: unknown, headers?: Record<string, string>): RegistryActionResult;
+  verifyWebhook(
+    connectorKey: string,
+    payload: unknown,
+    headers: Record<string, string>,
+    material?: WebhookVerifyMaterial,
+  ): RegistryActionResult;
   createHttpClient(
     connectorKey: string,
     operation: string,
@@ -3707,6 +3721,9 @@ export const defaultConnectorRegistry = createConnectorRegistry(withGitHubPathId
     ashby: { parse: ashbyParseWebhook },
     calendly: { parse: calendlyParseWebhook },
     typeform: { parse: typeformParseWebhook },
+    // GitHub signs the raw body with the per-hook secret (X-Hub-Signature-256)
+    // and names the event only in headers; see connectors/github/src/webhook.ts.
+    github: { parse: githubParseWebhook, verifyRaw: githubVerifyWebhookRaw },
   },
 })));
 
@@ -3925,13 +3942,13 @@ export function createConnectorRegistry(input: {
       }
       return { ok: true, output: runExecution(() => boundedOutput(handler(inputValue), operationSpec.maxResponseBytes), operationSpec.timeoutMs) };
     },
-    parseWebhook(connectorKey: string, payload: unknown): RegistryActionResult {
+    parseWebhook(connectorKey: string, payload: unknown, headers: Record<string, string> = {}): RegistryActionResult {
       const handlers = input.webhooks?.[connectorKey];
       if (!handlers) {
         return { ok: false, code: "UNKNOWN_CONNECTOR", message: "Connector has no webhook handler." };
       }
       try {
-        return { ok: true, output: handlers.parse(payload) };
+        return { ok: true, output: handlers.parse(payload, headers) };
       } catch (error) {
         return {
           ok: false,
@@ -3940,10 +3957,30 @@ export function createConnectorRegistry(input: {
         };
       }
     },
-    verifyWebhook(connectorKey: string, payload: unknown, headers: Record<string, string>): RegistryActionResult {
+    verifyWebhook(
+      connectorKey: string,
+      payload: unknown,
+      headers: Record<string, string>,
+      material: WebhookVerifyMaterial = {},
+    ): RegistryActionResult {
       const handlers = input.webhooks?.[connectorKey];
       if (!handlers) {
         return { ok: false, code: "UNKNOWN_CONNECTOR", message: "Connector has no webhook handler." };
+      }
+      // Raw-body verifiers fail closed: without the exact bytes or the
+      // connection secret the delivery is not verified. Errors are reported
+      // without the thrown message so no signing material can leak.
+      if (handlers.verifyRaw) {
+        try {
+          return {
+            ok: true,
+            output: {
+              verified: handlers.verifyRaw({ rawBody: material.rawBody, headers, secret: material.secret }) === true,
+            },
+          };
+        } catch {
+          return { ok: false, code: "WEBHOOK_VERIFY_FAILED", message: "Webhook verification failed." };
+        }
       }
       // A connector with no verifier accepts every delivery (e.g. providers
       // that do not sign their webhooks). The control plane still records and

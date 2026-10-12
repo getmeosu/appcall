@@ -10,6 +10,7 @@ fn parsed(id: &str, operation: &str) -> ParsedWebhook {
         idempotency_key: id.into(),
         operation: operation.into(),
         sanitized: serde_json::json!({"text":"safe","apiKey":"never-retain"}),
+        triggers: Vec::new(),
     }
 }
 
@@ -113,6 +114,7 @@ async fn event_only_manifest_webhooks_retain_operations_in_memory_history() {
                     idempotency_key: (*id).into(),
                     operation: (*operation).into(),
                     sanitized: sanitized.clone(),
+                    triggers: Vec::new(),
                 },
             )
             .unwrap();
@@ -205,6 +207,7 @@ async fn event_only_manifest_webhooks_support_filters_usage_replay_and_deduplica
                     connector: connector.into(),
                     connection_id: connection_id.into(),
                     operation: operation.into(),
+                    trigger: String::new(),
                 },
             )
             .await
@@ -629,6 +632,7 @@ async fn filtered_stream_delivers_matching_new_events_only() {
         connector: "slack".into(),
         connection_id: "c".into(),
         operation: "messages.list".into(),
+        trigger: String::new(),
     };
     let delivered = events
         .poll_filtered(&principal, &cursor, &matching)
@@ -1071,4 +1075,61 @@ async fn event_detail_replay_and_stream_disconnect_preserve_scope() {
     .await
     .unwrap();
     assert!(events.retirement_ready());
+}
+#[tokio::test]
+async fn memory_triggers_round_trip_and_filter_stream_and_history() {
+    let repo = super::history_tests::fixture();
+    let events = MemoryEvents::new(repo.clone(), None, None);
+    let (expected, revision) = repo.get_connection("proj_dev", None, "c").unwrap();
+    let mut opened = parsed("opened", "");
+    opened.triggers = vec!["issues.opened".into()];
+    let opened_id = events
+        .accept(&expected, revision, &opened)
+        .unwrap()
+        .event_id;
+    let plain_id = events
+        .accept(&expected, revision, &parsed("plain", ""))
+        .unwrap()
+        .event_id;
+    let mut invalid = parsed("bad", "");
+    invalid.triggers = vec!["".into()];
+    assert!(events.accept(&expected, revision, &invalid).is_err());
+    let principal = Principal::project("proj_dev").unwrap();
+    let filter = |trigger: &str| crate::streaming::EventFilters {
+        trigger: trigger.into(),
+        ..Default::default()
+    };
+    let matched = events
+        .poll_filtered(&principal, "", &filter("issues.opened"))
+        .await
+        .unwrap();
+    assert_eq!(matched.len(), 1);
+    assert_eq!(matched[0].id, opened_id);
+    assert_eq!(matched[0].triggers, vec!["issues.opened".to_owned()]);
+    assert!(events
+        .poll_filtered(&principal, "", &filter("issues.closed"))
+        .await
+        .unwrap()
+        .is_empty());
+    let all = events.poll(&principal, "").await.unwrap();
+    assert_eq!(all.len(), 2);
+    assert!(all
+        .iter()
+        .any(|e| e.id == plain_id && e.triggers.is_empty()));
+    let history = events
+        .handle(
+            Some(&principal),
+            &Request {
+                method: "GET".into(),
+                uri: "/v1/webhook-events?trigger=issues.opened".into(),
+                headers: vec![],
+                body: vec![],
+            },
+        )
+        .await
+        .unwrap()
+        .unwrap();
+    let listed = history.body["events"].as_array().unwrap();
+    assert_eq!(listed.len(), 1);
+    assert_eq!(listed[0]["triggers"], serde_json::json!(["issues.opened"]));
 }

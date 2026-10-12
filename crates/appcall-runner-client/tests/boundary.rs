@@ -493,7 +493,9 @@ async fn all_public_methods_keep_existing_wire_names() {
                             WebhookVerifyRequest {
                                 connector_key: "slack".into(),
                                 headers: Default::default(),
-                                payload: json!({})
+                                payload: json!({}),
+                                raw_body_base64: None,
+                                secret: None,
                             }
                         )
                         .await
@@ -508,6 +510,7 @@ async fn all_public_methods_keep_existing_wire_names() {
                             &context(),
                             WebhookParseRequest {
                                 connector_key: "slack".into(),
+                                headers: Default::default(),
                                 payload: json!({})
                             }
                         )
@@ -604,4 +607,52 @@ fn unsafe_configuration_never_echoes_credentials() {
         ClientOptions::default()
     )
     .is_err());
+}
+
+#[test]
+fn webhook_wire_fields_and_debug_redaction() {
+    let mut headers = std::collections::BTreeMap::new();
+    headers.insert(
+        "x-hub-signature-256".to_owned(),
+        "sha256=feedface".to_owned(),
+    );
+    let verify = WebhookVerifyRequest {
+        connector_key: "github".into(),
+        headers: headers.clone(),
+        payload: json!({"action":"opened"}),
+        raw_body_base64: Some("eyJhIjoxfQ==".into()),
+        secret: Some("hook-secret-value".into()),
+    };
+    let wire = serde_json::to_value(&verify).unwrap();
+    assert_eq!(wire["rawBody"], "eyJhIjoxfQ==");
+    assert_eq!(wire["secret"], "hook-secret-value");
+    assert_eq!(wire["headers"]["x-hub-signature-256"], "sha256=feedface");
+    let debug = format!("{verify:?}");
+    for leaked in ["hook-secret-value", "feedface", "eyJhIjoxfQ==", "opened"] {
+        assert!(!debug.contains(leaked), "{leaked} leaked into Debug");
+    }
+    let bare = serde_json::to_value(WebhookVerifyRequest {
+        connector_key: "slack".into(),
+        headers: Default::default(),
+        payload: json!({}),
+        raw_body_base64: None,
+        secret: None,
+    })
+    .unwrap();
+    assert_eq!(bare, json!({"connectorKey":"slack","payload":{}}));
+    let parse = serde_json::to_value(WebhookParseRequest {
+        connector_key: "github".into(),
+        headers,
+        payload: json!({}),
+    })
+    .unwrap();
+    assert_eq!(parse["headers"]["x-hub-signature-256"], "sha256=feedface");
+    let legacy: WebhookParseResponse =
+        serde_json::from_value(json!({"idempotencyKey":"k","sanitized":{}})).unwrap();
+    assert!(legacy.triggers.is_empty());
+    let tagged: WebhookParseResponse = serde_json::from_value(
+        json!({"idempotencyKey":"k","sanitized":{},"triggers":["issues.opened"]}),
+    )
+    .unwrap();
+    assert_eq!(tagged.triggers, vec!["issues.opened".to_owned()]);
 }

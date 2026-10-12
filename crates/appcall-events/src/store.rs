@@ -241,6 +241,13 @@ impl<'a> PgEvents<'a> {
             columns.push("provider_event_key");
             params.push(&provider_event_key);
         }
+        if webhook_triggers_column_exists(&mut tx)? {
+            columns.push("triggers");
+            params.push(&parsed.triggers);
+        } else if !parsed.triggers.is_empty() {
+            // Never silently drop parser-derived triggers on an old schema.
+            return Err(Error::Storage);
+        }
         let placeholders = (1..=params.len())
             .map(|position| format!("${position}"))
             .collect::<Vec<_>>()
@@ -290,6 +297,9 @@ impl<'a> PgEvents<'a> {
     }
     fn page(&mut self, p: &Principal, r: &ListRequest, forward: bool) -> Result<EventPage> {
         authorize(p)?;
+        if !r.trigger.is_empty() && !crate::valid_triggers(std::slice::from_ref(&r.trigger)) {
+            return Err(Error::Invalid);
+        }
         let limit = if r.limit == 0 {
             if forward {
                 100
@@ -312,27 +322,39 @@ impl<'a> PgEvents<'a> {
                 }
             }
         }
-        let sql = if forward {
-            "SELECT * FROM webhook_events WHERE project_id=$1 AND ($2::text IS NULL OR external_account_id=$2) AND ($3::text='' OR connection_id=$3) AND ($4::text='' OR connector=$4) AND ($5::text='' OR operation=$5) AND stream_position>$6 AND ($7::timestamptz IS NULL OR (created_at,id)>($7,$8::text)) ORDER BY stream_position LIMIT $9"
+        // The trigger predicate is only emitted when requested so that an
+        // unfiltered read keeps working on a schema without the column.
+        let (trigger_clause, trigger_clause_l) = if r.trigger.is_empty() {
+            ("", "")
         } else {
-            "WITH snapshot AS (SELECT l.stream_position AS snapshot_position,l.id AS snapshot_id FROM webhook_events l WHERE l.project_id=$1 AND ($2::text IS NULL OR l.external_account_id=$2) AND l.stream_position IS NOT NULL ORDER BY l.stream_position DESC LIMIT 1) SELECT page.*,snapshot.snapshot_position,snapshot.snapshot_id FROM snapshot LEFT JOIN LATERAL (SELECT l.* FROM webhook_events l WHERE l.project_id=$1 AND ($2::text IS NULL OR l.external_account_id=$2) AND ($3::text='' OR l.connection_id=$3) AND ($4::text='' OR l.connector=$4) AND ($5::text='' OR l.operation=$5) AND l.stream_position>$6 AND ($7::timestamptz IS NULL OR (l.created_at,l.id)<($7,$8::text)) ORDER BY l.created_at DESC,l.id DESC LIMIT $9) page ON TRUE"
+            (
+                " AND $10::text=ANY(triggers)",
+                " AND $10::text=ANY(l.triggers)",
+            )
         };
+        let sql = if forward {
+            format!("SELECT * FROM webhook_events WHERE project_id=$1 AND ($2::text IS NULL OR external_account_id=$2) AND ($3::text='' OR connection_id=$3) AND ($4::text='' OR connector=$4) AND ($5::text='' OR operation=$5){trigger_clause} AND stream_position>$6 AND ($7::timestamptz IS NULL OR (created_at,id)>($7,$8::text)) ORDER BY stream_position LIMIT $9")
+        } else {
+            format!("WITH snapshot AS (SELECT l.stream_position AS snapshot_position,l.id AS snapshot_id FROM webhook_events l WHERE l.project_id=$1 AND ($2::text IS NULL OR l.external_account_id=$2) AND l.stream_position IS NOT NULL ORDER BY l.stream_position DESC LIMIT 1) SELECT page.*,snapshot.snapshot_position,snapshot.snapshot_id FROM snapshot LEFT JOIN LATERAL (SELECT l.* FROM webhook_events l WHERE l.project_id=$1 AND ($2::text IS NULL OR l.external_account_id=$2) AND ($3::text='' OR l.connection_id=$3) AND ($4::text='' OR l.connector=$4) AND ($5::text='' OR l.operation=$5){trigger_clause_l} AND l.stream_position>$6 AND ($7::timestamptz IS NULL OR (l.created_at,l.id)<($7,$8::text)) ORDER BY l.created_at DESC,l.id DESC LIMIT $9) page ON TRUE")
+        };
+        let fetch = (limit + 1) as i64;
+        let mut params: Vec<&(dyn ToSql + Sync)> = vec![
+            &p.project_id,
+            &p.brand_id,
+            &r.connection_id,
+            &r.connector,
+            &r.operation,
+            &position,
+            &at,
+            &id,
+            &fetch,
+        ];
+        if !r.trigger.is_empty() {
+            params.push(&r.trigger);
+        }
         let rows = self
             .client
-            .query(
-                sql,
-                &[
-                    &p.project_id,
-                    &p.brand_id,
-                    &r.connection_id,
-                    &r.connector,
-                    &r.operation,
-                    &position,
-                    &at,
-                    &id,
-                    &((limit + 1) as i64),
-                ],
-            )
+            .query(&sql, &params)
             .map_err(|_| Error::Storage)?;
         let snapshot_cursor = if forward {
             String::new()
@@ -510,6 +532,15 @@ fn connection_revision_snapshot(
     Ok(Some(revision))
 }
 
+fn webhook_triggers_column_exists(tx: &mut Transaction<'_>) -> Result<bool> {
+    tx.query_one(
+        "SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema=current_schema() AND table_name='webhook_events' AND column_name='triggers')",
+        &[],
+    )
+    .map(|row| row.get(0))
+    .map_err(|_| Error::Storage)
+}
+
 fn connection_revision_column_exists(tx: &mut Transaction<'_>) -> Result<bool> {
     tx.query_one(
         "SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema=current_schema() AND table_name='connections' AND column_name='connection_revision')",
@@ -626,6 +657,16 @@ fn event(row: Row) -> Result<Event> {
         payload: row.try_get("payload").map_err(|_| Error::Storage)?,
         created_at: row.try_get("created_at").map_err(|_| Error::Storage)?,
         stream_position: row.try_get("stream_position").map_err(|_| Error::Storage)?,
+        // Rows from a schema without the column, and rows stored before
+        // trigger tagging (NULL under POLL-1's nullable definition), read
+        // as untriggered.
+        triggers: if row.columns().iter().any(|c| c.name() == "triggers") {
+            row.try_get::<_, Option<Vec<String>>>("triggers")
+                .map_err(|_| Error::Storage)?
+                .unwrap_or_default()
+        } else {
+            Vec::new()
+        },
     })
 }
 fn ensure_current_connection(tx: &mut Transaction<'_>, e: &Event) -> Result<()> {

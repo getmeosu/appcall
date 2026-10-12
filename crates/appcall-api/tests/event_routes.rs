@@ -1,3 +1,6 @@
+#[path = "github_served/mod.rs"]
+mod github_served;
+
 use appcall_api::{
     event_routes::{public_exact, EventRoutes},
     Request,
@@ -806,4 +809,325 @@ fn retiring_events(schema: &str, pids: &std::sync::Mutex<Vec<i32>>) -> RetiringE
         healthy: Arc::new(std::sync::atomic::AtomicBool::new(true)),
         stop: tokio::sync::watch::channel(false).0,
     }
+}
+
+/// HMAC-SHA256 (RFC 2104) over the exact bytes, hex encoded as GitHub sends it.
+fn github_signature(secret: &[u8], body: &[u8]) -> String {
+    use sha2::{Digest, Sha256};
+    let mut key = [0u8; 64];
+    if secret.len() > 64 {
+        key[..32].copy_from_slice(&Sha256::digest(secret));
+    } else {
+        key[..secret.len()].copy_from_slice(secret);
+    }
+    let pad = |byte: u8| key.iter().map(|k| k ^ byte).collect::<Vec<_>>();
+    let inner = Sha256::new()
+        .chain_update(pad(0x36))
+        .chain_update(body)
+        .finalize();
+    let outer = Sha256::new()
+        .chain_update(pad(0x5c))
+        .chain_update(inner)
+        .finalize();
+    format!(
+        "sha256={}",
+        outer.iter().map(|b| format!("{b:02x}")).collect::<String>()
+    )
+}
+
+struct BunRunner(std::process::Child, String);
+impl BunRunner {
+    fn start() -> Self {
+        use std::io::BufRead;
+        let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+        let mut child = std::process::Command::new("bun")
+            .current_dir(&root)
+            .args(["run", "runner/bun/src/index.ts"])
+            .env("APPCALL_RUNNER_HOST", "127.0.0.1")
+            .env("APPCALL_RUNNER_PORT", "0")
+            .env("APPCALL_RUNNER_TOKEN", "runner-token")
+            .stdout(std::process::Stdio::piped())
+            .stderr(std::process::Stdio::null())
+            .spawn()
+            .expect("Bun is required for the GitHub webhook end-to-end test");
+        let stdout = child.stdout.take().unwrap();
+        let (tx, rx) = std::sync::mpsc::sync_channel(1);
+        std::thread::spawn(move || {
+            for line in std::io::BufReader::new(stdout)
+                .lines()
+                .map_while(|l| l.ok())
+            {
+                let Ok(message) = serde_json::from_str::<Value>(&line) else {
+                    continue;
+                };
+                if message["event"] == "started" && message["component"] == "runner" {
+                    let _ = tx.send(message["port"].as_u64());
+                    return;
+                }
+            }
+        });
+        match rx.recv_timeout(Duration::from_secs(60)) {
+            Ok(Some(port)) => Self(child, format!("http://127.0.0.1:{port}")),
+            _ => {
+                let _ = child.kill();
+                let _ = child.wait();
+                panic!("Bun runner did not start");
+            }
+        }
+    }
+}
+impl Drop for BunRunner {
+    fn drop(&mut self) {
+        let _ = self.0.kill();
+        let _ = self.0.wait();
+    }
+}
+
+#[test]
+#[ignore = "requires isolated PostgreSQL and Bun runner"]
+fn github_signed_webhook_reaches_runner_and_persists_filterable_triggers() {
+    let mut db = connect("");
+    let schema = format!("github_hook_{}", uuid::Uuid::new_v4().simple());
+    db.batch_execute(&format!(
+        "CREATE SCHEMA {schema}; SET search_path TO {schema}"
+    ))
+    .unwrap();
+    for sql in [
+        include_str!("../../../migrations/202605140001_init.sql"),
+        include_str!("../../../migrations/202605290001_connections_ownership.sql"),
+        include_str!("../../../migrations/202605290003_usage_brand_dim.sql"),
+        include_str!("../../../migrations/202605290004_connections_owner_check.sql"),
+        include_str!("../../../migrations/202609040001_sync_job_terminal_failure.sql"),
+        include_str!("../../../migrations/202609070001_event_outbox.sql"),
+        include_str!("../../../migrations/202609110001_event_connection_dedup.sql"),
+        include_str!("../../../migrations/202609120001_connection_revision.sql"),
+        include_str!("../../../migrations/202609120002_connection_generation.sql"),
+        include_str!("../../../migrations/202610120002_poll_state.sql"),
+    ] {
+        db.batch_execute(sql).unwrap();
+    }
+    let hook_secret = "fixture-github-hook-secret";
+    let mut store = Store::new(connect(&schema), LocalProvider::new(&[7; 32]).unwrap());
+    db.batch_execute("INSERT INTO projects(id,name) VALUES('p','p')")
+        .unwrap();
+    store
+        .store_secret(
+            "p",
+            "gh-secret",
+            "oauth2",
+            format!(r#"{{"accessToken":"synthetic-token","webhookSecret":"{hook_secret}"}}"#)
+                .as_bytes(),
+        )
+        .unwrap();
+    store
+        .store_secret("p", "gh-plain", "oauth2", br#"{"accessToken":"synthetic"}"#)
+        .unwrap();
+    db.batch_execute("INSERT INTO connections(id,project_id,connector,auth_type,status,credential_owner,external_account_id,secret_ref_id) VALUES('gh','p','github','oauth2','active','brand','brand','gh-secret'),('gh-nosecret','p','github','oauth2','active','brand','brand','gh-plain')").unwrap();
+    let bun = BunRunner::start();
+    let runner =
+        appcall_runner_client::RunnerClient::new(&bun.1, "runner-token", Default::default())
+            .unwrap();
+    let routes = EventRoutes::new(connect(&schema), store, runner, None);
+    let principal = Principal::project("p").unwrap();
+    // GitHub signs its own compact serialization; this deliberately differs
+    // from serde_json's output so a re-serialized body cannot verify.
+    let body = br#"{"action": "opened", "issue": {"number": 7}, "repository": {"id": 1, "full_name": "o/r"}, "sender": {"id": 2, "login": "u"}}"#.to_vec();
+    let request = |connection: &str, body: &[u8], headers: Vec<(&str, String)>| Request {
+        method: "POST".into(),
+        uri: format!("/v1/connections/{connection}/webhooks/github"),
+        headers: headers
+            .into_iter()
+            .map(|(k, v)| (k.to_owned(), v))
+            .chain([("Content-Type".to_owned(), "application/json".to_owned())])
+            .collect(),
+        body: body.to_vec(),
+    };
+    let signed = |delivery: &str, _body: &[u8], signature: String| {
+        vec![
+            ("X-GitHub-Event", "issues".to_owned()),
+            ("X-GitHub-Delivery", delivery.to_owned()),
+            ("X-Hub-Signature-256", signature),
+        ]
+    };
+    let good = github_signature(hook_secret.as_bytes(), &body);
+    let runtime = tokio::runtime::Runtime::new().unwrap();
+    runtime.block_on(async {
+        let reject = |response: appcall_api::Result<Option<appcall_api::Response>>| {
+            assert_eq!(response.unwrap_err().code, "WEBHOOK_SIGNATURE_INVALID")
+        };
+        // Tampered body under a valid signature.
+        let mut tampered = body.clone();
+        tampered[12] = b'c';
+        reject(
+            routes
+                .handle(
+                    Some(&principal),
+                    &request("gh", &tampered, signed("d-1", &tampered, good.clone())),
+                )
+                .await,
+        );
+        // Wrong secret.
+        reject(
+            routes
+                .handle(
+                    Some(&principal),
+                    &request(
+                        "gh",
+                        &body,
+                        signed("d-1", &body, github_signature(b"wrong", &body)),
+                    ),
+                )
+                .await,
+        );
+        // Missing and malformed signature headers.
+        reject(
+            routes
+                .handle(
+                    Some(&principal),
+                    &request(
+                        "gh",
+                        &body,
+                        vec![
+                            ("X-GitHub-Event", "issues".into()),
+                            ("X-GitHub-Delivery", "d-1".into()),
+                        ],
+                    ),
+                )
+                .await,
+        );
+        for malformed in [
+            good.replace("sha256=", "sha1="),
+            good.to_uppercase(),
+            good[..good.len() - 2].to_owned(),
+            format!("{good} "),
+        ] {
+            reject(
+                routes
+                    .handle(
+                        Some(&principal),
+                        &request("gh", &body, signed("d-1", &body, malformed)),
+                    )
+                    .await,
+            );
+        }
+        // Re-serialized JSON of the same document.
+        let reserialized =
+            serde_json::to_vec(&serde_json::from_slice::<Value>(&body).unwrap()).unwrap();
+        assert_ne!(reserialized, body);
+        reject(
+            routes
+                .handle(
+                    Some(&principal),
+                    &request(
+                        "gh",
+                        &reserialized,
+                        signed("d-1", &reserialized, good.clone()),
+                    ),
+                )
+                .await,
+        );
+        // A connection without a webhook secret fails closed.
+        reject(
+            routes
+                .handle(
+                    Some(&principal),
+                    &request("gh-nosecret", &body, signed("d-1", &body, good.clone())),
+                )
+                .await,
+        );
+        let accepted = routes
+            .handle(
+                Some(&principal),
+                &request("gh", &body, signed("d-1", &body, good.clone())),
+            )
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(accepted.status, 202);
+        let event_id = accepted.body["eventId"].as_str().unwrap().to_owned();
+        let redelivery = routes
+            .handle(
+                Some(&principal),
+                &request("gh", &body, signed("d-1", &body, good.clone())),
+            )
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(redelivery.status, 200);
+        assert_eq!(redelivery.body["eventId"], event_id.as_str());
+        let filtered = |trigger: &str| {
+            let routes = &routes;
+            let principal = &principal;
+            let trigger = trigger.to_owned();
+            async move {
+                routes
+                    .poll_filtered(
+                        principal,
+                        "",
+                        &appcall_api::streaming::EventFilters {
+                            trigger,
+                            ..Default::default()
+                        },
+                    )
+                    .await
+                    .unwrap()
+            }
+        };
+        // Canonical Composio slugs from the locked GitHub trigger map.
+        let matched = filtered("GITHUB_ISSUE_CREATED_TRIGGER").await;
+        assert_eq!(matched.len(), 1);
+        assert_eq!(matched[0].id, event_id);
+        assert_eq!(matched[0].operation, "webhook.issues");
+        assert_eq!(
+            matched[0].triggers,
+            vec![
+                "GITHUB_ISSUE_ADDED_EVENT".to_owned(),
+                "GITHUB_ISSUE_CREATED_TRIGGER".to_owned(),
+                "GITHUB_ISSUE_EVENT_OCCURRED_TRIGGER".to_owned(),
+            ]
+        );
+        assert_eq!(matched[0].payload["deliveryId"], "d-1");
+        assert_eq!(
+            filtered("GITHUB_ISSUE_EVENT_OCCURRED_TRIGGER").await.len(),
+            1
+        );
+        assert!(filtered("GITHUB_PULL_REQUEST_CREATED").await.is_empty());
+        assert!(filtered("issues.opened").await.is_empty());
+    });
+    let row = db
+        .query_one(
+            "SELECT triggers, operation FROM webhook_events WHERE connection_id='gh'",
+            &[],
+        )
+        .unwrap();
+    assert_eq!(
+        row.get::<_, Vec<String>>(0),
+        vec![
+            "GITHUB_ISSUE_ADDED_EVENT".to_owned(),
+            "GITHUB_ISSUE_CREATED_TRIGGER".to_owned(),
+            "GITHUB_ISSUE_EVENT_OCCURRED_TRIGGER".to_owned(),
+        ]
+    );
+    assert_eq!(row.get::<_, String>(1), "webhook.issues");
+    let stored = db
+        .query_one("SELECT count(*) FROM webhook_events", &[])
+        .unwrap()
+        .get::<_, i64>(0);
+    assert_eq!(stored, 1);
+    // WH-1 runtime-served proof: the verified delivery has a durable outbox row, so the
+    // slugs it carried are recorded as the `webhook` source of runtime-served.json.
+    let outbox = db
+        .query_one(
+            "SELECT count(*) FROM webhook_outbox o JOIN webhook_events e ON o.project_id=e.project_id AND o.event_id=e.id WHERE e.connection_id='gh'",
+            &[],
+        )
+        .unwrap()
+        .get::<_, i64>(0);
+    assert_eq!(outbox, 1, "the verified delivery has an outbox row");
+    let served: std::collections::BTreeSet<String> =
+        row.get::<_, Vec<String>>(0).into_iter().collect();
+    drop(bun);
+    db.batch_execute(&format!("DROP SCHEMA {schema} CASCADE"))
+        .unwrap();
+    github_served::record("webhook", &served);
 }

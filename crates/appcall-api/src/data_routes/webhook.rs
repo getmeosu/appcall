@@ -12,6 +12,10 @@ pub fn webhook_read(
     let path = url.path();
     let body = if path == "/v1/webhook-events" {
         let q = LogQuery::parse_for(url, LogKind::Webhook)?;
+        let trigger = q.get("trigger");
+        if !trigger.is_empty() && !appcall_events::valid_triggers(&[trigger.to_owned()]) {
+            return Err(ApiError::new("INVALID_REQUEST"));
+        }
         let page = PgEvents::new(client)
             .list(
                 principal,
@@ -21,6 +25,7 @@ pub fn webhook_read(
                     connection_id: q.get("connectionId").into(),
                     connector: q.get("connector").into(),
                     operation: q.get("operation").into(),
+                    trigger: q.get("trigger").into(),
                 },
             )
             .map_err(event_error)?;
@@ -65,6 +70,9 @@ pub fn event_response(event: &Event) -> Value {
     let mut body = json!({"id":event.id,"connectionId":event.connection_id,"connector":event.connector,"createdAt":event.created_at,"payload":event.payload});
     if !event.operation.is_empty() {
         body["operation"] = event.operation.clone().into()
+    }
+    if !event.triggers.is_empty() {
+        body["triggers"] = json!(event.triggers)
     }
     body
 }

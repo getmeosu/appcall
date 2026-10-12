@@ -338,6 +338,8 @@ fn parser_rpc_outbox_worker_retains_event_only_deliveries_after_disconnect() {
                     connector_key: connector.into(),
                     headers: Default::default(),
                     payload: payload.clone(),
+                    raw_body_base64: None,
+                    secret: None,
                 },
             ))
             .unwrap()
@@ -348,6 +350,7 @@ fn parser_rpc_outbox_worker_retains_event_only_deliveries_after_disconnect() {
                 &context,
                 appcall_runner_client::WebhookParseRequest {
                     connector_key: connector.into(),
+                    headers: Default::default(),
                     payload,
                 },
             ))
@@ -365,6 +368,7 @@ fn parser_rpc_outbox_worker_retains_event_only_deliveries_after_disconnect() {
                     idempotency_key: parsed.idempotency_key,
                     operation: parsed.operation,
                     sanitized: parsed.sanitized,
+                    triggers: Vec::new(),
                 },
             )
             .unwrap();
@@ -447,6 +451,7 @@ fn run_event(mode: u8) {
         },
         operation: "messages.list".into(),
         sanitized: json!({"channel":"C123"}),
+        triggers: Vec::new(),
     };
     let accepted = appcall_events::PgEvents::new(&mut db)
         .accept(&claims, &parsed)

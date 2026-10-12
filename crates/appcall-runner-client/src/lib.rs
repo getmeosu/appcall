@@ -122,13 +122,36 @@ pub struct OutputResponse {
 }
 pub type ActionExecuteResponse = OutputResponse;
 pub type SyncListResponse = OutputResponse;
-#[derive(Clone, Debug, Serialize)]
+// Deliberately no derived Debug: headers carry provider signatures and
+// `secret` carries the connection's webhook signing secret.
+#[derive(Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct WebhookVerifyRequest {
     pub connector_key: String,
     #[serde(skip_serializing_if = "std::collections::BTreeMap::is_empty")]
     pub headers: std::collections::BTreeMap<String, String>,
     pub payload: Value,
+    /// Standard base64 of the exact request body bytes, for verifiers that
+    /// sign the raw body (re-serialized JSON never verifies).
+    #[serde(rename = "rawBody", skip_serializing_if = "Option::is_none")]
+    pub raw_body_base64: Option<String>,
+    /// The connection's webhook signing secret. Never logged.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub secret: Option<String>,
+}
+impl fmt::Debug for WebhookVerifyRequest {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("WebhookVerifyRequest")
+            .field("connector_key", &self.connector_key)
+            .field("headers", &self.headers.keys().collect::<Vec<_>>())
+            .field("payload", &"<redacted>")
+            .field(
+                "raw_body_base64",
+                &self.raw_body_base64.as_ref().map(|_| "<redacted>"),
+            )
+            .field("secret", &self.secret.as_ref().map(|_| "<redacted>"))
+            .finish()
+    }
 }
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct WebhookVerifyResponse {
@@ -138,6 +161,9 @@ pub struct WebhookVerifyResponse {
 #[serde(rename_all = "camelCase")]
 pub struct WebhookParseRequest {
     pub connector_key: String,
+    /// Lower-cased request headers (for example `x-github-event`).
+    #[serde(skip_serializing_if = "std::collections::BTreeMap::is_empty")]
+    pub headers: std::collections::BTreeMap<String, String>,
     pub payload: Value,
 }
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -147,6 +173,9 @@ pub struct WebhookParseResponse {
     #[serde(default)]
     pub operation: String,
     pub sanitized: Value,
+    /// Trigger names derived by the parser; older runners omit the field.
+    #[serde(default)]
+    pub triggers: Vec<String>,
 }
 
 // Deliberately no derived Debug: reqwest and bearer configuration are private.

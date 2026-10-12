@@ -28,6 +28,12 @@ pub fn sse_frame(event: &Value) -> Result<String> {
             body[target] = event[source].clone()
         }
     }
+    if let Some(triggers) = event
+        .get("triggers")
+        .filter(|t| t.as_array().is_some_and(|t| !t.is_empty()))
+    {
+        body["triggers"] = triggers.clone()
+    }
     if let Some(payload) = event.get("payload") {
         body["payload"] = payload.clone()
     }
@@ -53,6 +59,7 @@ pub fn sse_filters(url: &url::Url) -> Result<crate::streaming::EventFilters> {
         connector: values.get("connector").cloned().unwrap_or_default(),
         connection_id: values.get("connectionId").cloned().unwrap_or_default(),
         operation: values.get("operation").cloned().unwrap_or_default(),
+        trigger: values.get("trigger").cloned().unwrap_or_default(),
     };
     filters.validate()?;
     Ok(filters)

@@ -57,6 +57,7 @@ fn parsed(id: &str) -> ParsedWebhook {
         idempotency_key: id.into(),
         operation: "messages.list".into(),
         sanitized: json!({"channel":"C123","safe":true}),
+        triggers: Vec::new(),
     }
 }
 
@@ -271,6 +272,7 @@ fn connection_scoped_identity_keeps_public_delivery_and_usage_keys_consistent() 
                     idempotency_key: "same-provider-key".into(),
                     operation: String::new(),
                     sanitized: json!({"crossProject":true}),
+                    triggers: Vec::new(),
                 },
             )
             .unwrap();
@@ -896,6 +898,7 @@ fn event_dedup_migration_rolls_back_atomically_and_preserves_legacy_reads() {
                         idempotency_key: id.into(),
                         operation: String::new(),
                         sanitized: json!({}),
+                        triggers: Vec::new(),
                     },
                 )
                 .unwrap_err(),
@@ -976,6 +979,7 @@ fn provider_keys_fail_closed_until_dedup_column_exists() {
                 idempotency_key: String::new(),
                 operation: String::new(),
                 sanitized: json!({}),
+                triggers: Vec::new(),
             },
         )
         .unwrap();
@@ -1020,6 +1024,7 @@ fn event_only_webhooks_retain_usage_and_replay_without_sync_jobs() {
                         idempotency_key: (*event_id).into(),
                         operation: (*operation).into(),
                         sanitized: payload.clone(),
+                        triggers: Vec::new(),
                     },
                 )
                 .unwrap();
@@ -1541,4 +1546,99 @@ fn acceptance_fences_connection_identity_verified_before_provider_rpc() {
     assert!(PgEvents::new(&mut db.client)
         .accept_for_connection(&claims("a"), &parsed("fresh"), &snapshot, revision)
         .is_ok());
+}
+
+fn triggered(id: &str, triggers: &[&str]) -> ParsedWebhook {
+    ParsedWebhook {
+        idempotency_key: id.into(),
+        operation: String::new(),
+        sanitized: json!({"safe":true}),
+        triggers: triggers.iter().map(|t| (*t).to_owned()).collect(),
+    }
+}
+
+#[test]
+#[ignore = "requires isolated APPCALL_ENGINE_POSTGRES_URL"]
+fn triggers_round_trip_filter_and_legacy_rows_read_empty() {
+    let mut db = Db::new();
+    let p = brand("brand-a");
+    // Pre-migration schema: untriggered events still ingest and read, while
+    // parser-derived triggers are never silently dropped.
+    let legacy = {
+        let mut store = PgEvents::new(&mut db.client);
+        let legacy = store
+            .accept(&claims("a"), &triggered("legacy", &[]))
+            .unwrap();
+        assert_eq!(
+            store
+                .accept(&claims("a"), &triggered("early", &["issues.opened"]))
+                .unwrap_err(),
+            Error::Storage
+        );
+        let page = store.stream(&p, &ListRequest::default()).unwrap();
+        assert_eq!(page.events.len(), 1);
+        assert!(page.events[0].triggers.is_empty());
+        legacy
+    };
+    // POLL-1 owns the column (OXIDE-WH-1 ships no migration of its own).
+    db.client
+        .batch_execute(include_str!(
+            "../../../migrations/202610120002_poll_state.sql"
+        ))
+        .unwrap();
+    let mut store = PgEvents::new(&mut db.client);
+    assert!(store.get(&p, &legacy.event_id).unwrap().triggers.is_empty());
+    let opened = store
+        .accept(
+            &claims("a"),
+            &triggered("opened", &["issues.opened", "issues"]),
+        )
+        .unwrap();
+    let closed = store
+        .accept(&claims("a"), &triggered("closed", &["issues.closed"]))
+        .unwrap();
+    assert_eq!(
+        store.get(&p, &opened.event_id).unwrap().triggers,
+        vec!["issues.opened".to_owned(), "issues".to_owned()]
+    );
+    let ids = |page: EventPage| page.events.into_iter().map(|e| e.id).collect::<Vec<_>>();
+    let filter = |trigger: &str| ListRequest {
+        trigger: trigger.into(),
+        ..Default::default()
+    };
+    assert_eq!(
+        ids(store.stream(&p, &filter("issues.opened")).unwrap()),
+        vec![opened.event_id.clone()]
+    );
+    assert_eq!(
+        ids(store.stream(&p, &filter("issues")).unwrap()),
+        vec![opened.event_id.clone()]
+    );
+    assert_eq!(
+        ids(store.list(&p, &filter("issues.closed")).unwrap()),
+        vec![closed.event_id.clone()]
+    );
+    assert!(store
+        .stream(&p, &filter("issues.reopened"))
+        .unwrap()
+        .events
+        .is_empty());
+    assert_eq!(
+        ids(store.stream(&p, &ListRequest::default()).unwrap()),
+        vec![legacy.event_id, opened.event_id, closed.event_id]
+    );
+    assert_eq!(
+        store.stream(&p, &filter("bad\ntrigger")).unwrap_err(),
+        Error::Invalid
+    );
+    for invalid in [
+        triggered("empty", &[""]),
+        triggered("dup", &["issues", "issues"]),
+        triggered("control", &["issues\u{7}"]),
+    ] {
+        assert_eq!(
+            store.accept(&claims("a"), &invalid).unwrap_err(),
+            Error::Invalid
+        );
+    }
 }
