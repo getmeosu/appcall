@@ -1,3 +1,4 @@
+import { mailchimpCredential, type MailchimpCredential } from "./oauth";
 import { createMailchimpClient, parseMailchimpRateLimit, isRecord } from "./http";
 import { normalizeTemplate, parseTemplatesResponse } from "./objects";
 import type { NormalizedTemplate } from "./objects";
@@ -18,8 +19,8 @@ export function validateGetTemplateInput(input: unknown): GetTemplateInput {
   return { templateId: requireString(input.templateId, "templateId") };
 }
 
-export function createTemplatesClient(options: { apiKey: string; fetch?: typeof fetch; operation?: string }) {
-  const client = createMailchimpClient({ apiKey: options.apiKey, fetch: options.fetch, operation: options.operation ?? "templates.list" });
+export function createTemplatesClient(options: MailchimpCredential & { fetch?: typeof fetch; operation?: string }) {
+  const client = createMailchimpClient({ ...mailchimpCredential(options as Record<string, unknown>), fetch: options.fetch, operation: options.operation ?? "templates.list" });
   return {
     async listTemplates(input: unknown): Promise<{ ok: true; templates: NormalizedTemplate[] } | { ok: false; error: { code: string; message: string; retryAfterSeconds?: number } }> {
       validateListTemplatesInput(input);

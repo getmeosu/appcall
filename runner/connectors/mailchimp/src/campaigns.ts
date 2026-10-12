@@ -1,3 +1,4 @@
+import { mailchimpCredential, type MailchimpCredential } from "./oauth";
 import { createMailchimpClient, parseMailchimpRateLimit, isRecord } from "./http";
 import { normalizeCampaign } from "./objects";
 import type { NormalizedCampaign } from "./objects";
@@ -72,8 +73,8 @@ export function validateReplicateCampaignInput(input: unknown): ReplicateCampaig
 
 // ─── Client ──────────────────────────────────────────────────────────────────
 
-export function createCampaignsClient(options: { apiKey: string; fetch?: typeof fetch; operation?: string }) {
-  const client = createMailchimpClient({ apiKey: options.apiKey, fetch: options.fetch, operation: options.operation ?? "campaigns.create" });
+export function createCampaignsClient(options: MailchimpCredential & { fetch?: typeof fetch; operation?: string }) {
+  const client = createMailchimpClient({ ...mailchimpCredential(options as Record<string, unknown>), fetch: options.fetch, operation: options.operation ?? "campaigns.create" });
 
   return {
     async createCampaign(input: unknown): Promise<{ ok: true; campaign: NormalizedCampaign } | { ok: false; error: { code: string; message: string; retryAfterSeconds?: number } }> {

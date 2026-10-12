@@ -1,3 +1,4 @@
+import { hasMailchimpCredential, mailchimpCredential } from "./oauth";
 import { missingCredentialFailure } from "../../../bun/src/credentials";
 import { createMailchimpClient, parseMailchimpRateLimit } from "./http";
 import { normalizeContact } from "./objects";
@@ -33,10 +34,10 @@ import { validateListAutomationsInput, validateGetAutomationInput, createAutomat
 export type CreateContactInput = { listId: string; email: string; firstName?: string; lastName?: string; status?: string };
 
 export function createContact(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
-  if (isRecord(input) && typeof input.apiKey === "string") {
+  if (hasMailchimpCredential(input)) {
     const payload = validateCreateContactInput(input);
     const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
-    return createMailchimpClient({ apiKey: input.apiKey, fetch: fetchFn, operation: "contacts.create" })
+    return createMailchimpClient({ ...mailchimpCredential(input), fetch: fetchFn, operation: "contacts.create" })
       .fetchJSON(`/lists/${payload.listId}/members`, {
         method: "POST",
         body: JSON.stringify({
@@ -71,9 +72,9 @@ function validateCreateContactInput(input: unknown): CreateContactInput {
 // ─── lists.members.get ────────────────────────────────────────────────────────
 
 export function getMember(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
-  if (isRecord(input) && typeof input.apiKey === "string") {
+  if (hasMailchimpCredential(input)) {
     const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
-    return createListsClient({ apiKey: input.apiKey, fetch: fetchFn, operation: "lists.members.get" })
+    return createListsClient({ ...mailchimpCredential(input), fetch: fetchFn, operation: "lists.members.get" })
       .getMember(input)
       .then((result) => {
         if (result.ok) return { connector: "mailchimp", action: "lists.members.get", source: "connector", member: result.member };
@@ -89,9 +90,9 @@ export function getMember(input: unknown): Record<string, unknown> | Promise<Rec
 // ─── lists.members.update ─────────────────────────────────────────────────────
 
 export function updateMember(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
-  if (isRecord(input) && typeof input.apiKey === "string") {
+  if (hasMailchimpCredential(input)) {
     const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
-    return createListsClient({ apiKey: input.apiKey, fetch: fetchFn, operation: "lists.members.update" })
+    return createListsClient({ ...mailchimpCredential(input), fetch: fetchFn, operation: "lists.members.update" })
       .updateMember(input)
       .then((result) => {
         if (result.ok) return { connector: "mailchimp", action: "lists.members.update", source: "connector", member: result.member };
@@ -107,9 +108,9 @@ export function updateMember(input: unknown): Record<string, unknown> | Promise<
 // ─── lists.members.upsert ─────────────────────────────────────────────────────
 
 export function upsertMember(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
-  if (isRecord(input) && typeof input.apiKey === "string") {
+  if (hasMailchimpCredential(input)) {
     const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
-    return createListsClient({ apiKey: input.apiKey, fetch: fetchFn, operation: "lists.members.upsert" })
+    return createListsClient({ ...mailchimpCredential(input), fetch: fetchFn, operation: "lists.members.upsert" })
       .upsertMember(input)
       .then((result) => {
         if (result.ok) return { connector: "mailchimp", action: "lists.members.upsert", source: "connector", member: result.member };
@@ -125,9 +126,9 @@ export function upsertMember(input: unknown): Record<string, unknown> | Promise<
 // ─── lists.members.delete ─────────────────────────────────────────────────────
 
 export function deleteMember(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
-  if (isRecord(input) && typeof input.apiKey === "string") {
+  if (hasMailchimpCredential(input)) {
     const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
-    return createListsClient({ apiKey: input.apiKey, fetch: fetchFn, operation: "lists.members.delete" })
+    return createListsClient({ ...mailchimpCredential(input), fetch: fetchFn, operation: "lists.members.delete" })
       .deleteMember(input)
       .then((result) => {
         if (result.ok) return { connector: "mailchimp", action: "lists.members.delete", source: "connector", deleted: true };
@@ -143,9 +144,9 @@ export function deleteMember(input: unknown): Record<string, unknown> | Promise<
 // ─── lists.members.tags.add ───────────────────────────────────────────────────
 
 export function addMemberTags(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
-  if (isRecord(input) && typeof input.apiKey === "string") {
+  if (hasMailchimpCredential(input)) {
     const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
-    return createListsClient({ apiKey: input.apiKey, fetch: fetchFn, operation: "lists.members.tags.add" })
+    return createListsClient({ ...mailchimpCredential(input), fetch: fetchFn, operation: "lists.members.tags.add" })
       .addMemberTags(input)
       .then((result) => {
         if (result.ok) return { connector: "mailchimp", action: "lists.members.tags.add", source: "connector", updated: true };
@@ -161,9 +162,9 @@ export function addMemberTags(input: unknown): Record<string, unknown> | Promise
 // ─── lists.create ─────────────────────────────────────────────────────────────
 
 export function createList(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
-  if (isRecord(input) && typeof input.apiKey === "string") {
+  if (hasMailchimpCredential(input)) {
     const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
-    return createListsClient({ apiKey: input.apiKey, fetch: fetchFn, operation: "lists.create" })
+    return createListsClient({ ...mailchimpCredential(input), fetch: fetchFn, operation: "lists.create" })
       .createList(input)
       .then((result) => {
         if (result.ok) return { connector: "mailchimp", action: "lists.create", source: "connector", audience: result.audience };
@@ -179,9 +180,9 @@ export function createList(input: unknown): Record<string, unknown> | Promise<Re
 // ─── lists.get ────────────────────────────────────────────────────────────────
 
 export function getList(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
-  if (isRecord(input) && typeof input.apiKey === "string") {
+  if (hasMailchimpCredential(input)) {
     const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
-    return createListsClient({ apiKey: input.apiKey, fetch: fetchFn, operation: "lists.get" })
+    return createListsClient({ ...mailchimpCredential(input), fetch: fetchFn, operation: "lists.get" })
       .getList(input)
       .then((result) => {
         if (result.ok) return { connector: "mailchimp", action: "lists.get", source: "connector", audience: result.audience };
@@ -197,9 +198,9 @@ export function getList(input: unknown): Record<string, unknown> | Promise<Recor
 // ─── campaigns.create ─────────────────────────────────────────────────────────
 
 export function createCampaign(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
-  if (isRecord(input) && typeof input.apiKey === "string") {
+  if (hasMailchimpCredential(input)) {
     const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
-    return createCampaignsClient({ apiKey: input.apiKey, fetch: fetchFn, operation: "campaigns.create" })
+    return createCampaignsClient({ ...mailchimpCredential(input), fetch: fetchFn, operation: "campaigns.create" })
       .createCampaign(input)
       .then((result) => {
         if (result.ok) return { connector: "mailchimp", action: "campaigns.create", source: "connector", campaign: result.campaign };
@@ -215,9 +216,9 @@ export function createCampaign(input: unknown): Record<string, unknown> | Promis
 // ─── campaigns.get ────────────────────────────────────────────────────────────
 
 export function getCampaign(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
-  if (isRecord(input) && typeof input.apiKey === "string") {
+  if (hasMailchimpCredential(input)) {
     const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
-    return createCampaignsClient({ apiKey: input.apiKey, fetch: fetchFn, operation: "campaigns.get" })
+    return createCampaignsClient({ ...mailchimpCredential(input), fetch: fetchFn, operation: "campaigns.get" })
       .getCampaign(input)
       .then((result) => {
         if (result.ok) return { connector: "mailchimp", action: "campaigns.get", source: "connector", campaign: result.campaign };
@@ -233,9 +234,9 @@ export function getCampaign(input: unknown): Record<string, unknown> | Promise<R
 // ─── campaigns.send ───────────────────────────────────────────────────────────
 
 export function sendCampaign(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
-  if (isRecord(input) && typeof input.apiKey === "string") {
+  if (hasMailchimpCredential(input)) {
     const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
-    return createCampaignsClient({ apiKey: input.apiKey, fetch: fetchFn, operation: "campaigns.send" })
+    return createCampaignsClient({ ...mailchimpCredential(input), fetch: fetchFn, operation: "campaigns.send" })
       .sendCampaign(input)
       .then((result) => {
         if (result.ok) return { connector: "mailchimp", action: "campaigns.send", source: "connector", sent: true };
@@ -249,9 +250,9 @@ export function sendCampaign(input: unknown): Record<string, unknown> | Promise<
 }
 
 export function unscheduleCampaign(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
-  if (isRecord(input) && typeof input.apiKey === "string") {
+  if (hasMailchimpCredential(input)) {
     const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
-    return createCampaignsClient({ apiKey: input.apiKey, fetch: fetchFn, operation: "campaigns.unschedule" })
+    return createCampaignsClient({ ...mailchimpCredential(input), fetch: fetchFn, operation: "campaigns.unschedule" })
       .unscheduleCampaign(input)
       .then((result) => {
         if (result.ok) return { connector: "mailchimp", action: "campaigns.unschedule", source: "connector", unscheduled: true };
@@ -264,9 +265,9 @@ export function unscheduleCampaign(input: unknown): Record<string, unknown> | Pr
 }
 
 export function scheduleCampaign(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
-  if (isRecord(input) && typeof input.apiKey === "string") {
+  if (hasMailchimpCredential(input)) {
     const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
-    return createCampaignsClient({ apiKey: input.apiKey, fetch: fetchFn, operation: "campaigns.schedule" })
+    return createCampaignsClient({ ...mailchimpCredential(input), fetch: fetchFn, operation: "campaigns.schedule" })
       .scheduleCampaign(input)
       .then((result) => {
         if (result.ok) return { connector: "mailchimp", action: "campaigns.schedule", source: "connector", scheduled: true };
@@ -279,9 +280,9 @@ export function scheduleCampaign(input: unknown): Record<string, unknown> | Prom
 }
 
 export function deleteCampaign(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
-  if (isRecord(input) && typeof input.apiKey === "string") {
+  if (hasMailchimpCredential(input)) {
     const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
-    return createCampaignsClient({ apiKey: input.apiKey, fetch: fetchFn, operation: "campaigns.delete" })
+    return createCampaignsClient({ ...mailchimpCredential(input), fetch: fetchFn, operation: "campaigns.delete" })
       .deleteCampaign(input)
       .then((result) => {
         if (result.ok) return { connector: "mailchimp", action: "campaigns.delete", source: "connector", deleted: true };
@@ -294,9 +295,9 @@ export function deleteCampaign(input: unknown): Record<string, unknown> | Promis
 }
 
 export function replicateCampaign(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
-  if (isRecord(input) && typeof input.apiKey === "string") {
+  if (hasMailchimpCredential(input)) {
     const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
-    return createCampaignsClient({ apiKey: input.apiKey, fetch: fetchFn, operation: "campaigns.replicate" })
+    return createCampaignsClient({ ...mailchimpCredential(input), fetch: fetchFn, operation: "campaigns.replicate" })
       .replicateCampaign(input)
       .then((result) => {
         if (result.ok) return { connector: "mailchimp", action: "campaigns.replicate", source: "connector", campaign: result.campaign };
@@ -309,9 +310,9 @@ export function replicateCampaign(input: unknown): Record<string, unknown> | Pro
 }
 
 export function updateList(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
-  if (isRecord(input) && typeof input.apiKey === "string") {
+  if (hasMailchimpCredential(input)) {
     const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
-    return createListsClient({ apiKey: input.apiKey, fetch: fetchFn, operation: "lists.update" })
+    return createListsClient({ ...mailchimpCredential(input), fetch: fetchFn, operation: "lists.update" })
       .updateList(input)
       .then((result) => {
         if (result.ok) return { connector: "mailchimp", action: "lists.update", source: "connector", audience: result.audience };
@@ -324,9 +325,9 @@ export function updateList(input: unknown): Record<string, unknown> | Promise<Re
 }
 
 export function deleteList(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
-  if (isRecord(input) && typeof input.apiKey === "string") {
+  if (hasMailchimpCredential(input)) {
     const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
-    return createListsClient({ apiKey: input.apiKey, fetch: fetchFn, operation: "lists.delete" })
+    return createListsClient({ ...mailchimpCredential(input), fetch: fetchFn, operation: "lists.delete" })
       .deleteList(input)
       .then((result) => {
         if (result.ok) return { connector: "mailchimp", action: "lists.delete", source: "connector", deleted: true };
@@ -339,9 +340,9 @@ export function deleteList(input: unknown): Record<string, unknown> | Promise<Re
 }
 
 export function createMemberNote(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
-  if (isRecord(input) && typeof input.apiKey === "string") {
+  if (hasMailchimpCredential(input)) {
     const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
-    return createListsClient({ apiKey: input.apiKey, fetch: fetchFn, operation: "members.notes.create" })
+    return createListsClient({ ...mailchimpCredential(input), fetch: fetchFn, operation: "members.notes.create" })
       .createMemberNote(input)
       .then((result) => {
         if (result.ok) return { connector: "mailchimp", action: "members.notes.create", source: "connector", note: result.note };
@@ -354,9 +355,9 @@ export function createMemberNote(input: unknown): Record<string, unknown> | Prom
 }
 
 export function listTemplates(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
-  if (isRecord(input) && typeof input.apiKey === "string") {
+  if (hasMailchimpCredential(input)) {
     const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
-    return createTemplatesClient({ apiKey: input.apiKey, fetch: fetchFn, operation: "templates.list" })
+    return createTemplatesClient({ ...mailchimpCredential(input), fetch: fetchFn, operation: "templates.list" })
       .listTemplates(input)
       .then((result) => {
         if (result.ok) return { connector: "mailchimp", action: "templates.list", source: "connector", templates: result.templates };
@@ -369,9 +370,9 @@ export function listTemplates(input: unknown): Record<string, unknown> | Promise
 }
 
 export function getTemplate(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
-  if (isRecord(input) && typeof input.apiKey === "string") {
+  if (hasMailchimpCredential(input)) {
     const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
-    return createTemplatesClient({ apiKey: input.apiKey, fetch: fetchFn, operation: "templates.get" })
+    return createTemplatesClient({ ...mailchimpCredential(input), fetch: fetchFn, operation: "templates.get" })
       .getTemplate(input)
       .then((result) => {
         if (result.ok) return { connector: "mailchimp", action: "templates.get", source: "connector", template: result.template };
@@ -384,9 +385,9 @@ export function getTemplate(input: unknown): Record<string, unknown> | Promise<R
 }
 
 export function getReportSummary(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
-  if (isRecord(input) && typeof input.apiKey === "string") {
+  if (hasMailchimpCredential(input)) {
     const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
-    return createReportsClient({ apiKey: input.apiKey, fetch: fetchFn, operation: "reports.summary" })
+    return createReportsClient({ ...mailchimpCredential(input), fetch: fetchFn, operation: "reports.summary" })
       .getSummary(input)
       .then((result) => {
         if (result.ok) return { connector: "mailchimp", action: "reports.summary", source: "connector", report: result.report };
@@ -399,9 +400,9 @@ export function getReportSummary(input: unknown): Record<string, unknown> | Prom
 }
 
 export function getReportOpens(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
-  if (isRecord(input) && typeof input.apiKey === "string") {
+  if (hasMailchimpCredential(input)) {
     const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
-    return createReportsClient({ apiKey: input.apiKey, fetch: fetchFn, operation: "reports.opens" })
+    return createReportsClient({ ...mailchimpCredential(input), fetch: fetchFn, operation: "reports.opens" })
       .getOpens(input)
       .then((result) => {
         if (result.ok) return { connector: "mailchimp", action: "reports.opens", source: "connector", opens: result.opens };
@@ -414,9 +415,9 @@ export function getReportOpens(input: unknown): Record<string, unknown> | Promis
 }
 
 export function getReportClicks(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
-  if (isRecord(input) && typeof input.apiKey === "string") {
+  if (hasMailchimpCredential(input)) {
     const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
-    return createReportsClient({ apiKey: input.apiKey, fetch: fetchFn, operation: "reports.clicks" })
+    return createReportsClient({ ...mailchimpCredential(input), fetch: fetchFn, operation: "reports.clicks" })
       .getClicks(input)
       .then((result) => {
         if (result.ok) return { connector: "mailchimp", action: "reports.clicks", source: "connector", clicks: result.clicks };
@@ -429,9 +430,9 @@ export function getReportClicks(input: unknown): Record<string, unknown> | Promi
 }
 
 export function getReportUnsubscribed(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
-  if (isRecord(input) && typeof input.apiKey === "string") {
+  if (hasMailchimpCredential(input)) {
     const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
-    return createReportsClient({ apiKey: input.apiKey, fetch: fetchFn, operation: "reports.unsubscribed" })
+    return createReportsClient({ ...mailchimpCredential(input), fetch: fetchFn, operation: "reports.unsubscribed" })
       .getUnsubscribed(input)
       .then((result) => {
         if (result.ok) return { connector: "mailchimp", action: "reports.unsubscribed", source: "connector", unsubscribed: result.unsubscribed };
@@ -444,9 +445,9 @@ export function getReportUnsubscribed(input: unknown): Record<string, unknown> |
 }
 
 export function listAutomations(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
-  if (isRecord(input) && typeof input.apiKey === "string") {
+  if (hasMailchimpCredential(input)) {
     const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
-    return createAutomationsClient({ apiKey: input.apiKey, fetch: fetchFn, operation: "automations.list" })
+    return createAutomationsClient({ ...mailchimpCredential(input), fetch: fetchFn, operation: "automations.list" })
       .listAutomations(input)
       .then((result) => {
         if (result.ok) return { connector: "mailchimp", action: "automations.list", source: "connector", automations: result.automations };
@@ -459,9 +460,9 @@ export function listAutomations(input: unknown): Record<string, unknown> | Promi
 }
 
 export function getAutomation(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
-  if (isRecord(input) && typeof input.apiKey === "string") {
+  if (hasMailchimpCredential(input)) {
     const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
-    return createAutomationsClient({ apiKey: input.apiKey, fetch: fetchFn, operation: "automations.get" })
+    return createAutomationsClient({ ...mailchimpCredential(input), fetch: fetchFn, operation: "automations.get" })
       .getAutomation(input)
       .then((result) => {
         if (result.ok) return { connector: "mailchimp", action: "automations.get", source: "connector", automation: result.automation };

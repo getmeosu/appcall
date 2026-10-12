@@ -1,3 +1,4 @@
+import { mailchimpCredential, type MailchimpCredential } from "./oauth";
 import { createHash } from "crypto";
 import { createMailchimpClient, parseMailchimpRateLimit, prop, isRecord } from "./http";
 import { normalizeContact, normalizeAudience, normalizeMemberNote } from "./objects";
@@ -135,8 +136,8 @@ export function validateCreateMemberNoteInput(input: unknown): CreateMemberNoteI
 
 // ─── Client ──────────────────────────────────────────────────────────────────
 
-export function createListsClient(options: { apiKey: string; fetch?: typeof fetch; operation?: string }) {
-  const client = createMailchimpClient({ apiKey: options.apiKey, fetch: options.fetch, operation: options.operation ?? "lists.members.get" });
+export function createListsClient(options: MailchimpCredential & { fetch?: typeof fetch; operation?: string }) {
+  const client = createMailchimpClient({ ...mailchimpCredential(options as Record<string, unknown>), fetch: options.fetch, operation: options.operation ?? "lists.members.get" });
 
   return {
     async getMember(input: unknown): Promise<{ ok: true; member: NormalizedContact } | { ok: false; error: { code: string; message: string; retryAfterSeconds?: number } }> {

@@ -896,6 +896,7 @@ import {
   listAutomations as mcListAutomations, getAutomation as mcGetAutomation,
 } from "../../connectors/mailchimp/src/actions";
 import { healthcheck as mailchimpHealthcheck } from "../../connectors/mailchimp/src/healthcheck";
+import { withMailchimpOAuth } from "../../connectors/mailchimp/src/oauth";
 import { executeContactsListSync as listMailchimpContacts, executeAudiencesListSync as listMailchimpAudiences, executeCampaignsListSync as listMailchimpCampaigns } from "../../connectors/mailchimp/src/sync";
 import brevoManifest from "../../connectors/brevo/manifest.json";
 import {
@@ -2813,7 +2814,7 @@ export const defaultConnectorRegistry = createConnectorRegistry(withGitHubPathId
       "myself.get": jiraGetMyself,
       "fields.list": jiraListFields,
     },
-    mailchimp: {
+    mailchimp: withMailchimpOAuth({
       "contacts.create": createMailchimpContact,
       "lists.members.get": mcGetMember,
       "lists.members.update": mcUpdateMember,
@@ -2840,7 +2841,7 @@ export const defaultConnectorRegistry = createConnectorRegistry(withGitHubPathId
       "reports.unsubscribed": mcGetReportUnsubscribed,
       "automations.list": mcListAutomations,
       "automations.get": mcGetAutomation,
-    },
+    }),
     brevo: {
       "account.get": brevoParityActions["account.get"],
       "companies.create": brevoParityActions["companies.create"],

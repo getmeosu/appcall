@@ -57,7 +57,7 @@ async function invoke(
 describe("mailchimp declarative compile", () => {
   test("requires stored host, compiles, and pins open-connector", () => {
     expect(manifest.key).toBe("mailchimp");
-    expect(manifest.version).toBe("0.5.3");
+    expect(manifest.version).toBe("0.5.4");
     expect(manifest.runtime).toBe("bun");
     expect(manifest.auth.type).toBe("oauth2");
     expect(manifest.auth.scopes).toEqual([]);
@@ -65,7 +65,7 @@ describe("mailchimp declarative compile", () => {
     const fields = manifest.auth.setup.fields as Array<{ key: string; required?: boolean; secret?: boolean }>;
     expect(fields.find((field) => field.key === "host")).toMatchObject({ required: true, secret: false });
     expect(manifest.http.baseUrl).toBe("https://{{host}}/3.0");
-    expect(manifest.network.allowedHosts).toEqual(["*.api.mailchimp.com", "{{host}}"]);
+    expect(manifest.network.allowedHosts).toEqual(["*.api.mailchimp.com", "{{host}}", "login.mailchimp.com"]);
     expect(manifest.http.auth).toEqual({
       field: "apiKey",
       in: "header",

@@ -1,3 +1,4 @@
+import { mailchimpCredential, type MailchimpCredential } from "./oauth";
 import { createMailchimpClient, parseMailchimpRateLimit, isRecord } from "./http";
 import { normalizeReport, parseOpensResponse, parseClicksResponse, parseUnsubscribedResponse } from "./objects";
 import type { NormalizedReport, NormalizedOpen, NormalizedClick, NormalizedUnsubscribe } from "./objects";
@@ -9,8 +10,8 @@ export function validateCampaignReportInput(input: unknown): CampaignReportInput
   return { campaignId: requireString(input.campaignId, "campaignId") };
 }
 
-export function createReportsClient(options: { apiKey: string; fetch?: typeof fetch; operation?: string }) {
-  const client = createMailchimpClient({ apiKey: options.apiKey, fetch: options.fetch, operation: options.operation ?? "reports.summary" });
+export function createReportsClient(options: MailchimpCredential & { fetch?: typeof fetch; operation?: string }) {
+  const client = createMailchimpClient({ ...mailchimpCredential(options as Record<string, unknown>), fetch: options.fetch, operation: options.operation ?? "reports.summary" });
   return {
     async getSummary(input: unknown): Promise<{ ok: true; report: NormalizedReport } | { ok: false; error: { code: string; message: string; retryAfterSeconds?: number } }> {
       const payload = validateCampaignReportInput(input);
