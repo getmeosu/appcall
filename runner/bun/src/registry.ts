@@ -1,3 +1,4 @@
+import { splitOperationMetadata } from "./operation-metadata";
 import { withLiveMessageSync } from "./message_sync";
 import { runExecution } from "./execution";
 import {
@@ -4523,6 +4524,8 @@ function unsupportedBudget(spec: OperationSpec | undefined): RegistryFailure | n
 
 function boundedOutput(value: unknown, maxBytes: number | undefined): unknown {
  if(value && typeof (value as any).then==='function')return Promise.resolve(value).then(output=>boundedOutput(output,maxBytes));
- if(typeof maxBytes==='number' && jsonByteLength(value)>maxBytes)throw {code:'OUTPUT_TOO_LARGE',message:'Operation output exceeds the manifest byte limit.'};
+ // PLAT-OUT-1: measure the bytes the server sends, i.e. after the injected
+ // connector/action/source keys move to the envelope (same check as server.ts).
+ if(typeof maxBytes==='number' && jsonByteLength(splitOperationMetadata(value).output)>maxBytes)throw {code:'OUTPUT_TOO_LARGE',message:'Operation output exceeds the manifest byte limit.'};
  return value;
 }
