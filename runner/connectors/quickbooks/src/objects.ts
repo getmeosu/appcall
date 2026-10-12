@@ -11,7 +11,7 @@ export type QBInvoice = {
   TxnStatus?: string;
   CustomerRef?: { name?: string; value?: string };
   DueDate?: string;
-  MetaData?: { CreateTime?: string };
+  MetaData?: { CreateTime?: string; LastUpdatedTime?: string };
   [key: string]: unknown;
 };
 
@@ -21,7 +21,7 @@ export type QBCustomer = {
   PrimaryEmailAddr?: { Address?: string };
   Balance?: number;
   TotalSales?: number;
-  MetaData?: { CreateTime?: string };
+  MetaData?: { CreateTime?: string; LastUpdatedTime?: string };
   [key: string]: unknown;
 };
 
@@ -32,7 +32,7 @@ export type QBPayment = {
   TxnDate?: string;
   PaymentMethodRef?: { name?: string };
   CustomerRef?: { name?: string; value?: string };
-  MetaData?: { CreateTime?: string };
+  MetaData?: { CreateTime?: string; LastUpdatedTime?: string };
   [key: string]: unknown;
 };
 
@@ -200,7 +200,7 @@ function parseQBInvoice(r: Record<string, unknown>): QBInvoice {
     TxnStatus: typeof r.TxnStatus === "string" ? r.TxnStatus : undefined,
     CustomerRef: isRecord(r.CustomerRef) ? { name: typeof r.CustomerRef.name === "string" ? r.CustomerRef.name : undefined, value: typeof r.CustomerRef.value === "string" ? r.CustomerRef.value : undefined } : undefined,
     DueDate: typeof r.DueDate === "string" ? r.DueDate : undefined,
-    MetaData: isRecord(r.MetaData) ? { CreateTime: typeof r.MetaData.CreateTime === "string" ? r.MetaData.CreateTime : undefined } : undefined,
+    MetaData: parseMetaData(r.MetaData),
   };
 }
 
@@ -211,7 +211,7 @@ function parseQBCustomer(r: Record<string, unknown>): QBCustomer {
     PrimaryEmailAddr: isRecord(r.PrimaryEmailAddr) ? { Address: typeof r.PrimaryEmailAddr.Address === "string" ? r.PrimaryEmailAddr.Address : undefined } : undefined,
     Balance: typeof r.Balance === "number" ? r.Balance : undefined,
     TotalSales: typeof r.TotalSales === "number" ? r.TotalSales : undefined,
-    MetaData: isRecord(r.MetaData) ? { CreateTime: typeof r.MetaData.CreateTime === "string" ? r.MetaData.CreateTime : undefined } : undefined,
+    MetaData: parseMetaData(r.MetaData),
   };
 }
 
@@ -223,8 +223,16 @@ function parseQBPayment(r: Record<string, unknown>): QBPayment {
     TxnDate: typeof r.TxnDate === "string" ? r.TxnDate : undefined,
     PaymentMethodRef: isRecord(r.PaymentMethodRef) ? { name: typeof r.PaymentMethodRef.name === "string" ? r.PaymentMethodRef.name : undefined } : undefined,
     CustomerRef: isRecord(r.CustomerRef) ? { name: typeof r.CustomerRef.name === "string" ? r.CustomerRef.name : undefined, value: typeof r.CustomerRef.value === "string" ? r.CustomerRef.value : undefined } : undefined,
-    MetaData: isRecord(r.MetaData) ? { CreateTime: typeof r.MetaData.CreateTime === "string" ? r.MetaData.CreateTime : undefined } : undefined,
+    MetaData: parseMetaData(r.MetaData),
   };
+}
+
+function parseMetaData(value: unknown): { CreateTime?: string; LastUpdatedTime?: string } | undefined {
+  if (!isRecord(value)) return undefined;
+  const meta: { CreateTime?: string; LastUpdatedTime?: string } = {};
+  if (typeof value.CreateTime === "string") meta.CreateTime = value.CreateTime;
+  if (typeof value.LastUpdatedTime === "string") meta.LastUpdatedTime = value.LastUpdatedTime;
+  return meta;
 }
 
 function requireString(value: unknown, field: string): string {
