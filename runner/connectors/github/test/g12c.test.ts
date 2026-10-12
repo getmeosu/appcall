@@ -82,7 +82,7 @@ const opsOf = manifest.operations as Record<string, Record<string, any>>;
 
 describe("github FIX-G12C: G12 GraphQL ops via gqlRequest", () => {
   test("version 0.80.2 at 910 ops; auth.scopes unchanged (per-op scopes only)", () => {
-    expect(manifest.version).toBe("0.80.2");
+    expect(manifest.version).toBe("0.80.3");
     expect(Object.keys(opsOf)).toHaveLength(910);
     expect(manifest.auth.scopes).toEqual(["repo", "read:org", "admin:repo_hook", "admin:org_hook", "gist", "notifications", "admin:org"]);
     expect(manifest.auth.scopes).not.toContain("user");
@@ -272,6 +272,42 @@ describe("github FIX-G12C: G12 GraphQL ops via gqlRequest", () => {
 
   test("dry-run (no token) returns validated payloads", async () => {
     expect(await call("graphql.user_lists.create", { name: "x" })).toMatchObject({ validated: { name: "x" } });
+  });
+});
+
+describe("FIX-G12C graphql.search strict-validation aliases", () => {
+  test("conflicting name/state fields are aliased per fragment and folded back in the output", async () => {
+    const r = recorder([
+      json({
+        data: {
+          search: {
+            issueCount: 2,
+            pageInfo: { hasNextPage: false, endCursor: null, hasPreviousPage: false, startCursor: null },
+            nodes: [
+              { __typename: "Issue", id: "I_1", number: 1, title: "t", url: "u", issueState: "OPEN", createdAt: "c", repository: { nameWithOwner: "o/r" } },
+              { __typename: "PullRequest", id: "PR_1", number: 2, title: "p", url: "u2", pullRequestState: "MERGED", createdAt: "c", repository: { nameWithOwner: "o/r" } },
+              { __typename: "User", id: "U_1", login: "octocat", profileName: null, url: "u3" },
+              { __typename: "Repository", id: "R_1", name: "Hello", nameWithOwner: "o/Hello", url: "u4", description: null, isPrivate: false, stargazerCount: 1 },
+            ],
+          },
+        },
+      }),
+    ]);
+    const out = (await call("graphql.search", { query: "q", type: "ISSUE", accessToken: "t", fetch: r.fetch })) as Record<string, any>;
+    const doc = String(r.seen[0]!.body.query);
+    expect(doc).toContain("... on Issue { id number title url issueState: state ");
+    expect(doc).toContain("... on PullRequest { id number title url pullRequestState: state ");
+    expect(doc).toContain("... on User { id login profileName: name url }");
+    expect(doc).toContain("... on Organization { id login profileName: name url }");
+    // No bare `state` / nullable `name` left to merge against String!/IssueState!.
+    expect(doc).not.toMatch(/on (Issue|PullRequest) \{[^}]*\burl state\b/);
+    expect(doc).not.toMatch(/on (User|Organization) \{ id login name /);
+    expect(out.items).toEqual([
+      { __typename: "Issue", id: "I_1", number: 1, title: "t", url: "u", state: "OPEN", createdAt: "c", repository: { nameWithOwner: "o/r" } },
+      { __typename: "PullRequest", id: "PR_1", number: 2, title: "p", url: "u2", state: "MERGED", createdAt: "c", repository: { nameWithOwner: "o/r" } },
+      { __typename: "User", id: "U_1", login: "octocat", name: null, url: "u3" },
+      { __typename: "Repository", id: "R_1", name: "Hello", nameWithOwner: "o/Hello", url: "u4", description: null, isPrivate: false, stargazerCount: 1 },
+    ]);
   });
 });
 

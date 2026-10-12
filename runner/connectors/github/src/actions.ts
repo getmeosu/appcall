@@ -880,6 +880,20 @@ import {
 } from "./gap_g12c";
 
 import {
+  createGapG13cClient,
+  validateCreateSponsorshipInput,
+  validateCancelSponsorshipInput,
+  validateCreateSponsorsTierInput,
+  validatePublishSponsorsTierInput,
+  validateRetireSponsorsTierInput,
+  validateCreateProjectV2Input,
+  validateClearProjectV2ItemFieldInput,
+  validateAbortRepositoryMigrationInput,
+  validateUpdateSubscriptionInput,
+  validateRunGraphqlQueryInput,
+} from "./gap_g13c";
+
+import {
   createGapG12Client,
   validateAddProjectCollaboratorInput,
   validateAddTeamProjectInput,
@@ -10972,4 +10986,113 @@ export function updateUserListsForItemGraphql(input: unknown): Record<string, un
     });
   }
   return { connector: "github", action: "graphql.user_lists.items.update", source: "connector", validated: validateUpdateUserListsForItemInput(input) };
+}
+
+// ─── FIX-G13C: G13 GraphQL ops via src/graphql.ts gqlRequest ─────────────────
+
+function liveGapG13cClient(input: Record<string, unknown>) {
+  return createGapG13cClient({
+    accessToken: input.accessToken as string,
+    fetch: typeof input.fetch === "function" ? (input.fetch as typeof fetch) : undefined,
+  });
+}
+
+export function createSponsorshipGraphql(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG13cClient(input).createSponsorship(input).then((result) => {
+      if (!result.ok) throwGitHubGraphql(result);
+      return { connector: "github", action: "graphql.sponsorships.create", source: "connector", sponsorship: result.sponsorship };
+    });
+  }
+  return { connector: "github", action: "graphql.sponsorships.create", source: "connector", validated: validateCreateSponsorshipInput(input) };
+}
+
+export function cancelSponsorshipGraphql(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG13cClient(input).cancelSponsorship(input).then((result) => {
+      if (!result.ok) throwGitHubGraphql(result);
+      return { connector: "github", action: "graphql.sponsorships.cancel", source: "connector", cancelled: result.cancelled, sponsorsTier: result.sponsorsTier };
+    });
+  }
+  return { connector: "github", action: "graphql.sponsorships.cancel", source: "connector", validated: validateCancelSponsorshipInput(input) };
+}
+
+export function createSponsorsTierGraphql(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG13cClient(input).createSponsorsTier(input).then((result) => {
+      if (!result.ok) throwGitHubGraphql(result);
+      return { connector: "github", action: "graphql.sponsors.tiers.create", source: "connector", tierId: result.tierId, tier: result.tier };
+    });
+  }
+  return { connector: "github", action: "graphql.sponsors.tiers.create", source: "connector", validated: validateCreateSponsorsTierInput(input) };
+}
+
+export function publishSponsorsTierGraphql(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG13cClient(input).publishSponsorsTier(input).then((result) => {
+      if (!result.ok) throwGitHubGraphql(result);
+      return { connector: "github", action: "graphql.sponsors.tiers.publish", source: "connector", tier: result.tier };
+    });
+  }
+  return { connector: "github", action: "graphql.sponsors.tiers.publish", source: "connector", validated: validatePublishSponsorsTierInput(input) };
+}
+
+export function retireSponsorsTierGraphql(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG13cClient(input).retireSponsorsTier(input).then((result) => {
+      if (!result.ok) throwGitHubGraphql(result);
+      return { connector: "github", action: "graphql.sponsors.tiers.retire", source: "connector", tier: result.tier };
+    });
+  }
+  return { connector: "github", action: "graphql.sponsors.tiers.retire", source: "connector", validated: validateRetireSponsorsTierInput(input) };
+}
+
+export function createProjectV2Graphql(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG13cClient(input).createProjectV2(input).then((result) => {
+      if (!result.ok) throwGitHubGraphql(result);
+      return { connector: "github", action: "graphql.projects_v2.create", source: "connector", projectV2: result.projectV2 };
+    });
+  }
+  return { connector: "github", action: "graphql.projects_v2.create", source: "connector", validated: validateCreateProjectV2Input(input) };
+}
+
+export function clearProjectV2ItemFieldGraphql(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG13cClient(input).clearProjectV2ItemField(input).then((result) => {
+      if (!result.ok) throwGitHubGraphql(result);
+      return { connector: "github", action: "graphql.projects_v2.item_field.clear", source: "connector", item: result.item };
+    });
+  }
+  return { connector: "github", action: "graphql.projects_v2.item_field.clear", source: "connector", validated: validateClearProjectV2ItemFieldInput(input) };
+}
+
+export function abortRepositoryMigrationGraphql(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG13cClient(input).abortRepositoryMigration(input).then((result) => {
+      if (!result.ok) throwGitHubGraphql(result);
+      return { connector: "github", action: "graphql.migrations.abort", source: "connector", success: result.success };
+    });
+  }
+  return { connector: "github", action: "graphql.migrations.abort", source: "connector", validated: validateAbortRepositoryMigrationInput(input) };
+}
+
+export function updateSubscriptionGraphql(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG13cClient(input).updateSubscription(input).then((result) => {
+      if (!result.ok) throwGitHubGraphql(result);
+      return { connector: "github", action: "graphql.subscriptions.update", source: "connector", subscribable: result.subscribable };
+    });
+  }
+  return { connector: "github", action: "graphql.subscriptions.update", source: "connector", validated: validateUpdateSubscriptionInput(input) };
+}
+
+export function runGraphqlQuery(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG13cClient(input).runQuery(input).then((result) => {
+      if (!result.ok) throwGitHubGraphql(result);
+      return { connector: "github", action: "graphql.query", source: "connector", data: result.data };
+    });
+  }
+  return { connector: "github", action: "graphql.query", source: "connector", validated: validateRunGraphqlQueryInput(input) };
 }

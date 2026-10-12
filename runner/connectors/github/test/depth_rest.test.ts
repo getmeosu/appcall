@@ -3,20 +3,10 @@ import manifest from "../manifest.json";
 import coverage from "../fixtures/composio-coverage.json";
 import { compileDeclarativeConnector } from "../../../bun/src/declarative/compile";
 
-// FIX-G12C: the 12 G12 GraphQL ops left this declarative list; they run via src/gap_g12c.ts (test/g12c.test.ts).
+// FIX-G12C / FIX-G13C: the 12 G12 and 10 G13 GraphQL ops left this declarative list; they run via src/gap_g12c.ts / src/gap_g13c.ts (test/g12c.test.ts, test/g13c.test.ts).
 const ADDED = [
   "graphql.discussions.comments.delete",
   "graphql.discussions.delete",
-  "graphql.migrations.abort",
-  "graphql.projects_v2.create",
-  "graphql.projects_v2.item_field.clear",
-  "graphql.query",
-  "graphql.sponsors.tiers.create",
-  "graphql.sponsors.tiers.publish",
-  "graphql.sponsors.tiers.retire",
-  "graphql.sponsorships.cancel",
-  "graphql.sponsorships.create",
-  "graphql.subscriptions.update",
   "rest.apps.check_token",
   "rest.apps.create_from_manifest",
   "rest.apps.delete_authorization",
@@ -55,7 +45,7 @@ const ADDED = [
 
 describe("github full-depth REST additions", () => {
   test("version and runnable request blocks", () => {
-    expect(manifest.version).toBe("0.80.2");
+    expect(manifest.version).toBe("0.80.3");
     expect(Object.keys(manifest.operations)).toHaveLength(910);
     expect(manifest.network.allowedHosts).toContain("models.github.ai");
     for (const key of ADDED) {

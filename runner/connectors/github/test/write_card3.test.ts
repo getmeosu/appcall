@@ -35,7 +35,7 @@ function empty(status: number) {
 
 describe("github write card 3 user writes", () => {
   test("version is 0.79.0 at 852 ops with the write breakdown", () => {
-    expect(manifest.version).toBe("0.80.2");
+    expect(manifest.version).toBe("0.80.3");
     const ops = manifest.operations as Record<string, Record<string, unknown>>;
     expect(Object.keys(ops)).toHaveLength(910);
     const kinds = { action: 0, sync: 0, webhook: 0 };
@@ -49,7 +49,7 @@ describe("github write card 3 user writes", () => {
       }
     }
     expect(kinds).toEqual({ action: 860, sync: 4, webhook: 46 });
-    expect(side).toEqual({ read: 450, write: 395, absent: 15 });
+    expect(side).toEqual({ read: 451, write: 394, absent: 15 });
     expect(String(ops["users.get_authenticated"].description)).toContain("GET /user");
     expect(ops["users.get_authenticated"].sideEffect).toBe("read");
     for (const key of NO_POLICY) {

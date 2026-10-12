@@ -82,7 +82,7 @@ export function createGitHubClient(options: GitHubClientOptions) {
       return { status: response.status, headers: response.headers, body };
     },
 
-    async graphql(query: string, variables: Record<string, unknown> = {}) {
+    async graphql(query: string, variables: Record<string, unknown> = {}, operationName?: string) {
       return this.fetchJSON("/graphql", {
         method: "POST",
         headers: {
@@ -90,7 +90,7 @@ export function createGitHubClient(options: GitHubClientOptions) {
           // Prefer new-format global node ids (U_kgDO…) on every GraphQL call.
           "X-Github-Next-Global-ID": "1",
         },
-        body: JSON.stringify({ query, variables }),
+        body: JSON.stringify(operationName === undefined ? { query, variables } : { query, variables, operationName }),
       });
     },
   };
