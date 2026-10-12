@@ -18,7 +18,7 @@ it("declares secure setup, complete action contracts and write effects", () => {
   });
   expect(m.network.allowedHosts).toEqual(["{{host}}"]);
   expect(m.http.baseUrl).toBe("https://{{host}}/wp-json/wp/v2");
-  expect(m.version).toBe("0.2.0");
+  expect(m.version).toBe("0.2.1");
   expect(Object.keys(m.operations).sort()).toEqual(
     [
       "healthcheck",

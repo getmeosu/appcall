@@ -64,7 +64,7 @@ const COMPOSIO_TOOLS: Record<string, string> = {
 describe("kommo manifest", () => {
   test("keeps origin auth, provenance, and the five live ops", () => {
     expect(manifest.key).toBe("kommo");
-    expect(manifest.version).toBe("0.2.0");
+    expect(manifest.version).toBe("0.2.1");
     expect(manifest.auth.type).toBe("api_key");
     expect(manifest.http.baseUrl).toBe("https://{{subdomain}}.kommo.com");
     expect(manifest.http.auth).toEqual({

@@ -16,6 +16,7 @@ import { createConnectorHttpClient, ConnectorHttpError } from "../http";
 import { maxOperationResponseBytes } from "../budget";
 import { assertSafePathSegment, assertSafePathSegments, isBlankPathValue, isRecord, renderPath, renderTemplate, resolvePath } from "./template";
 import { assertOutputSchema, validateAgainstSchema } from "./validate";
+import { applySetupFieldRules, SetupFieldError, setupFieldRules, type SetupFieldRules } from "./setup_fields";
 import { assertStrictSchema, compileStrictValidator } from "./strict-schema";
 import type {
   CompiledConnector,
@@ -47,6 +48,8 @@ export function isDeclarativeManifest(manifest: unknown): boolean {
 export function compileDeclarativeConnector(manifest: DeclarativeManifest): CompiledConnector {
   assertTemplatedHostsAreDeclared(manifest);
   assertBasicAuthConfiguration(manifest.http?.auth);
+  // SEC-SETUP-1: also refuses a whole-host setup field without a host policy.
+  const setupRules = setupFieldRules(manifest);
   const actions: Record<string, CompiledHandler> = {};
   const syncs: Record<string, CompiledHandler> = {};
   const operations = manifest.operations ?? {};
@@ -64,7 +67,7 @@ export function compileDeclarativeConnector(manifest: DeclarativeManifest): Comp
     if (operation.kind !== "action") {
       continue;
     }
-    actions[operationKey] = compileOperation(manifest, operationKey, operation);
+    actions[operationKey] = compileOperation(manifest, operationKey, operation, setupRules);
   }
 
   return { key: manifest.key, actions, syncs };
@@ -144,6 +147,7 @@ function compileOperation(
   manifest: DeclarativeManifest,
   operationKey: string,
   operation: DeclarativeOperation,
+  setupRules: SetupFieldRules = setupFieldRules(manifest),
 ): CompiledHandler {
   const http: DeclarativeHttp = manifest.http ?? { baseUrl: "" };
   const request: DeclarativeRequest = operation.request ?? {};
@@ -199,7 +203,7 @@ function compileOperation(
       });
     }
 
-    return callProvider(manifest, http, operationKey, operation, request, record, validated);
+    return callProvider(manifest, http, operationKey, operation, request, record, validated, setupRules);
   };
 }
 
@@ -211,10 +215,22 @@ async function callProvider(
   request: DeclarativeRequest,
   input: Record<string, unknown>,
   validated: Record<string, unknown>,
+  setupRules: SetupFieldRules,
 ): Promise<Record<string, unknown>> {
   let url: URL;
   let headers: Record<string, string>;
   let body: string | undefined;
+  try {
+    // SEC-SETUP-1: setup values rendered into the URL (and the allowlist) are
+    // normalized and held to their position before anything renders them. A
+    // value bound for the host fails as the host check always has.
+    input = applySetupFieldRules(setupRules, input);
+  } catch (error) {
+    if (error instanceof SetupFieldError && error.host) {
+      throw { ok: false, code: "OUTBOUND_HOST_NOT_ALLOWED", message: error.message };
+    }
+    throw { ok: false, code: "INVALID_ACTION_INPUT", message: error instanceof Error ? error.message : "Action input is invalid." };
+  }
   try {
     url = buildURL(http, request, input);
     headers = buildHeaders(http, request, input);

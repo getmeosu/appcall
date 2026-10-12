@@ -51,7 +51,7 @@ describe("supportbee manifest", () => {
   it("keeps origin identity and bumps the deepen version", () => {
     expect(manifest.key).toBe("supportbee");
     expect(manifest.runtime).toBe("bun");
-    expect(manifest.version).toBe("0.2.0");
+    expect(manifest.version).toBe("0.2.1");
     expect(manifest.visibility).toBe("public");
     expect(manifest.categories).toEqual(["productivity"]);
     expect(manifest.http.auth.field).toBe("apiKey");

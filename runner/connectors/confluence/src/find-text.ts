@@ -1,5 +1,6 @@
 import { createConnectorHttpClient, ConnectorHttpError } from "../../../bun/src/http";
 import { isRecord } from "../../../bun/src/declarative/template";
+import { normalizeSetupHost, SETUP_HOST_POLICIES } from "../../../bun/src/declarative/setup_fields";
 
 type Match = {
   index: number;
@@ -36,9 +37,16 @@ export function findTextSelections(input: unknown): unknown {
   if (typeof searchText !== "string" || searchText.length === 0) {
     throw { ok: false, code: "INVALID_ACTION_INPUT", message: "search_text is required" };
   }
-  const site = typeof input.site === "string" ? input.site : "";
-  if (site.length === 0) {
+  const rawSite = typeof input.site === "string" ? input.site : "";
+  if (rawSite.length === 0) {
     throw { ok: false, code: "INVALID_ACTION_INPUT", message: "site is required" };
+  }
+  // SEC-SETUP-1: site is <name>.atlassian.net (https:// and trailing slashes tolerated).
+  let site: string;
+  try {
+    site = normalizeSetupHost(rawSite, "site", SETUP_HOST_POLICIES.confluence!.site!);
+  } catch (error) {
+    throw { ok: false, code: "INVALID_ACTION_INPUT", message: error instanceof Error ? error.message : "site is invalid" };
   }
 
   const maxResults = clampInt(input.max_results ?? input.maxResults, 25, 1, 100);

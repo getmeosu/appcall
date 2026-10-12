@@ -5,6 +5,7 @@
 import { ConnectorHttpError, hostIsAllowed } from "../../../bun/src/http";
 import { validateStrictInput } from "../../../bun/src/declarative/strict-schema";
 import { isRecord, renderPath, renderTemplate } from "../../../bun/src/declarative/template";
+import { normalizeSetupHost, SETUP_HOST_POLICIES } from "../../../bun/src/declarative/setup_fields";
 import manifest from "../manifest.json";
 
 type FetchFn = typeof fetch;
@@ -46,11 +47,17 @@ export async function executeTransport(operationKey: string, inputValue: unknown
   }
 
   const accessToken = inputValue.accessToken;
-  const restHost = inputValue.restHost;
   if (typeof accessToken !== "string" || accessToken.length === 0) {
     throw rejected("INVALID_ACTION_INPUT", "accessToken is required");
   }
-  if (typeof restHost !== "string" || !isDnsHost(restHost) || !hostIsAllowed(restHost, [restHost])) {
+  // SEC-SETUP-1: the REST host must be a DocuSign host (docusign.net/.com).
+  let restHost: string;
+  try {
+    restHost = normalizeSetupHost(inputValue.restHost, "restHost", SETUP_HOST_POLICIES.docusign!.restHost!);
+  } catch {
+    throw rejected("OUTBOUND_HOST_NOT_ALLOWED", "Outbound host is not allowed for this connector.");
+  }
+  if (!isDnsHost(restHost) || !hostIsAllowed(restHost, [restHost])) {
     throw rejected("OUTBOUND_HOST_NOT_ALLOWED", "Outbound host is not allowed for this connector.");
   }
 

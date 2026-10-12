@@ -9,7 +9,20 @@
  * so the runner still owns host allowlist, redirect blocking, response size and
  * deadline, plus inject-fetch for tests.
  */
-import { createJobBoardClient, assertSafePathSegment, type JobBoardClient } from "../../_shared/jobboard";
+import { createJobBoardClient, assertHostLabel, assertSafePathSegment, type JobBoardClient } from "../../_shared/jobboard";
+
+/**
+ * SEC-SETUP-1: the Careers Site host is `<company>.recruitee.com`, so there the
+ * company must be one RFC 1123 label (a dotted value used to add labels:
+ * `a.evil.example.recruitee.com`). A scheme, trailing slashes and the
+ * `.recruitee.com` suffix are dropped first so stored spellings keep working.
+ */
+export function careersSubdomain(value: unknown): string {
+  const text = typeof value === "string"
+    ? value.trim().replace(/^https:\/\//i, "").replace(/\/+$/, "").replace(/\.recruitee\.com$/i, "")
+    : value;
+  return assertHostLabel(text, "company");
+}
 import manifest from "../manifest.json";
 
 export interface RecruiteeClientConfig {
@@ -35,7 +48,7 @@ function operationBounds(operation: string | undefined, fallback: string): Opera
 
 /** Careers Site API client — used by jobs.list (NormalizedJob from /offers). */
 export function createClient(config: RecruiteeClientConfig): JobBoardClient {
-  const company = assertSafePathSegment(config.company, "company");
+  const company = careersSubdomain(config.company);
   const bounds = operationBounds(config.operation, "jobs.list");
   return createJobBoardClient({
     provider: "Recruitee",

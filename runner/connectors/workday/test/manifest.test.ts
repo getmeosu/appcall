@@ -14,7 +14,7 @@ function requestOf(key: string): Record<string, unknown> {
 describe("workday manifest", () => {
   test("declares a new oauth2 REST connector with tenant host", () => {
     expect(manifest.key).toBe("workday");
-    expect(manifest.version).toBe("0.2.0");
+    expect(manifest.version).toBe("0.2.1");
     expect(manifest.runtime).toBe("bun");
     expect(manifest.categories).toEqual(["productivity"]);
     expect(manifest.auth.type).toBe("oauth2");

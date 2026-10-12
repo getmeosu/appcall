@@ -18,7 +18,7 @@ function readCases(): any[] {
 
 test("ghost preserves the selected full manifest", () => {
   expect(manifest.key).toBe("ghost");
-  expect(manifest.version).toBe("0.2.0");
+  expect(manifest.version).toBe("0.2.1");
   expect(Object.keys(manifest.operations)).toEqual(expectedOperations);
   for (const operation of Object.values(manifest.operations) as any[]) {
     expect(operation.kind).toBe("action");

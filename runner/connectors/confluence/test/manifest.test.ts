@@ -137,7 +137,7 @@ describe("confluence manifest", () => {
     for (const key of origin) {
       expect(operations[key], key).toBeDefined();
     }
-    expect(manifest.version).toBe("0.4.0");
+    expect(manifest.version).toBe("0.4.1");
     expect(Object.keys(operations)).toHaveLength(73);
     expect(Object.keys(actionOps)).toHaveLength(69);
   });
@@ -263,7 +263,7 @@ describe("confluence manifest", () => {
 describe("confluence first-slice contract", () => {
   test("has required *.atlassian.net host, Basic email:apiToken, pinned provenance, and compiles", () => {
     expect(manifest.key).toBe("confluence");
-    expect(manifest.version).toBe("0.4.0");
+    expect(manifest.version).toBe("0.4.1");
     expect(manifest.runtime).toBe("bun");
     expect(manifest.http.baseUrl).toBe("https://{{site}}/wiki");
     expect(manifest.network.allowedHosts).toEqual(["{{site}}"]);

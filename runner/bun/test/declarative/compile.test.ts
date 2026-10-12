@@ -688,8 +688,10 @@ describe("declarative body-level failures", () => {
 // hostname and the manifest fixes the scheme, so the allowlist entry and
 // url.hostname compare directly and no tenant value can downgrade to http.
 
+// Keyed "gitlab" so its whole-host {{host}} field has a host policy (public);
+// SEC-SETUP-1 refuses to compile one without (see the test below).
 const tenantManifest = {
-  key: "tenant",
+  key: "gitlab",
   name: "Tenant",
   network: { allowedHosts: ["{{host}}"] },
   auth: { setup: { fields: [{ key: "host", required: true }, { key: "apiKey", required: true }] } },
@@ -773,6 +775,12 @@ describe("declarative per-tenant base URLs", () => {
       fetch: recordingFetch(box),
     });
     expect(box.url).toBe("https://acme.atlassian.net/api/v4/projects/1");
+  });
+
+  it("refuses at compile time a whole-host field with no host policy (SEC-SETUP-1)", () => {
+    expect(() =>
+      compileDeclarativeConnector({ ...(tenantManifest as Record<string, unknown>), key: "tenant" } as never),
+    ).toThrow(/SETUP_HOST_POLICIES/);
   });
 
   it("refuses at compile time to template a base URL from an undeclared field", () => {
