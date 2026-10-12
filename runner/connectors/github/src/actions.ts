@@ -892,6 +892,16 @@ import {
   validateUpdateSubscriptionInput,
   validateRunGraphqlQueryInput,
 } from "./gap_g13c";
+import {
+  createGapG14cClient,
+  validateGhecAuditInput,
+  validateGhecOrgInput,
+  validateGhecRoleCreateInput,
+  validateGhecRoleDeleteInput,
+  validateGhecRoleUpdateInput,
+  validateListCommentEditsInput,
+  validateRunGraphqlMutationInput,
+} from "./gap_g14c";
 
 import {
   createGapG12Client,
@@ -10858,6 +10868,15 @@ function throwGitHubGraphql(result: GraphqlError): never {
   if (result.error.code === "CONNECTOR_CAPABILITY_MISSING") {
     throw Object.assign(new Error(result.error.message), { ok: false, ...result.error });
   }
+  if (result.error.partialData !== undefined) {
+    throw {
+      ok: false,
+      code: result.error.code,
+      message: result.error.message,
+      retryAfterSeconds: result.error.retryAfterSeconds,
+      partialData: result.error.partialData,
+    };
+  }
   throwGitHub(result);
 }
 
@@ -11095,4 +11114,60 @@ export function runGraphqlQuery(input: unknown): Record<string, unknown> | Promi
     });
   }
   return { connector: "github", action: "graphql.query", source: "connector", validated: validateRunGraphqlQueryInput(input) };
+}
+
+// ─── FIX-G14C: graphql.mutate + GHEC rest.x.* with per-op requiredScopes ─────
+
+function liveGapG14cClient(input: Record<string, unknown>) {
+  return createGapG14cClient({
+    accessToken: input.accessToken as string,
+    fetch: typeof input.fetch === "function" ? (input.fetch as typeof fetch) : undefined,
+  });
+}
+
+export function runGraphqlMutation(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG14cClient(input).runMutation(input).then((result) => {
+      if (!result.ok) throwGitHubGraphql(result);
+      return { connector: "github", action: "graphql.mutate", source: "connector", data: result.data };
+    });
+  }
+  return { connector: "github", action: "graphql.mutate", source: "connector", validated: validateRunGraphqlMutationInput(input) };
+}
+
+function ghecOp(
+  action: string,
+  validate: (input: unknown) => unknown,
+  call: (client: ReturnType<typeof createGapG14cClient>, input: Record<string, unknown>) => Promise<{ ok: true; status: number; data: unknown } | GraphqlError>,
+) {
+  return (input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> => {
+    if (isRecord(input) && typeof input.accessToken === "string") {
+      return call(liveGapG14cClient(input), input).then((result) => {
+        if (!result.ok) throwGitHubGraphql(result);
+        return { connector: "github", action, source: "connector", data: result.data };
+      });
+    }
+    return { connector: "github", action, source: "connector", validated: validate(input) };
+  };
+}
+
+export const getGhecOrgAuditLog = ghecOp("rest.x.AUDIT", validateGhecAuditInput, (c, i) => c.getAuditLog(i));
+export const createGhecOrgRole = ghecOp("rest.x.ORG_ROLE_CREATE", validateGhecRoleCreateInput, (c, i) => c.createOrgRole(i));
+export const updateGhecOrgRole = ghecOp("rest.x.ORG_ROLE_UPDATE", validateGhecRoleUpdateInput, (c, i) => c.updateOrgRole(i));
+export const deleteGhecOrgRole = ghecOp("rest.x.ORG_ROLE_DELETE", validateGhecRoleDeleteInput, (c, i) => c.deleteOrgRole(i));
+export const listGhecOrgFineGrainedPermissions = ghecOp(
+  "rest.x.ORG_FINE_PERMS",
+  (input) => validateGhecOrgInput(input, "rest.x.ORG_FINE_PERMS"),
+  (c, i) => c.listOrgFineGrainedPermissions(i),
+);
+
+export function listIssueCommentEdits(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGapG14cClient(input).listCommentEdits(input).then((result) => {
+      if (!result.ok) throwGitHubGraphql(result);
+      const { ok: _ok, ...rest } = result;
+      return { connector: "github", action: "issues.comments.edits.list", source: "connector", ...rest };
+    });
+  }
+  return { connector: "github", action: "issues.comments.edits.list", source: "connector", validated: validateListCommentEditsInput(input) };
 }

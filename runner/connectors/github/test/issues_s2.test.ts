@@ -153,30 +153,48 @@ describe("github S2 issues-deepen-search", () => {
     expect((result.issue as Record<string, unknown>).assignee).toBe("bob");
   });
 
-  test("removeIssueLabels atomically sets remaining labels", async () => {
+  test("removeIssueLabels sends one DELETE per label with the name URL-encoded", async () => {
     const requests: Request[] = [];
     const result = await removeIssueLabels({
       accessToken: "ghp_test-token",
       owner: "acme",
       repo: "app",
       issueNumber: 50,
-      labels: ["bug"],
+      labels: ["bug", "good first issue", "bug"],
       fetch: async (input, init) => {
         const req = new Request(input, init);
         requests.push(req);
-        if (req.method === "GET") {
-          return new Response(JSON.stringify(labelsFixture), { status: 200 });
-        }
-        return new Response(JSON.stringify([{ id: 11, name: "enhancement", color: "a2eeef" }]), { status: 200 });
+        const remaining = requests.length === 1
+          ? [{ id: 11, name: "enhancement" }, { id: 12, name: "good first issue" }]
+          : [{ id: 11, name: "enhancement" }];
+        return new Response(JSON.stringify(remaining), { status: 200 });
       },
     });
     expect(requests).toHaveLength(2);
-    expect(requests[0].method).toBe("GET");
-    expect(requests[0].url).toContain("/issues/50/labels");
-    expect(requests[1].method).toBe("PUT");
-    const body = JSON.parse(await requests[1].text());
-    expect(body).toEqual(["enhancement"]);
+    expect(requests.map((r) => r.method)).toEqual(["DELETE", "DELETE"]);
+    expect(requests[0].url).toBe("https://api.github.com/repos/acme/app/issues/50/labels/bug");
+    expect(requests[1].url).toBe("https://api.github.com/repos/acme/app/issues/50/labels/good%20first%20issue");
+    expect(requests.some((r) => r.method === "GET" || r.method === "PUT")).toBe(false);
     expect(result.labels).toEqual(["enhancement"]);
+  });
+
+  test("removeIssueLabels 404 on DELETE is an upstream error naming labels already removed", async () => {
+    const requests: Request[] = [];
+    await expect(
+      removeIssueLabels({
+        accessToken: "ghp_test-token",
+        owner: "acme",
+        repo: "app",
+        issueNumber: 50,
+        labels: ["bug", "a/b?"],
+        fetch: async (input, init) => {
+          requests.push(new Request(input, init));
+          if (requests.length === 1) return new Response(JSON.stringify([]), { status: 200 });
+          return new Response(JSON.stringify({ message: "Label does not exist" }), { status: 404 });
+        },
+      }),
+    ).rejects.toMatchObject({ code: "CONNECTOR_UPSTREAM_ERROR", message: expect.stringContaining("Already removed: bug") });
+    expect(requests[1].url).toBe("https://api.github.com/repos/acme/app/issues/50/labels/a%2Fb%3F");
   });
 
   test("setIssueLabels puts full label list", async () => {

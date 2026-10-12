@@ -61,9 +61,9 @@ const call = (op: string, input: Record<string, unknown>) =>
 const opsOf = manifest.operations as Record<string, Record<string, any>>;
 
 describe("github FIX-G13C: G13 GraphQL ops via gqlRequest", () => {
-  test("version 0.80.3 at 910 ops; auth.scopes unchanged", () => {
-    expect(manifest.version).toBe("0.80.3");
-    expect(Object.keys(opsOf)).toHaveLength(910);
+  test("version 0.81.0 at 912 ops; auth.scopes unchanged", () => {
+    expect(manifest.version).toBe("0.81.0");
+    expect(Object.keys(opsOf)).toHaveLength(912);
     expect(manifest.auth.scopes).toEqual(["repo", "read:org", "admin:repo_hook", "admin:org_hook", "gist", "notifications", "admin:org"]);
     for (const scope of ["user", "project", "workflow"]) expect(manifest.auth.scopes).not.toContain(scope);
   });
@@ -104,11 +104,13 @@ describe("github FIX-G13C: G13 GraphQL ops via gqlRequest", () => {
     expect(opsOf["graphql.sponsorships.create"]!.inputSchema.properties.amount).toMatchObject({ type: "integer", minimum: 1, maximum: 12000 });
   });
 
-  test("graphql.query maps only Composio RUN_GRAPH_QL_QUERY", () => {
+  test("graphql.query maps Composio RUN_GRAPH_QL_QUERY and (FIX-G14C, linus) RUN_GRAPH_QL_RELAY_QUERY", () => {
     const mapped = coverage.mapped as Record<string, string>;
-    expect(Object.entries(mapped).filter(([, v]) => v === "graphql.query").map(([k]) => k)).toEqual(["GITHUB_RUN_GRAPH_QL_QUERY"]);
-    expect(String(opsOf["graphql.query"]!.description)).not.toContain("RELAY");
-    expect((coverage.missing_still as Array<{ slug: string }>).map((m) => m.slug)).toContain("GITHUB_RUN_GRAPH_QL_RELAY_QUERY");
+    expect(Object.entries(mapped).filter(([, v]) => v === "graphql.query").map(([k]) => k).sort()).toEqual([
+      "GITHUB_RUN_GRAPH_QL_QUERY",
+      "GITHUB_RUN_GRAPH_QL_RELAY_QUERY",
+    ]);
+    expect((coverage.missing_still as Array<{ slug: string }>).map((m) => m.slug)).not.toContain("GITHUB_RUN_GRAPH_QL_RELAY_QUERY");
   });
 
   for (const op of Object.keys(OPS)) {

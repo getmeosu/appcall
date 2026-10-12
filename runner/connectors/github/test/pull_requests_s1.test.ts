@@ -251,35 +251,62 @@ describe("github S1 pr-reviews-comments", () => {
     expect(notMerged.merged).toBe(false);
   });
 
-  test("convertToDraft and markReady", async () => {
-    const draftReqs: Request[] = [];
-    const draft = await convertPullRequestToDraft({
-      accessToken: "ghp_test-token",
-      owner: "acme",
-      repo: "app",
-      pullNumber: 20,
-      fetch: async (input, init) => {
-        draftReqs.push(new Request(input, init));
-        return new Response(JSON.stringify(convertDraftFixture), { status: 200 });
-      },
-    });
-    expect(draftReqs[0].method).toBe("POST");
-    expect(draftReqs[0].url).toContain("/convert_to_draft");
-    expect((draft.pullRequest as Record<string, unknown>).isDraft).toBe(true);
+  test("convertToDraft and markReady resolve the node id over REST then run the GraphQL mutation", async () => {
+    const route = (draftAfter: boolean, root: string) => {
+      const reqs: Array<{ method: string; url: string; body: string; headers: Headers }> = [];
+      const fetchFn = async (input: RequestInfo | URL, init?: RequestInit) => {
+        const req = new Request(input, init);
+        reqs.push({ method: req.method, url: req.url, body: req.method === "POST" ? await req.text() : "", headers: req.headers });
+        if (req.method === "GET") {
+          return new Response(JSON.stringify({ ...convertDraftFixture, node_id: "PR_kwDOabc", draft: !draftAfter }), { status: 200 });
+        }
+        return new Response(
+          JSON.stringify({ data: { [root]: { pullRequest: { id: "PR_kwDOabc", isDraft: draftAfter, state: "OPEN", updatedAt: "2026-10-12T00:00:00Z" } } } }),
+          { status: 200 },
+        );
+      };
+      return { reqs, fetchFn };
+    };
 
-    const readyReqs: Request[] = [];
-    const ready = await markPullRequestReady({
-      accessToken: "ghp_test-token",
-      owner: "acme",
-      repo: "app",
-      pullNumber: 20,
-      fetch: async (input, init) => {
-        readyReqs.push(new Request(input, init));
-        return new Response(JSON.stringify(markReadyFixture), { status: 200 });
-      },
-    });
-    expect(readyReqs[0].url).toContain("/ready_for_review");
+    const d = route(true, "convertPullRequestToDraft");
+    const draft = await convertPullRequestToDraft({ accessToken: "ghp_test-token", owner: "acme", repo: "app", pullNumber: 20, fetch: d.fetchFn });
+    expect(d.reqs.map((r) => `${r.method} ${r.url}`)).toEqual([
+      "GET https://api.github.com/repos/acme/app/pulls/20",
+      "POST https://api.github.com/graphql",
+    ]);
+    expect(d.reqs.some((r) => r.url.includes("/convert_to_draft"))).toBe(false);
+    const draftBody = JSON.parse(d.reqs[1]!.body);
+    expect(draftBody.query).toContain("convertPullRequestToDraft(input: { pullRequestId: $id })");
+    expect(draftBody.variables).toEqual({ id: "PR_kwDOabc" });
+    expect(d.reqs[1]!.headers.get("X-Github-Next-Global-ID")).toBe("1");
+    expect((draft.pullRequest as Record<string, unknown>).isDraft).toBe(true);
+    expect((draft.pullRequest as Record<string, unknown>).number).toBe(20);
+    expect((draft.pullRequest as Record<string, unknown>).updatedAt).toBe("2026-10-12T00:00:00Z");
+
+    const r = route(false, "markPullRequestReadyForReview");
+    const ready = await markPullRequestReady({ accessToken: "ghp_test-token", owner: "acme", repo: "app", pullNumber: 20, fetch: r.fetchFn });
+    expect(r.reqs.some((q) => q.url.includes("/ready_for_review"))).toBe(false);
+    expect(JSON.parse(r.reqs[1]!.body).query).toContain("markPullRequestReadyForReview(input: { pullRequestId: $id })");
     expect((ready.pullRequest as Record<string, unknown>).isDraft).toBe(false);
+    void markReadyFixture;
+  });
+
+  test("convertToDraft maps a 404 PR and GraphQL errors on 200 to upstream errors", async () => {
+    await expect(
+      convertPullRequestToDraft({
+        accessToken: "ghp_test-token", owner: "acme", repo: "app", pullNumber: 99,
+        fetch: async () => new Response(JSON.stringify({ message: "Not Found" }), { status: 404 }),
+      }),
+    ).rejects.toMatchObject({ code: "CONNECTOR_UPSTREAM_ERROR", message: "Pull request not found." });
+    await expect(
+      markPullRequestReady({
+        accessToken: "ghp_test-token", owner: "acme", repo: "app", pullNumber: 20,
+        fetch: async (input, init) =>
+          new Request(input, init).method === "GET"
+            ? new Response(JSON.stringify({ ...convertDraftFixture, node_id: "PR_kwDOabc" }), { status: 200 })
+            : new Response(JSON.stringify({ data: { markPullRequestReadyForReview: null }, errors: [{ type: "UNPROCESSABLE", message: "Pull request is not a draft" }] }), { status: 200 }),
+      }),
+    ).rejects.toMatchObject({ code: "CONNECTOR_UPSTREAM_ERROR", message: "Pull request is not a draft" });
   });
 
   test("create review maps rate limit", async () => {
