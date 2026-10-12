@@ -67,8 +67,8 @@ const CREATES = [
 ] as const;
 
 describe("github FIX-EFFECTS: manifest guards", () => {
-  test("version 0.86.0 at 847 ops", () => {
-    expect(manifest.version).toBe("0.86.0");
+  test("version 0.86.1 at 847 ops", () => {
+    expect(manifest.version).toBe("0.86.1");
     expect(Object.keys(ops)).toHaveLength(847);
   });
 

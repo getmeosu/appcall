@@ -827,6 +827,7 @@ import {
   listGhecOrgFineGrainedPermissions as ghListGhecOrgFineGrainedPermissions,
 } from "../../connectors/github/src/actions";
 import { healthcheck as githubHealthcheck } from "../../connectors/github/src/healthcheck";
+import { withGitHubPathIdentityGuard } from "../../connectors/github/src/path_identity";
 import { executeIssuesListSync as listGitHubIssues, executePullRequestsListSync as listGitHubPRs, executeCommitsListSync as listGitHubCommits, executeRepositoriesListSync as listGitHubRepos } from "../../connectors/github/src/sync";
 import salesforceManifest from "../../connectors/salesforce/manifest.json";
 import {
@@ -1686,7 +1687,8 @@ const fakeConnector = {
 // withDeclarativeConnectors also compiles declarative operations declared on a
 // statically imported manifest, which is how a hand-written connector migrates
 // one operation at a time. A registered handler always wins over a compiled one.
-export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeConnectors({
+// FIX-SEGMENT-2: github actions are then wrapped with the login / repo-name guard.
+export const defaultConnectorRegistry = createConnectorRegistry(withGitHubPathIdentityGuard(withDeclarativeConnectors({
   manifests: [fakeConnector, slackManifest, telegramManifest, whatsappManifest, notionManifest, googleWorkspaceManifest, microsoft365Manifest, githubManifest, salesforceManifest, hubspotManifest, linkedinManifest, jiraManifest, mailchimpManifest, brevoManifest, sendgridManifest, klaviyoManifest, shopifyManifest, woocommerceManifest, quickbooksManifest, greenhouseManifest, leverManifest, ashbyManifest, intercomManifest, workableManifest, smartrecruitersManifest, recruiteeManifest, zohoRecruitManifest, typeformManifest, calendlyManifest, googleAdsManifest, metaAdsManifest, linkedinAdsManifest, tiktokAdsManifest, xeroManifest, zohoBooksManifest, httpRequestManifest, csvManifest, webhookManifest, smtpEmailManifest, automationWebhookManifest, calComManifest, lushaManifest, apolloManifest, apifyManifest, zoomManifest, saleshandyManifest, unipileManifest, rb2bManifest, caldavManifest, resendManifest, googlemeetManifest],
   healthchecks: {
     fake: () => ({ connector: "fake", status: "ok" }),
@@ -3692,7 +3694,7 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
     calendly: { parse: calendlyParseWebhook },
     typeform: { parse: typeformParseWebhook },
   },
-}));
+})));
 
 export function createConnectorRegistry(input: {
   manifests: Manifest[];
