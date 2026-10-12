@@ -5,7 +5,7 @@ describe("cal-com connector manifest", () => {
   test("declares key, runtime, auth, network, operations, and models", () => {
     expect(manifest.key).toBe("cal-com");
     expect(manifest.name).toBe("Cal.com");
-    expect(manifest.version).toBe("0.3.0");
+    expect(manifest.version).toBe("0.3.1");
     expect(manifest.runtime).toBe("bun");
   });
 
