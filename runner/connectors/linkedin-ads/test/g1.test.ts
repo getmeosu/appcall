@@ -64,7 +64,7 @@ async function failure(promise: unknown): Promise<any> {
 
 describe("G1 manifest contract", () => {
   it("is v0.6.0 with 47 ops and 15 new G1 ops", () => {
-    expect(manifest.version).toBe("0.6.1");
+    expect(manifest.version).toBe("0.6.2");
     expect(Object.keys(operations)).toHaveLength(47);
     expect(ALL_G1).toHaveLength(15);
     for (const key of ALL_G1) expect(operations[key], key).toBeDefined();
@@ -298,5 +298,31 @@ describe("permission mapping", () => {
     }
     const limited = await failure(searchCampaigns({ ...credential, accountId: "1", fetch: fake([{ status: 429, headers: { "retry-after": "12" }, body: {} }], []) }));
     expect(limited).toMatchObject({ code: "CONNECTOR_RATE_LIMITED", retryAfterSeconds: 12 });
+  });
+});
+
+// PLAT-OUT-1 (v0.6.2): connector/action/source ride on the runner result envelope.
+// G1 handlers return only their declared payload, and their output schemas neither
+// declare nor require the envelope keys.
+describe("PLAT-OUT-1 result envelope", () => {
+  const G1_OPS = [
+    "ad_accounts.search", "campaigns.search", "ad_account_users.list_mine", "ad_account_users.list",
+    "creatives.get", "budget_pricing.get", "campaign_groups.create", "campaigns.create", "creatives.create",
+    "campaign_groups.update", "campaigns.update", "creatives.update",
+    "campaign_groups.delete", "campaigns.delete", "creatives.delete",
+  ];
+  it("G1 output schemas carry no connector/action/source", () => {
+    const ops = (manifest as any).operations;
+    for (const op of G1_OPS) {
+      const schema = ops[op].outputSchema;
+      for (const key of ["connector", "action", "source"]) {
+        expect(schema.properties[key]).toBeUndefined();
+        expect(schema.required ?? []).not.toContain(key);
+      }
+    }
+  });
+  it("G1 handler output carries no envelope keys", async () => {
+    const group: any = await createCampaignGroup({ ...credential, accountId: "1", name: "G", status: "DRAFT", runSchedule: { start: 1 }, fetch: fake([{ status: 201, headers: { "x-restli-id": "99" } }], []) });
+    expect(Object.keys(group).sort()).toEqual(["campaignGroupId", "campaignGroupUrn"]);
   });
 });
