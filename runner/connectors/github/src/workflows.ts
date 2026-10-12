@@ -196,8 +196,8 @@ export function normalizeRunApproval(item: Record<string, unknown>) {
     comment: typeof item.comment === "string" ? item.comment : "",
     user: typeof user.login === "string" ? user.login : "",
     environments: environments.map((env) => ({
-      id: typeof env.id === "number" ? env.id : 0,
-      name: typeof env.name === "string" ? env.name : "",
+      id: typeof env.id === "number" ? env.id : null,
+      name: typeof env.name === "string" ? env.name : null,
     })),
     createdAt: typeof item.created_at === "string" ? item.created_at : null,
     modelVersion: "2026-05-16" as const,
@@ -592,15 +592,15 @@ export function validateApproveRunInput(input: unknown): ApproveRunInput {
   };
 }
 
-function normalizeCache(item: Record<string, unknown>) {
+export function normalizeCache(item: Record<string, unknown>) {
   return {
-    id: typeof item.id === "number" ? item.id : 0,
-    ref: typeof item.ref === "string" ? item.ref : "",
-    key: typeof item.key === "string" ? item.key : "",
-    version: typeof item.version === "string" ? item.version : "",
-    lastAccessedAt: typeof item.last_accessed_at === "string" ? item.last_accessed_at : "",
-    createdAt: typeof item.created_at === "string" ? item.created_at : "",
-    sizeInBytes: typeof item.size_in_bytes === "number" ? item.size_in_bytes : 0,
+    id: typeof item.id === "number" ? item.id : null,
+    ref: typeof item.ref === "string" ? item.ref : null,
+    key: typeof item.key === "string" ? item.key : null,
+    version: typeof item.version === "string" ? item.version : null,
+    lastAccessedAt: typeof item.last_accessed_at === "string" ? item.last_accessed_at : null,
+    createdAt: typeof item.created_at === "string" ? item.created_at : null,
+    sizeInBytes: typeof item.size_in_bytes === "number" ? item.size_in_bytes : null,
     modelVersion: "2026-05-16" as const,
     raw: item,
   };

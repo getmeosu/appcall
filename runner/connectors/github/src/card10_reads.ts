@@ -41,7 +41,7 @@ export type NormalizedReaction = {
   id: number;
   content: string;
   createdAt: string;
-  userLogin: string;
+  userLogin: string | null;
 };
 
 export type NormalizedRunnerLabel = {
@@ -122,7 +122,7 @@ export function normalizeReaction(item: Record<string, unknown>): NormalizedReac
     id: typeof item.id === "number" ? item.id : 0,
     content: typeof item.content === "string" ? item.content : "",
     createdAt: typeof item.created_at === "string" ? item.created_at : "",
-    userLogin: user && typeof user.login === "string" ? user.login : "",
+    userLogin: user && typeof user.login === "string" ? user.login : null,
   };
 }
 

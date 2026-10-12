@@ -16,7 +16,7 @@ export type NormalizedPublicKey = { keyId: string; key: string };
 export type NormalizedRepoSecret = { name: string; createdAt: string; updatedAt: string };
 export type NormalizedOrgSecret = NormalizedRepoSecret & {
   visibility: string;
-  selectedRepositoriesUrl: string;
+  selectedRepositoriesUrl: string | null;
 };
 export type NormalizedRepoSummary = { id: number; name: string; fullName: string; private: boolean };
 
@@ -452,11 +452,11 @@ function normalizeRepoSecret(item: Record<string, unknown>): NormalizedRepoSecre
   };
 }
 
-function normalizeOrgSecret(item: Record<string, unknown>): NormalizedOrgSecret {
+export function normalizeOrgSecret(item: Record<string, unknown>): NormalizedOrgSecret {
   return {
     ...normalizeRepoSecret(item),
     visibility: typeof item.visibility === "string" ? item.visibility : "",
-    selectedRepositoriesUrl: typeof item.selected_repositories_url === "string" ? item.selected_repositories_url : "",
+    selectedRepositoriesUrl: typeof item.selected_repositories_url === "string" ? item.selected_repositories_url : null,
   };
 }
 

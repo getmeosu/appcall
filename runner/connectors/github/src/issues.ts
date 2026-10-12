@@ -413,7 +413,7 @@ export type NormalizedLabel = {
   providerLabelId: number;
   name: string;
   color: string;
-  description: string;
+  description: string | null;
   modelVersion: "2026-05-16";
   raw: GitHubLabel;
 };
@@ -425,7 +425,7 @@ export function normalizeGitHubLabel(label: GitHubLabel): NormalizedLabel {
     providerLabelId: label.id,
     name: label.name ?? "",
     color: label.color ?? "",
-    description: label.description ?? "",
+    description: label.description ?? null,
     modelVersion: "2026-05-16",
     raw: label,
   };

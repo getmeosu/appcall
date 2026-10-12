@@ -243,9 +243,9 @@ export type NormalizedCommitComment = {
   provider: "github";
   providerCommentId: number;
   body: string;
-  author: string;
+  author: string | null;
   sha: string;
-  path: string;
+  path: string | null;
   htmlUrl: string;
   createdAt: string;
   modelVersion: "2026-05-16";
@@ -325,9 +325,9 @@ export function normalizeCommitComment(comment: Record<string, unknown>): Normal
     provider: "github",
     providerCommentId: typeof comment.id === "number" ? comment.id : 0,
     body: typeof comment.body === "string" ? comment.body : "",
-    author: typeof user.login === "string" ? user.login : "",
+    author: typeof user.login === "string" ? user.login : null,
     sha: typeof comment.commit_id === "string" ? comment.commit_id : "",
-    path: typeof comment.path === "string" ? comment.path : "",
+    path: typeof comment.path === "string" ? comment.path : null,
     htmlUrl: typeof comment.html_url === "string" ? comment.html_url : "",
     createdAt: typeof comment.created_at === "string" ? comment.created_at : "",
     modelVersion: "2026-05-16",

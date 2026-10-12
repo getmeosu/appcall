@@ -16,7 +16,7 @@ export type NormalizedCodespaceDetail = {
   name: string;
   displayName: string;
   state: string;
-  machineName: string;
+  machineName: string | null;
   recentFolders: string[];
 };
 
@@ -189,14 +189,14 @@ export function createGapG5Client(options: { accessToken: string; fetch?: typeof
 
 // ─── normalizers / helpers ───────────────────────────────────────────────────
 
-function normalizeCodespace(item: Record<string, unknown>): NormalizedCodespaceDetail {
+export function normalizeCodespace(item: Record<string, unknown>): NormalizedCodespaceDetail {
   const machine = isRecord(item.machine) ? item.machine : {};
   return {
     id: typeof item.id === "number" ? item.id : 0,
     name: typeof item.name === "string" ? item.name : "",
     displayName: typeof item.display_name === "string" ? item.display_name : "",
     state: typeof item.state === "string" ? item.state : "",
-    machineName: typeof machine.name === "string" ? machine.name : "",
+    machineName: typeof machine.name === "string" ? machine.name : null,
     recentFolders: Array.isArray(item.recent_folders)
       ? item.recent_folders.filter((entry): entry is string => typeof entry === "string")
       : [],

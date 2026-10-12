@@ -7,8 +7,8 @@ type TrafficWindow = RepoScope & { per?: "day" | "week" };
 export type NormalizedContributorWeek = { w: number; a: number; d: number; c: number };
 
 export type NormalizedContributor = {
-  login: string;
-  id: number;
+  login: string | null;
+  id: number | null;
   total: number;
   weeks: NormalizedContributorWeek[];
 };
@@ -73,8 +73,8 @@ export function normalizeContributor(item: Record<string, unknown>): NormalizedC
   const author = isRecord(item.author) ? item.author : {};
   const weeks = Array.isArray(item.weeks) ? item.weeks.filter(isRecord).map(normalizeWeek) : [];
   return {
-    login: typeof author.login === "string" ? author.login : "",
-    id: typeof author.id === "number" ? author.id : 0,
+    login: typeof author.login === "string" ? author.login : null,
+    id: typeof author.id === "number" ? author.id : null,
     total: numberOrZero(item.total),
     weeks,
   };

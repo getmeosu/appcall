@@ -384,7 +384,7 @@ export type NormalizedConversationComment = {
   provider: "github";
   providerCommentId: number;
   body: string;
-  author: string;
+  author: string | null;
   htmlUrl: string;
   createdAt: string;
   updatedAt: string;
@@ -399,7 +399,7 @@ export function normalizeConversationComment(comment: Record<string, unknown>): 
     provider: "github",
     providerCommentId: typeof comment.id === "number" ? comment.id : 0,
     body: typeof comment.body === "string" ? comment.body : "",
-    author: typeof user.login === "string" ? user.login : "",
+    author: typeof user.login === "string" ? user.login : null,
     htmlUrl: typeof comment.html_url === "string" ? comment.html_url : "",
     createdAt: typeof comment.created_at === "string" ? comment.created_at : "",
     updatedAt: typeof comment.updated_at === "string" ? comment.updated_at : "",
@@ -597,7 +597,7 @@ export type NormalizedReviewComment = {
   body: string;
   path: string;
   commitId: string;
-  author: string;
+  author: string | null;
   htmlUrl: string;
   createdAt: string;
   updatedAt: string;
@@ -616,7 +616,7 @@ export function normalizeGitHubReviewComment(comment: Record<string, unknown>): 
     body: typeof comment.body === "string" ? comment.body : "",
     path: typeof comment.path === "string" ? comment.path : "",
     commitId: typeof comment.commit_id === "string" ? comment.commit_id : "",
-    author: typeof user.login === "string" ? user.login : "",
+    author: typeof user.login === "string" ? user.login : null,
     htmlUrl: typeof comment.html_url === "string" ? comment.html_url : "",
     createdAt: typeof comment.created_at === "string" ? comment.created_at : "",
     updatedAt: typeof comment.updated_at === "string" ? comment.updated_at : "",

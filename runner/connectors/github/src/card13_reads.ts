@@ -45,7 +45,7 @@ export type NormalizedTeam = {
   permission: string;
 };
 
-export type NormalizedRoleTeam = NormalizedTeam & { assignment: string };
+export type NormalizedRoleTeam = NormalizedTeam & { assignment: string | null };
 
 export type NormalizedTeamInvitation = {
   id: number;
@@ -62,9 +62,9 @@ export type NormalizedTeamRepoPermission = {
   roleName: string | null;
   permissions: {
     admin: boolean;
-    maintain: boolean;
+    maintain: boolean | null;
     push: boolean;
-    triage: boolean;
+    triage: boolean | null;
     pull: boolean;
   };
 };
@@ -94,7 +94,7 @@ export type NormalizedRepoCacheUsage = {
 export type NormalizedBillableOs = { totalMs: number; jobs: number };
 
 export type NormalizedRunTiming = {
-  runDurationMs: number;
+  runDurationMs: number | null;
   billable: {
     ubuntu: NormalizedBillableOs;
     macos: NormalizedBillableOs;
@@ -211,7 +211,7 @@ export function normalizeTeam(item: Record<string, unknown>): NormalizedTeam {
 export function normalizeRoleTeam(item: Record<string, unknown>): NormalizedRoleTeam {
   return {
     ...normalizeTeam(item),
-    assignment: typeof item.assignment === "string" ? item.assignment : "",
+    assignment: typeof item.assignment === "string" ? item.assignment : null,
   };
 }
 
@@ -234,9 +234,9 @@ export function normalizeTeamRepoPermission(item: Record<string, unknown>): Norm
     roleName: typeof item.role_name === "string" ? item.role_name : null,
     permissions: {
       admin: permissions.admin === true,
-      maintain: permissions.maintain === true,
+      maintain: typeof permissions.maintain === "boolean" ? permissions.maintain : null,
       push: permissions.push === true,
-      triage: permissions.triage === true,
+      triage: typeof permissions.triage === "boolean" ? permissions.triage : null,
       pull: permissions.pull === true,
     },
   };
@@ -276,7 +276,7 @@ export function normalizeRepoCacheUsage(item: Record<string, unknown>): Normaliz
 export function normalizeRunTiming(item: Record<string, unknown>): NormalizedRunTiming {
   const billable = isRecord(item.billable) ? item.billable : {};
   return {
-    runDurationMs: typeof item.run_duration_ms === "number" ? item.run_duration_ms : 0,
+    runDurationMs: typeof item.run_duration_ms === "number" ? item.run_duration_ms : null,
     billable: {
       ubuntu: billableOs(billable.UBUNTU),
       macos: billableOs(billable.MACOS),
