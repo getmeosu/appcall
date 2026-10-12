@@ -1,3 +1,4 @@
+import { isUnsafePathSegment } from "../../_shared/jobboard";
 import { createConnectorHttpClient, ConnectorHttpError } from "../../../bun/src/http";
 
 type UploadInput = Record<string, unknown> & {
@@ -54,8 +55,11 @@ function validate(input: Record<string, unknown>): {
   }
 
   const invoiceId = input.invoiceId;
+  // SEC-PATH-2d: blank/whitespace, dot-only (raw, padded or %2e) and separator ids are
+  // rejected before any request (they were sent as /invoices/%20/pdf).
   if (typeof invoiceId !== "string" || invoiceId.length === 0 || invoiceId.length > 128
-    || invoiceId === "." || invoiceId === ".." || /[\/\\\u0000-\u001f\u007f]/.test(invoiceId)) {
+    || invoiceId === "." || invoiceId === ".." || /[\/\\\u0000-\u001f\u007f]/.test(invoiceId)
+    || isUnsafePathSegment(invoiceId)) {
     throw failure("INVALID_ACTION_INPUT", "invoiceId is invalid.");
   }
 

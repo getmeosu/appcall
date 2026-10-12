@@ -118,7 +118,12 @@ export function createJobBoardClient(options: JobBoardClientOptions): JobBoardCl
  * Segments made only of dots ("." / "..") are rejected too, since URL
  * normalization would turn them into path traversal.
  */
-export function assertSafePathSegment(value: string, field: string): string {
+export function assertSafePathSegment(value: unknown, field: string): string {
+  // SEC-PATH-2d: a missing or non-string value (e.g. a sync called without its
+  // board/site/company) is "required", not a TypeError from value.trim().
+  if (typeof value !== "string") {
+    throw new Error(`${field} is required`);
+  }
   const trimmed = value.trim();
   if (trimmed.length === 0) {
     throw new Error(`${field} is required`);
