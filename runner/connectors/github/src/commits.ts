@@ -19,13 +19,13 @@ export type NormalizedCommit = {
   provider: "github";
   sha: string;
   message: string;
-  author: string;
-  authorEmail: string;
-  committer: string;
-  committerEmail: string;
+  author: string | null;
+  authorEmail: string | null;
+  committer: string | null;
+  committerEmail: string | null;
   url: string;
-  authoredAt: string;
-  committedAt: string;
+  authoredAt: string | null;
+  committedAt: string | null;
   modelVersion: "2026-05-16";
   raw: GitHubCommit;
 };
@@ -36,13 +36,15 @@ export function normalizeGitHubCommit(commit: GitHubCommit): NormalizedCommit {
     provider: "github",
     sha: commit.sha,
     message: commit.commit?.message ?? "",
-    author: commit.commit?.author?.name ?? commit.author?.login ?? "",
-    authorEmail: commit.commit?.author?.email ?? "",
-    committer: commit.commit?.committer?.name ?? "",
-    committerEmail: commit.commit?.committer?.email ?? "",
+    // GH-TYPED-READS TR-2: commit.author / commit.committer are nullable-git-user with optional
+    // name, email and date in the pinned spec; null when missing instead of "".
+    author: commit.commit?.author?.name ?? commit.author?.login ?? null,
+    authorEmail: commit.commit?.author?.email ?? null,
+    committer: commit.commit?.committer?.name ?? null,
+    committerEmail: commit.commit?.committer?.email ?? null,
     url: commit.html_url ?? "",
-    authoredAt: commit.commit?.author?.date ?? "",
-    committedAt: commit.commit?.committer?.date ?? "",
+    authoredAt: commit.commit?.author?.date ?? null,
+    committedAt: commit.commit?.committer?.date ?? null,
     modelVersion: "2026-05-16",
     raw: commit,
   };

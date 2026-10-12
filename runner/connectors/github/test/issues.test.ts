@@ -37,7 +37,10 @@ describe("github issues", () => {
     expect(issue.id).toBe("gh-issue:1");
     expect(issue.title).toBe("Minimal");
     expect(issue.labels).toEqual([]);
-    expect(issue.author).toBe("");
+    // GH-TYPED-READS TR-2 (0.86.7): user is nullable upstream; null, not "".
+    expect(issue.author).toBeNull();
+    expect(issue.body).toBeNull();
+    expect(issue.closedAt).toBeNull();
   });
 
   test("normalizes closed issue", () => {

@@ -26,14 +26,14 @@ export type NormalizedUser = {
   provider: "github";
   providerUserId: number;
   login: string;
-  name: string;
-  email: string;
-  bio: string;
+  name: string | null;
+  email: string | null;
+  bio: string | null;
   url: string;
   type: string;
-  company: string;
-  location: string;
-  blog: string;
+  company: string | null;
+  location: string | null;
+  blog: string | null;
   publicRepos: number;
   followers: number;
   following: number;
@@ -50,14 +50,16 @@ export function normalizeGitHubUser(user: GitHubUser): NormalizedUser {
     provider: "github",
     providerUserId: user.id,
     login: typeof user.login === "string" ? user.login : "",
-    name: typeof user.name === "string" ? user.name : "",
-    email: typeof user.email === "string" ? user.email : "",
-    bio: typeof user.bio === "string" ? user.bio : "",
+    // GH-TYPED-READS TR-2: name, email, bio, company, location and blog are nullable in the pinned spec
+    // (public-user / private-user / simple-user); null when missing instead of "".
+    name: typeof user.name === "string" ? user.name : null,
+    email: typeof user.email === "string" ? user.email : null,
+    bio: typeof user.bio === "string" ? user.bio : null,
     url: typeof user.html_url === "string" ? user.html_url : "",
     type: typeof user.type === "string" ? user.type : "",
-    company: typeof user.company === "string" ? user.company : "",
-    location: typeof user.location === "string" ? user.location : "",
-    blog: typeof user.blog === "string" ? user.blog : "",
+    company: typeof user.company === "string" ? user.company : null,
+    location: typeof user.location === "string" ? user.location : null,
+    blog: typeof user.blog === "string" ? user.blog : null,
     publicRepos: typeof user.public_repos === "number" ? user.public_repos : 0,
     followers: typeof user.followers === "number" ? user.followers : 0,
     following: typeof user.following === "number" ? user.following : 0,
