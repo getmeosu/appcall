@@ -1,6 +1,6 @@
 import { createConnectorHttpClient } from "../../../bun/src/http";
 import manifest from "../manifest.json";
-import { assertHostLabel, assertSafePathSegment } from "../../_shared/jobboard";
+import { assertVendorLabel, assertSafePathSegment } from "../../_shared/jobboard";
 import { compileDeclarativeConnector } from "../../../bun/src/declarative/compile";
 
 function upstreamErrorFor(
@@ -326,7 +326,7 @@ export async function executeWorkableAction(operation: string, rawInput: unknown
   const input = rawInput as ActionInput;
   const request = requests[operation];
   if (!request) throw new Error(`Unsupported Workable action: ${operation}`);
-  const account = assertHostLabel(input.account, "account");
+  const account = assertVendorLabel(input.account, "account", "workable.com");
   if (typeof input.accessToken !== "string" || input.accessToken.length === 0) throw new Error("accessToken is required");
   const baseUrl =
     request.host === "public"
@@ -389,7 +389,7 @@ function withAccountGuard(handler: (input: unknown) => unknown): (input: unknown
     if (record.account === undefined && record.accessToken === undefined) return handler(input);
     let account: string;
     try {
-      account = assertHostLabel(record.account, "account");
+      account = assertVendorLabel(record.account, "account", "workable.com");
     } catch (error) {
       return Promise.reject(error);
     }

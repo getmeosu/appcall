@@ -1,3 +1,4 @@
+import { requireBotToken } from "./token";
 import { createConnectorHttpClient, type ConnectorHttpClient } from "../../../bun/src/http";
 import manifest from "../manifest.json";
 import { mapTelegramError, normalizeJsonLike } from "./messages";
@@ -27,7 +28,7 @@ export type GetMeResult = {
 };
 
 export async function getMe(input: GetMeClientInput): Promise<GetMeResult> {
-  const token = requireString(input.botToken, "botToken").trim();
+  const token = requireBotToken(input.botToken);
   if (token.length === 0) throw new Error("botToken is required");
   const httpClient = input.httpClient ?? createConnectorHttpClient({
     allowedHosts: manifest.network.allowedHosts,
@@ -82,7 +83,7 @@ export function validateGetUpdatesInput(input: unknown): GetUpdatesInput {
 
 export async function getUpdates(input: GetUpdatesClientInput): Promise<GetUpdatesResult> {
   const validated = validateGetUpdatesInput(input);
-  const token = requireString(input.botToken, "botToken").trim();
+  const token = requireBotToken(input.botToken);
   if (token.length === 0) throw new Error("botToken is required");
   const httpClient = input.httpClient ?? createConnectorHttpClient({
     allowedHosts: manifest.network.allowedHosts,
@@ -165,7 +166,7 @@ export function validateSetMyCommandsInput(input: unknown): SetMyCommandsInput {
 
 export async function setMyCommands(input: SetMyCommandsClientInput): Promise<SetMyCommandsResult> {
   const validated = validateSetMyCommandsInput(input);
-  const token = requireString(input.botToken, "botToken").trim();
+  const token = requireBotToken(input.botToken);
   if (token.length === 0) throw new Error("botToken is required");
   const httpClient = input.httpClient ?? createConnectorHttpClient({
     allowedHosts: manifest.network.allowedHosts,
@@ -232,7 +233,7 @@ export function validateAnswerCallbackQueryInput(input: unknown): AnswerCallback
 
 export async function answerCallbackQuery(input: AnswerCallbackQueryClientInput): Promise<AnswerCallbackQueryResult> {
   const validated = validateAnswerCallbackQueryInput(input);
-  const token = requireString(input.botToken, "botToken").trim();
+  const token = requireBotToken(input.botToken);
   if (token.length === 0) throw new Error("botToken is required");
   const httpClient = input.httpClient ?? createConnectorHttpClient({
     allowedHosts: manifest.network.allowedHosts,

@@ -1,7 +1,7 @@
 import { compileDeclarativeConnector } from "../../../bun/src/declarative/compile";
 import { ConnectorHttpError, createConnectorHttpClient, hostIsAllowed } from "../../../bun/src/http";
 import manifest from "../manifest.json";
-import { assertHostLabel, assertSafePathSegment } from "../../_shared/jobboard";
+import { assertVendorLabel, assertSafePathSegment } from "../../_shared/jobboard";
 
 const compiled = compileDeclarativeConnector(manifest as never);
 const allowedHosts = ["*.zendesk.com"];
@@ -32,7 +32,7 @@ function credentials(input: unknown): { email: string; apiToken: string; subdoma
   const apiToken = input.apiToken;
   if (typeof email !== "string" || email.length === 0 || email.length > 254 || /[\r\n]/.test(email)) invalidInput("email is required");
   if (typeof apiToken !== "string" || apiToken.length === 0 || apiToken.length > 256 || /[\r\n]/.test(apiToken)) invalidInput("apiToken is required");
-  const subdomain = assertHostLabel(input.subdomain, "subdomain");
+  const subdomain = assertVendorLabel(input.subdomain, "subdomain", "zendesk.com");
   return { email, apiToken, subdomain };
 }
 
@@ -326,7 +326,7 @@ function withSubdomainGuard(handler: (input: unknown) => unknown): (input: unkno
     if (!isRecord(input) || (input.subdomain === undefined && input.apiToken === undefined)) return handler(input);
     let subdomain: string;
     try {
-      subdomain = assertHostLabel(input.subdomain, "subdomain");
+      subdomain = assertVendorLabel(input.subdomain, "subdomain", "zendesk.com");
     } catch (error) {
       return Promise.reject(error);
     }

@@ -194,6 +194,20 @@ export function assertHostLabel(value: unknown, field: string): string {
 }
 
 /**
+ * SEC-SETUP-2: assertVendorLabel accepts the spellings stored connections hold
+ * for a `<label>.<suffix>` host field: a leading `https://` (any case), trailing
+ * slashes and the full provider host are dropped, then the rest must be one
+ * RFC 1123 label (assertHostLabel). Any other scheme, path or label rejects.
+ */
+export function assertVendorLabel(value: unknown, field: string, suffix: string): string {
+  const escaped = suffix.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const text = typeof value === "string"
+    ? value.trim().replace(/^https:\/\//i, "").replace(/\/+$/, "").replace(new RegExp(`\\.${escaped}$`, "i"), "")
+    : value;
+  return assertHostLabel(text, field);
+}
+
+/**
  * isUnsafePathSegment reports whether a caller id would change the request path
  * once interpolated, even after one round of percent-decoding: missing, blank or
  * whitespace-only, dot-only (".", ".."), a percent-encoded dot or blank form

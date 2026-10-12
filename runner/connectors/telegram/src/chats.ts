@@ -1,3 +1,4 @@
+import { requireBotToken } from "./token";
 import { createConnectorHttpClient, type ConnectorHttpClient } from "../../../bun/src/http";
 import manifest from "../manifest.json";
 import { mapTelegramError } from "./messages";
@@ -41,7 +42,7 @@ export function validateGetChatInput(input: unknown): GetChatInput {
 
 export async function getChat(input: GetChatClientInput): Promise<GetChatResult> {
   const validated = validateGetChatInput(input);
-  const token = requireString(input.botToken, "botToken").trim();
+  const token = requireBotToken(input.botToken);
   if (token.length === 0) throw new Error("botToken is required");
   const httpClient = input.httpClient ?? createConnectorHttpClient({
     allowedHosts: manifest.network.allowedHosts,
@@ -87,7 +88,7 @@ export function validateGetChatMemberCountInput(input: unknown): GetChatMemberCo
 
 export async function getChatMemberCount(input: GetChatMemberCountClientInput): Promise<GetChatMemberCountResult> {
   const validated = validateGetChatMemberCountInput(input);
-  const token = requireString(input.botToken, "botToken").trim();
+  const token = requireBotToken(input.botToken);
   if (token.length === 0) throw new Error("botToken is required");
   const httpClient = input.httpClient ?? createConnectorHttpClient({
     allowedHosts: manifest.network.allowedHosts,
@@ -143,7 +144,7 @@ export function validateSendChatActionInput(input: unknown): SendChatActionInput
 
 export async function sendChatAction(input: SendChatActionClientInput): Promise<SendChatActionResult> {
   const validated = validateSendChatActionInput(input);
-  const token = requireString(input.botToken, "botToken").trim();
+  const token = requireBotToken(input.botToken);
   if (token.length === 0) throw new Error("botToken is required");
   const httpClient = input.httpClient ?? createConnectorHttpClient({
     allowedHosts: manifest.network.allowedHosts,
@@ -188,7 +189,7 @@ export function validateExportChatInviteLinkInput(input: unknown): ExportChatInv
 
 export async function exportChatInviteLink(input: ExportChatInviteLinkClientInput): Promise<ExportChatInviteLinkResult> {
   const validated = validateExportChatInviteLinkInput(input);
-  const token = requireString(input.botToken, "botToken").trim();
+  const token = requireBotToken(input.botToken);
   if (token.length === 0) throw new Error("botToken is required");
   const httpClient = input.httpClient ?? createConnectorHttpClient({
     allowedHosts: manifest.network.allowedHosts,
@@ -236,7 +237,7 @@ export function validateGetChatAdministratorsInput(input: unknown): GetChatAdmin
 
 export async function getChatAdministrators(input: GetChatAdministratorsClientInput): Promise<GetChatAdministratorsResult> {
   const validated = validateGetChatAdministratorsInput(input);
-  const token = requireString(input.botToken, "botToken").trim();
+  const token = requireBotToken(input.botToken);
   if (token.length === 0) throw new Error("botToken is required");
   const httpClient = input.httpClient ?? createConnectorHttpClient({
     allowedHosts: manifest.network.allowedHosts,
@@ -287,7 +288,7 @@ export function validateGetChatMemberInput(input: unknown): GetChatMemberInput {
 
 export async function getChatMember(input: GetChatMemberClientInput): Promise<GetChatMemberResult> {
   const validated = validateGetChatMemberInput(input);
-  const token = requireString(input.botToken, "botToken").trim();
+  const token = requireBotToken(input.botToken);
   if (token.length === 0) throw new Error("botToken is required");
   const httpClient = input.httpClient ?? createConnectorHttpClient({
     allowedHosts: manifest.network.allowedHosts,
@@ -341,7 +342,7 @@ export function validateGetChatHistoryInput(input: unknown): GetChatHistoryInput
 
 export async function getChatHistory(input: GetChatHistoryClientInput): Promise<GetChatHistoryResult> {
   const validated = validateGetChatHistoryInput(input);
-  const token = requireString(input.botToken, "botToken").trim();
+  const token = requireBotToken(input.botToken);
   if (token.length === 0) throw new Error("botToken is required");
   const httpClient = input.httpClient ?? createConnectorHttpClient({
     allowedHosts: manifest.network.allowedHosts,

@@ -6,8 +6,10 @@ import { normalizeShopDomain } from "../src/http";
 const BAD = [
   ".", "..", "", " ", "%2e", "a.evil.example", "evil.example/x", "a/b", "a\\b", "/", "a?b", "a#b", "a@b",
   "-shop", "shop-", "a_b", "acme:443", "acme.myshopify.com.evil.example", "evil.example#.myshopify.com", "https://",
+  // SEC-SETUP-2: only https:// is stripped; another scheme is refused.
+  "http://acme.myshopify.com", "http://acme",
 ];
-const GOOD = ["acme", " acme ", "ACME", "acme.myshopify.com", "ACME.MyShopify.com", "https://acme.myshopify.com", "https://acme.myshopify.com/", "http://acme.myshopify.com", "acme/"];
+const GOOD = ["acme", " acme ", "ACME", "acme.myshopify.com", "ACME.MyShopify.com", "https://acme.myshopify.com", "https://acme.myshopify.com/", "acme/"];
 
 describe("shopify shopDomain", () => {
   test("stored spellings normalize to one label", () => {
