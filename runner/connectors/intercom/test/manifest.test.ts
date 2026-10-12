@@ -6,8 +6,8 @@ describe("Intercom manifest", () => {
     expect(manifest.key).toBe("intercom");
   });
 
-  it("has version 0.6.0", () => {
-    expect(manifest.version).toBe("0.6.0");
+  it("has version 0.6.1", () => {
+    expect(manifest.version).toBe("0.6.1");
   });
 
   it("uses bun runtime", () => {
@@ -79,15 +79,15 @@ describe("Intercom manifest", () => {
     );
   });
 
-  it("wires close/assign/tag Reconcile → conversations.get", () => {
+  it("FX-intercom-1 shape rule: close/assign/tag carry no effect keys", () => {
     for (const key of ["conversations.close", "conversations.assign", "conversations.tag"] as const) {
       const op = manifest.operations[key] as {
         effectPolicy?: string;
         reconcile?: string;
         sideEffect?: string;
       };
-      expect(op.effectPolicy).toBe("Reconcile");
-      expect(op.reconcile).toBe("conversations.get");
+      expect(op.effectPolicy).toBeUndefined();
+      expect(op.reconcile).toBeUndefined();
       expect(op.sideEffect).toBe("write");
     }
     expect(manifest.operations["conversations.close"].request.path).toBe(
@@ -101,13 +101,13 @@ describe("Intercom manifest", () => {
     );
   });
 
-  it("wires conversations.reply Idempotent → conversations.get", () => {
+  it("FX-intercom-1: conversations.reply carries no effect keys (creates a conversation part)", () => {
     const reply = manifest.operations["conversations.reply"] as {
       effectPolicy?: string;
       reconcile?: string;
     };
-    expect(reply.effectPolicy).toBe("Idempotent");
-    expect(reply.reconcile).toBe("conversations.get");
+    expect(reply.effectPolicy).toBeUndefined();
+    expect(reply.reconcile).toBeUndefined();
   });
 
   it("declares contacts.get + conversations.search as reads", () => {

@@ -24,7 +24,7 @@ async function settle(result: ReturnType<typeof defaultConnectorRegistry.execute
   }
 }
 
-describe("Reconcile observe projection: intercom conversation writes", () => {
+describe("intercom conversation writes (FX-intercom-1: no effect keys, shape rule)", () => {
   const cases: [string, Record<string, unknown>, string][] = [
     ["conversations.close", { id: "147", adminId: "991", body: "Closing - resolved." }, "/conversations/147/parts"],
     ["conversations.assign", { id: "147", adminId: "991", assigneeId: "5", body: "Over to you." }, "/conversations/147/parts"],
@@ -32,7 +32,7 @@ describe("Reconcile observe projection: intercom conversation writes", () => {
   ];
 
   for (const [action, input, writePath] of cases) {
-    test(`${action} with action-only inputs observes conversations.get`, async () => {
+    test(`${action}: one POST, no observe`, async () => {
       const { calls, impl } = intercomFetch();
       const settled = await settle(
         defaultConnectorRegistry.executeAction("intercom", action, { ...input, accessToken: "token", fetch: impl }),
@@ -41,13 +41,12 @@ describe("Reconcile observe projection: intercom conversation writes", () => {
       expect(settled.failure).toBeUndefined();
       expect(calls.map((c) => `${c.method} ${new URL(c.url).pathname}${new URL(c.url).search}`)).toEqual([
         `POST ${writePath}`,
-        "GET /conversations/147",
       ]);
-      expect(settled.output).toMatchObject({ connector: "intercom", action: "conversations.get", data: { id: "147" } });
+      expect(settled.output).toEqual({ conversation: null });
     });
   }
 
-  test("conversations.reply is idempotent: observes conversations.get after the reply", async () => {
+  test("FX-intercom-1: conversations.reply carries no effect keys: one POST, no observe", async () => {
     const { calls, impl } = intercomFetch(200, { type: "conversation", id: "147" });
     const settled = await settle(
       defaultConnectorRegistry.executeAction("intercom", "conversations.reply", {
@@ -64,9 +63,8 @@ describe("Reconcile observe projection: intercom conversation writes", () => {
     expect(settled.failure).toBeUndefined();
     expect(calls.map((call) => `${call.method} ${new URL(call.url).pathname}`)).toEqual([
       "POST /conversations/147/reply",
-      "GET /conversations/147",
     ]);
-    expect(settled.output).toMatchObject({ connector: "intercom", action: "conversations.get", data: { id: "147" } });
+    expect(settled.output).toMatchObject({ type: "conversation", id: "147" });
   });
 
   test("upstream write failure surfaces CONNECTOR_UPSTREAM_ERROR and never observes", async () => {

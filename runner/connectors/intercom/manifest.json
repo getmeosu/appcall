@@ -1,7 +1,7 @@
 {
   "key": "intercom",
   "name": "Intercom",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "runtime": "bun",
   "visibility": "public",
   "categories": [
@@ -370,7 +370,7 @@
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
       "title": "Reply to Conversation",
-      "description": "Reply to an Intercom conversation as an admin (comment or note) via POST /conversations/{id}/reply. EffectPolicy Idempotent projects conversation id from the primary response and observes via conversations.get (handler returns raw Conversation).",
+      "description": "Reply to an Intercom conversation as an admin (comment or note) via POST /conversations/{id}/reply. Returns the raw Conversation from the reply response. No effectPolicy and no reconcile (creates a conversation part).",
       "inputSchema": {
         "type": "object",
         "required": [
@@ -441,20 +441,16 @@
       },
       "enforceOutputSchema": true,
       "validationMode": "strict-generated",
-      "responseFormat": "json",
-      "effectPolicy": "Idempotent",
-      "reconcile": "conversations.get"
+      "responseFormat": "json"
     },
     "conversations.close": {
       "kind": "action",
       "sideEffect": "write",
-      "effectPolicy": "Reconcile",
-      "reconcile": "conversations.get",
       "timeoutMs": 15000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
       "title": "Close Conversation",
-      "description": "Close an Intercom conversation via POST /conversations/{id}/parts (message_type close). EffectPolicy Reconcile observes via conversations.get.",
+      "description": "Close an Intercom conversation via POST /conversations/{id}/parts (message_type close). No effectPolicy and no reconcile (shape rule: conversations.get returns {connector, action, source, data}, which fails this op's closed outputSchema {data}).",
       "inputSchema": {
         "type": "object",
         "required": [
@@ -512,13 +508,11 @@
     "conversations.assign": {
       "kind": "action",
       "sideEffect": "write",
-      "effectPolicy": "Reconcile",
-      "reconcile": "conversations.get",
       "timeoutMs": 15000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
       "title": "Assign Conversation",
-      "description": "Assign an Intercom conversation via POST /conversations/{id}/parts (message_type assignment). assigneeId may be admin or team id; \"0\" unassigns. EffectPolicy Reconcile observes via conversations.get.",
+      "description": "Assign an Intercom conversation via POST /conversations/{id}/parts (message_type assignment). assigneeId may be admin or team id; \"0\" unassigns. No effectPolicy and no reconcile (shape rule: conversations.get returns {connector, action, source, data}, which fails this op's closed outputSchema {data}).",
       "inputSchema": {
         "type": "object",
         "required": [
@@ -583,13 +577,11 @@
     "conversations.tag": {
       "kind": "action",
       "sideEffect": "write",
-      "effectPolicy": "Reconcile",
-      "reconcile": "conversations.get",
       "timeoutMs": 15000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
       "title": "Tag Conversation",
-      "description": "Add a tag via POST /conversations/{id}/tags (body id=tagId, admin_id). Upstream returns Tag; EffectPolicy Reconcile observes conversation via conversations.get.",
+      "description": "Add a tag via POST /conversations/{id}/tags (body id=tagId, admin_id). Upstream returns Tag. No effectPolicy and no reconcile (shape rule: conversations.get returns {connector, action, source, data}, which fails this op's closed outputSchema {data}).",
       "inputSchema": {
         "type": "object",
         "required": [
