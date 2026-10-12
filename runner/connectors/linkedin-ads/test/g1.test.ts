@@ -63,8 +63,8 @@ async function failure(promise: unknown): Promise<any> {
 }
 
 describe("G1 manifest contract", () => {
-  it("has 47 ops including the 15 G1 ops (v0.7.0 after LI-SCOPES)", () => {
-    expect(manifest.version).toBe("0.7.0");
+  it("has 47 ops including the 15 G1 ops (v0.7.1 after LI-G1b)", () => {
+    expect(manifest.version).toBe("0.7.1");
     expect(Object.keys(operations)).toHaveLength(47);
     expect(ALL_G1).toHaveLength(15);
     for (const key of ALL_G1) expect(operations[key], key).toBeDefined();

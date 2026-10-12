@@ -138,7 +138,9 @@ export function getCampaign(input: unknown): ActionResult {
         throw handleError("campaigns.get", result);
       });
   }
-  return { connector: "linkedin-ads", action: "campaigns.get", source: "connector", validated };
+  // Dry run carries campaign: null like campaign_groups.get / creatives.get, so the
+  // campaigns.update Reconcile output keeps one shape (LI-G1b).
+  return { connector: "linkedin-ads", action: "campaigns.get", source: "connector", campaign: null, validated };
 }
 
 function validateCampaignsGetInput(input: unknown): CampaignsGetInput {
