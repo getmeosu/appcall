@@ -4,7 +4,7 @@ import manifest from "../manifest.json";
 describe("meta-ads manifest", () => {
   it("has correct key and version", () => {
     expect(manifest.key).toBe("meta-ads");
-    expect(manifest.version).toBe("0.4.0");
+    expect(manifest.version).toBe("0.4.1");
     expect(manifest.runtime).toBe("bun");
   });
 
@@ -68,7 +68,7 @@ describe("meta-ads manifest", () => {
     }
   });
 
-  it("applies effect rules: creates omit, updates Reconcile, never Idempotent", () => {
+  it("applies effect rules: creates/updates/deletes omit, never Idempotent", () => {
     const ops = manifest.operations as Record<string, any>;
     expect(ops["campaigns.create"].effectPolicy).toBeUndefined();
     expect(ops["ad_sets.create"].effectPolicy).toBeUndefined();
@@ -84,14 +84,12 @@ describe("meta-ads manifest", () => {
     expect(ops["insights.async.get"].effectPolicy).toBeUndefined();
     expect(ops["ad_creatives.preview"].effectPolicy).toBeUndefined();
     expect(ops["reach_estimate.get"].effectPolicy).toBeUndefined();
-    expect(ops["campaigns.update"].effectPolicy).toBe("Reconcile");
-    expect(ops["campaigns.update"].reconcile).toBe("campaigns.get");
-    expect(ops["ad_sets.update"].effectPolicy).toBe("Reconcile");
-    expect(ops["ad_sets.update"].reconcile).toBe("ad_sets.get");
-    expect(ops["ads.update"].effectPolicy).toBe("Reconcile");
-    expect(ops["ads.update"].reconcile).toBe("ads.get");
-    expect(ops["ad_creatives.update"].effectPolicy).toBe("Reconcile");
-    expect(ops["ad_creatives.update"].reconcile).toBe("ad_creatives.get");
+    // FX-meta-1: the .get observes return {campaign|adSet|ad|creative}, not {id, success}.
+    for (const id of ["campaigns.update", "ad_sets.update", "ads.update", "ad_creatives.update"]) {
+      for (const key of ["effectPolicy", "reconcile", "observe", "reconcileInput"]) {
+        expect(ops[id][key], `${id}.${key}`).toBeUndefined();
+      }
+    }
     expect(ops["ads.update"].inputSchema.properties.bidAmount).toBeUndefined();
     expect(ops["ads.create"].inputSchema.properties.bidAmount).toBeUndefined();
     const blob = JSON.stringify(manifest);

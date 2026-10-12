@@ -3,7 +3,9 @@
  * audiences, async insights, reach estimate). Graph API v26.0 via tip createMetaClient.
  *
  * Effect keys (/workspace/parity-briefs/meta-ads-g2-selflock.md):
- * - ad_creatives.update → Reconcile → ad_creatives.get (resolveObserveFields)
+ * - ad_creatives.update omits all effect keys (FX-meta-1 shape rule: ad_creatives.get
+ *   returns {creative}, not {id, success})
+ * - deletes are sideEffect destructive (DELETED cannot be reverted)
  * - creates / deletes / async / one-shots omit effectPolicy/reconcile/observe
  * - Never Idempotent
  * - No poll_spec / applink_treatment=web_only / delivery-estimate deprecated fields
@@ -241,7 +243,7 @@ export function deleteAd(input: unknown): ActionResult {
 }
 
 // ---------------------------------------------------------------------------
-// 4. ad_creatives.update — Reconcile → ad_creatives.get
+// 4. ad_creatives.update — no effect keys (FX-meta-1)
 // ---------------------------------------------------------------------------
 
 export function updateAdCreative(input: unknown): ActionResult {
