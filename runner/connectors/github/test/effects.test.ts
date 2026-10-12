@@ -67,8 +67,8 @@ const CREATES = [
 ] as const;
 
 describe("github FIX-EFFECTS: manifest guards", () => {
-  test("version 0.86.5 at 847 ops", () => {
-    expect(manifest.version).toBe("0.86.5");
+  test("version 0.86.6 at 847 ops", () => {
+    expect(manifest.version).toBe("0.86.6");
     expect(Object.keys(ops)).toHaveLength(847);
   });
 
@@ -339,8 +339,8 @@ function schemaErrors(value: unknown, schema: any, path = "$"): string[] {
 }
 
 describe("github FIX-EFFECTS: each kept Reconcile projects onto the op's own output schema", () => {
-  test("the kept table is 27 ops (FIX-EFFECTS-b dropped orgs.teams.update; FIX-EFFECTS-c dropped 13)", () => {
-    expect(Object.keys(RECONCILE_KEEP)).toHaveLength(27);
+  test("the kept table is 26 ops (FIX-EFFECTS-b dropped orgs.teams.update; FIX-EFFECTS-c dropped 13; TR-1 amend dropped repos.interaction_limits.set)", () => {
+    expect(Object.keys(RECONCILE_KEEP)).toHaveLength(26);
   });
   for (const [key, observe] of Object.entries(RECONCILE_KEEP)) {
     test(`${key} -> ${observe}`, async () => {
@@ -431,7 +431,6 @@ const KEPT_EXACT: Readonly<Record<string, string>> = {
   "pull_requests.reviews.update": "pull_requests.reviews.get",
   "releases.assets.update": "releases.assets.get",
   "releases.update": "releases.get",
-  "repos.interaction_limits.set": "repos.interaction_limits.get",
   "repos.rulesets.update": "repos.rulesets.get",
   "repos.star": "user.starred.check",
   "repos.subscription.set": "repos.subscription.get",
@@ -444,9 +443,9 @@ const EFFECTS_C_OMIT = [
   "repos.update", "user.update",
 ];
 
-describe("github FIX-EFFECTS-c: kept set is exactly 27", () => {
+describe("github FIX-EFFECTS-c: kept set is exactly 26 (27 after EFFECTS-c; TR-1 amend omits repos.interaction_limits.set)", () => {
   test("RECONCILE_KEEP and the manifest's effect-key ops equal the literal kept set", () => {
-    expect(Object.keys(KEPT_EXACT)).toHaveLength(27);
+    expect(Object.keys(KEPT_EXACT)).toHaveLength(26);
     expect({ ...RECONCILE_KEEP }).toEqual({ ...KEPT_EXACT });
     const withKeys = Object.keys(ops).filter((key) => effectKeys(ops[key]!).length > 0).sort();
     expect(withKeys).toEqual(Object.keys(KEPT_EXACT).sort());
@@ -463,6 +462,15 @@ describe("github FIX-EFFECTS-c: kept set is exactly 27", () => {
       expect(String(ops[key]!.description), key).toContain("No effectPolicy and no reconcile");
       expect(String(ops[key]!.description), key).not.toMatch(/effectPolicy Reconcile/i);
     }
+  });
+  test("GH-TYPED-READS TR-1 amend (linus): repos.interaction_limits.set omits and says why", () => {
+    const op = ops["repos.interaction_limits.set"]!;
+    expect(effectKeys(op)).toEqual([]);
+    expect("repos.interaction_limits.set" in RECONCILE_KEEP).toBe(false);
+    expect(String(op.description)).toContain("No effectPolicy and no reconcile");
+    expect(String(op.description)).toContain("expires_at");
+    expect(String(op.description)).not.toMatch(/effectPolicy Reconcile/i);
+    expect(Object.keys(op.inputSchema.properties)).toContain("expiry");
   });
   test("every hooks update/config op accepts the write-only secret (reason for omit)", () => {
     for (const key of ["orgs.hooks.update", "repos.hooks.update", "orgs.hooks.config.update", "repos.hooks.config.update"]) {
@@ -548,7 +556,9 @@ describe("github FIX-EFFECTS-c: kept-op field mappings (observe reads back every
     }
     expect(ops["releases.get"]!.outputSchema.properties.release.properties).toEqual(ops["releases.update"]!.outputSchema.properties.release.properties);
     expect(ops["releases.get"]!.outputSchema.properties.release.properties).toMatchObject({
-      providerReleaseId: { type: ["number", "null"] }, body: { type: "string" }, draft: { type: "boolean" }, prerelease: { type: "boolean" }, targetBranch: { type: "string" },
+      // GH-TYPED-READS (0.86.6): integer id; body and targetBranch nullable (never "" / "main").
+      // FIX-DESTRUCTIVE amend 2: providerReleaseId nullable (null for a non-numeric id, never 0).
+      providerReleaseId: { type: ["integer", "null"] }, body: { type: ["string", "null"] }, draft: { type: "boolean" }, prerelease: { type: "boolean" }, targetBranch: { type: ["string", "null"] },
     });
   });
 
@@ -558,7 +568,8 @@ describe("github FIX-EFFECTS-c: kept-op field mappings (observe reads back every
     if (!r.ok) throw new Error(JSON.stringify(r));
     const out = (await Promise.resolve(r.output)) as { release: Record<string, unknown> };
     expect(schemaErrors(out, ops["releases.get"]!.outputSchema)).toEqual([]);
-    // FIX-DESTRUCTIVE amend: providerReleaseId is null for a non-numeric id (was a fabricated 0).
-    expect([out.release.providerReleaseId, out.release.body, out.release.draft, out.release.prerelease, out.release.targetBranch]).toEqual([null, "", false, false, "main"]);
+    // GH-TYPED-READS (0.86.6): body (nullable upstream) and targetBranch (linus: never "main") are null.
+    // FIX-DESTRUCTIVE amend 2: providerReleaseId is null for a non-numeric id (was a fabricated 0).
+    expect([out.release.providerReleaseId, out.release.body, out.release.draft, out.release.prerelease, out.release.targetBranch]).toEqual([null, null, false, false, null]);
   });
 });

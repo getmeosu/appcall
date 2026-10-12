@@ -108,8 +108,8 @@ export type NormalizedIssueComment = {
   id: string;
   provider: "github";
   providerCommentId: number;
-  body: string;
-  author: string;
+  body: string | null;
+  author: string | null;
   url: string;
   createdAt: string;
   modelVersion: "2026-05-16";
@@ -121,8 +121,9 @@ export function normalizeGitHubComment(comment: GitHubIssueComment): NormalizedI
     id: `gh-comment:${comment.id}`,
     provider: "github",
     providerCommentId: comment.id,
-    body: comment.body ?? "",
-    author: comment.user?.login ?? "",
+    // GH-TYPED-READS (0.86.6): body is optional and user nullable upstream; null when missing.
+    body: typeof comment.body === "string" ? comment.body : null,
+    author: typeof comment.user?.login === "string" ? comment.user.login : null,
     url: comment.html_url ?? "",
     createdAt: comment.created_at ?? "",
     modelVersion: "2026-05-16",

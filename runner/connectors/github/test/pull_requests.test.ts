@@ -50,7 +50,12 @@ describe("github pull requests", () => {
     const pr = normalizeGitHubPullRequest({ id: 1, number: 1, title: "Minimal" });
 
     expect(pr.id).toBe("gh-pr:1");
-    expect(pr.isDraft).toBe(false);
+    // GH-TYPED-READS (0.86.6): draft is optional upstream, so a missing draft is null (was false);
+    // state is never invented as "open"; merged_at/closed_at are null.
+    expect(pr.isDraft).toBeNull();
+    expect(pr.state).toBeNull();
+    expect(pr.mergedAt).toBeNull();
+    expect(pr.closedAt).toBeNull();
     expect(pr.isMerged).toBe(false);
     expect(pr.headBranch).toBe("");
   });

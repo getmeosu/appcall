@@ -27,17 +27,17 @@ export type NormalizedRelease = {
   provider: "github";
   providerReleaseId: number | null;
   tagName: string;
-  name: string;
-  body: string;
+  name: string | null;
+  body: string | null;
   draft: boolean;
   prerelease: boolean;
   url: string;
-  tarballUrl: string;
-  zipballUrl: string;
+  tarballUrl: string | null;
+  zipballUrl: string | null;
   author: string;
-  targetBranch: string;
+  targetBranch: string | null;
   createdAt: string;
-  publishedAt: string;
+  publishedAt: string | null;
   modelVersion: "2026-05-16";
   raw: GitHubRelease;
 };
@@ -51,17 +51,19 @@ export function normalizeGitHubRelease(release: GitHubRelease): NormalizedReleas
     // FIX-DESTRUCTIVE amend (linus): a non-numeric upstream id is null, never a fabricated 0.
     providerReleaseId: typeof release.id === "number" ? release.id : null,
     tagName: release.tag_name ?? "",
-    name: release.name ?? "",
-    body: typeof release.body === "string" ? release.body : "",
+    // GH-TYPED-READS (0.86.6): name, body, tarball_url, zipball_url and published_at are
+    // nullable upstream, and targetBranch is null (never "main") when target_commitish is missing.
+    name: typeof release.name === "string" ? release.name : null,
+    body: typeof release.body === "string" ? release.body : null,
     draft: typeof release.draft === "boolean" ? release.draft : false,
     prerelease: typeof release.prerelease === "boolean" ? release.prerelease : false,
     url: release.html_url ?? "",
-    tarballUrl: release.tarball_url ?? "",
-    zipballUrl: release.zipball_url ?? "",
+    tarballUrl: typeof release.tarball_url === "string" ? release.tarball_url : null,
+    zipballUrl: typeof release.zipball_url === "string" ? release.zipball_url : null,
     author: release.author?.login ?? "",
-    targetBranch: typeof release.target_commitish === "string" ? release.target_commitish : "main",
+    targetBranch: typeof release.target_commitish === "string" ? release.target_commitish : null,
     createdAt: release.created_at ?? "",
-    publishedAt: release.published_at ?? "",
+    publishedAt: typeof release.published_at === "string" ? release.published_at : null,
     modelVersion: "2026-05-16",
     raw: release,
   };
@@ -88,13 +90,13 @@ export type NormalizedReleaseAsset = {
   provider: "github";
   providerAssetId: number;
   name: string;
-  label: string;
+  label: string | null;
   contentType: string;
   size: number;
   downloadCount: number;
   downloadUrl: string;
   state: string;
-  uploader: string;
+  uploader: string | null;
   createdAt: string;
   updatedAt: string;
   modelVersion: "2026-05-16";
@@ -107,13 +109,14 @@ export function normalizeGitHubReleaseAsset(asset: GitHubReleaseAsset): Normaliz
     provider: "github",
     providerAssetId: asset.id,
     name: asset.name ?? "",
-    label: typeof asset.label === "string" ? asset.label : "",
+    // GH-TYPED-READS (0.86.6): label and uploader are nullable upstream; null, not "".
+    label: typeof asset.label === "string" ? asset.label : null,
     contentType: asset.content_type ?? "",
     size: typeof asset.size === "number" ? asset.size : 0,
     downloadCount: typeof asset.download_count === "number" ? asset.download_count : 0,
     downloadUrl: asset.browser_download_url ?? "",
     state: asset.state ?? "",
-    uploader: asset.uploader?.login ?? "",
+    uploader: typeof asset.uploader?.login === "string" ? asset.uploader.login : null,
     createdAt: asset.created_at ?? "",
     updatedAt: asset.updated_at ?? "",
     modelVersion: "2026-05-16",

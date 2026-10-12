@@ -12,8 +12,8 @@ const VALUE_TYPES = ["string", "single_select", "multi_select", "true_false", "u
 const VALUES_EDITABLE_BY = ["org_actors", "org_and_repo_actors"] as const;
 
 export type NormalizedOidcSubject = {
-  includeClaimKeys: string[];
-  useImmutableSubject: boolean;
+  includeClaimKeys: string[] | null;
+  useImmutableSubject: boolean | null;
 };
 export type NormalizedRepoOidcSubject = NormalizedOidcSubject & { useDefault: boolean };
 export type NormalizedRepoSummary = {
@@ -477,13 +477,14 @@ export function createGapG7Client(options: { accessToken: string; fetch?: typeof
 
 // ─── normalizers ─────────────────────────────────────────────────────────────
 
+// GH-TYPED-READS (0.86.6): spec-optional or nullable upstream fields are null when missing, never a fabricated default.
 function normalizeRepoOidcSubject(item: Record<string, unknown>): NormalizedRepoOidcSubject {
   return {
     useDefault: item.use_default === true,
     includeClaimKeys: Array.isArray(item.include_claim_keys)
       ? item.include_claim_keys.filter((entry): entry is string => typeof entry === "string")
-      : [],
-    useImmutableSubject: item.use_immutable_subject === true,
+      : null,
+    useImmutableSubject: typeof item.use_immutable_subject === "boolean" ? item.use_immutable_subject : null,
   };
 }
 

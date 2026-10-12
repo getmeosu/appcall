@@ -47,10 +47,10 @@ export type NormalizedDiscussion = {
   title: string;
   body: string;
   url: string;
-  author: string;
+  author: string | null;
   categoryId: string;
   categoryName: string;
-  isAnswered: boolean;
+  isAnswered: boolean | null;
   createdAt: string;
   updatedAt: string;
   modelVersion: typeof MODEL_VERSION;
@@ -91,7 +91,8 @@ export function normalizeDiscussionCategory(item: Record<string, unknown>): Norm
 export function normalizeDiscussion(item: Record<string, unknown>): NormalizedDiscussion {
   const nodeId = typeof item.id === "string" ? item.id : "";
   const number = typeof item.number === "number" ? item.number : 0;
-  const author = isRecord(item.author) && typeof item.author.login === "string" ? item.author.login : "";
+  // GH-TYPED-READS (0.86.6): author (Actor) and isAnswered are nullable in GraphQL; null, not ""/false.
+  const author = isRecord(item.author) && typeof item.author.login === "string" ? item.author.login : null;
   const category = isRecord(item.category) ? item.category : {};
   return {
     id: `gh-discussion:${number || nodeId}`,
@@ -104,7 +105,7 @@ export function normalizeDiscussion(item: Record<string, unknown>): NormalizedDi
     author,
     categoryId: typeof category.id === "string" ? category.id : "",
     categoryName: typeof category.name === "string" ? category.name : "",
-    isAnswered: item.isAnswered === true,
+    isAnswered: typeof item.isAnswered === "boolean" ? item.isAnswered : null,
     createdAt: typeof item.createdAt === "string" ? item.createdAt : "",
     updatedAt: typeof item.updatedAt === "string" ? item.updatedAt : "",
     modelVersion: MODEL_VERSION,

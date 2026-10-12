@@ -40,8 +40,9 @@ const NO_POLICY = [
 const RECONCILE = {
   "repos.topics.replace": "repos.topics.get",
   "repos.subscription.set": "repos.subscription.get",
-  "repos.interaction_limits.set": "repos.interaction_limits.get",
 } as const;
+// GH-TYPED-READS TR-1 amend: repos.interaction_limits.set omits (expiry is a duration; the observe
+// only returns expires_at). Asserted in effects.test.ts.
 
 function empty(status: number) {
   return new Response("", { status });
@@ -49,7 +50,7 @@ function empty(status: number) {
 
 describe("github write card 2 repo writes", () => {
   test("version is 0.79.0 at 852 ops with the write breakdown", () => {
-    expect(manifest.version).toBe("0.86.5");
+    expect(manifest.version).toBe("0.86.6");
     const ops = manifest.operations as Record<string, Record<string, unknown>>;
     expect(Object.keys(ops)).toHaveLength(847);
     const kinds = { action: 0, sync: 0, webhook: 0 };

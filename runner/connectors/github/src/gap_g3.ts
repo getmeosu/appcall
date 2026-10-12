@@ -49,7 +49,7 @@ export type NormalizedRepoSummary = {
 };
 export type NormalizedOidcSubject = {
   includeClaimKeys: string[];
-  useImmutableSubject: boolean;
+  useImmutableSubject: boolean | null;
 };
 
 // ─── validators ──────────────────────────────────────────────────────────────
@@ -528,7 +528,8 @@ function normalizeOidcSubject(item: Record<string, unknown>): NormalizedOidcSubj
     includeClaimKeys: Array.isArray(item.include_claim_keys)
       ? item.include_claim_keys.filter((entry): entry is string => typeof entry === "string")
       : [],
-    useImmutableSubject: item.use_immutable_subject === true,
+    // GH-TYPED-READS (0.86.6): optional upstream field; null when missing.
+    useImmutableSubject: typeof item.use_immutable_subject === "boolean" ? item.use_immutable_subject : null,
   };
 }
 

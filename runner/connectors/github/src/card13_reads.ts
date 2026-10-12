@@ -76,8 +76,8 @@ export type NormalizedOrgWorkflowPermissions = {
 
 export type NormalizedOrgActionsPermissions = {
   enabledRepositories: string;
-  allowedActions: string;
-  shaPinningRequired: boolean;
+  allowedActions: string | null;
+  shaPinningRequired: boolean | null;
 };
 
 export type NormalizedOrgCacheUsage = {
@@ -252,8 +252,9 @@ export function normalizeOrgWorkflowPermissions(item: Record<string, unknown>): 
 export function normalizeOrgActionsPermissions(item: Record<string, unknown>): NormalizedOrgActionsPermissions {
   return {
     enabledRepositories: typeof item.enabled_repositories === "string" ? item.enabled_repositories : "",
-    allowedActions: typeof item.allowed_actions === "string" ? item.allowed_actions : "",
-    shaPinningRequired: item.sha_pinning_required === true,
+    // GH-TYPED-READS (0.86.6): optional upstream fields; null when missing.
+    allowedActions: typeof item.allowed_actions === "string" ? item.allowed_actions : null,
+    shaPinningRequired: typeof item.sha_pinning_required === "boolean" ? item.sha_pinning_required : null,
   };
 }
 

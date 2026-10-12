@@ -401,7 +401,9 @@ function parseBypassActors(value: unknown): BypassActor[] {
     }
     const out: BypassActor = { actorType: actorType as BypassActor["actorType"] };
     if (item.actorId !== undefined || item.actor_id !== undefined) {
-      const actorId = item.actorId ?? item.actor_id;
+      // GH-TYPED-READS TR-1 amend: `??` turned an explicit actorId:null (DeployKey, as the input schema
+      // documents) into undefined and rejected it; keep null.
+      const actorId = item.actorId !== undefined ? item.actorId : item.actor_id;
       if (actorId !== null && (typeof actorId !== "number" || !Number.isSafeInteger(actorId))) {
         throw new Error(`bypassActors[${index}].actorId must be an integer or null`);
       }

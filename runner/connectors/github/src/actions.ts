@@ -5579,7 +5579,7 @@ export function getNotificationThreadSubscription(input: unknown): Record<string
   if (isRecord(input) && typeof input.accessToken === "string") {
     return liveCard3Client(input, "notifications.threads.subscription.get").getThreadSubscription(input).then((result) => {
       if (!result.ok) throwVariable(result);
-      return { connector: "github", action: "notifications.threads.subscription.get", source: "connector", notModified: result.notModified, subscription: result.notModified ? undefined : result.subscription };
+      return { connector: "github", action: "notifications.threads.subscription.get", source: "connector", notModified: result.notModified, subscription: result.notModified ? null : result.subscription };
     });
   }
   return { connector: "github", action: "notifications.threads.subscription.get", source: "connector", validated: validateGetThreadSubscriptionInput(input) };
