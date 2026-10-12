@@ -907,43 +907,28 @@ import {
   createGapG12Client,
   validateAddProjectCollaboratorInput,
   validateAddTeamProjectInput,
-  validateCreateOrgProjectInput,
   validateCreateProjectCardInput,
-  validateCreateProjectColumnInput,
-  validateCreateRepoProjectInput,
   validateCreateTeamDiscussionInput,
-  validateCreateUserProjectInput,
   validateDeleteProjectCardInput,
-  validateDeleteProjectColumnInput,
-  validateDeleteProjectInput,
   validateDeleteTeamDiscussionInput,
   validateGetAssignmentInput,
   validateGetClassroomInput,
   validateGetProjectCardInput,
   validateGetProjectCollaboratorPermissionInput,
-  validateGetProjectColumnInput,
-  validateGetProjectInput,
   validateGetTeamDiscussionInput,
   validateGetTeamProjectPermissionInput,
   validateListAcceptedAssignmentsInput,
   validateListAssignmentGradesInput,
   validateListClassroomAssignmentsInput,
   validateListClassroomsInput,
-  validateListOrgClassicProjectsInput,
   validateListProjectCardsInput,
   validateListProjectCollaboratorsInput,
-  validateListProjectColumnsInput,
-  validateListRepoProjectsInput,
   validateListTeamDiscussionsInput,
   validateListTeamProjectsInput,
-  validateListUserClassicProjectsInput,
   validateMoveProjectCardInput,
-  validateMoveProjectColumnInput,
   validateRemoveProjectCollaboratorInput,
   validateRemoveTeamProjectInput,
   validateUpdateProjectCardInput,
-  validateUpdateProjectColumnInput,
-  validateUpdateProjectInput,
   validateUpdateTeamDiscussionInput,
 } from "./gap_g12";
 import {
@@ -10453,156 +10438,6 @@ export function listGraphqlSecurityVulnerabilities(input: unknown): Record<strin
     });
   }
   return { connector: "github", action: "graphql.security_vulnerabilities.list", source: "connector", validated: validateListGraphqlSecurityVulnerabilitiesInput(input) };
-}
-
-export function getProject(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
-  if (isRecord(input) && typeof input.accessToken === "string") {
-    return liveGapG12Client(input, "projects.get").getProject(input).then((result) => {
-      if (!result.ok) throwGitHub(result);
-      return { connector: "github", action: "projects.get", source: "connector", project: result.item };
-    });
-  }
-  return { connector: "github", action: "projects.get", source: "connector", validated: validateGetProjectInput(input) };
-}
-
-export function updateProject(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
-  if (isRecord(input) && typeof input.accessToken === "string") {
-    return liveGapG12Client(input, "projects.update").updateProject(input).then((result) => {
-      if (!result.ok) throwGitHub(result);
-      return { connector: "github", action: "projects.update", source: "connector", project: result.item, status: result.status };
-    });
-  }
-  return { connector: "github", action: "projects.update", source: "connector", validated: validateUpdateProjectInput(input) };
-}
-
-export function deleteProject(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
-  if (isRecord(input) && typeof input.accessToken === "string") {
-    return liveGapG12Client(input, "projects.delete").deleteProject(input).then((result) => {
-      if (!result.ok) throwGitHub(result);
-      return { connector: "github", action: "projects.delete", source: "connector", deleted: result.deleted, projectId: result.projectId };
-    });
-  }
-  return { connector: "github", action: "projects.delete", source: "connector", validated: validateDeleteProjectInput(input) };
-}
-
-export function listOrgClassicProjects(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
-  if (isRecord(input) && typeof input.accessToken === "string") {
-    return liveGapG12Client(input, "orgs.projects.list").listOrgClassicProjects(input).then((result) => {
-      if (!result.ok) throwGitHub(result);
-      return { connector: "github", action: "orgs.projects.list", source: "connector", projects: result.items };
-    });
-  }
-  return { connector: "github", action: "orgs.projects.list", source: "connector", validated: validateListOrgClassicProjectsInput(input) };
-}
-
-export function createOrgProject(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
-  if (isRecord(input) && typeof input.accessToken === "string") {
-    return liveGapG12Client(input, "orgs.projects.create").createOrgProject(input).then((result) => {
-      if (!result.ok) throwGitHub(result);
-      return { connector: "github", action: "orgs.projects.create", source: "connector", project: result.item, status: result.status };
-    });
-  }
-  return { connector: "github", action: "orgs.projects.create", source: "connector", validated: validateCreateOrgProjectInput(input) };
-}
-
-export function listRepoProjects(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
-  if (isRecord(input) && typeof input.accessToken === "string") {
-    return liveGapG12Client(input, "repos.projects.list").listRepoProjects(input).then((result) => {
-      if (!result.ok) throwGitHub(result);
-      return { connector: "github", action: "repos.projects.list", source: "connector", projects: result.items };
-    });
-  }
-  return { connector: "github", action: "repos.projects.list", source: "connector", validated: validateListRepoProjectsInput(input) };
-}
-
-export function createRepoProject(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
-  if (isRecord(input) && typeof input.accessToken === "string") {
-    return liveGapG12Client(input, "repos.projects.create").createRepoProject(input).then((result) => {
-      if (!result.ok) throwGitHub(result);
-      return { connector: "github", action: "repos.projects.create", source: "connector", project: result.item, status: result.status };
-    });
-  }
-  return { connector: "github", action: "repos.projects.create", source: "connector", validated: validateCreateRepoProjectInput(input) };
-}
-
-export function listUserClassicProjects(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
-  if (isRecord(input) && typeof input.accessToken === "string") {
-    return liveGapG12Client(input, "users.projects.list").listUserClassicProjects(input).then((result) => {
-      if (!result.ok) throwGitHub(result);
-      return { connector: "github", action: "users.projects.list", source: "connector", projects: result.items };
-    });
-  }
-  return { connector: "github", action: "users.projects.list", source: "connector", validated: validateListUserClassicProjectsInput(input) };
-}
-
-export function createUserProject(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
-  if (isRecord(input) && typeof input.accessToken === "string") {
-    return liveGapG12Client(input, "user.projects.create").createUserProject(input).then((result) => {
-      if (!result.ok) throwGitHub(result);
-      return { connector: "github", action: "user.projects.create", source: "connector", project: result.item, status: result.status };
-    });
-  }
-  return { connector: "github", action: "user.projects.create", source: "connector", validated: validateCreateUserProjectInput(input) };
-}
-
-export function listProjectColumns(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
-  if (isRecord(input) && typeof input.accessToken === "string") {
-    return liveGapG12Client(input, "projects.columns.list").listProjectColumns(input).then((result) => {
-      if (!result.ok) throwGitHub(result);
-      return { connector: "github", action: "projects.columns.list", source: "connector", columns: result.items };
-    });
-  }
-  return { connector: "github", action: "projects.columns.list", source: "connector", validated: validateListProjectColumnsInput(input) };
-}
-
-export function createProjectColumn(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
-  if (isRecord(input) && typeof input.accessToken === "string") {
-    return liveGapG12Client(input, "projects.columns.create").createProjectColumn(input).then((result) => {
-      if (!result.ok) throwGitHub(result);
-      return { connector: "github", action: "projects.columns.create", source: "connector", column: result.item, status: result.status };
-    });
-  }
-  return { connector: "github", action: "projects.columns.create", source: "connector", validated: validateCreateProjectColumnInput(input) };
-}
-
-export function getProjectColumn(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
-  if (isRecord(input) && typeof input.accessToken === "string") {
-    return liveGapG12Client(input, "projects.columns.get").getProjectColumn(input).then((result) => {
-      if (!result.ok) throwGitHub(result);
-      return { connector: "github", action: "projects.columns.get", source: "connector", column: result.item };
-    });
-  }
-  return { connector: "github", action: "projects.columns.get", source: "connector", validated: validateGetProjectColumnInput(input) };
-}
-
-export function updateProjectColumn(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
-  if (isRecord(input) && typeof input.accessToken === "string") {
-    return liveGapG12Client(input, "projects.columns.update").updateProjectColumn(input).then((result) => {
-      if (!result.ok) throwGitHub(result);
-      return { connector: "github", action: "projects.columns.update", source: "connector", column: result.item, status: result.status };
-    });
-  }
-  return { connector: "github", action: "projects.columns.update", source: "connector", validated: validateUpdateProjectColumnInput(input) };
-}
-
-export function deleteProjectColumn(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
-  if (isRecord(input) && typeof input.accessToken === "string") {
-    return liveGapG12Client(input, "projects.columns.delete").deleteProjectColumn(input).then((result) => {
-      if (!result.ok) throwGitHub(result);
-      return { connector: "github", action: "projects.columns.delete", source: "connector", deleted: result.deleted, columnId: result.columnId };
-    });
-  }
-  return { connector: "github", action: "projects.columns.delete", source: "connector", validated: validateDeleteProjectColumnInput(input) };
-}
-
-export function moveProjectColumn(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
-  if (isRecord(input) && typeof input.accessToken === "string") {
-    return liveGapG12Client(input, "projects.columns.move").moveProjectColumn(input).then((result) => {
-      if (!result.ok) throwGitHub(result);
-      return { connector: "github", action: "projects.columns.move", source: "connector", moved: result.moved, columnId: result.columnId, position: result.position };
-    });
-  }
-  return { connector: "github", action: "projects.columns.move", source: "connector", validated: validateMoveProjectColumnInput(input) };
 }
 
 export function listProjectCards(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {

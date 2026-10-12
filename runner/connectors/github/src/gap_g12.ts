@@ -1,7 +1,9 @@
 import { createGitHubClient, parseGitHubRateLimit, type GitHubClient } from "./http";
 import { requireSingleSegment as segment } from "./path_segment";
 
-// G12: classic Projects + Classroom + team discussions (40 Composio-gap REST ops).
+// G12: classic Projects + Classroom + team discussions (40 Composio-gap REST ops at 0.81.2).
+// PRUNE-1 (0.82.0) removed the 15 Projects (classic) project/column ops: the REST API was
+// sunset 2025-04-01 (https://github.blog/changelog/2024-05-23-sunset-notice-projects-classic/).
 // All omit effectPolicy/reconcile/effect. GET/DELETE are body-less. JSON Content-Type only when a body is set.
 
 type Page = { perPage?: number; page?: number };
@@ -19,7 +21,6 @@ export type NormalizedProject = {
   number: number;
   htmlUrl: string;
 };
-export type NormalizedColumn = { id: number; name: string; projectUrl: string };
 export type NormalizedCard = { id: number; note: string; columnUrl: string; archived: boolean };
 export type NormalizedClassroom = { id: number; name: string; archived: boolean };
 export type NormalizedAssignment = { id: number; title: string; slug: string };
@@ -28,93 +29,6 @@ export type NormalizedDiscussion = { id: number; number: number; title: string; 
 const PROJECT_ACCEPT = { Accept: "application/vnd.github.inertia+json" };
 
 // ─── validators ──────────────────────────────────────────────────────────────
-
-export function validateGetProjectInput(input: unknown): ProjectId {
-  if (!isRecord(input)) throw new Error("projects.get input must be an object");
-  return { projectId: requireId(input.projectId ?? input.project_id, "projectId") };
-}
-
-export function validateUpdateProjectInput(input: unknown): ProjectId & { name?: string; body?: string; state?: "open" | "closed" } {
-  if (!isRecord(input)) throw new Error("projects.update input must be an object");
-  const out: ProjectId & { name?: string; body?: string; state?: "open" | "closed" } = {
-    projectId: requireId(input.projectId ?? input.project_id, "projectId"),
-  };
-  if (input.name !== undefined) out.name = requireNonEmpty(input.name, "name");
-  if (input.body !== undefined) out.body = requireString(input.body, "body");
-  if (input.state !== undefined) {
-    if (input.state !== "open" && input.state !== "closed") throw new Error("state must be open or closed");
-    out.state = input.state;
-  }
-  return out;
-}
-
-export function validateDeleteProjectInput(input: unknown): ProjectId {
-  if (!isRecord(input)) throw new Error("projects.delete input must be an object");
-  return { projectId: requireId(input.projectId ?? input.project_id, "projectId") };
-}
-
-export function validateListOrgClassicProjectsInput(input: unknown): OrgScope & Page & { state?: string } {
-  if (!isRecord(input)) throw new Error("orgs.projects.list input must be an object");
-  return { org: segment(input.org, "org"), ...page(input), ...optionalState(input) };
-}
-
-export function validateCreateOrgProjectInput(input: unknown): OrgScope & { name: string; body?: string } {
-  if (!isRecord(input)) throw new Error("orgs.projects.create input must be an object");
-  return { org: segment(input.org, "org"), name: requireNonEmpty(input.name, "name"), ...optionalBody(input) };
-}
-
-export function validateListRepoProjectsInput(input: unknown): RepoScope & Page & { state?: string } {
-  if (!isRecord(input)) throw new Error("repos.projects.list input must be an object");
-  return { ...repo(input), ...page(input), ...optionalState(input) };
-}
-
-export function validateCreateRepoProjectInput(input: unknown): RepoScope & { name: string; body?: string } {
-  if (!isRecord(input)) throw new Error("repos.projects.create input must be an object");
-  return { ...repo(input), name: requireNonEmpty(input.name, "name"), ...optionalBody(input) };
-}
-
-export function validateListUserClassicProjectsInput(input: unknown): { username: string } & Page & { state?: string } {
-  if (!isRecord(input)) throw new Error("users.projects.list input must be an object");
-  return { username: segment(input.username, "username"), ...page(input), ...optionalState(input) };
-}
-
-export function validateCreateUserProjectInput(input: unknown): { name: string; body?: string } {
-  if (!isRecord(input)) throw new Error("user.projects.create input must be an object");
-  return { name: requireNonEmpty(input.name, "name"), ...optionalBody(input) };
-}
-
-export function validateListProjectColumnsInput(input: unknown): ProjectId & Page {
-  if (!isRecord(input)) throw new Error("projects.columns.list input must be an object");
-  return { projectId: requireId(input.projectId ?? input.project_id, "projectId"), ...page(input) };
-}
-
-export function validateCreateProjectColumnInput(input: unknown): ProjectId & { name: string } {
-  if (!isRecord(input)) throw new Error("projects.columns.create input must be an object");
-  return { projectId: requireId(input.projectId ?? input.project_id, "projectId"), name: requireNonEmpty(input.name, "name") };
-}
-
-export function validateGetProjectColumnInput(input: unknown): ColumnId {
-  if (!isRecord(input)) throw new Error("projects.columns.get input must be an object");
-  return { columnId: requireId(input.columnId ?? input.column_id, "columnId") };
-}
-
-export function validateUpdateProjectColumnInput(input: unknown): ColumnId & { name: string } {
-  if (!isRecord(input)) throw new Error("projects.columns.update input must be an object");
-  return { columnId: requireId(input.columnId ?? input.column_id, "columnId"), name: requireNonEmpty(input.name, "name") };
-}
-
-export function validateDeleteProjectColumnInput(input: unknown): ColumnId {
-  if (!isRecord(input)) throw new Error("projects.columns.delete input must be an object");
-  return { columnId: requireId(input.columnId ?? input.column_id, "columnId") };
-}
-
-export function validateMoveProjectColumnInput(input: unknown): ColumnId & { position: string } {
-  if (!isRecord(input)) throw new Error("projects.columns.move input must be an object");
-  return {
-    columnId: requireId(input.columnId ?? input.column_id, "columnId"),
-    position: requireNonEmpty(input.position, "position"),
-  };
-}
 
 export function validateListProjectCardsInput(input: unknown): ColumnId & Page & { archivedState?: string } {
   if (!isRecord(input)) throw new Error("projects.cards.list input must be an object");
@@ -347,169 +261,6 @@ export function createGapG12Client(options: { accessToken: string; fetch?: typeo
     base ?? createGitHubClient({ accessToken: options.accessToken, fetch: options.fetch, operation });
 
   return {
-    async getProject(input: unknown) {
-      const payload = validateGetProjectInput(input);
-      return readObject(clientFor("projects.get"), `/projects/${payload.projectId}`, "projects.get", normalizeProject, PROJECT_ACCEPT);
-    },
-    async updateProject(input: unknown) {
-      const payload = validateUpdateProjectInput(input);
-      const body: Record<string, unknown> = {};
-      if (payload.name !== undefined) body.name = payload.name;
-      if (payload.body !== undefined) body.body = payload.body;
-      if (payload.state !== undefined) body.state = payload.state;
-      return writeObject(
-        clientFor("projects.update"),
-        `/projects/${payload.projectId}`,
-        jsonInit("PATCH", body, PROJECT_ACCEPT),
-        "projects.update",
-        normalizeProject,
-        [200],
-      );
-    },
-    async deleteProject(input: unknown) {
-      const payload = validateDeleteProjectInput(input);
-      return empty(
-        clientFor("projects.delete"),
-        `/projects/${payload.projectId}`,
-        { method: "DELETE", headers: PROJECT_ACCEPT },
-        204,
-        { deleted: true, projectId: payload.projectId },
-        "projects.delete",
-      );
-    },
-    async listOrgClassicProjects(input: unknown) {
-      const payload = validateListOrgClassicProjectsInput(input);
-      return readList(
-        clientFor("orgs.projects.list"),
-        `/orgs/${enc(payload.org)}/projects${qs({ ...pageParams(payload), ...stateParam(payload) })}`,
-        "orgs.projects.list",
-        normalizeProject,
-        PROJECT_ACCEPT,
-      );
-    },
-    async createOrgProject(input: unknown) {
-      const payload = validateCreateOrgProjectInput(input);
-      const body: Record<string, unknown> = { name: payload.name };
-      if (payload.body !== undefined) body.body = payload.body;
-      return writeObject(
-        clientFor("orgs.projects.create"),
-        `/orgs/${enc(payload.org)}/projects`,
-        jsonInit("POST", body, PROJECT_ACCEPT),
-        "orgs.projects.create",
-        normalizeProject,
-        [201],
-      );
-    },
-    async listRepoProjects(input: unknown) {
-      const payload = validateListRepoProjectsInput(input);
-      return readList(
-        clientFor("repos.projects.list"),
-        `${repoPath(payload)}/projects${qs({ ...pageParams(payload), ...stateParam(payload) })}`,
-        "repos.projects.list",
-        normalizeProject,
-        PROJECT_ACCEPT,
-      );
-    },
-    async createRepoProject(input: unknown) {
-      const payload = validateCreateRepoProjectInput(input);
-      const body: Record<string, unknown> = { name: payload.name };
-      if (payload.body !== undefined) body.body = payload.body;
-      return writeObject(
-        clientFor("repos.projects.create"),
-        `${repoPath(payload)}/projects`,
-        jsonInit("POST", body, PROJECT_ACCEPT),
-        "repos.projects.create",
-        normalizeProject,
-        [201],
-      );
-    },
-    async listUserClassicProjects(input: unknown) {
-      const payload = validateListUserClassicProjectsInput(input);
-      return readList(
-        clientFor("users.projects.list"),
-        `/users/${enc(payload.username)}/projects${qs({ ...pageParams(payload), ...stateParam(payload) })}`,
-        "users.projects.list",
-        normalizeProject,
-        PROJECT_ACCEPT,
-      );
-    },
-    async createUserProject(input: unknown) {
-      const payload = validateCreateUserProjectInput(input);
-      const body: Record<string, unknown> = { name: payload.name };
-      if (payload.body !== undefined) body.body = payload.body;
-      return writeObject(
-        clientFor("user.projects.create"),
-        "/user/projects",
-        jsonInit("POST", body, PROJECT_ACCEPT),
-        "user.projects.create",
-        normalizeProject,
-        [201],
-      );
-    },
-    async listProjectColumns(input: unknown) {
-      const payload = validateListProjectColumnsInput(input);
-      return readList(
-        clientFor("projects.columns.list"),
-        `/projects/${payload.projectId}/columns${qs(pageParams(payload))}`,
-        "projects.columns.list",
-        normalizeColumn,
-        PROJECT_ACCEPT,
-      );
-    },
-    async createProjectColumn(input: unknown) {
-      const payload = validateCreateProjectColumnInput(input);
-      return writeObject(
-        clientFor("projects.columns.create"),
-        `/projects/${payload.projectId}/columns`,
-        jsonInit("POST", { name: payload.name }, PROJECT_ACCEPT),
-        "projects.columns.create",
-        normalizeColumn,
-        [201],
-      );
-    },
-    async getProjectColumn(input: unknown) {
-      const payload = validateGetProjectColumnInput(input);
-      return readObject(
-        clientFor("projects.columns.get"),
-        `/projects/columns/${payload.columnId}`,
-        "projects.columns.get",
-        normalizeColumn,
-        PROJECT_ACCEPT,
-      );
-    },
-    async updateProjectColumn(input: unknown) {
-      const payload = validateUpdateProjectColumnInput(input);
-      return writeObject(
-        clientFor("projects.columns.update"),
-        `/projects/columns/${payload.columnId}`,
-        jsonInit("PATCH", { name: payload.name }, PROJECT_ACCEPT),
-        "projects.columns.update",
-        normalizeColumn,
-        [200],
-      );
-    },
-    async deleteProjectColumn(input: unknown) {
-      const payload = validateDeleteProjectColumnInput(input);
-      return empty(
-        clientFor("projects.columns.delete"),
-        `/projects/columns/${payload.columnId}`,
-        { method: "DELETE", headers: PROJECT_ACCEPT },
-        204,
-        { deleted: true, columnId: payload.columnId },
-        "projects.columns.delete",
-      );
-    },
-    async moveProjectColumn(input: unknown) {
-      const payload = validateMoveProjectColumnInput(input);
-      return empty(
-        clientFor("projects.columns.move"),
-        `/projects/columns/${payload.columnId}/moves`,
-        jsonInit("POST", { position: payload.position }, PROJECT_ACCEPT),
-        201,
-        { moved: true, columnId: payload.columnId, position: payload.position },
-        "projects.columns.move",
-      );
-    },
     async listProjectCards(input: unknown) {
       const payload = validateListProjectCardsInput(input);
       const params = pageParams(payload);
@@ -810,14 +561,6 @@ function normalizeProject(item: Record<string, unknown>): NormalizedProject {
   };
 }
 
-function normalizeColumn(item: Record<string, unknown>): NormalizedColumn {
-  return {
-    id: typeof item.id === "number" ? item.id : 0,
-    name: typeof item.name === "string" ? item.name : "",
-    projectUrl: typeof item.project_url === "string" ? item.project_url : "",
-  };
-}
-
 function normalizeCard(item: Record<string, unknown>): NormalizedCard {
   return {
     id: typeof item.id === "number" ? item.id : 0,
@@ -990,22 +733,6 @@ function pageParams(payload: Page): Record<string, string> {
   if (payload.perPage !== undefined) params.per_page = String(Math.min(payload.perPage, 100));
   if (payload.page !== undefined) params.page = String(payload.page);
   return params;
-}
-
-function optionalState(input: Record<string, unknown>): { state?: string } {
-  if (input.state === undefined) return {};
-  const state = requireNonEmpty(input.state, "state");
-  if (state !== "open" && state !== "closed" && state !== "all") throw new Error("state must be open, closed, or all");
-  return { state };
-}
-
-function stateParam(payload: { state?: string }): Record<string, string> {
-  return payload.state ? { state: payload.state } : {};
-}
-
-function optionalBody(input: Record<string, unknown>): { body?: string } {
-  if (input.body === undefined) return {};
-  return { body: requireString(input.body, "body") };
 }
 
 function qs(params: Record<string, string>): string {
