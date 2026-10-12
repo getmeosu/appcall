@@ -1,6 +1,6 @@
 import { createGitHubClient, parseGitHubRateLimit, type GitHubClient } from "./http";
-import { normalizeGitHubOrg, type GitHubOrg } from "./orgs";
-import { normalizeGitHubEvent, normalizeGitHubUser, type GitHubEvent, type GitHubUser } from "./users";
+import { normalizeGitHubOrgListItem, type GitHubOrg } from "./orgs";
+import { normalizeGitHubEvent, normalizeGitHubUserListItem, type GitHubEvent, type GitHubUser } from "./users";
 import { requireSingleSegment as segment } from "./path_segment";
 
 type OrgName = { org: string };
@@ -155,7 +155,7 @@ export function createOrgsReadsClient(options: { accessToken: string; fetch?: ty
       const result = await read(client, `/organizations${qs(params)}`, "orgs.public.list", "GitHub organizations list was not found.");
       if (!result.ok) return result;
       if (!Array.isArray(result.body)) return upstream("GitHub rejected the orgs.public.list request.");
-      return { ok: true as const, organizations: result.body.filter(isRecord).map((org) => normalizeGitHubOrg(org as GitHubOrg)) };
+      return { ok: true as const, organizations: result.body.filter(isRecord).map((org) => normalizeGitHubOrgListItem(org as GitHubOrg)) };
     },
 
     async listUserOrgs(input: unknown) {
@@ -163,7 +163,7 @@ export function createOrgsReadsClient(options: { accessToken: string; fetch?: ty
       const result = await read(client, `/users/${enc(payload.username)}/orgs${pageQuery(payload)}`, "users.orgs.list", "GitHub user organizations were not found.");
       if (!result.ok) return result;
       if (!Array.isArray(result.body)) return upstream("GitHub rejected the users.orgs.list request.");
-      return { ok: true as const, organizations: result.body.filter(isRecord).map((org) => normalizeGitHubOrg(org as GitHubOrg)) };
+      return { ok: true as const, organizations: result.body.filter(isRecord).map((org) => normalizeGitHubOrgListItem(org as GitHubOrg)) };
     },
 
     async listUserOrgEvents(input: unknown) {
@@ -183,7 +183,7 @@ export function createOrgsReadsClient(options: { accessToken: string; fetch?: ty
       const result = await read(client, `/orgs/${enc(payload.org)}/outside_collaborators${qs(params)}`, "orgs.outside_collaborators.list", "GitHub outside collaborators were not found.");
       if (!result.ok) return result;
       if (!Array.isArray(result.body)) return upstream("GitHub rejected the orgs.outside_collaborators.list request.");
-      return { ok: true as const, collaborators: result.body.filter(isRecord).map((user) => normalizeGitHubUser(user as GitHubUser)) };
+      return { ok: true as const, collaborators: result.body.filter(isRecord).map((user) => normalizeGitHubUserListItem(user as GitHubUser)) };
     },
 
     async listOrgEvents(input: unknown) {
@@ -199,7 +199,7 @@ export function createOrgsReadsClient(options: { accessToken: string; fetch?: ty
       const result = await read(client, `/orgs/${enc(payload.org)}/public_members${pageQuery(payload)}`, "orgs.public_members.list", "GitHub public members were not found.");
       if (!result.ok) return result;
       if (!Array.isArray(result.body)) return upstream("GitHub rejected the orgs.public_members.list request.");
-      return { ok: true as const, members: result.body.filter(isRecord).map((user) => normalizeGitHubUser(user as GitHubUser)) };
+      return { ok: true as const, members: result.body.filter(isRecord).map((user) => normalizeGitHubUserListItem(user as GitHubUser)) };
     },
 
     async listBlocks(input: unknown) {
@@ -207,7 +207,7 @@ export function createOrgsReadsClient(options: { accessToken: string; fetch?: ty
       const result = await read(client, `/orgs/${enc(payload.org)}/blocks${pageQuery(payload)}`, "orgs.blocks.list", "GitHub blocked users were not found.");
       if (!result.ok) return result;
       if (!Array.isArray(result.body)) return upstream("GitHub rejected the orgs.blocks.list request.");
-      return { ok: true as const, users: result.body.filter(isRecord).map((user) => normalizeGitHubUser(user as GitHubUser)) };
+      return { ok: true as const, users: result.body.filter(isRecord).map((user) => normalizeGitHubUserListItem(user as GitHubUser)) };
     },
   };
 }

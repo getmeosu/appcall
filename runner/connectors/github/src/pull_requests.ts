@@ -63,7 +63,9 @@ export function normalizeGitHubPullRequest(pr: GitHubPullRequest): NormalizedPul
     state: typeof pr.state === "string" ? pr.state : null,
     isOpen: pr.state === "open",
     isDraft: typeof pr.draft === "boolean" ? pr.draft : null,
-    isMerged: pr.merged ?? false,
+    // GH-TYPED-READS TR-3: list endpoints return pull-request-simple, which has no `merged`; there a
+    // merged PR was reported isMerged:false. merged_at (required, nullable) decides instead.
+    isMerged: typeof pr.merged === "boolean" ? pr.merged : typeof pr.merged_at === "string",
     url: pr.html_url ?? "",
     headBranch: pr.head?.ref ?? "",
     baseBranch: pr.base?.ref ?? "",

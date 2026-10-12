@@ -1,6 +1,6 @@
 import { createGitHubClient, parseGitHubRateLimit, type GitHubClient } from "./http";
 import { normalizeGitHubRepo, type GitHubRepo } from "./repos";
-import { normalizeGitHubUser, type GitHubUser } from "./users";
+import { normalizeGitHubUserListItem, type GitHubUser } from "./users";
 
 export type GitHubNotification = {
   id: string;
@@ -297,7 +297,7 @@ export function createNotificationsSocialClient(options: { accessToken: string; 
       const client = clientFor(options, base, "teams.members.list");
       const response = await client.fetchJSON(`/orgs/${encodeURIComponent(payload.org)}/teams/${encodeURIComponent(payload.teamSlug)}/members${pageQuery(payload.perPage, payload.page)}`);
       if (response.status === 200 && Array.isArray(response.body)) {
-        return { ok: true as const, members: (response.body as GitHubUser[]).map(normalizeGitHubUser) };
+        return { ok: true as const, members: (response.body as GitHubUser[]).map(normalizeGitHubUserListItem) };
       }
       return mapError(response.status, response.headers, "teams.members.list");
     },

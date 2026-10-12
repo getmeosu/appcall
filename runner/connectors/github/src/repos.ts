@@ -83,6 +83,33 @@ export function normalizeGitHubRepo(repo: GitHubRepo): NormalizedRepo {
   };
 }
 
+// GH-TYPED-READS TR-3: list endpoints return minimal-repository (or repository /
+// repo-search-result-item), where clone_url, ssh_url, default_branch, the counts and the
+// timestamps are optional (timestamps also nullable). A list item gets null for a missing value
+// instead of the full-repository fallbacks ("", "main", 0). Present values are unchanged.
+export type NormalizedRepoListItem = Omit<NormalizedRepo, "cloneUrl" | "sshUrl" | "defaultBranch" | "stars" | "forks" | "openIssues" | "createdAt" | "updatedAt" | "pushedAt"> & {
+  cloneUrl: string | null; sshUrl: string | null; defaultBranch: string | null;
+  stars: number | null; forks: number | null; openIssues: number | null;
+  createdAt: string | null; updatedAt: string | null; pushedAt: string | null;
+};
+
+export function normalizeGitHubRepoListItem(repo: GitHubRepo): NormalizedRepoListItem {
+  const str = (v: unknown) => (typeof v === "string" ? v : null);
+  const num = (v: unknown) => (typeof v === "number" ? v : null);
+  return {
+    ...normalizeGitHubRepo(repo),
+    cloneUrl: str(repo.clone_url),
+    sshUrl: str(repo.ssh_url),
+    defaultBranch: str(repo.default_branch),
+    stars: num(repo.stargazers_count),
+    forks: num(repo.forks_count),
+    openIssues: num(repo.open_issues_count),
+    createdAt: str(repo.created_at),
+    updatedAt: str(repo.updated_at),
+    pushedAt: str(repo.pushed_at),
+  };
+}
+
 // ─── Input types & validators ─────────────────────────────────────────────────
 
 export type GetRepoInput = { owner: string; repo: string };
@@ -436,7 +463,7 @@ export function createReposClient(options: { accessToken: string; fetch?: typeof
       const qs = params.toString() ? `?${params.toString()}` : "";
       const response = await client.fetchJSON(`/user/repos${qs}`);
       if (response.status === 200) {
-        const repos = Array.isArray(response.body) ? (response.body as GitHubRepo[]).map(normalizeGitHubRepo) : [];
+        const repos = Array.isArray(response.body) ? (response.body as GitHubRepo[]).map(normalizeGitHubRepoListItem) : [];
         return { ok: true as const, repos };
       }
       if (response.status === 429 || (response.status === 403 && parseGitHubRateLimit(response.status, response.headers).limited)) {
