@@ -43,7 +43,7 @@
  */
 import { assertSafePathSegment } from "../../_shared/jobboard";
 import { createApiClient, createClient } from "./http";
-import { jobIdSegment, userIdSegment, withJobPrefix } from "./ids";
+import { jobIdSegment, userIdSegment, userIdValue, withJobPrefix } from "./ids";
 import { pageIdParam } from "./paging";
 import { normalizeJob, type NormalizedJob } from "./objects";
 
@@ -216,7 +216,10 @@ export function buildJobsSearchQuery(input: JobsSearchInput): string {
     if (!POSTING_STATUS_SET.has(input.postingStatus)) throw new Error(`postingStatus must be one of ${POSTING_STATUSES.join(", ")}`);
     qs.set("postingStatus", input.postingStatus);
   }
-  for (const u of stringArray(input.hiringTeamMemberId, "hiringTeamMemberId") ?? []) qs.append("hiringTeamMemberId", u);
+  // SR-ID-1: users.list emits sr-user:-prefixed ids; accept them and send the raw id.
+  (stringArray(input.hiringTeamMemberId, "hiringTeamMemberId") ?? []).forEach((u, i) =>
+    qs.append("hiringTeamMemberId", userIdValue(u, `hiringTeamMemberId[${i}]`)),
+  );
   const encoded = qs.toString();
   return encoded ? `?${encoded}` : "";
 }
@@ -466,7 +469,8 @@ export async function executeJobsHiringTeamAdd(
   input: SmartRecruitersG2AuthInput & { id: string; userId: string; role: (typeof HIRING_TEAM_ROLES)[number] },
 ): Promise<{ jobId: string; member: HiringTeamMember }> {
   const id = jobSeg(input.id, "id");
-  const userId = userIdSegment(input.userId, "userId");
+  // Body field (SR-ID-1): raw or sr-user:-prefixed, sent raw; no path guard.
+  const userId = userIdValue(input.userId, "userId");
   if (typeof input.role !== "string" || !ROLE_SET.has(input.role)) {
     throw new Error(`role must be one of ${HIRING_TEAM_ROLES.join(", ")}`);
   }

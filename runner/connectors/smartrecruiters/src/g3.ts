@@ -45,9 +45,12 @@ import { assertSafePathSegment } from "../../_shared/jobboard";
 import { createApiClient } from "./http";
 import {
   candidateIdSegment,
+  candidateIdValue,
   interviewIdSegment,
   jobIdSegment,
+  jobIdValue,
   userIdSegment,
+  userIdValue,
   withCandidatePrefix,
   withInterviewPrefix,
   withJobPrefix,
@@ -170,9 +173,10 @@ function attendeeStatus(value: unknown, field: string): (typeof ATTENDEE_STATUSE
 }
 
 export function buildInterviewInput(input: InterviewsCreateInput): Record<string, unknown> {
-  const candidateId = candidateIdSegment(input.candidateId, "candidateId");
-  const jobId = jobIdSegment(input.jobId, "jobId");
-  const organizerId = userIdSegment(input.organizerId, "organizerId");
+  // Body fields (SR-ID-1): prefix stripped, id validated, no path guard.
+  const candidateId = candidateIdValue(input.candidateId, "candidateId");
+  const jobId = jobIdValue(input.jobId, "jobId");
+  const organizerId = userIdValue(input.organizerId, "organizerId");
   const timezone = requiredString(input.timezone, "timezone");
   if (timezone.length > 100) throw new Error("timezone must be at most 100 characters");
   if (!Array.isArray(input.timeslots) || input.timeslots.length < 1 || input.timeslots.length > 50) {
@@ -188,7 +192,7 @@ export function buildInterviewInput(input: InterviewsCreateInput): Record<string
     const interviewers = slot.interviewers.map((row, j) => {
       if (!isRecord(row)) throw new Error(`timeslots[${i}].interviewers[${j}] must be an object`);
       return {
-        id: userIdSegment(row.id, `timeslots[${i}].interviewers[${j}].id`),
+        id: userIdValue(row.id, `timeslots[${i}].interviewers[${j}].id`),
         status: attendeeStatus(row.status, `timeslots[${i}].interviewers[${j}].status`),
       };
     });
@@ -340,13 +344,13 @@ export async function executeMessagesShare(
     const shareWith: Record<string, unknown> = {};
     if (input.shareWith.users != null) {
       if (!Array.isArray(input.shareWith.users)) throw new Error("shareWith.users must be an array of user ids");
-      shareWith.users = input.shareWith.users.map((id, i) => userIdSegment(id, `shareWith.users[${i}]`));
+      shareWith.users = input.shareWith.users.map((id, i) => userIdValue(id, `shareWith.users[${i}]`));
     }
     if (input.shareWith.hiringTeamOf != null) {
       if (!Array.isArray(input.shareWith.hiringTeamOf)) {
         throw new Error("shareWith.hiringTeamOf must be an array of job ids");
       }
-      shareWith.hiringTeamOf = input.shareWith.hiringTeamOf.map((id, i) => jobIdSegment(id, `shareWith.hiringTeamOf[${i}]`));
+      shareWith.hiringTeamOf = input.shareWith.hiringTeamOf.map((id, i) => jobIdValue(id, `shareWith.hiringTeamOf[${i}]`));
     }
     if (typeof input.shareWith.everyone === "boolean") shareWith.everyone = input.shareWith.everyone;
     if (typeof input.shareWith.openNote === "boolean") shareWith.openNote = input.shareWith.openNote;
@@ -383,8 +387,8 @@ export async function executeMessagesList(
   },
 ): Promise<{ messages: MessageRow[]; total: number; nextPageId: string | null }> {
   const qs = new URLSearchParams();
-  qs.set("candidateId", candidateIdSegment(input.candidateId, "candidateId"));
-  if (input.jobId != null) qs.set("jobId", jobIdSegment(input.jobId, "jobId"));
+  qs.set("candidateId", candidateIdValue(input.candidateId, "candidateId"));
+  if (input.jobId != null) qs.set("jobId", jobIdValue(input.jobId, "jobId"));
   const pageId = pageIdParam(input.pageId, "pageId");
   if (pageId) qs.set("pageId", pageId);
   if (input.limit != null) {
@@ -534,8 +538,8 @@ export async function executeReviewsList(
   input: SmartRecruitersG3AuthInput & { candidateId: string; jobId: string },
 ): Promise<{ reviews: ReviewSummary[]; total: number }> {
   const qs = new URLSearchParams();
-  qs.set("candidateId", candidateIdSegment(input.candidateId, "candidateId"));
-  qs.set("jobId", jobIdSegment(input.jobId, "jobId"));
+  qs.set("candidateId", candidateIdValue(input.candidateId, "candidateId"));
+  qs.set("jobId", jobIdValue(input.jobId, "jobId"));
   const raw = await client(input, "reviews.list").getJSON(`${REVIEWS_BASE}/reviews?${qs.toString()}`);
   const rows = Array.isArray(raw) ? raw.filter(isRecord).filter((r) => str(r.id) != null) : [];
   const reviews = rows.map(reviewOf);
