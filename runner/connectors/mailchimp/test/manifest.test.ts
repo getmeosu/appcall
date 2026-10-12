@@ -4,7 +4,7 @@ import manifest from "../manifest.json";
 describe("mailchimp manifest", () => {
   it("has correct key and version", () => {
     expect(manifest.key).toBe("mailchimp");
-    expect(manifest.version).toBe("0.5.3");
+    expect(manifest.version).toBe("0.5.4");
     expect(manifest.runtime).toBe("bun");
   });
 
@@ -19,7 +19,7 @@ describe("mailchimp manifest", () => {
   });
 
   it("allows mailchimp wildcard host plus the stored host", () => {
-    expect(manifest.network.allowedHosts).toEqual(["*.api.mailchimp.com", "{{host}}"]);
+    expect(manifest.network.allowedHosts).toEqual(["*.api.mailchimp.com", "{{host}}", "login.mailchimp.com"]);
     expect(manifest.http.baseUrl).toBe("https://{{host}}/3.0");
   });
 

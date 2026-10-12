@@ -1,3 +1,4 @@
+import { mailchimpCredential, type MailchimpCredential } from "./oauth";
 import { createMailchimpClient, parseMailchimpRateLimit, isRecord } from "./http";
 import { normalizeAutomation, parseAutomationsResponse } from "./objects";
 import type { NormalizedAutomation } from "./objects";
@@ -15,8 +16,8 @@ export function validateGetAutomationInput(input: unknown): GetAutomationInput {
   return { automationId: requireString(input.automationId, "automationId") };
 }
 
-export function createAutomationsClient(options: { apiKey: string; fetch?: typeof fetch; operation?: string }) {
-  const client = createMailchimpClient({ apiKey: options.apiKey, fetch: options.fetch, operation: options.operation ?? "automations.list" });
+export function createAutomationsClient(options: MailchimpCredential & { fetch?: typeof fetch; operation?: string }) {
+  const client = createMailchimpClient({ ...mailchimpCredential(options as Record<string, unknown>), fetch: options.fetch, operation: options.operation ?? "automations.list" });
   return {
     async listAutomations(input: unknown): Promise<{ ok: true; automations: NormalizedAutomation[] } | { ok: false; error: { code: string; message: string; retryAfterSeconds?: number } }> {
       validateListAutomationsInput(input);
