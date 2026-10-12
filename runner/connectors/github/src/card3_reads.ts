@@ -13,10 +13,10 @@ export type NormalizedRoleUser = { id: number; login: string };
 export type NormalizedThreadSubscription = {
   subscribed: boolean;
   ignored: boolean;
-  reason: string;
-  createdAt: string;
+  reason: string | null;
+  createdAt: string | null;
   url: string;
-  threadUrl: string;
+  threadUrl: string | null;
 };
 export type NormalizedUsageItem = {
   date: string;
@@ -211,14 +211,15 @@ function normalizeRoleUser(item: Record<string, unknown>): NormalizedRoleUser {
   };
 }
 
+// GH-TYPED-READS (0.86.6): reason and created_at are nullable, thread_url optional upstream.
 function normalizeThreadSubscription(item: Record<string, unknown>): NormalizedThreadSubscription {
   return {
     subscribed: item.subscribed === true,
     ignored: item.ignored === true,
-    reason: typeof item.reason === "string" ? item.reason : "",
-    createdAt: typeof item.created_at === "string" ? item.created_at : "",
+    reason: typeof item.reason === "string" ? item.reason : null,
+    createdAt: typeof item.created_at === "string" ? item.created_at : null,
     url: typeof item.url === "string" ? item.url : "",
-    threadUrl: typeof item.thread_url === "string" ? item.thread_url : "",
+    threadUrl: typeof item.thread_url === "string" ? item.thread_url : null,
   };
 }
 

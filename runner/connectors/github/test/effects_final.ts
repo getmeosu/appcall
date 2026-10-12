@@ -6,6 +6,8 @@
 // FIX-EFFECTS-c (v0.86.3): 13 more dropped (40 -> 27) under linus's rule: keep only if the observe
 // reads back every writable field on the same id (renamed fields need a mapping test) and the
 // output validates against the op's own schema. Write-only secrets and partial observes omit.
+// GH-TYPED-READS TR-1 amend (v0.86.6): repos.interaction_limits.set dropped (27 -> 26): expiry is a
+// duration but the observe only returns the computed expires_at.
 export const RECONCILE_KEEP: Readonly<Record<string, string>> = {
   "actions.oidc.customization.sub.set": "actions.oidc.customization.sub.get",
   "actions.permissions.access.set": "actions.permissions.access.get",
@@ -29,7 +31,6 @@ export const RECONCILE_KEEP: Readonly<Record<string, string>> = {
   "pull_requests.reviews.update": "pull_requests.reviews.get",
   "releases.assets.update": "releases.assets.get",
   "releases.update": "releases.get",
-  "repos.interaction_limits.set": "repos.interaction_limits.get",
   "repos.rulesets.update": "repos.rulesets.get",
   "repos.star": "user.starred.check",
   "repos.subscription.set": "repos.subscription.get",

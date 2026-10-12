@@ -29,10 +29,10 @@ export type NormalizedPullRequest = {
   providerPullRequestId: number;
   number: number;
   title: string;
-  body: string;
-  state: string;
+  body: string | null;
+  state: string | null;
   isOpen: boolean;
-  isDraft: boolean;
+  isDraft: boolean | null;
   isMerged: boolean;
   url: string;
   headBranch: string;
@@ -44,8 +44,8 @@ export type NormalizedPullRequest = {
   author: string;
   createdAt: string;
   updatedAt: string;
-  mergedAt: string;
-  closedAt: string;
+  mergedAt: string | null;
+  closedAt: string | null;
   modelVersion: "2026-05-16";
   raw: GitHubPullRequest;
 };
@@ -57,10 +57,12 @@ export function normalizeGitHubPullRequest(pr: GitHubPullRequest): NormalizedPul
     providerPullRequestId: pr.id,
     number: pr.number,
     title: pr.title ?? "",
-    body: pr.body ?? "",
-    state: pr.state ?? "open",
+    // GH-TYPED-READS (0.86.6): body, merged_at and closed_at are nullable and draft optional
+    // upstream; state is never invented as "open". Missing values are null.
+    body: typeof pr.body === "string" ? pr.body : null,
+    state: typeof pr.state === "string" ? pr.state : null,
     isOpen: pr.state === "open",
-    isDraft: pr.draft ?? false,
+    isDraft: typeof pr.draft === "boolean" ? pr.draft : null,
     isMerged: pr.merged ?? false,
     url: pr.html_url ?? "",
     headBranch: pr.head?.ref ?? "",
@@ -72,8 +74,8 @@ export function normalizeGitHubPullRequest(pr: GitHubPullRequest): NormalizedPul
     author: pr.user?.login ?? "",
     createdAt: pr.created_at ?? "",
     updatedAt: pr.updated_at ?? "",
-    mergedAt: pr.merged_at ?? "",
-    closedAt: pr.closed_at ?? "",
+    mergedAt: typeof pr.merged_at === "string" ? pr.merged_at : null,
+    closedAt: typeof pr.closed_at === "string" ? pr.closed_at : null,
     modelVersion: "2026-05-16",
     raw: pr,
   };
@@ -544,9 +546,9 @@ export type NormalizedReview = {
   pullRequestUrl: string;
   state: string;
   body: string;
-  author: string;
-  commitId: string;
-  submittedAt: string;
+  author: string | null;
+  commitId: string | null;
+  submittedAt: string | null;
   htmlUrl: string;
   modelVersion: "2026-05-16";
   raw: Record<string, unknown>;
@@ -561,9 +563,10 @@ export function normalizeGitHubReview(review: Record<string, unknown>): Normaliz
     pullRequestUrl: typeof review.pull_request_url === "string" ? review.pull_request_url : "",
     state: typeof review.state === "string" ? review.state : "",
     body: typeof review.body === "string" ? review.body : "",
-    author: typeof user.login === "string" ? user.login : "",
-    commitId: typeof review.commit_id === "string" ? review.commit_id : "",
-    submittedAt: typeof review.submitted_at === "string" ? review.submitted_at : "",
+    // GH-TYPED-READS (0.86.6): user and commit_id are nullable, submitted_at optional upstream.
+    author: typeof user.login === "string" ? user.login : null,
+    commitId: typeof review.commit_id === "string" ? review.commit_id : null,
+    submittedAt: typeof review.submitted_at === "string" ? review.submitted_at : null,
     htmlUrl: typeof review.html_url === "string" ? review.html_url : "",
     modelVersion: "2026-05-16",
     raw: review,

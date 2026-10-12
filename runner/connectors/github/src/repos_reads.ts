@@ -30,7 +30,7 @@ export type NormalizedReadme = {
 export type NormalizedSubscription = {
   subscribed: boolean;
   ignored: boolean;
-  reason: string;
+  reason: string | null;
   createdAt: string;
   url: string;
   repositoryUrl: string;
@@ -201,7 +201,8 @@ export function normalizeSubscription(item: Record<string, unknown>): Normalized
   return {
     subscribed: item.subscribed === true,
     ignored: item.ignored === true,
-    reason: typeof item.reason === "string" ? item.reason : "",
+    // GH-TYPED-READS (0.86.6): reason is nullable upstream; null, not "".
+    reason: typeof item.reason === "string" ? item.reason : null,
     createdAt: typeof item.created_at === "string" ? item.created_at : "",
     url: typeof item.url === "string" ? item.url : "",
     repositoryUrl: typeof item.repository_url === "string" ? item.repository_url : "",
@@ -329,15 +330,13 @@ export function createReposReadsClient(options: { accessToken: string; fetch?: t
       const payload = validateGetInteractionLimitsInput(input);
       const response = await client.fetchJSON(`${repoPath(payload)}/interaction-limits`);
       // GitHub returns 200 with a body when limits are set, or 204 when none are set.
-      if (response.status === 200 && isRecord(response.body)) {
+      // GH-TYPED-READS (0.86.6): no limits (204, or the spec's empty-object 200) is limits:null,
+      // never a fabricated { limit: "", origin: "", expiresAt: "" }.
+      if (response.status === 200 && isRecord(response.body) && "limit" in response.body) {
         return { ok: true as const, limits: normalizeInteractionLimits(response.body), present: true as const };
       }
-      if (response.status === 204) {
-        return {
-          ok: true as const,
-          limits: { limit: "", origin: "", expiresAt: "" },
-          present: false as const,
-        };
+      if (response.status === 204 || (response.status === 200 && isRecord(response.body))) {
+        return { ok: true as const, limits: null, present: false as const };
       }
       if (response.status === 404) return upstream("Repository interaction limits not found.");
       return mapRateOrUpstream(response, "GitHub rejected the get interaction limits request.");

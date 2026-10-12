@@ -12,7 +12,7 @@ type IssueEvent = Repo & { eventId: number };
 type MilestoneLabels = Repo & { milestoneNumber: number };
 
 export type NormalizedGist = { id: string; description: string; public: boolean; owner: string };
-export type NormalizedGistComment = { id: number; body: string; user: string; createdAt: string };
+export type NormalizedGistComment = { id: number; body: string; user: string | null; createdAt: string };
 export type NormalizedGistCommit = { sha: string; user: string; committedAt: string };
 export type NormalizedIssue = { number: number; title: string; state: string };
 export type NormalizedIssueComment = { id: number; body: string; user: string; createdAt: string };
@@ -217,12 +217,13 @@ function normalizeGist(item: Record<string, unknown>): NormalizedGist {
   };
 }
 
+// GH-TYPED-READS (0.86.6): user is nullable upstream (deleted account); null, not "".
 function normalizeGistComment(item: Record<string, unknown>): NormalizedGistComment {
   const user = isRecord(item.user) ? item.user : {};
   return {
     id: typeof item.id === "number" ? item.id : 0,
     body: typeof item.body === "string" ? item.body : "",
-    user: typeof user.login === "string" ? user.login : "",
+    user: typeof user.login === "string" ? user.login : null,
     createdAt: typeof item.created_at === "string" ? item.created_at : "",
   };
 }

@@ -133,13 +133,40 @@ export type NormalizedRuleset = {
   provider: "github";
   rulesetId: number;
   name: string;
-  target: string;
-  sourceType: string;
+  target: string | null;
+  sourceType: string | null;
   source: string;
   enforcement: string;
   modelVersion: "2026-05-16";
   raw: GitHubRuleset;
 };
+
+/** GitHub's `{ enabled: boolean }` protection toggle as a nullable bool (null when absent or malformed). */
+export function enabledFlag(value: unknown): boolean | null {
+  return isRecord(value) && typeof value.enabled === "boolean" ? value.enabled : null;
+}
+
+export type NormalizedBypassActor = { actorId: number | null; actorType: string; bypassMode: string | null };
+
+/** Ruleset bypass_actors (optional upstream) in the repos.rulesets.update input shape; null when absent. */
+export function normalizeBypassActors(value: unknown): NormalizedBypassActor[] | null {
+  if (!Array.isArray(value)) return null;
+  return value.filter(isRecord).map((actor) => ({
+    actorId: typeof actor.actor_id === "number" ? actor.actor_id : null,
+    actorType: typeof actor.actor_type === "string" ? actor.actor_type : "",
+    bypassMode: typeof actor.bypass_mode === "string" ? actor.bypass_mode : null,
+  }));
+}
+
+export type NormalizedRefNameConditions = { refName: { include: string[] | null; exclude: string[] | null } | null };
+
+/** Ruleset conditions (optional/nullable upstream) as the ref_name part repos.rulesets.update writes; null when absent. Org-level repository_* conditions stay in raw. */
+export function normalizeRefNameConditions(value: unknown): NormalizedRefNameConditions | null {
+  if (!isRecord(value)) return null;
+  const refName = isRecord(value.ref_name) ? value.ref_name : null;
+  const strings = (list: unknown) => (Array.isArray(list) ? list.filter((x): x is string => typeof x === "string") : null);
+  return { refName: refName ? { include: strings(refName.include), exclude: strings(refName.exclude) } : null };
+}
 
 export function normalizeGitHubRuleset(ruleset: GitHubRuleset): NormalizedRuleset {
   return {
@@ -147,8 +174,9 @@ export function normalizeGitHubRuleset(ruleset: GitHubRuleset): NormalizedRulese
     provider: "github",
     rulesetId: ruleset.id,
     name: ruleset.name ?? "",
-    target: ruleset.target ?? "",
-    sourceType: ruleset.source_type ?? "",
+    // GH-TYPED-READS (0.86.6): target and source_type are optional upstream; null when missing.
+    target: typeof ruleset.target === "string" ? ruleset.target : null,
+    sourceType: typeof ruleset.source_type === "string" ? ruleset.source_type : null,
     source: ruleset.source ?? "",
     enforcement: ruleset.enforcement ?? "",
     modelVersion: "2026-05-16",
@@ -566,11 +594,22 @@ export function createGovernanceClient(options: { accessToken: string; fetch?: t
         return {
           ok: true as const,
           protection: {
-            url: typeof response.body.url === "string" ? response.body.url : "",
-            enforceAdmins: response.body.enforce_admins ?? null,
+            // GH-TYPED-READS (0.86.6): url is optional upstream; null when missing.
+            url: typeof response.body.url === "string" ? response.body.url : null,
+            // GH-TYPED-READS TR-1 amend (linus): GitHub's {enabled} toggles are normalized to a
+            // nullable bool (null when the key is absent), so every field branches.protection.update
+            // writes reads back on the same name.
+            enforceAdmins: enabledFlag(response.body.enforce_admins),
             requiredStatusChecks: response.body.required_status_checks ?? null,
             requiredPullRequestReviews: response.body.required_pull_request_reviews ?? null,
             restrictions: response.body.restrictions ?? null,
+            requiredLinearHistory: enabledFlag(response.body.required_linear_history),
+            allowForcePushes: enabledFlag(response.body.allow_force_pushes),
+            allowDeletions: enabledFlag(response.body.allow_deletions),
+            blockCreations: enabledFlag(response.body.block_creations),
+            requiredConversationResolution: enabledFlag(response.body.required_conversation_resolution),
+            lockBranch: enabledFlag(response.body.lock_branch),
+            allowForkSyncing: enabledFlag(response.body.allow_fork_syncing),
             modelVersion: "2026-05-16" as const,
             raw: response.body,
           },
@@ -836,7 +875,10 @@ export function createGovernanceClient(options: { accessToken: string; fetch?: t
           ok: true as const,
           ruleset: {
             ...normalizeGitHubRuleset(ruleset),
-            rules: Array.isArray(ruleset.rules) ? ruleset.rules : [],
+            rules: Array.isArray(ruleset.rules) ? ruleset.rules : null,
+            // GH-TYPED-READS TR-1 amend (linus): typed read-back of what repos.rulesets.update writes.
+            bypassActors: normalizeBypassActors(ruleset.bypass_actors),
+            conditions: normalizeRefNameConditions(ruleset.conditions),
           },
         };
       }

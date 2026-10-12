@@ -28,20 +28,20 @@ export type NormalizedWorkflowPermissions = {
 
 export type NormalizedActionsPermissions = {
   enabled: boolean;
-  allowedActions: string;
+  allowedActions: string | null;
 };
 
 export type NormalizedSelectedActions = {
-  githubOwnedAllowed: boolean;
-  verifiedAllowed: boolean;
-  patternsAllowed: string[];
+  githubOwnedAllowed: boolean | null;
+  verifiedAllowed: boolean | null;
+  patternsAllowed: string[] | null;
 };
 
 export type NormalizedBranchPolicy = {
-  id: number;
-  name: string;
-  type: string;
-  nodeId: string;
+  id: number | null;
+  name: string | null;
+  type: string | null;
+  nodeId: string | null;
 };
 
 export function validateGetWorkflowPermissionsInput(input: unknown): RepoScope {
@@ -130,6 +130,7 @@ export function validateDeleteBranchPolicyInput(input: unknown): PolicyId {
   return validateGetBranchPolicyInput(input);
 }
 
+// GH-TYPED-READS (0.86.6): spec-optional or nullable upstream fields are null when missing, never a fabricated default.
 export function normalizeWorkflowPermissions(item: Record<string, unknown>): NormalizedWorkflowPermissions {
   return {
     defaultWorkflowPermissions: typeof item.default_workflow_permissions === "string" ? item.default_workflow_permissions : "",
@@ -140,24 +141,24 @@ export function normalizeWorkflowPermissions(item: Record<string, unknown>): Nor
 export function normalizeActionsPermissions(item: Record<string, unknown>): NormalizedActionsPermissions {
   return {
     enabled: item.enabled === true,
-    allowedActions: typeof item.allowed_actions === "string" ? item.allowed_actions : "",
+    allowedActions: typeof item.allowed_actions === "string" ? item.allowed_actions : null,
   };
 }
 
 export function normalizeSelectedActions(item: Record<string, unknown>): NormalizedSelectedActions {
   return {
-    githubOwnedAllowed: item.github_owned_allowed === true,
-    verifiedAllowed: item.verified_allowed === true,
-    patternsAllowed: Array.isArray(item.patterns_allowed) ? item.patterns_allowed.filter((p): p is string => typeof p === "string") : [],
+    githubOwnedAllowed: typeof item.github_owned_allowed === "boolean" ? item.github_owned_allowed : null,
+    verifiedAllowed: typeof item.verified_allowed === "boolean" ? item.verified_allowed : null,
+    patternsAllowed: Array.isArray(item.patterns_allowed) ? item.patterns_allowed.filter((p): p is string => typeof p === "string") : null,
   };
 }
 
 export function normalizeBranchPolicy(item: Record<string, unknown>, fallback?: { name: string; type: string }): NormalizedBranchPolicy {
   return {
-    id: typeof item.id === "number" ? item.id : 0,
-    name: typeof item.name === "string" ? item.name : (fallback?.name ?? ""),
-    type: typeof item.type === "string" ? item.type : (fallback?.type ?? ""),
-    nodeId: typeof item.node_id === "string" ? item.node_id : "",
+    id: typeof item.id === "number" ? item.id : null,
+    name: typeof item.name === "string" ? item.name : (fallback?.name ?? null),
+    type: typeof item.type === "string" ? item.type : (fallback?.type ?? null),
+    nodeId: typeof item.node_id === "string" ? item.node_id : null,
   };
 }
 

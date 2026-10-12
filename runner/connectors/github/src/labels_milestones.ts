@@ -162,17 +162,17 @@ export type NormalizedMilestone = {
   providerMilestoneId: number;
   number: number;
   title: string;
-  description: string;
+  description: string | null;
   state: string;
   openIssues: number;
   closedIssues: number;
   url: string;
   htmlUrl: string;
-  dueOn: string;
+  dueOn: string | null;
   createdAt: string;
   updatedAt: string;
-  closedAt: string;
-  creator: string;
+  closedAt: string | null;
+  creator: string | null;
   modelVersion: "2026-05-16";
   raw: Record<string, unknown>;
 };
@@ -185,17 +185,18 @@ export function normalizeMilestone(item: Record<string, unknown>): NormalizedMil
     providerMilestoneId: typeof item.id === "number" ? item.id : 0,
     number: typeof item.number === "number" ? item.number : 0,
     title: typeof item.title === "string" ? item.title : "",
-    description: typeof item.description === "string" ? item.description : "",
+    // GH-TYPED-READS (0.86.6): description, due_on, closed_at and creator are nullable upstream.
+    description: typeof item.description === "string" ? item.description : null,
     state: typeof item.state === "string" ? item.state : "",
     openIssues: typeof item.open_issues === "number" ? item.open_issues : 0,
     closedIssues: typeof item.closed_issues === "number" ? item.closed_issues : 0,
     url: typeof item.url === "string" ? item.url : "",
     htmlUrl: typeof item.html_url === "string" ? item.html_url : "",
-    dueOn: typeof item.due_on === "string" ? item.due_on : "",
+    dueOn: typeof item.due_on === "string" ? item.due_on : null,
     createdAt: typeof item.created_at === "string" ? item.created_at : "",
     updatedAt: typeof item.updated_at === "string" ? item.updated_at : "",
-    closedAt: typeof item.closed_at === "string" ? item.closed_at : "",
-    creator: typeof creator.login === "string" ? creator.login : "",
+    closedAt: typeof item.closed_at === "string" ? item.closed_at : null,
+    creator: typeof creator.login === "string" ? creator.login : null,
     modelVersion: "2026-05-16",
     raw: item,
   };
