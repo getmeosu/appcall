@@ -42,15 +42,16 @@ const OPS: Array<[string, (extra: Extra, f: typeof fetch) => Promise<unknown>]> 
 ];
 
 // Hosts per DC, from the official Zoho docs cited in src/datacenter.ts.
-const EXPECTED: Record<string, { accounts: string; api: string }> = {
-  com: { accounts: "accounts.zoho.com", api: "recruit.zoho.com" },
-  eu: { accounts: "accounts.zoho.eu", api: "www.zohoapis.eu" },
-  in: { accounts: "accounts.zoho.in", api: "www.zohoapis.in" },
-  "com.au": { accounts: "accounts.zoho.com.au", api: "www.zohoapis.com.au" },
-  jp: { accounts: "accounts.zoho.jp", api: "www.zohoapis.jp" },
-  ca: { accounts: "accounts.zohocloud.ca", api: "www.zohoapis.ca" },
-  sa: { accounts: "accounts.zoho.sa", api: "www.zohoapis.sa" },
-  "com.cn": { accounts: "accounts.zoho.com.cn", api: "www.zohoapis.com.cn" },
+// ZR-1: Recruit API hosts are recruit.<dc> (live-verified; www.zohoapis.<dc> 404s for /recruit/v2).
+const EXPECTED: Record<string, { accounts: string; api: string; zohoapis: string }> = {
+  com: { accounts: "accounts.zoho.com", api: "recruit.zoho.com", zohoapis: "www.zohoapis.com" },
+  eu: { accounts: "accounts.zoho.eu", api: "recruit.zoho.eu", zohoapis: "www.zohoapis.eu" },
+  in: { accounts: "accounts.zoho.in", api: "recruit.zoho.in", zohoapis: "www.zohoapis.in" },
+  "com.au": { accounts: "accounts.zoho.com.au", api: "recruit.zoho.com.au", zohoapis: "www.zohoapis.com.au" },
+  jp: { accounts: "accounts.zoho.jp", api: "recruit.zoho.jp", zohoapis: "www.zohoapis.jp" },
+  ca: { accounts: "accounts.zohocloud.ca", api: "recruit.zohocloud.ca", zohoapis: "www.zohoapis.ca" },
+  sa: { accounts: "accounts.zoho.sa", api: "recruit.zoho.sa", zohoapis: "www.zohoapis.sa" },
+  "com.cn": { accounts: "accounts.zoho.com.cn", api: "recruit.zoho.com.cn", zohoapis: "www.zohoapis.com.cn" },
 };
 
 describe("zoho-recruit data centre table", () => {
@@ -158,7 +159,7 @@ describe("zoho-recruit token api_domain check", () => {
 
     for (const [dc, want] of Object.entries(EXPECTED)) {
       const s = stub();
-      await executeJobOpeningsListSync({ accessToken: TOKEN, dataCenter: dc, api_domain: `https://${want.api === "recruit.zoho.com" ? "www.zohoapis.com" : want.api}`, fetch: s.impl } as never);
+      await executeJobOpeningsListSync({ accessToken: TOKEN, dataCenter: dc, api_domain: `https://${want.zohoapis}`, fetch: s.impl } as never);
       expect(s.calls).toHaveLength(1);
       expect(new URL(s.calls[0]!.url).host).toBe(want.api);
     }
@@ -177,7 +178,7 @@ describe("zoho-recruit token api_domain check", () => {
       ["com", "www.zohoapis.com"],
       ["com", ""],
       ["ca", "https://www.zohoapis.com"],
-      ["com.au", "https://recruit.zoho.com.au"],
+      ["com.au", "https://recruit.zoho.com"],
     ];
     for (const [dc, apiDomain] of bad) {
       expect(() => assertApiDomainMatches(dc as never, apiDomain)).toThrow();

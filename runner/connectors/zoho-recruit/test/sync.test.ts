@@ -190,7 +190,7 @@ describe("zoho-recruit candidates.search sync", () => {
     expect(result.items[0].id).toBe("zr-candidate:4000000020001");
   });
 
-  test("forwards email/phone/word/page/perPage/fields", async () => {
+  test("forwards email/phone/word/page/perPage; accepts but does not send fields (ZR-1)", async () => {
     const { calls, impl } = stubFetch(JSON.stringify(candidatesSearchFixture));
 
     await executeCandidatesSearchSync({
@@ -210,7 +210,8 @@ describe("zoho-recruit candidates.search sync", () => {
     expect(url.searchParams.get("word")).toBe("Christina");
     expect(url.searchParams.get("page")).toBe("2");
     expect(url.searchParams.get("per_page")).toBe("25");
-    expect(url.searchParams.get("fields")).toBe("id,Email");
+    // ZR-1: fields is not a documented search parameter (search-records.html).
+    expect(url.searchParams.has("fields")).toBe(false);
   });
 });
 

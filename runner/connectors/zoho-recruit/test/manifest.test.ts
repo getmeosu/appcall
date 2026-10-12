@@ -6,8 +6,8 @@ describe("Zoho Recruit manifest", () => {
     expect(manifest.key).toBe("zoho-recruit");
   });
 
-  it("has version 0.3.1", () => {
-    expect(manifest.version).toBe("0.3.1");
+  it("has version 0.3.2", () => {
+    expect(manifest.version).toBe("0.3.2");
   });
 
   it("uses bun runtime", () => {
@@ -18,16 +18,16 @@ describe("Zoho Recruit manifest", () => {
     expect(manifest.auth.type).toBe("oauth2");
   });
 
-  it("allows only recruit.zoho.com plus the allowlisted non-US Recruit API hosts (ZR-0)", () => {
+  it("allows only the 8 per-DC Recruit API hosts (ZR-1: recruit.<dc>, not www.zohoapis.<dc>)", () => {
     expect(manifest.network.allowedHosts).toEqual([
       "recruit.zoho.com",
-      "www.zohoapis.eu",
-      "www.zohoapis.in",
-      "www.zohoapis.com.au",
-      "www.zohoapis.jp",
-      "www.zohoapis.ca",
-      "www.zohoapis.sa",
-      "www.zohoapis.com.cn",
+      "recruit.zoho.eu",
+      "recruit.zoho.in",
+      "recruit.zoho.com.au",
+      "recruit.zoho.jp",
+      "recruit.zohocloud.ca",
+      "recruit.zoho.sa",
+      "recruit.zoho.com.cn",
     ]);
   });
 
