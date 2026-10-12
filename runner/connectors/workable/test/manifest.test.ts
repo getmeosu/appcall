@@ -8,7 +8,7 @@ describe("Workable manifest", () => {
   });
 
   it("has version 0.6.2", () => {
-    expect(manifest.version).toBe("0.6.2");
+    expect(manifest.version).toBe("0.6.3");
   });
 
   it("uses bun runtime", () => {

@@ -10,7 +10,7 @@ import { assertHostLabel } from "../../_shared/jobboard";
  */
 export function normalizeShopDomain(value: unknown): string {
   const text = typeof value === "string"
-    ? value.trim().replace(/^https?:\/\//i, "").replace(/\/+$/, "").replace(/\.myshopify\.com$/i, "")
+    ? value.trim().replace(/^https:\/\//i, "").replace(/\/+$/, "").replace(/\.myshopify\.com$/i, "")
     : value;
   return assertHostLabel(text, "shopDomain");
 }

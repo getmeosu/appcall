@@ -18,10 +18,15 @@ import { createJobBoardClient, assertHostLabel, assertSafePathSegment, type JobB
  * `.recruitee.com` suffix are dropped first so stored spellings keep working.
  */
 export function careersSubdomain(value: unknown): string {
-  const text = typeof value === "string"
+  return assertHostLabel(stripCompany(value), "company");
+}
+
+// SEC-SETUP-2: the admin (ATS) API takes the same stored spellings
+// (`https://acme1`, `acme1/`, `acme1.recruitee.com`) as the careers host.
+function stripCompany(value: unknown): unknown {
+  return typeof value === "string"
     ? value.trim().replace(/^https:\/\//i, "").replace(/\/+$/, "").replace(/\.recruitee\.com$/i, "")
     : value;
-  return assertHostLabel(text, "company");
 }
 import manifest from "../manifest.json";
 
@@ -63,7 +68,7 @@ export function createClient(config: RecruiteeClientConfig): JobBoardClient {
 
 /** Authenticated ATS API client — candidates, offers, pipeline stages. */
 export function createAtsClient(config: RecruiteeClientConfig): JobBoardClient {
-  const company = assertSafePathSegment(config.company, "company");
+  const company = assertSafePathSegment(stripCompany(config.company), "company");
   const bounds = operationBounds(config.operation, "candidates.list");
   return createJobBoardClient({
     provider: "Recruitee",

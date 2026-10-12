@@ -7,7 +7,7 @@ describe("Recruitee manifest", () => {
   });
 
   it("has version 0.3.1", () => {
-    expect(manifest.version).toBe("0.3.2");
+    expect(manifest.version).toBe("0.3.3");
   });
 
   it("uses bun runtime", () => {

@@ -34,7 +34,7 @@ import type { DeclarativeManifest } from "./types";
 
 export type HostPolicy =
   | { kind: "vendor"; suffixes: string[] }
-  | { kind: "vendor-label"; suffix: string }
+  | { kind: "vendor-label"; suffix: string; bareLabel?: boolean }
   | { kind: "public" };
 
 export const SETUP_HOST_POLICIES: Record<string, Record<string, HostPolicy>> = {
@@ -44,7 +44,9 @@ export const SETUP_HOST_POLICIES: Record<string, Record<string, HostPolicy>> = {
     oauthHost: { kind: "vendor", suffixes: ["docusign.net", "docusign.com"] },
   },
   workday: { host: { kind: "vendor", suffixes: ["workday.com", "myworkday.com"] } },
-  mailchimp: { host: { kind: "vendor-label", suffix: "api.mailchimp.com" } },
+  // SEC-SETUP-2: a bare data center label (`us21`) is stored by older
+  // connections, as the hand-written client (assertMailchimpHost) accepts.
+  mailchimp: { host: { kind: "vendor-label", suffix: "api.mailchimp.com", bareLabel: true } },
   gitlab: { host: { kind: "public" } },
   lemmy: { host: { kind: "public" } },
   mastodon: { instance: { kind: "public" } },
@@ -223,6 +225,7 @@ export function normalizeSetupHost(value: unknown, field: string, policy: HostPo
     const labels = host.split(".");
     if (!labels.every((label) => LABEL.test(label))) fail(field, "must be a valid hostname");
     if (policy.kind === "vendor-label") {
+      if (policy.bareLabel && labels.length === 1) return `${host.toLowerCase()}.${policy.suffix}`;
       if (labels.length !== policy.suffix.split(".").length + 1 || !host.endsWith(`.${policy.suffix}`)) {
         fail(field, `must be <name>.${policy.suffix}`);
       }
