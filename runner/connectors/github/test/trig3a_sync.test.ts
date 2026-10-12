@@ -43,9 +43,9 @@ const POLLING = {
 
 describe("TRIG-3a manifest", () => {
   test("version and op counts", () => {
-    expect(manifest.version).toBe("0.89.1");
+    expect(manifest.version).toBe("0.89.2");
     const kinds = Object.values(ops).map((op) => op.kind);
-    expect([kinds.filter((k) => k === "action").length, kinds.filter((k) => k === "webhook").length, kinds.filter((k) => k === "sync").length]).toEqual([800, 47, 12]);
+    expect([kinds.filter((k) => k === "action").length, kinds.filter((k) => k === "webhook").length, kinds.filter((k) => k === "sync").length]).toEqual([801, 47, 12]);
   });
 
   test("exactly the four TRIG-3a syncs declare poll, with the audit's triggers", () => {
@@ -74,7 +74,7 @@ describe("TRIG-3a manifest", () => {
 
   test("the TS registry loads the poll blocks and dispatches the syncs", async () => {
     const described = defaultConnectorRegistry.describe("github") as { version: string; operations: Record<string, Record<string, unknown>> };
-    expect(described.version).toBe("0.89.1");
+    expect(described.version).toBe("0.89.2");
     for (const key of Object.keys(POLLING)) expect(described.operations[key].poll).toEqual(ops[key].poll);
     const { calls, fetchFn } = mockFetch(artifactsFixture);
     const result = defaultConnectorRegistry.executeSync("github", "actions.artifacts.sync", { owner: "octo-org", repo: "octo-docs", accessToken: "t", fetch: fetchFn, cursor: "3" });

@@ -68,8 +68,8 @@ const CREATES = [
 
 describe("github FIX-EFFECTS: manifest guards", () => {
   test("version 0.87.0 at 851 ops", () => {
-    expect(manifest.version).toBe("0.89.1");
-    expect(Object.keys(ops)).toHaveLength(859);
+    expect(manifest.version).toBe("0.89.2");
+    expect(Object.keys(ops)).toHaveLength(860);
   });
 
   test("no op declares effectPolicy Idempotent, and no description still claims it", () => {

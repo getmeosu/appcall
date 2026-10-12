@@ -29,7 +29,8 @@ const NON_DELETE_DESTRUCTIVE = [
   "pull_requests.reviews.dismiss",
 ] as const;
 
-// Every DELETE action that is NOT destructive: a reversible toggle or a detach (42).
+// Every DELETE action that is NOT destructive: a reversible toggle or a detach (43).
+// REFRESH-1: rest.issues.remove_blocked_by_dependency is a detach (the relation, not an issue) -> write.
 // Amend 2 (linus): repos.collaborators.remove and orgs.outside_collaborators.remove left this list
 // (removing the user deletes their forks of private repositories).
 // Amend (linus): the 4 remove_all detaches and notifications.threads.mark_done stay write.
@@ -69,6 +70,7 @@ const REVERSIBLE_DELETES = [
   "repos.private_vulnerability_reporting.disable",
   "repos.subscription.delete",
   "repos.unstar",
+  "rest.issues.remove_blocked_by_dependency",
   "teams.membership.remove",
   "user.blocks.unblock",
   "user.codespaces.secrets.repositories.remove",
@@ -108,15 +110,15 @@ const deleteActions = Object.entries(ops)
 
 describe("github FIX-DESTRUCTIVE", () => {
   test("version 0.87.0 at 851 ops; 77 destructive, 283 write", () => {
-    expect(manifest.version).toBe("0.89.1");
-    expect(Object.keys(ops).length).toBe(859);
+    expect(manifest.version).toBe("0.89.2");
+    expect(Object.keys(ops).length).toBe(860);
     const side: Record<string, number> = {};
     for (const op of Object.values(ops)) {
       if (op.kind !== "action") continue;
       const key = String(op.sideEffect ?? "absent");
       side[key] = (side[key] ?? 0) + 1;
     }
-    expect(side).toEqual({ read: 425, write: 283, destructive: 77, absent: 15 });
+    expect(side).toEqual({ read: 425, write: 284, destructive: 77, absent: 15 });
   });
 
   test("the destructive set is exactly DESTRUCTIVE (77); no other op is destructive", () => {
@@ -142,8 +144,8 @@ describe("github FIX-DESTRUCTIVE", () => {
   });
 
   test("every DELETE action is destructive or one of the 42 listed reversible deletes (write)", () => {
-    expect(deleteActions.length).toBe(114);
-    expect(REVERSIBLE_DELETES.length).toBe(42);
+    expect(deleteActions.length).toBe(115);
+    expect(REVERSIBLE_DELETES.length).toBe(43);
     const destructiveDeletes = deleteActions.filter((key) => DESTRUCTIVE.includes(key));
     const writeDeletes = deleteActions.filter((key) => !DESTRUCTIVE.includes(key));
     expect(destructiveDeletes.length).toBe(72);

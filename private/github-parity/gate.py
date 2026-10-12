@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
-"""GitHub 846 parity gate: per-slug Composio coverage at a git rev or the working tree.
+"""GitHub 897 parity gate: per-slug Composio coverage at a git rev or the working tree.
 
 usage: python3 private/github-parity/gate.py [REV ...]   (default: the working tree)
 
-The 846 Composio-named GitHub slugs (composio-github-tools.txt) are partitioned by the gate
+The 897 Composio-named GitHub slugs (composio-github-tools.txt) are partitioned by the gate
 audit (gate-audit-a1549a6d.json) into gate rows and cited drops. A gate row counts as covered
 only when its op exists in the manifest AND is kind=action: sync and webhook ops are tool=false
 and never cover a slug. Every gate row must also agree with fixtures/composio-coverage.json.
-Exit status is 0 only when all rows are covered, nothing disagrees, and covered + drops = 846.
+Exit status is 0 only when all rows are covered, nothing disagrees, and covered + drops = 897.
 """
 import json
 import subprocess
@@ -21,7 +21,7 @@ TOOLS = HERE / 'composio-github-tools.txt'
 MANIFEST = 'runner/connectors/github/manifest.json'
 COVERAGE = 'runner/connectors/github/fixtures/composio-coverage.json'
 RELAY = 'GITHUB_RUN_GRAPH_QL_RELAY_QUERY'
-TOTAL = 846
+TOTAL = 897
 
 
 def gate_op(row):
@@ -49,7 +49,7 @@ def evaluate(rows, ops, mapped):
 
 
 def load_audit():
-    """Gate rows and drops, checked to partition the 846 named slugs exactly."""
+    """Gate rows and drops, checked to partition the 897 named slugs exactly."""
     audit = json.loads(AUDIT.read_text())
     rows, drops = audit['slugs'], audit['drops']
     tools = [line.strip() for line in TOOLS.read_text().splitlines() if line.strip()]
@@ -57,7 +57,7 @@ def load_audit():
     if len(tools) != TOTAL or len(set(tools)) != TOTAL:
         raise SystemExit(f'{TOOLS.name}: expected {TOTAL} unique slugs, got {len(set(tools))}/{len(tools)}')
     if len(names) != len(set(names)) or set(names) != set(tools):
-        raise SystemExit('gate rows + drops do not partition the 846 named slugs')
+        raise SystemExit('gate rows + drops do not partition the 897 named slugs')
     return rows, drops
 
 
@@ -75,7 +75,7 @@ def run(rev, rows, drops):
     label = rev or 'worktree'
     print(label, 'gate', ok, '/', len(rows), 'missing', missing, 'not-action', not_action,
           'coverage-json disagrees', len(disagree), disagree[:8])
-    print(' 846 math: covered', ok, '+ cited drops', len(drops), '=', ok + len(drops),
+    print(' 897 math: covered', ok, '+ cited drops', len(drops), '=', ok + len(drops),
           '(gate rows + drops =', len(rows) + len(drops), ')')
     return ok == len(rows) and not disagree and ok + len(drops) == TOTAL
 

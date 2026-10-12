@@ -136,8 +136,8 @@ describe("GH-TYPED-READS TR-1: the 24 observes declare their full normalized out
     expect(Object.keys(RECONCILE_KEEP)).toHaveLength(26);
     expect([...new Set([...Object.values(RECONCILE_KEEP), "repos.interaction_limits.get"])].sort()).toEqual([...TYPED_OBSERVES].sort());
     expect(TYPED_OBSERVES).toHaveLength(24);
-    expect(manifest.version).toBe("0.89.1");
-    expect(Object.keys(ops)).toHaveLength(859);
+    expect(manifest.version).toBe("0.89.2");
+    expect(Object.keys(ops)).toHaveLength(860);
   });
 
   test("no typed observe declares a bare object: every object schema with a normalized payload lists its properties", () => {

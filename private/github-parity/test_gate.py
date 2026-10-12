@@ -56,13 +56,13 @@ class RepoGateTests(unittest.TestCase):
         self.ops = gate.read(None, gate.MANIFEST)['operations']
         self.mapped = gate.read(None, gate.COVERAGE)['mapped']
 
-    def test_audit_partitions_the_846_named_slugs(self):
+    def test_audit_partitions_the_897_named_slugs(self):
         self.assertEqual(len(self.rows) + len(self.drops), gate.TOTAL)
-        self.assertEqual((len(self.rows), len(self.drops)), (793, 53))
+        self.assertEqual((len(self.rows), len(self.drops)), (825, 72))
 
-    def test_every_gate_row_is_an_action_and_math_is_846(self):
+    def test_every_gate_row_is_an_action_and_math_is_897(self):
         ok, missing, not_action, _ = gate.evaluate(self.rows, self.ops, self.mapped)
-        self.assertEqual((ok, missing, not_action), (793, [], []))
+        self.assertEqual((ok, missing, not_action), (825, [], []))
         self.assertEqual(ok + len(self.drops), gate.TOTAL)
 
     def test_gate_and_coverage_json_agree_on_every_slug(self):

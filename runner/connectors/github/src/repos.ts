@@ -211,12 +211,33 @@ export function validateCreateRepoInput(input: unknown): CreateRepoInput {
   };
 }
 
-export type ListReposInput = { type?: string; sort?: string; perPage?: number; page?: number };
+export type ListReposInput = { type?: string; visibility?: string; affiliation?: string; sort?: string; perPage?: number; page?: number };
+
+const LIST_REPOS_VISIBILITY = ["all", "public", "private"];
+const LIST_REPOS_AFFILIATION = ["owner", "collaborator", "organization_member"];
 
 export function validateListReposInput(input: unknown): ListReposInput {
   if (!isRecord(input)) throw new Error("list repos input must be an object");
+  // REFRESH-1: GITHUB_LIST_REPOSITORIES. GitHub returns 422 when type is combined with visibility or affiliation.
+  const visibility = input.visibility === undefined ? undefined : input.visibility;
+  if (visibility !== undefined && (typeof visibility !== "string" || !LIST_REPOS_VISIBILITY.includes(visibility))) {
+    throw new Error("visibility must be all, public, or private");
+  }
+  let affiliation: string | undefined;
+  if (input.affiliation !== undefined) {
+    const parts = Array.isArray(input.affiliation) ? input.affiliation : typeof input.affiliation === "string" ? input.affiliation.split(",") : null;
+    if (!parts || parts.length === 0 || parts.some((part) => typeof part !== "string" || !LIST_REPOS_AFFILIATION.includes(part.trim()))) {
+      throw new Error("affiliation must be a comma-separated list of owner, collaborator, organization_member");
+    }
+    affiliation = [...new Set(parts.map((part) => String(part).trim()))].join(",");
+  }
+  if (input.type !== undefined && (visibility !== undefined || affiliation !== undefined)) {
+    throw new Error("type cannot be combined with visibility or affiliation");
+  }
   return {
     type: typeof input.type === "string" ? input.type : undefined,
+    visibility: visibility as string | undefined,
+    affiliation,
     sort: typeof input.sort === "string" ? input.sort : undefined,
     perPage: typeof input.perPage === "number" ? input.perPage : undefined,
     page: typeof input.page === "number" ? input.page : undefined,
@@ -477,6 +498,8 @@ export function createReposClient(options: { accessToken: string; fetch?: typeof
       const payload = validateListReposInput(input);
       const params = new URLSearchParams();
       if (payload.type) params.set("type", payload.type);
+      if (payload.visibility) params.set("visibility", payload.visibility);
+      if (payload.affiliation) params.set("affiliation", payload.affiliation);
       if (payload.sort) params.set("sort", payload.sort);
       if (payload.perPage) params.set("per_page", String(payload.perPage));
       if (payload.page) params.set("page", String(payload.page));

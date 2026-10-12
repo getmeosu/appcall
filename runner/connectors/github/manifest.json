@@ -1,7 +1,7 @@
 {
   "key": "github",
   "name": "GitHub",
-  "version": "0.89.1",
+  "version": "0.89.2",
   "runtime": "bun",
   "categories": [
     "dev-tools"
@@ -265,6 +265,16 @@
               "closed"
             ],
             "description": "New state for the issue."
+          },
+          "stateReason": {
+            "type": "string",
+            "enum": [
+              "completed",
+              "not_planned",
+              "duplicate",
+              "reopened"
+            ],
+            "description": "Reason for the state change (GitHub state_reason). Ignored unless state changes."
           },
           "labels": {
             "type": "array",
@@ -1315,6 +1325,19 @@
               "member"
             ],
             "description": "Filter by repository type."
+          },
+          "visibility": {
+            "type": "string",
+            "enum": [
+              "all",
+              "public",
+              "private"
+            ],
+            "description": "Filter by visibility. Cannot be combined with type."
+          },
+          "affiliation": {
+            "type": "string",
+            "description": "Comma-separated list of owner, collaborator, organization_member. Cannot be combined with type."
           },
           "sort": {
             "type": "string",
@@ -48314,6 +48337,59 @@
           301
         ],
         "body": "{{body}}"
+      }
+    },
+    "rest.issues.remove_blocked_by_dependency": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Remove a dependency an issue is blocked by",
+      "description": "DELETE /repos/{owner}/{repo}/issues/{issue_number}/dependencies/blocked_by/{issue_id} - Remove a dependency an issue is blocked by. Public GitHub REST. Reversible detach (re-add with rest.issues.add_blocked_by_dependency); the issues themselves are not deleted. Composio: GITHUB_MANAGE_ISSUE_BLOCKING_DEPENDENCY.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "The account owner of the repository. The name is not case sensitive."
+          },
+          "repo": {
+            "type": "string",
+            "description": "The name of the repository without the `.git` extension. The name is not case sensitive."
+          },
+          "issue_number": {
+            "type": "integer",
+            "description": "The number that identifies the issue."
+          },
+          "issue_id": {
+            "type": "integer",
+            "description": "The id of the blocking issue to remove as a dependency (the issue id, not its number)."
+          }
+        },
+        "required": [
+          "owner",
+          "repo",
+          "issue_number",
+          "issue_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": true
+      },
+      "request": {
+        "method": "DELETE",
+        "baseUrl": "https://api.github.com",
+        "path": "/repos/{{owner}}/{{repo}}/issues/{{issue_number}}/dependencies/blocked_by/{{issue_id}}",
+        "headers": {
+          "Accept": "application/vnd.github+json",
+          "X-GitHub-Api-Version": "2022-11-28",
+          "Authorization": "Bearer {{accessToken}}"
+        },
+        "success": [
+          200
+        ]
       }
     },
     "graphql.sponsors.tiers.publish": {

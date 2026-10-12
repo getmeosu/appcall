@@ -120,11 +120,11 @@ describe("TRIG-2: the trigger map and the coverage map", () => {
 
 describe("TRIG-2: op accounting (actions and triggers counted separately)", () => {
   test("v0.87.0: 797 actions + 47 webhook ops + 4 sync = 848 ops (46 Composio triggers)", () => {
-    expect(manifest.version).toBe("0.89.1");
+    expect(manifest.version).toBe("0.89.2");
     const kinds: Record<string, number> = {};
     for (const op of Object.values(ops)) kinds[op.kind] = (kinds[op.kind] ?? 0) + 1;
-    expect(kinds).toEqual({ action: 800, webhook: 47, sync: 12 });
-    expect(Object.keys(ops)).toHaveLength(859);
+    expect(kinds).toEqual({ action: 801, webhook: 47, sync: 12 });
+    expect(Object.keys(ops)).toHaveLength(860);
   });
 });
 
