@@ -1,4 +1,5 @@
 import { effectOf } from "./effects_final";
+import { mutating } from "./destructive_keys";
 import { describe, expect, test } from "bun:test";
 import manifest from "../manifest.json";
 import envListFixture from "../fixtures/environment_variables.json";
@@ -30,7 +31,7 @@ const READS = [
 
 describe("github N8 environment and org action variables", () => {
   test("manifest stays on the base version and wires Idempotent reconcile like milestones.create", () => {
-    expect(manifest.version).toBe("0.86.4");
+    expect(manifest.version).toBe("0.86.5");
     expect(Object.keys(manifest.operations).length).toBe(847);
     for (const key of READS) {
       const op = manifest.operations[key] as Record<string, unknown>;
@@ -57,7 +58,7 @@ describe("github N8 environment and org action variables", () => {
       "actions.org_variables.delete",
     ] as const) {
       const op = manifest.operations[key] as Record<string, unknown>;
-      expect(op.sideEffect).toBe("write");
+      expect(op.sideEffect, key).toBe(mutating(key));
       expect(op.effectPolicy).toBe(effectOf(key).policy);
       expect(op.reconcile).toBe(effectOf(key).reconcile);
       expect(op.observe).toBeUndefined();

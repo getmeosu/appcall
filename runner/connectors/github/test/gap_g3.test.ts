@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { mutating } from "./destructive_keys";
 import manifest from "../manifest.json";
 import {
   convertOutsideCollaborator,
@@ -67,21 +68,22 @@ function empty(status: number) {
 
 describe("github gap G3 organization actions reads and writes", () => {
   test("version is 0.79.0 at 852 ops with the read/write breakdown", () => {
-    expect(manifest.version).toBe("0.86.4");
+    expect(manifest.version).toBe("0.86.5");
     const ops = manifest.operations as Record<string, Record<string, unknown>>;
     expect(Object.keys(ops)).toHaveLength(847);
     const kinds = { action: 0, sync: 0, webhook: 0 };
-    const side = { read: 0, write: 0, absent: 0 };
+    const side = { read: 0, write: 0, destructive: 0, absent: 0 };
     for (const op of Object.values(ops)) {
       kinds[op.kind as keyof typeof kinds] += 1;
       if (op.kind === "action") {
         if (op.sideEffect === "read") side.read += 1;
         else if (op.sideEffect === "write") side.write += 1;
+        else if (op.sideEffect === "destructive") side.destructive += 1;
         else side.absent += 1;
       }
     }
     expect(kinds).toEqual({ action: 797, sync: 4, webhook: 46 });
-    expect(side).toEqual({ read: 422, write: 360, absent: 15 });
+    expect(side).toEqual({ read: 422, write: 283, destructive: 77, absent: 15 });
   });
 
   test("the fifteen G3 ops are present, omit all three effect keys, and document their paths", () => {
@@ -93,7 +95,7 @@ describe("github gap G3 organization actions reads and writes", () => {
       const op = ops[key];
       expect(op).toBeDefined();
       expect(op.kind).toBe("action");
-      expect(op.sideEffect).toBe(meta.sideEffect);
+      expect(op.sideEffect, key).toBe(meta.sideEffect === "write" ? mutating(key) : meta.sideEffect);
       expect(op.effectPolicy).toBeUndefined();
       expect(op.reconcile).toBeUndefined();
       expect(op.effect).toBeUndefined();

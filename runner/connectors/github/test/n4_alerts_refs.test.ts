@@ -1,4 +1,5 @@
 import { effectOf } from "./effects_final";
+import { mutating } from "./destructive_keys";
 import { describe, expect, test } from "bun:test";
 import manifest from "../manifest.json";
 import dependabotFixture from "../fixtures/dependabot_alerts.json";
@@ -50,7 +51,7 @@ function schemaKeys(schema: unknown, acc: string[] = []): string[] {
 
 describe("github N4 alerts refs tags gist delete", () => {
   test("manifest is 0.79.0 with exactly 852 ops and the N4 policies", () => {
-    expect(manifest.version).toBe("0.86.4");
+    expect(manifest.version).toBe("0.86.5");
     expect(Object.keys(manifest.operations).length).toBe(847);
     for (const key of N4_READS) {
       const op = manifest.operations[key] as Record<string, unknown>;
@@ -69,7 +70,7 @@ describe("github N4 alerts refs tags gist delete", () => {
     expect(createTag.reconcile).toBe(effectOf("git.tags.create").reconcile);
     for (const key of ["gists.delete", "git.refs.delete"] as const) {
       const op = manifest.operations[key] as Record<string, unknown>;
-      expect(op.sideEffect).toBe("write");
+      expect(op.sideEffect, key).toBe(mutating(key));
       expect(op.effectPolicy).toBe(effectOf(key).policy);
       expect(op.reconcile).toBe(effectOf(key).reconcile);
     }

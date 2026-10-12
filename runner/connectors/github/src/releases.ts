@@ -25,7 +25,7 @@ export type GitHubRelease = {
 export type NormalizedRelease = {
   id: string;
   provider: "github";
-  providerReleaseId: number;
+  providerReleaseId: number | null;
   tagName: string;
   name: string;
   body: string;
@@ -48,7 +48,8 @@ export function normalizeGitHubRelease(release: GitHubRelease): NormalizedReleas
   return {
     id: `gh-release:${release.id}`,
     provider: "github",
-    providerReleaseId: typeof release.id === "number" ? release.id : 0,
+    // FIX-DESTRUCTIVE amend (linus): a non-numeric upstream id is null, never a fabricated 0.
+    providerReleaseId: typeof release.id === "number" ? release.id : null,
     tagName: release.tag_name ?? "",
     name: release.name ?? "",
     body: typeof release.body === "string" ? release.body : "",

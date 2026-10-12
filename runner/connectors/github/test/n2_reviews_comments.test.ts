@@ -25,6 +25,7 @@ import {
 } from "../src/actions";
 import { validateListReviewCommentsInput } from "../src/pull_requests";
 import { validateListCommitCommentsInput } from "../src/commits";
+import { mutating } from "./destructive_keys";
 
 const N2_READS = [
   "pull_requests.reviews.get",
@@ -43,7 +44,7 @@ const N2_RECONCILE = [
 
 describe("github N2 reviews comments timeline checks", () => {
   test("manifest wires exactly the N2 effect policies on the N1 tip", () => {
-    expect(manifest.version).toBe("0.86.4");
+    expect(manifest.version).toBe("0.86.5");
     expect(Object.keys(manifest.operations).length).toBe(847);
     for (const key of N2_READS) {
       const op = manifest.operations[key] as Record<string, unknown>;
@@ -61,12 +62,12 @@ describe("github N2 reviews comments timeline checks", () => {
     // FIX-EFFECTS: resource deletes carry no effect keys.
     for (const key of ["pull_requests.review_comments.delete", "commits.comments.delete"] as const) {
       const op = manifest.operations[key] as Record<string, unknown>;
-      expect(op.sideEffect).toBe("write");
+      expect(op.sideEffect, key).toBe(mutating(key));
       expect(op.effectPolicy).toBe(effectOf(key).policy);
       expect(op.reconcile).toBe(effectOf(key).reconcile);
     }
     const pending = manifest.operations["pull_requests.reviews.delete_pending"] as Record<string, unknown>;
-    expect(pending.sideEffect).toBe("write");
+    expect(pending.sideEffect).toBe("destructive");
     expect(pending.effectPolicy).toBe(effectOf("pull_requests.reviews.delete_pending").policy);
     expect(pending.reconcile).toBe(effectOf("pull_requests.reviews.delete_pending").reconcile);
     expect(manifest.operations["pull_requests.review_comments.list"].sideEffect).toBe("read");

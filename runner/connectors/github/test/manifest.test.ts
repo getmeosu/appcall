@@ -1,6 +1,7 @@
 import { effectOf } from "./effects_final";
 import { describe, expect, test } from "bun:test";
 import manifest from "../manifest.json";
+import { mutating } from "./destructive_keys";
 
 describe("github connector manifest", () => {
   test("manifest declares key, runtime, and auth", () => {
@@ -182,7 +183,7 @@ describe("github connector manifest", () => {
     ];
     for (const key of writes) {
       const op = manifest.operations[key] as Record<string, unknown>;
-      expect(op.sideEffect).toBe("write");
+      expect(op.sideEffect, key).toBe(mutating(key));
       expect(op.effectPolicy).toBe(effectOf(key).policy);
       expect(op.reconcile).toBe(effectOf(key).reconcile);
     }
@@ -287,7 +288,7 @@ describe("github connector manifest", () => {
     expect(manifest.operations["repos.contents.put"].sideEffect).toBe("write");
     expect(manifest.operations["repos.contents.put"].effectPolicy).toBe(effectOf("repos.contents.put").policy);
     expect(manifest.operations["repos.contents.put"].reconcile).toBe(effectOf("repos.contents.put").reconcile);
-    expect(manifest.operations["repos.contents.delete"].sideEffect).toBe("write");
+    expect(manifest.operations["repos.contents.delete"].sideEffect).toBe("destructive");
     expect(manifest.operations["repos.contents.delete"].effectPolicy).toBe(effectOf("repos.contents.delete").policy);
     expect(manifest.operations["repos.contents.push_files"].sideEffect).toBe("write");
     expect(manifest.operations["repos.contents.push_files"].effectPolicy).toBe(effectOf("repos.contents.push_files").policy);
@@ -305,7 +306,7 @@ describe("github connector manifest", () => {
   });
 
   test("manifest version is 0.79.0", () => {
-    expect(manifest.version).toBe("0.86.4");
+    expect(manifest.version).toBe("0.86.5");
     expect(manifest.version).not.toBe("0.19.0");
   });
 
@@ -340,7 +341,7 @@ describe("github connector manifest", () => {
       ["repos.collaborators.remove", undefined, undefined],
     ] as const) {
       const op = manifest.operations[key] as Record<string, unknown>;
-      expect(op.sideEffect).toBe("write");
+      expect(op.sideEffect, key).toBe(mutating(key));
       expect(op.effectPolicy).toBe(effectOf(key).policy);
       expect(op.reconcile).toBe(effectOf(key).reconcile);
     }
@@ -419,7 +420,7 @@ describe("github connector manifest", () => {
     expect(update.effectPolicy).toBe(effectOf("repos.update").policy);
     expect(update.reconcile).toBe(effectOf("repos.update").reconcile);
     const del = manifest.operations["branches.delete"] as Record<string, unknown>;
-    expect(del.sideEffect).toBe("write");
+    expect(del.sideEffect).toBe("destructive");
     // FIX-EFFECTS: resource delete, no effect keys.
     expect(del.effectPolicy).toBe(effectOf("branches.delete").policy);
     expect(del.reconcile).toBe(effectOf("branches.delete").reconcile);
@@ -521,7 +522,7 @@ describe("github connector manifest", () => {
       expect(op.reconcile).toBe(effectOf(key).reconcile);
     }
     const del = manifest.operations["releases.delete"] as Record<string, unknown>;
-    expect(del.sideEffect).toBe("write");
+    expect(del.sideEffect).toBe("destructive");
     expect(del.effectPolicy).toBe(effectOf("releases.delete").policy);
     expect(del.reconcile).toBe(effectOf("releases.delete").reconcile);
   });
