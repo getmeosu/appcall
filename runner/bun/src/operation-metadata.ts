@@ -18,6 +18,13 @@ export function markOperationMetadata<T extends Record<string, unknown>>(output:
   return output;
 }
 
+/** Keys already marked as injected runner metadata (empty when none). */
+export function operationMetadataKeys(output: unknown): string[] {
+  if (output === null || typeof output !== "object" || Array.isArray(output)) return [];
+  const keys = (output as Record<PropertyKey, unknown>)[OPERATION_METADATA];
+  return Array.isArray(keys) ? keys.filter((key): key is string => typeof key === "string") : [];
+}
+
 export function splitOperationMetadata(output: unknown): { output: unknown; metadata: Record<string, unknown> } {
   if (output === null || typeof output !== "object" || Array.isArray(output)) return { output, metadata: {} };
   const keys = (output as Record<PropertyKey, unknown>)[OPERATION_METADATA];
