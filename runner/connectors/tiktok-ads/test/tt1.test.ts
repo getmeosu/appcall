@@ -31,12 +31,12 @@ describe("TT-1 TT-EFFECTS: delete sideEffects", () => {
     expect(new Set(deletes)).toEqual(new Set([...TT1_DESTRUCTIVE_OPS, ...Object.keys(TT1_REVERSIBLE_DELETES)]));
   });
 
-  it("pins the destructive set to the 19 irreversible deletes", () => {
+  it("pins the destructive set to the 20 irreversible deletes", () => {
     const destructive = Object.entries(ops).filter(([, op]) => op.sideEffect === "destructive").map(([k]) => k).sort();
     expect(destructive).toEqual([...TT1_DESTRUCTIVE_OPS].sort());
   });
 
-  it("keeps the 6 reversible deletes as write, with their restore op present", () => {
+  it("keeps the 5 reversible deletes as write, with their restore op present", () => {
     for (const [key, restore] of Object.entries(TT1_REVERSIBLE_DELETES)) {
       expect(ops[key].sideEffect, key).toBe("write");
       expect(ops[restore], restore).toBeDefined();
@@ -51,9 +51,9 @@ describe("TT-1 TT-EFFECTS: delete sideEffects", () => {
     expect(JSON.stringify(manifest)).not.toMatch(/idempotent/i);
   });
 
-  it("keeps sideEffect counts at 235 read, 170 write, 19 destructive", () => {
+  it("keeps sideEffect counts at 235 read, 169 write, 20 destructive", () => {
     const count = (s: string) => Object.values(ops).filter((op) => op.sideEffect === s).length;
-    expect([count("read"), count("write"), count("destructive")]).toEqual([235, 170, 19]);
+    expect([count("read"), count("write"), count("destructive")]).toEqual([235, 169, 20]);
   });
 });
 
