@@ -6,8 +6,8 @@ describe("Greenhouse manifest", () => {
     expect(manifest.key).toBe("greenhouse");
   });
 
-  it("has version 0.10.1", () => {
-    expect(manifest.version).toBe("0.10.1");
+  it("has version 0.10.2", () => {
+    expect(manifest.version).toBe("0.10.2");
   });
 
   it("uses bun runtime", () => {
