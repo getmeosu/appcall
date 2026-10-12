@@ -121,7 +121,7 @@ describe("Workable action operations", () => {
   });
 
   test("healthcheck calls SPI stages when a token is present", async () => {
-    const { calls, impl } = stubFetch(JSON.stringify(actionFixture));
+    const { calls, impl } = stubFetch(JSON.stringify({ stages: [{ slug: "sourced", name: "Sourced", kind: "sourced", position: 0 }] }));
 
     const result = await healthcheck({ ...auth, fetch: impl });
 

@@ -10,10 +10,13 @@ export type GreenhouseHealthcheckInput = {
 /**
  * Mint an OAuth token (client credentials) then GET /v3/users?per_page=1.
  * Proves both token exchange and Harvest Bearer access (and Site Admin `sub` when set).
+ * Any token-mint or Harvest failure throws (401/403 → CONNECTOR_UPSTREAM_ERROR,
+ * 429 → CONNECTOR_RATE_LIMITED), so source:"provider" is only returned after a
+ * real provider success. connector/action ride on the PLAT-OUT-1 envelope.
  */
 export async function healthcheck(input: GreenhouseHealthcheckInput = {}): Promise<{
-  connector: "greenhouse";
   status: "ok";
+  source: "provider";
   data: unknown;
 }> {
   const client = createAuthClient({
@@ -24,5 +27,12 @@ export async function healthcheck(input: GreenhouseHealthcheckInput = {}): Promi
     operation: "healthcheck",
   });
   const data = await client.getJSON("/users?per_page=1");
-  return { connector: "greenhouse", status: "ok", data };
+  if (data === null || typeof data !== "object") {
+    throw {
+      ok: false,
+      code: "CONNECTOR_RESPONSE_INVALID",
+      message: "Greenhouse healthcheck returned no users payload.",
+    };
+  }
+  return { status: "ok", source: "provider", data };
 }
