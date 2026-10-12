@@ -8,7 +8,7 @@ import { validateListUsersInput } from "../src/correctness_card18";
 
 describe("github correctness card 18", () => {
   test("version is 0.79.0 at 852 ops with the read/write breakdown", () => {
-    expect(manifest.version).toBe("0.89.6");
+    expect(manifest.version).toBe("0.89.7");
     const ops = manifest.operations as Record<string, Record<string, unknown>>;
     expect(Object.keys(ops)).toHaveLength(860);
     const kinds = { action: 0, sync: 0, webhook: 0 };

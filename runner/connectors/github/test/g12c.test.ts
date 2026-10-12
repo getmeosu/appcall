@@ -82,7 +82,7 @@ const opsOf = manifest.operations as Record<string, Record<string, any>>;
 
 describe("github FIX-G12C: G12 GraphQL ops via gqlRequest", () => {
   test("version 0.87.0 at 851 ops; auth.scopes unchanged (per-op scopes only)", () => {
-    expect(manifest.version).toBe("0.89.6");
+    expect(manifest.version).toBe("0.89.7");
     expect(Object.keys(opsOf)).toHaveLength(860);
     expect(manifest.auth.scopes).toEqual(["repo", "read:org", "admin:repo_hook", "admin:org_hook", "gist", "notifications", "admin:org"]);
     expect(manifest.auth.scopes).not.toContain("user");
