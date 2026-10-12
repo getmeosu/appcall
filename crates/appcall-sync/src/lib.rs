@@ -1,8 +1,10 @@
 //! Durable message synchronization with PostgreSQL lease fencing.
 mod poll;
+mod poll_scope;
 mod repository;
 mod service;
 pub use poll::*;
+pub use poll_scope::*;
 pub use repository::*;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -199,6 +201,7 @@ pub struct Config {
     pub retry_base: Duration,
     pub max_retry_delay: Duration,
     pub max_attempts: u32,
+    pub poll_retention: PollRetention,
 }
 impl Default for Config {
     fn default() -> Self {
@@ -207,6 +210,7 @@ impl Default for Config {
             retry_base: Duration::from_secs(1),
             max_retry_delay: Duration::from_secs(3600),
             max_attempts: DEFAULT_MAX_ATTEMPTS,
+            poll_retention: PollRetention::default(),
         }
     }
 }

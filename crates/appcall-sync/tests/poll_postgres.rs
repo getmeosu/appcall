@@ -658,6 +658,256 @@ fn failure_backoff_pause_and_input_change() {
     drop_schema(&schema);
 }
 
+#[test]
+#[ignore = "requires explicit local PostgreSQL"]
+fn scoped_calls_never_reach_connections_outside_the_caller() {
+    let (mut db, schema) = fixture();
+    db.batch_execute(
+        "INSERT INTO projects(id,name) VALUES('q','other');
+         INSERT INTO connections(id,project_id,connector,status,auth_type,external_account_id,credential_owner)
+         VALUES('cq','q','pollfix','active','api_key','brand','brand'),
+               ('c2','p','pollfix','active','api_key','brand-2','brand'),
+               ('cp','p','pollfix','active','api_key',NULL,'platform');",
+    )
+    .unwrap();
+    let brand = PollCaller {
+        project_id: "p",
+        account_id: "brand",
+    };
+    let request = |connection: &str| PollSubscription {
+        connection_id: connection.into(),
+        ..subscription(json!({}))
+    };
+    // Other project, other account, platform-owned, wrong connector, missing.
+    for (caller, connector, connection) in [
+        (brand, "pollfix", "cq"),
+        (brand, "pollfix", "c2"),
+        (brand, "pollfix", "cp"),
+        (brand, "other", "c"),
+        (brand, "pollfix", "missing"),
+    ] {
+        assert_eq!(
+            poll_subscribe_scoped(&mut db, &caller, connector, &request(connection)).map(|_| ()),
+            Err(Error::NotFound),
+            "{connection} via {connector}"
+        );
+    }
+    // A request naming another project than the caller's.
+    assert_eq!(
+        poll_subscribe_scoped(
+            &mut db,
+            &brand,
+            "pollfix",
+            &PollSubscription {
+                project_id: "q".into(),
+                ..request("cq")
+            }
+        )
+        .map(|_| ()),
+        Err(Error::NotFound)
+    );
+    let (view, created) = poll_subscribe_scoped(&mut db, &brand, "pollfix", &request("c")).unwrap();
+    assert!(created);
+    assert_eq!(
+        (view.connection_id.as_str(), view.status.as_str()),
+        ("c", "active")
+    );
+    let (_, created) = poll_subscribe_scoped(&mut db, &brand, "pollfix", &request("c")).unwrap();
+    assert!(!created, "idempotent");
+    // A project-wide caller reaches every project connection, still not q's.
+    let project = PollCaller {
+        project_id: "p",
+        account_id: "",
+    };
+    poll_subscribe_scoped(&mut db, &project, "pollfix", &request("c2")).unwrap();
+    assert_eq!(
+        poll_subscriptions_scoped(&mut db, &brand, "c2", None),
+        Err(Error::NotFound)
+    );
+    assert_eq!(
+        poll_unsubscribe_scoped(&mut db, &brand, "c2", "items.list"),
+        Err(Error::NotFound)
+    );
+    assert_eq!(
+        poll_subscriptions_scoped(&mut db, &project, "cq", None),
+        Err(Error::NotFound)
+    );
+    assert_eq!(
+        poll_subscriptions_scoped(&mut db, &project, "c2", None)
+            .unwrap()
+            .len(),
+        1
+    );
+    assert_eq!(
+        poll_subscriptions_scoped(&mut db, &brand, "c", Some("items.list")).unwrap()[0].operation,
+        "items.list"
+    );
+    assert!(
+        poll_subscriptions_scoped(&mut db, &brand, "c", Some("other.list"))
+            .unwrap()
+            .is_empty()
+    );
+    assert!(poll_unsubscribe_scoped(&mut db, &brand, "c", "items.list").unwrap());
+    assert!(!poll_unsubscribe_scoped(&mut db, &brand, "c", "items.list").unwrap());
+    let mut c = session(&schema);
+    let rows: i64 = c
+        .query_one("SELECT count(*) FROM poll_subscriptions", &[])
+        .unwrap()
+        .get(0);
+    assert_eq!(rows, 1, "only the project-wide c2 subscription remains");
+    drop(c);
+    drop(db);
+    drop_schema(&schema);
+}
+
+fn commit_with(
+    repo: &mut Repository,
+    page: &[(&str, &str)],
+    retention: PollRetention,
+) -> PollReport {
+    let claim = repo
+        .poll_claim("w", Duration::from_secs(30))
+        .unwrap()
+        .expect("due subscription");
+    repo.poll_commit_with(&claim, &spec(), items(page), retention)
+        .unwrap()
+}
+fn seen_keys(c: &mut Client) -> Vec<String> {
+    c.query(
+        "SELECT item_key FROM poll_seen_items ORDER BY item_key",
+        &[],
+    )
+    .unwrap()
+    .iter()
+    .map(|r| r.get(0))
+    .collect()
+}
+
+#[test]
+#[ignore = "requires explicit local PostgreSQL"]
+fn retention_caps_unobserved_items_keeps_observed_ones_and_renews_the_epoch() {
+    let (db, schema) = fixture();
+    let mut repo = Repository::new(db);
+    repo.poll_subscribe(&subscription(json!({}))).unwrap();
+    let mut c = session(&schema);
+    let cap = PollRetention {
+        cap: 2,
+        ttl: Duration::from_secs(3600),
+    };
+    // Observed items are never pruned, even beyond the cap.
+    let five = [("a", "1"), ("b", "1"), ("c", "1"), ("d", "1"), ("e", "1")];
+    assert_eq!(commit_with(&mut repo, &five, cap).pruned, 0);
+    assert_eq!(seen_keys(&mut c).len(), 5);
+    let before = epoch(&mut c);
+    // Make d and e the most recently observed of the soon-unobserved items.
+    c.execute(
+        "UPDATE poll_seen_items SET last_seen_at=clock_timestamp()-CASE WHEN item_key IN ('d','e') THEN interval '1 minute' ELSE interval '10 minutes' END",
+        &[],
+    )
+    .unwrap();
+    make_due(&mut c);
+    // Only a is still on the page: of b..e, only the cap (2) newest stay.
+    let run = commit_with(&mut repo, &[("a", "1")], cap);
+    assert_eq!((run.pruned, run.emitted), (2, 0));
+    assert_eq!(seen_keys(&mut c), ["a", "d", "e"]);
+    assert!(epoch(&mut c) > before, "a prune renews the epoch");
+    // A pruned item that comes back is new again, under a fresh key.
+    make_due(&mut c);
+    let back = commit_with(&mut repo, &[("a", "1"), ("b", "1")], cap);
+    assert_eq!(back.emitted, 1);
+    let got = events(&mut c);
+    assert_eq!(got.len(), 1);
+    assert_eq!(got[0].2["change"], "new");
+    assert_eq!(got[0].2["itemKey"], "b");
+    // A run that prunes nothing keeps the epoch.
+    let steady = epoch(&mut c);
+    make_due(&mut c);
+    let none = commit_with(&mut repo, &[("a", "1"), ("b", "1"), ("d", "1")], cap);
+    assert_eq!(none.pruned, 0);
+    assert_eq!(epoch(&mut c), steady);
+    // An item emitted as new, pruned, and seen again must emit again: the
+    // renewed epoch keeps its revision-0 key distinct from the first event.
+    make_due(&mut c);
+    assert_eq!(
+        commit_with(&mut repo, &[("a", "1"), ("x", "1")], cap).emitted,
+        1
+    );
+    c.execute(
+        "UPDATE poll_seen_items SET last_seen_at=clock_timestamp()-interval '1 day' WHERE item_key='x'",
+        &[],
+    )
+    .unwrap();
+    make_due(&mut c);
+    let one_day = PollRetention {
+        cap: 2,
+        ttl: Duration::from_secs(3600),
+    };
+    // x is past the TTL (the other unobserved items fit in the cap).
+    assert_eq!(commit_with(&mut repo, &[("a", "1")], one_day).pruned, 1);
+    assert!(!seen_keys(&mut c).contains(&"x".to_owned()));
+    make_due(&mut c);
+    assert_eq!(
+        commit_with(&mut repo, &[("a", "1"), ("x", "1")], cap).emitted,
+        1
+    );
+    let x: Vec<_> = events(&mut c)
+        .into_iter()
+        .filter(|e| e.2["itemKey"] == "x")
+        .collect();
+    assert_eq!(x.len(), 2);
+    assert_ne!(x[0].3, x[1].3);
+    drop(c);
+    drop(repo);
+    drop_schema(&schema);
+}
+
+#[test]
+#[ignore = "requires explicit local PostgreSQL"]
+fn retention_ttl_prunes_only_items_no_longer_observed() {
+    let (db, schema) = fixture();
+    let mut repo = Repository::new(db);
+    repo.poll_subscribe(&subscription(json!({}))).unwrap();
+    let mut c = session(&schema);
+    let ttl = PollRetention {
+        cap: 10_000,
+        ttl: Duration::from_secs(24 * 3600),
+    };
+    commit_with(
+        &mut repo,
+        &[("old", "1"), ("gone", "1"), ("fresh", "1")],
+        ttl,
+    );
+    // old (still observed) and gone (not observed) are both past the TTL.
+    c.execute(
+        "UPDATE poll_seen_items SET last_seen_at=clock_timestamp()-interval '2 days' WHERE item_key IN ('old','gone')",
+        &[],
+    )
+    .unwrap();
+    make_due(&mut c);
+    let run = commit_with(&mut repo, &[("old", "1")], ttl);
+    assert_eq!((run.pruned, run.emitted), (1, 0));
+    assert_eq!(seen_keys(&mut c), ["fresh", "old"]);
+    // Observing old refreshed its last_seen_at, so the next run keeps it.
+    let refreshed: bool = c
+        .query_one(
+            "SELECT last_seen_at>clock_timestamp()-interval '1 minute' FROM poll_seen_items WHERE item_key='old'",
+            &[],
+        )
+        .unwrap()
+        .get(0);
+    assert!(refreshed);
+    // Still on the page and unchanged: never re-emitted.
+    make_due(&mut c);
+    assert_eq!(
+        commit_with(&mut repo, &[("old", "1"), ("fresh", "1")], ttl).emitted,
+        0
+    );
+    assert!(events(&mut c).is_empty());
+    drop(c);
+    drop(repo);
+    drop_schema(&schema);
+}
+
 // ─── service level: scripted runner ──────────────────────────────────────────
 
 struct Creds;

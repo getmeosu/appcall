@@ -401,6 +401,13 @@ impl Backend for Application {
         };
         self.providers.handle(identity.as_ref(), r).await
     }
+    async fn poll_subscriptions(
+        &self,
+        i: &Identity,
+        c: appcall_api::poll_routes::PollCommand,
+    ) -> Result<appcall_api::poll_routes::PollReply> {
+        self.core.poll_subscriptions(i, c).await
+    }
     async fn auxiliary_route(&self, i: &Identity, r: &Request) -> Result<Option<Response>> {
         if let Some(response) = self.local_start(i, r).await? {
             return Ok(Some(response));
