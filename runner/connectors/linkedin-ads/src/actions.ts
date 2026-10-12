@@ -12,6 +12,7 @@ import {
   parseCreativesResponse,
   parseAnalyticsResponse,
 } from "./objects";
+import { encodePathSegment } from "../../_shared/jobboard";
 
 type ActionResult = Record<string, unknown> | Promise<Record<string, unknown>>;
 
@@ -120,7 +121,7 @@ export function getCampaign(input: unknown): ActionResult {
     const accountId = sanitizeResourceId(validated.accountId, ["urn:li:sponsoredAccount:"]);
     const campaignId = sanitizeResourceId(validated.campaignId, ["urn:li:sponsoredCampaign:"]);
     return createLinkedInAdsClient(clientOpts(input, "campaigns.get"))
-      .fetchJSON(`/rest/adAccounts/${accountId}/adCampaigns/${campaignId}`, { method: "GET" })
+      .fetchJSON(`/rest/adAccounts/${encodePathSegment(accountId, "accountId")}/adCampaigns/${encodePathSegment(campaignId, "campaignId")}`, { method: "GET" })
       .then((result) => {
         if (result.status === 200 && isRecord(result.body)) {
           return {
@@ -155,7 +156,7 @@ export function getAdAccount(input: unknown): ActionResult {
   if (hasLiveAuth(input)) {
     const accountId = sanitizeResourceId(validated.accountId, ["urn:li:sponsoredAccount:"]);
     return createLinkedInAdsClient(clientOpts(input, "ad_accounts.get"))
-      .fetchJSON(`/rest/adAccounts/${accountId}`, { method: "GET" })
+      .fetchJSON(`/rest/adAccounts/${encodePathSegment(accountId, "accountId")}`, { method: "GET" })
       .then((result) => {
         if (result.status === 200 && isRecord(result.body)) {
           return {
@@ -203,7 +204,7 @@ export function listCampaignGroups(input: unknown): ActionResult {
       params.set("search.status.values[0]", validated.status);
     }
     return createLinkedInAdsClient(clientOpts(input, "campaign_groups.list"))
-      .fetchJSON(`/rest/adAccounts/${accountId}/adCampaignGroups?${params.toString()}`, { method: "GET" })
+      .fetchJSON(`/rest/adAccounts/${encodePathSegment(accountId, "accountId")}/adCampaignGroups?${params.toString()}`, { method: "GET" })
       .then((result) => {
         if (result.status === 200) {
           const parsed = parseCampaignGroupsResponse(result.body);
@@ -282,7 +283,7 @@ export function listCreatives(input: unknown): ActionResult {
       add("pageSize", String(validated.pageSize ?? validated.count));
     }
     return createLinkedInAdsClient(clientOpts(input, "creatives.list"))
-      .fetchJSON(`/rest/adAccounts/${accountId}/creatives?${pairs.join("&")}`, { method: "GET", headers: { "X-RestLi-Method": "FINDER" } })
+      .fetchJSON(`/rest/adAccounts/${encodePathSegment(accountId, "accountId")}/creatives?${pairs.join("&")}`, { method: "GET", headers: { "X-RestLi-Method": "FINDER" } })
       .then((result) => {
         if (result.status === 200) {
           const parsed = parseCreativesResponse(result.body);

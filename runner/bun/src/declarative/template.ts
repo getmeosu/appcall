@@ -50,7 +50,8 @@ export function renderTemplate(template: unknown, context: TemplateContext): unk
 export function renderPath(path: string, context: TemplateContext): string {
   const renderedPath = path.replace(placeholderPattern, (match, expression: string, offset: number) => {
     const value = resolvePath(expression, context);
-    if (value === undefined || value === null || value === "") {
+    // SEC-PATH-2b: a whitespace-only id is never a valid path segment.
+    if (value === undefined || value === null || value === "" || (typeof value === "string" && value.trim() === "")) {
       throw new Error(`${lastSegment(expression)} is required`);
     }
     const rendered = encodeURIComponent(String(value));

@@ -1,6 +1,7 @@
 import { compileDeclarativeConnector } from "../../../bun/src/declarative/compile";
 import { ConnectorHttpError, createConnectorHttpClient } from "../../../bun/src/http";
 import manifest from "../manifest.json";
+import { encodePathSegment } from "../../_shared/jobboard";
 
 const compiled = compileDeclarativeConnector(manifest as never);
 const allowedHosts = (manifest.network as { allowedHosts: string[] }).allowedHosts;
@@ -419,7 +420,7 @@ export function updateProject(inputValue: unknown): Promise<JsonRecord> | JsonRe
     return callFloat({
       action: "projects.update",
       method: "PATCH",
-      path: `/projects/${projectId}`,
+      path: `/projects/${encodePathSegment(projectId, "projectId")}`,
       body: projectWriteBody(input, true),
       success: [200],
       input,
@@ -455,7 +456,7 @@ export function updateAllocation(inputValue: unknown): Promise<JsonRecord> | Jso
     return callFloat({
       action: "allocations.update",
       method: "PATCH",
-      path: `/tasks/${allocationId}`,
+      path: `/tasks/${encodePathSegment(allocationId, "allocationId")}`,
       body: allocationWriteBody(input, false),
       success: [200],
       input,

@@ -5,7 +5,7 @@ describe("unipile connector manifest", () => {
   test("declares key, runtime, auth, network, operations, and models", () => {
     expect(manifest.key).toBe("unipile");
     expect(manifest.name).toBe("Unipile");
-    expect(manifest.version).toBe("0.1.0");
+    expect(manifest.version).toBe("0.1.1");
     expect(manifest.runtime).toBe("bun");
   });
 

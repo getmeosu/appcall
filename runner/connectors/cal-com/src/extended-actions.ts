@@ -1,4 +1,5 @@
 import { createCalComClient, isRecord, unwrapEnvelope, parseCalComRateLimit } from "./http";
+import { assertNoTraversalSegment } from "../../_shared/jobboard";
 
 export type CalComExtendedSpec = {
   op: string;
@@ -2080,7 +2081,8 @@ function asPathValue(value: unknown, field: string): string {
   const text = typeof value === "number" ? String(value) : typeof value === "string" ? value : "";
   if (!text) throw new Error(`${field} is required`);
   if (text.includes("/") || text.includes("\\") || text.includes("..")) throw new Error(`${field} is invalid`);
-  return text;
+  // "." slips past the check above and encodeURIComponent leaves it intact.
+  return assertNoTraversalSegment(text, field);
 }
 
 function isSuccessStatus(status: number): boolean {

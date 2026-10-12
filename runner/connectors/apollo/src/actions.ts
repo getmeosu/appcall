@@ -1,4 +1,5 @@
 import { createApolloClient, parseApolloRateLimit, isRecord } from "./http";
+import { encodePathSegment } from "../../_shared/jobboard";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -451,7 +452,7 @@ export function createOrganizationsJobPostingsClient(options: { apiKey: string; 
   return {
     async getJobPostings(input: unknown) {
       const payload = validateOrganizationsJobPostingsInput(input);
-      const response = await client.fetchJSON(`/api/v1/organizations/${payload.id}/job_postings`);
+      const response = await client.fetchJSON(`/api/v1/organizations/${encodePathSegment(payload.id, "id")}/job_postings`);
       if (response.status === 200) {
         const b = response.body as Record<string, unknown>;
         const job_postings = Array.isArray(b.job_postings) ? b.job_postings : [];
@@ -547,7 +548,7 @@ export function createContactsClient(options: { apiKey: string; fetch?: typeof f
       if (optString(input.mobile_phone)) body.mobile_phone = input.mobile_phone;
       if (optString(input.linkedin_url)) body.linkedin_url = input.linkedin_url;
       if (optStringArray(input.label_names)) body.label_names = input.label_names;
-      const response = await updateClient.fetchJSON(`/api/v1/contacts/${id}`, { method: "PUT", body: JSON.stringify(body) });
+      const response = await updateClient.fetchJSON(`/api/v1/contacts/${encodePathSegment(id, "id")}`, { method: "PUT", body: JSON.stringify(body) });
       if (response.status === 200) {
         const b = response.body as Record<string, unknown>;
         const contact = isRecord(b.contact) ? b.contact : b;
@@ -696,7 +697,7 @@ export function createAccountsClient(options: { apiKey: string; fetch?: typeof f
       if (optString(input.website_url)) body.website_url = input.website_url;
       if (optNumber(input.num_employees) !== undefined) body.num_employees = input.num_employees;
       if (optString(input.industry)) body.industry = input.industry;
-      const response = await updateClient.fetchJSON(`/api/v1/accounts/${id}`, { method: "PUT", body: JSON.stringify(body) });
+      const response = await updateClient.fetchJSON(`/api/v1/accounts/${encodePathSegment(id, "id")}`, { method: "PUT", body: JSON.stringify(body) });
       if (response.status === 200) {
         const b = response.body as Record<string, unknown>;
         const account = isRecord(b.account) ? b.account : b;
@@ -777,7 +778,7 @@ export function createSequencesClient(options: { apiKey: string; fetch?: typeof 
       const contact_ids = input.contact_ids.filter((v): v is string => typeof v === "string");
       const body: Record<string, unknown> = { emailer_campaign_id, contact_ids };
       if (optString(input.send_email_from_email_account_id)) body.send_email_from_email_account_id = input.send_email_from_email_account_id;
-      const response = await addContactsClient.fetchJSON(`/api/v1/emailer_campaigns/${emailer_campaign_id}/add_contact_ids`, { method: "POST", body: JSON.stringify(body) });
+      const response = await addContactsClient.fetchJSON(`/api/v1/emailer_campaigns/${encodePathSegment(emailer_campaign_id, "emailer_campaign_id")}/add_contact_ids`, { method: "POST", body: JSON.stringify(body) });
       if (response.status === 200) {
         const b = response.body as Record<string, unknown>;
         const contacts = Array.isArray(b.contacts) ? b.contacts : [];

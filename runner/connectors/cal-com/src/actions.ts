@@ -1,4 +1,5 @@
 import { createCalComClient, parseCalComRateLimit, isRecord, prop, unwrapEnvelope } from "./http";
+import { encodePathSegment } from "../../_shared/jobboard";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -106,7 +107,7 @@ export function createEventTypesClient(options: { token: string; fetch?: typeof 
     },
 
     async get(id: number) {
-      const response = await client.fetchJSON(`/event-types/${id}`, {}, "2024-06-14");
+      const response = await client.fetchJSON(`/event-types/${encodePathSegment(id, "id")}`, {}, "2024-06-14");
       if (response.status === 200) {
         const data = unwrapEnvelope(response.body);
         return { ok: true as const, eventType: data };
@@ -145,7 +146,7 @@ export function createEventTypesClient(options: { token: string; fetch?: typeof 
       if (payload.description !== undefined) body.description = payload.description;
       if (payload.hidden !== undefined) body.hidden = payload.hidden;
       if (payload.scheduleId !== undefined) body.scheduleId = payload.scheduleId;
-      const response = await client.fetchJSON(`/event-types/${payload.id}`, { method: "PATCH", body: JSON.stringify(body) }, "2024-06-14");
+      const response = await client.fetchJSON(`/event-types/${encodePathSegment(payload.id, "id")}`, { method: "PATCH", body: JSON.stringify(body) }, "2024-06-14");
       if (isSuccessStatus(response.status)) {
         const data = unwrapEnvelope(response.body);
         return { ok: true as const, eventType: data };
@@ -157,7 +158,7 @@ export function createEventTypesClient(options: { token: string; fetch?: typeof 
     },
 
     async delete(id: number) {
-      const response = await client.fetchJSON(`/event-types/${id}`, { method: "DELETE" }, "2024-06-14");
+      const response = await client.fetchJSON(`/event-types/${encodePathSegment(id, "id")}`, { method: "DELETE" }, "2024-06-14");
       if (isSuccessStatus(response.status)) {
         const data = unwrapEnvelope(response.body);
         return { ok: true as const, eventType: data };
@@ -342,7 +343,7 @@ export function createBookingsClient(options: { token: string; fetch?: typeof fe
     },
 
     async get(uid: string) {
-      const response = await client.fetchJSON(`/bookings/${uid}`);
+      const response = await client.fetchJSON(`/bookings/${encodePathSegment(uid, "uid")}`);
       if (response.status === 200) {
         const data = unwrapEnvelope(response.body);
         return { ok: true as const, booking: data };
@@ -379,7 +380,7 @@ export function createBookingsClient(options: { token: string; fetch?: typeof fe
     async cancel(uid: string, cancellationReason?: string) {
       const body: Record<string, unknown> = {};
       if (cancellationReason) body.cancellationReason = cancellationReason;
-      const response = await client.fetchJSON(`/bookings/${uid}/cancel`, { method: "POST", body: JSON.stringify(body) });
+      const response = await client.fetchJSON(`/bookings/${encodePathSegment(uid, "uid")}/cancel`, { method: "POST", body: JSON.stringify(body) });
       if (response.status === 200 || response.status === 201) {
         const data = unwrapEnvelope(response.body);
         return { ok: true as const, booking: data };
@@ -393,7 +394,7 @@ export function createBookingsClient(options: { token: string; fetch?: typeof fe
     async reschedule(uid: string, start: string, reschedulingReason?: string) {
       const body: Record<string, unknown> = { start };
       if (reschedulingReason) body.reschedulingReason = reschedulingReason;
-      const response = await client.fetchJSON(`/bookings/${uid}/reschedule`, { method: "POST", body: JSON.stringify(body) });
+      const response = await client.fetchJSON(`/bookings/${encodePathSegment(uid, "uid")}/reschedule`, { method: "POST", body: JSON.stringify(body) });
       if (response.status === 200 || response.status === 201) {
         const data = unwrapEnvelope(response.body);
         return { ok: true as const, booking: data };
@@ -405,7 +406,7 @@ export function createBookingsClient(options: { token: string; fetch?: typeof fe
     },
 
     async confirm(uid: string) {
-      const response = await client.fetchJSON(`/bookings/${uid}/confirm`, { method: "POST", body: JSON.stringify({}) });
+      const response = await client.fetchJSON(`/bookings/${encodePathSegment(uid, "uid")}/confirm`, { method: "POST", body: JSON.stringify({}) });
       if (response.status === 200 || response.status === 201) {
         const data = unwrapEnvelope(response.body);
         return { ok: true as const, booking: data };
@@ -419,7 +420,7 @@ export function createBookingsClient(options: { token: string; fetch?: typeof fe
     async decline(uid: string, reason?: string) {
       const body: Record<string, unknown> = {};
       if (reason) body.reason = reason;
-      const response = await client.fetchJSON(`/bookings/${uid}/decline`, { method: "POST", body: JSON.stringify(body) });
+      const response = await client.fetchJSON(`/bookings/${encodePathSegment(uid, "uid")}/decline`, { method: "POST", body: JSON.stringify(body) });
       if (response.status === 200 || response.status === 201) {
         const data = unwrapEnvelope(response.body);
         return { ok: true as const, booking: data };
@@ -668,7 +669,7 @@ export function createSchedulesClient(options: { token: string; fetch?: typeof f
     },
 
     async get(id: number) {
-      const response = await client.fetchJSON(`/schedules/${id}`, {}, "2024-06-11");
+      const response = await client.fetchJSON(`/schedules/${encodePathSegment(id, "id")}`, {}, "2024-06-11");
       if (response.status === 200) {
         const data = unwrapEnvelope(response.body);
         return { ok: true as const, schedule: data };
@@ -699,7 +700,7 @@ export function createSchedulesClient(options: { token: string; fetch?: typeof f
       if (payload.timeZone !== undefined) body.timeZone = payload.timeZone;
       if (payload.isDefault !== undefined) body.isDefault = payload.isDefault;
       if (payload.availability !== undefined) body.availability = payload.availability;
-      const response = await client.fetchJSON(`/schedules/${payload.id}`, { method: "PATCH", body: JSON.stringify(body) }, "2024-06-11");
+      const response = await client.fetchJSON(`/schedules/${encodePathSegment(payload.id, "id")}`, { method: "PATCH", body: JSON.stringify(body) }, "2024-06-11");
       if (isSuccessStatus(response.status)) {
         const data = unwrapEnvelope(response.body);
         return { ok: true as const, schedule: data };
@@ -711,7 +712,7 @@ export function createSchedulesClient(options: { token: string; fetch?: typeof f
     },
 
     async delete(id: number) {
-      const response = await client.fetchJSON(`/schedules/${id}`, { method: "DELETE" }, "2024-06-11");
+      const response = await client.fetchJSON(`/schedules/${encodePathSegment(id, "id")}`, { method: "DELETE" }, "2024-06-11");
       if (isSuccessStatus(response.status)) {
         const data = unwrapEnvelope(response.body);
         return { ok: true as const, schedule: data };
@@ -959,7 +960,7 @@ export function createWebhooksClient(options: { token: string; fetch?: typeof fe
     },
 
     async get(id: number) {
-      const response = await client.fetchJSON(`/webhooks/${id}`);
+      const response = await client.fetchJSON(`/webhooks/${encodePathSegment(id, "id")}`);
       if (response.status === 200) {
         const data = unwrapEnvelope(response.body);
         return { ok: true as const, webhook: data };
@@ -971,7 +972,7 @@ export function createWebhooksClient(options: { token: string; fetch?: typeof fe
     },
 
     async delete(id: number) {
-      const response = await client.fetchJSON(`/webhooks/${id}`, { method: "DELETE" });
+      const response = await client.fetchJSON(`/webhooks/${encodePathSegment(id, "id")}`, { method: "DELETE" });
       if (isSuccessStatus(response.status)) {
         const data = unwrapEnvelope(response.body);
         return { ok: true as const, webhook: data };

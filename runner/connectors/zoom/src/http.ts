@@ -78,6 +78,43 @@ export function fieldValue(obj: Record<string, unknown>, ...keys: string[]): unk
   return undefined;
 }
 
+/** First alias whose value is present (anything but undefined), so "" is seen, not skipped. */
+export function presentField(obj: Record<string, unknown>, ...keys: string[]): unknown {
+  for (const key of keys) {
+    if (obj[key] !== undefined) return obj[key];
+  }
+  return undefined;
+}
+
+/**
+ * SEC-PATH-2b: guard a Zoom path value on the RAW input, before any encoding.
+ * Empty, whitespace (anywhere), backslashes, control characters and dot-only
+ * values are rejected. "/" stays allowed here because Zoom meeting/webinar
+ * UUIDs are base64 and are encoded by the caller.
+ */
+export function assertZoomRawSegment(value: unknown, field: string): string {
+  let text: string;
+  if (typeof value === "string") text = value;
+  else if (typeof value === "number" && Number.isFinite(value)) text = String(value);
+  else throw new Error(`${field} is required`);
+  if (text.trim().length === 0) throw new Error(`${field} is required`);
+  if (/\s/.test(text)) throw new Error(`${field} must not contain whitespace`);
+  if (text.includes("\\")) throw new Error(`${field} must not contain backslashes`);
+  if (/[\u0000-\u001f\u007f-\u009f]/u.test(text)) throw new Error(`${field} must not contain control characters`);
+  if (/^\.+$/.test(text)) throw new Error(`${field} must not be a dot segment`);
+  return text;
+}
+
+/**
+ * Optional Zoom path value: omitted (undefined) stays undefined so the caller
+ * may apply a documented default; any present value ("" included) must pass
+ * assertZoomRawSegment.
+ */
+export function optionalZoomSegment(obj: Record<string, unknown>, field: string, ...aliases: string[]): string | undefined {
+  const value = presentField(obj, field, ...aliases);
+  return value === undefined ? undefined : assertZoomRawSegment(value, field);
+}
+
 export function requireField(obj: Record<string, unknown>, field: string, ...aliases: string[]): string {
   const value = fieldString(obj, field, ...aliases);
   if (!value) throw new Error(`${field} is required`);

@@ -1,4 +1,5 @@
 import { createCalendlyClient, parseCalendlyRateLimit, isRecord, prop } from "./http";
+import { encodePathSegment } from "../../_shared/jobboard";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -154,7 +155,7 @@ export function createScheduledEventsClient(options: { accessToken: string; fetc
     async get(input: unknown) {
       if (!isRecord(input)) throw new Error("scheduled_events.get input must be an object");
       const uuid = requireString(input.uuid, "uuid");
-      const response = await client.fetchJSON(`/scheduled_events/${uuid}`);
+      const response = await client.fetchJSON(`/scheduled_events/${encodePathSegment(uuid, "uuid")}`);
       if (response.status === 200) {
         const body = response.body as Record<string, unknown>;
         const resource = isRecord(body.resource) ? body.resource : body;
@@ -171,7 +172,7 @@ export function createScheduledEventsClient(options: { accessToken: string; fetc
       const uuid = requireString(input.uuid, "uuid");
       const body: Record<string, string> = {};
       if (typeof input.reason === "string") body.reason = input.reason;
-      const response = await client.fetchJSON(`/scheduled_events/${uuid}/cancellation`, {
+      const response = await client.fetchJSON(`/scheduled_events/${encodePathSegment(uuid, "uuid")}/cancellation`, {
         method: "POST",
         body: JSON.stringify(body),
       });
@@ -266,7 +267,7 @@ export function createInviteesClient(options: { accessToken: string; fetch?: typ
       if (payload.pageToken) params.set("page_token", payload.pageToken);
       if (payload.email) params.set("email", payload.email);
       const query = params.toString();
-      const response = await client.fetchJSON(`/scheduled_events/${payload.uuid}/invitees${query ? `?${query}` : ""}`);
+      const response = await client.fetchJSON(`/scheduled_events/${encodePathSegment(payload.uuid, "uuid")}/invitees${query ? `?${query}` : ""}`);
       if (response.status === 200) {
         const body = response.body as Record<string, unknown>;
         const collection = Array.isArray(body.collection) ? body.collection : [];
@@ -562,7 +563,7 @@ export function getEventType(input: unknown): Record<string, unknown> | Promise<
       fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
       operation: "event_types.get",
     });
-    return fetchResource(client, `/event_types/${validated.uuid}`, "Event type not found.").then((result) =>
+    return fetchResource(client, `/event_types/${encodePathSegment(validated.uuid, "uuid")}`, "Event type not found.").then((result) =>
       wrapGet("event_types.get", "eventType", result),
     );
   }
@@ -587,7 +588,7 @@ export function getInvitee(input: unknown): Record<string, unknown> | Promise<Re
     });
     return fetchResource(
       client,
-      `/scheduled_events/${validated.eventUuid}/invitees/${validated.uuid}`,
+      `/scheduled_events/${encodePathSegment(validated.eventUuid, "eventUuid")}/invitees/${encodePathSegment(validated.uuid, "uuid")}`,
       "Invitee not found.",
     ).then((result) => wrapGet("invitees.get", "invitee", result));
   }
@@ -722,7 +723,7 @@ export function deleteWebhookSubscription(input: unknown): Record<string, unknow
       fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
       operation: "webhook_subscriptions.delete",
     });
-    return client.fetchJSON(`/webhook_subscriptions/${payload.uuid}`, { method: "DELETE" }).then((response) => {
+    return client.fetchJSON(`/webhook_subscriptions/${encodePathSegment(payload.uuid, "uuid")}`, { method: "DELETE" }).then((response) => {
       if (response.status === 204 || response.status === 200) {
         return { connector: "calendly", action: "webhook_subscriptions.delete", source: "connector", deleted: true, uuid: payload.uuid };
       }
@@ -748,7 +749,7 @@ export function getUser(input: unknown): Record<string, unknown> | Promise<Recor
       fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
       operation: "users.get",
     });
-    return fetchResource(client, `/users/${validated.uuid}`, "User not found.").then((result) =>
+    return fetchResource(client, `/users/${encodePathSegment(validated.uuid, "uuid")}`, "User not found.").then((result) =>
       wrapGet("users.get", "user", result),
     );
   }
@@ -768,7 +769,7 @@ export function getOrganization(input: unknown): Record<string, unknown> | Promi
       fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
       operation: "organizations.get",
     });
-    return fetchResource(client, `/organizations/${validated.uuid}`, "Organization not found.").then((result) =>
+    return fetchResource(client, `/organizations/${encodePathSegment(validated.uuid, "uuid")}`, "Organization not found.").then((result) =>
       wrapGet("organizations.get", "organization", result),
     );
   }
@@ -817,7 +818,7 @@ export function getRoutingForm(input: unknown): Record<string, unknown> | Promis
       fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
       operation: "routing_forms.get",
     });
-    return fetchResource(client, `/routing_forms/${validated.uuid}`, "Routing form not found.").then((result) =>
+    return fetchResource(client, `/routing_forms/${encodePathSegment(validated.uuid, "uuid")}`, "Routing form not found.").then((result) =>
       wrapGet("routing_forms.get", "routingForm", result),
     );
   }

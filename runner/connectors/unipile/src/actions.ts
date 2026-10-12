@@ -1,4 +1,5 @@
 import { createUnipileClient, classifyUnipileResponse, ConnectorErrorCode, isRecord } from "./http";
+import { encodePathSegment } from "../../_shared/jobboard";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -63,7 +64,7 @@ export function createAccountsClient(options: { apiKey: string; dsn: string; fet
 
     async get(accountId: string) {
       const getClient = createUnipileClient({ apiKey: options.apiKey, baseUrl: options.dsn, fetch: options.fetch, operation: "accounts.get" });
-      const response = await getClient.fetchJSON(`/accounts/${accountId}`);
+      const response = await getClient.fetchJSON(`/accounts/${encodePathSegment(accountId, "accountId")}`);
       if (response.status === 200) {
         return { ok: true as const, account: response.body };
       }
@@ -137,7 +138,7 @@ export function createChatsClient(options: { apiKey: string; dsn: string; fetch?
 
     async get(chatId: string) {
       const client = createUnipileClient({ apiKey: options.apiKey, baseUrl: options.dsn, fetch: options.fetch, operation: "chats.get" });
-      const response = await client.fetchJSON(`/chats/${chatId}`);
+      const response = await client.fetchJSON(`/chats/${encodePathSegment(chatId, "chatId")}`);
       if (response.status === 200) {
         return { ok: true as const, chat: response.body };
       }
@@ -198,7 +199,7 @@ export function createMessagesClient(options: { apiKey: string; dsn: string; fet
       if (payload.limit !== undefined) params.set("limit", String(payload.limit));
       if (payload.cursor) params.set("cursor", payload.cursor);
       const query = params.toString();
-      const response = await client.fetchJSON(`/chats/${payload.chatId}/messages${query ? `?${query}` : ""}`);
+      const response = await client.fetchJSON(`/chats/${encodePathSegment(payload.chatId, "chatId")}/messages${query ? `?${query}` : ""}`);
       if (response.status === 200) {
         const body = response.body as Record<string, unknown>;
         const items = Array.isArray(body.items) ? body.items : (Array.isArray(body.messages) ? body.messages : []);
@@ -213,7 +214,7 @@ export function createMessagesClient(options: { apiKey: string; dsn: string; fet
 
     async send(chatId: string, text: string) {
       const client = createUnipileClient({ apiKey: options.apiKey, baseUrl: options.dsn, fetch: options.fetch, operation: "messages.send" });
-      const response = await client.fetchJSON(`/chats/${chatId}/messages`, {
+      const response = await client.fetchJSON(`/chats/${encodePathSegment(chatId, "chatId")}/messages`, {
         method: "POST",
         body: JSON.stringify({ text }),
       });
@@ -321,7 +322,7 @@ export function createEmailsClient(options: { apiKey: string; dsn: string; fetch
 
     async get(emailId: string) {
       const client = createUnipileClient({ apiKey: options.apiKey, baseUrl: options.dsn, fetch: options.fetch, operation: "emails.get" });
-      const response = await client.fetchJSON(`/emails/${emailId}`);
+      const response = await client.fetchJSON(`/emails/${encodePathSegment(emailId, "emailId")}`);
       if (response.status === 200) {
         return { ok: true as const, email: response.body };
       }
@@ -419,7 +420,7 @@ export function getLinkedInProfile(input: unknown): Record<string, unknown> | Pr
     const account_id = requireString(input.account_id, "account_id");
     const client = createUnipileClient({ apiKey: input.apiKey, baseUrl: input.dsn, fetch: getFetch(input), operation: "linkedin.profile.get" });
     const params = new URLSearchParams({ account_id });
-    return client.fetchJSON(`/users/${identifier}?${params.toString()}`).then((response) => {
+    return client.fetchJSON(`/users/${encodePathSegment(identifier, "identifier")}?${params.toString()}`).then((response) => {
       if (response.status === 200) {
         return { connector: "unipile", action: "linkedin.profile.get", source: "connector", profile: response.body };
       }
