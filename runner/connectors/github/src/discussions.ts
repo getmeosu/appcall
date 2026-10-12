@@ -33,7 +33,7 @@ export type NormalizedDiscussionCategory = {
   nodeId: string;
   name: string;
   emoji: string;
-  description: string;
+  description: string | null;
   isAnswerable: boolean;
   modelVersion: typeof MODEL_VERSION;
   raw: Record<string, unknown>;
@@ -81,7 +81,7 @@ export function normalizeDiscussionCategory(item: Record<string, unknown>): Norm
     nodeId,
     name: typeof item.name === "string" ? item.name : "",
     emoji: typeof item.emoji === "string" ? item.emoji : "",
-    description: typeof item.description === "string" ? item.description : "",
+    description: typeof item.description === "string" ? item.description : null,
     isAnswerable: item.isAnswerable === true,
     modelVersion: MODEL_VERSION,
     raw: item,
