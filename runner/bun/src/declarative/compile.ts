@@ -14,7 +14,7 @@
 
 import { createConnectorHttpClient, ConnectorHttpError } from "../http";
 import { maxOperationResponseBytes } from "../budget";
-import { assertSafePathSegment, assertSafePathSegments, isRecord, renderPath, renderTemplate, resolvePath } from "./template";
+import { assertSafePathSegment, assertSafePathSegments, isBlankPathValue, isRecord, renderPath, renderTemplate, resolvePath } from "./template";
 import { assertOutputSchema, validateAgainstSchema } from "./validate";
 import { assertStrictSchema, compileStrictValidator } from "./strict-schema";
 import type {
@@ -447,8 +447,9 @@ function renderRequestPath(
       (candidate) => candidate.inputName === expression || candidate.wireName === expression,
     );
     const value = parameter ? parameterInput(parameter, input) : resolvePath(expression, input);
-    // SEC-PATH-2b: a whitespace-only id is never a valid path segment.
-    if (value === undefined || value === null || value === "" || (typeof value === "string" && value.trim() === "")) {
+    // SEC-PATH-2b: a whitespace-only id is never a valid path segment; SEC-PATH-2c-2
+    // extends that to blank array items.
+    if (isBlankPathValue(value)) {
       throw new Error(`${lastParameterSegment(parameter?.inputName ?? expression)} is required`);
     }
     const rendered = parameter ? serializePathParameter(parameter, value) : encodeURIComponent(String(value));

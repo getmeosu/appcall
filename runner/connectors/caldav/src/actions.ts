@@ -1,4 +1,4 @@
-import { createCalDAVClient, parseCalDAVRateLimit, isRecord } from "./http";
+import { createCalDAVClient, parseCalDAVRateLimit, isRecord, resolveCollectionHref, type HrefKind } from "./http";
 import {
   buildPrincipalPropfind,
   buildCalendarHomePropfind,
@@ -13,6 +13,14 @@ import {
 } from "./dav";
 
 // ─── Shared helpers ────────────────────────────────────────────────────────────
+
+/** Like requireString, but a missing href is INVALID_ACTION_INPUT (SEC-PATH-2c-2). */
+function requireHref(value: unknown, field: string): string {
+  if (typeof value !== "string" || value.length === 0) {
+    throw Object.assign(new Error(`${field} is required`), { ok: false, code: "INVALID_ACTION_INPUT" });
+  }
+  return value;
+}
 
 function requireString(value: unknown, field: string): string {
   if (typeof value !== "string" || value.length === 0) throw new Error(`${field} is required`);
@@ -41,6 +49,11 @@ function throwIfError(result: { ok: false; error: { code: string; message: strin
 /** Extract injected fetch from input */
 function extractFetch(input: Record<string, unknown>): typeof fetch | undefined {
   return typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
+}
+
+/** SEC-PATH-2c-2: the absolute URL for a caller href, or INVALID_ACTION_INPUT before any request. */
+function guardHref(input: Record<string, unknown>, href: string, field: string, kind: HrefKind): string {
+  return resolveCollectionHref(typeof input.baseUrl === "string" ? input.baseUrl : undefined, href, field, kind);
 }
 
 /** Build client options from input record */
@@ -106,14 +119,15 @@ export function validateCalendarHomeGetInput(input: unknown): CalendarHomeGetInp
     username: requireString(input.username, "username"),
     password: requireString(input.password, "password"),
     baseUrl: typeof input.baseUrl === "string" ? input.baseUrl : undefined,
-    principalHref: requireString(input.principalHref, "principalHref"),
+    principalHref: requireHref(input.principalHref, "principalHref"),
   };
 }
 
 export async function runCalendarHomeGet(input: Record<string, unknown>): Promise<{ ok: true; calendarHomeHref: string } | { ok: false; error: { code: string; message: string; retryAfterSeconds?: number } }> {
   const payload = validateCalendarHomeGetInput(input);
+  const principalUrl = guardHref(input, payload.principalHref, "principalHref", "collection");
   const client = createCalDAVClient(clientOpts(input, "calendar_home.get"));
-  const response = await client.propfind(payload.principalHref, "0", buildCalendarHomePropfind());
+  const response = await client.propfind(principalUrl, "0", buildCalendarHomePropfind());
   if (response.status === 207 || response.status === 200) {
     const parsed = parseMultiStatus(response.body);
     let calendarHomeHref = "";
@@ -145,14 +159,15 @@ export function validateCalendarsListInput(input: unknown): CalendarsListInput {
     username: requireString(input.username, "username"),
     password: requireString(input.password, "password"),
     baseUrl: typeof input.baseUrl === "string" ? input.baseUrl : undefined,
-    calendarHomeHref: requireString(input.calendarHomeHref, "calendarHomeHref"),
+    calendarHomeHref: requireHref(input.calendarHomeHref, "calendarHomeHref"),
   };
 }
 
 export async function runCalendarsList(input: Record<string, unknown>): Promise<{ ok: true; calendars: unknown[] } | { ok: false; error: { code: string; message: string; retryAfterSeconds?: number } }> {
   const payload = validateCalendarsListInput(input);
+  const homeUrl = guardHref(input, payload.calendarHomeHref, "calendarHomeHref", "collection");
   const client = createCalDAVClient(clientOpts(input, "calendars.list"));
-  const response = await client.propfind(payload.calendarHomeHref, "1", buildCalendarListPropfind());
+  const response = await client.propfind(homeUrl, "1", buildCalendarListPropfind());
   if (response.status === 207 || response.status === 200) {
     const parsed = parseMultiStatus(response.body);
     const calendars = parsed.responses
@@ -189,7 +204,7 @@ export function validateEventsListInput(input: unknown): EventsListInput {
     username: requireString(input.username, "username"),
     password: requireString(input.password, "password"),
     baseUrl: typeof input.baseUrl === "string" ? input.baseUrl : undefined,
-    calendarHref: requireString(input.calendarHref, "calendarHref"),
+    calendarHref: requireHref(input.calendarHref, "calendarHref"),
     start: typeof input.start === "string" ? input.start : undefined,
     end: typeof input.end === "string" ? input.end : undefined,
   };
@@ -197,9 +212,10 @@ export function validateEventsListInput(input: unknown): EventsListInput {
 
 export async function runEventsList(input: Record<string, unknown>): Promise<{ ok: true; events: unknown[] } | { ok: false; error: { code: string; message: string; retryAfterSeconds?: number } }> {
   const payload = validateEventsListInput(input);
+  const calendarUrl = guardHref(input, payload.calendarHref, "calendarHref", "collection");
   const client = createCalDAVClient(clientOpts(input, "events.list"));
   const reportBody = buildCalendarQueryReport(payload.start, payload.end);
-  const response = await client.report(payload.calendarHref, "1", reportBody);
+  const response = await client.report(calendarUrl, "1", reportBody);
   if (response.status === 207 || response.status === 200) {
     const parsed = parseMultiStatus(response.body);
     const events = parsed.responses
@@ -243,14 +259,15 @@ export function validateEventsGetInput(input: unknown): EventsGetInput {
     username: requireString(input.username, "username"),
     password: requireString(input.password, "password"),
     baseUrl: typeof input.baseUrl === "string" ? input.baseUrl : undefined,
-    eventHref: requireString(input.eventHref, "eventHref"),
+    eventHref: requireHref(input.eventHref, "eventHref"),
   };
 }
 
 export async function runEventsGet(input: Record<string, unknown>): Promise<{ ok: true; uid: string; summary: string; start: string; end: string; location: string; description: string; etag: string; calendarData: string } | { ok: false; error: { code: string; message: string; retryAfterSeconds?: number } }> {
   const payload = validateEventsGetInput(input);
+  const eventUrl = guardHref(input, payload.eventHref, "eventHref", "resource");
   const client = createCalDAVClient(clientOpts(input, "events.get"));
-  const response = await client.get(payload.eventHref);
+  const response = await client.get(eventUrl);
   if (response.status === 200) {
     const vevent = parseVEvent(response.body);
     const etag = response.headers["etag"] ?? response.headers["ETag"] ?? "";
@@ -296,7 +313,7 @@ export function validateEventsCreateInput(input: unknown): EventsCreateInput {
     username: requireString(input.username, "username"),
     password: requireString(input.password, "password"),
     baseUrl: typeof input.baseUrl === "string" ? input.baseUrl : undefined,
-    calendarHref: requireString(input.calendarHref, "calendarHref"),
+    calendarHref: requireHref(input.calendarHref, "calendarHref"),
     summary: requireString(input.summary, "summary"),
     start: requireString(input.start, "start"),
     end: requireString(input.end, "end"),
@@ -311,10 +328,14 @@ export function validateEventsCreateInput(input: unknown): EventsCreateInput {
 export async function runEventsCreate(input: Record<string, unknown>): Promise<{ ok: true; href: string; uid: string; etag: string } | { ok: false; error: { code: string; message: string; retryAfterSeconds?: number } }> {
   const payload = validateEventsCreateInput(input);
   const uid = payload.uid ?? generateUid();
+  guardHref(input, payload.calendarHref, "calendarHref", "collection");
+  const href = `${payload.calendarHref.replace(/\/$/, "")}/${uid}.ics`;
+  // The created resource itself must satisfy the event-href rule (a uid cannot
+  // add segments that escape or collapse the calendar).
+  const eventUrl = guardHref(input, href, "uid", "resource");
   const client = createCalDAVClient(clientOpts(input, "events.create"));
   const calendarData = buildVEvent({ uid, summary: payload.summary, start: payload.start, end: payload.end, description: payload.description, location: payload.location, timezone: payload.timezone, attendees: payload.attendees });
-  const href = `${payload.calendarHref.replace(/\/$/, "")}/${uid}.ics`;
-  const response = await client.putCreate(href, calendarData);
+  const response = await client.putCreate(eventUrl, calendarData);
   if (response.status === 201 || response.status === 200 || response.status === 204) {
     const etag = response.headers["etag"] ?? response.headers["ETag"] ?? "";
     return { ok: true, href, uid, etag };
@@ -346,7 +367,7 @@ export function validateEventsUpdateInput(input: unknown): EventsUpdateInput {
     username: requireString(input.username, "username"),
     password: requireString(input.password, "password"),
     baseUrl: typeof input.baseUrl === "string" ? input.baseUrl : undefined,
-    eventHref: requireString(input.eventHref, "eventHref"),
+    eventHref: requireHref(input.eventHref, "eventHref"),
     etag: requireString(input.etag, "etag"),
     uid: requireString(input.uid, "uid"),
     summary: requireString(input.summary, "summary"),
@@ -361,12 +382,13 @@ export function validateEventsUpdateInput(input: unknown): EventsUpdateInput {
 
 export async function runEventsUpdate(input: Record<string, unknown>): Promise<{ ok: true; href: string; etag: string } | { ok: false; error: { code: string; message: string; retryAfterSeconds?: number } }> {
   const payload = validateEventsUpdateInput(input);
+  const eventUrl = guardHref(input, payload.eventHref, "eventHref", "resource");
   const client = createCalDAVClient(clientOpts(input, "events.update"));
   // Validate all caller-controlled iCalendar values before reading the remote
   // resource. The PUT body is merged below so provider-owned fields and
   // components survive the update.
   buildVEvent({ uid: payload.uid, summary: payload.summary, start: payload.start, end: payload.end, description: payload.description, location: payload.location, timezone: payload.timezone, attendees: payload.attendees });
-  const current = await client.get(payload.eventHref);
+  const current = await client.get(eventUrl);
   if (current.status !== 200) {
     if (current.status === 412) {
       return { ok: false, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "CalDAV conflict: event was modified by another client (ETag mismatch)." } };
@@ -392,7 +414,7 @@ export async function runEventsUpdate(input: Record<string, unknown>): Promise<{
   } catch {
     return { ok: false, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "CalDAV event resource cannot be safely updated." } };
   }
-  const response = await client.putUpdate(payload.eventHref, payload.etag, calendarData);
+  const response = await client.putUpdate(eventUrl, payload.etag, calendarData);
   if (response.status === 201 || response.status === 200 || response.status === 204) {
     const newEtag = response.headers["etag"] ?? response.headers["ETag"] ?? "";
     return { ok: true, href: payload.eventHref, etag: newEtag };
@@ -423,15 +445,16 @@ export function validateEventsDeleteInput(input: unknown): EventsDeleteInput {
     username: requireString(input.username, "username"),
     password: requireString(input.password, "password"),
     baseUrl: typeof input.baseUrl === "string" ? input.baseUrl : undefined,
-    eventHref: requireString(input.eventHref, "eventHref"),
+    eventHref: requireHref(input.eventHref, "eventHref"),
     etag: typeof input.etag === "string" ? input.etag : undefined,
   };
 }
 
 export async function runEventsDelete(input: Record<string, unknown>): Promise<{ ok: true; deleted: boolean; alreadyGone: boolean } | { ok: false; error: { code: string; message: string; retryAfterSeconds?: number } }> {
   const payload = validateEventsDeleteInput(input);
+  const eventUrl = guardHref(input, payload.eventHref, "eventHref", "resource");
   const client = createCalDAVClient(clientOpts(input, "events.delete"));
-  const response = await client.delete(payload.eventHref, payload.etag);
+  const response = await client.delete(eventUrl, payload.etag);
   if (response.status === 204 || response.status === 200) {
     return { ok: true, deleted: true, alreadyGone: false };
   }
@@ -464,7 +487,7 @@ export function validateFreeBusyQueryInput(input: unknown): FreeBusyQueryInput {
     username: requireString(input.username, "username"),
     password: requireString(input.password, "password"),
     baseUrl: typeof input.baseUrl === "string" ? input.baseUrl : undefined,
-    href: requireString(input.href, "href"),
+    href: requireHref(input.href, "href"),
     start: requireString(input.start, "start"),
     end: requireString(input.end, "end"),
   };
@@ -472,9 +495,10 @@ export function validateFreeBusyQueryInput(input: unknown): FreeBusyQueryInput {
 
 export async function runFreeBusyQuery(input: Record<string, unknown>): Promise<{ ok: true; freeBusyData: string; status: number } | { ok: false; error: { code: string; message: string; retryAfterSeconds?: number } }> {
   const payload = validateFreeBusyQueryInput(input);
+  const targetUrl = guardHref(input, payload.href, "href", "collection");
   const client = createCalDAVClient(clientOpts(input, "freebusy.query"));
   const reportBody = buildFreeBusyReport(payload.start, payload.end);
-  const response = await client.report(payload.href, "0", reportBody);
+  const response = await client.report(targetUrl, "0", reportBody);
   if (response.status === 207 || response.status === 200) {
     return { ok: true, freeBusyData: response.body, status: response.status };
   }

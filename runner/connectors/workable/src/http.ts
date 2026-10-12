@@ -6,7 +6,7 @@
  * controls: the manifest host allowlist (`*.workable.com`), blocked redirects, a
  * bounded response size and a request deadline, plus inject-fetch for tests.
  */
-import { createJobBoardClient, assertSafePathSegment, type JobBoardClient } from "../../_shared/jobboard";
+import { createJobBoardClient, assertHostLabel, type JobBoardClient } from "../../_shared/jobboard";
 import manifest from "../manifest.json";
 
 export interface WorkableClientConfig {
@@ -31,7 +31,8 @@ function operationBounds(operation: string | undefined, fallback: string): Opera
 }
 
 export function createClient(config: WorkableClientConfig): JobBoardClient {
-  const account = assertSafePathSegment(config.account, "account");
+  // SEC-PATH-2c-2: one RFC 1123 label, so the host stays {account}.workable.com.
+  const account = assertHostLabel(config.account, "account");
   const bounds = operationBounds(config.operation, "jobs.list");
   return createJobBoardClient({
     provider: "Workable",

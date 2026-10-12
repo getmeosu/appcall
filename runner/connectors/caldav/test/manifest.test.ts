@@ -5,7 +5,7 @@ describe("caldav connector manifest", () => {
   test("declares key, runtime, auth, network, operations, and models", () => {
     expect(manifest.key).toBe("caldav");
     expect(manifest.name).toBe("CalDAV (Apple iCloud & generic)");
-    expect(manifest.version).toBe("0.1.0");
+    expect(manifest.version).toBe("0.1.1");
     expect(manifest.runtime).toBe("bun");
   });
 

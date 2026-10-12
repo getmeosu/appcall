@@ -217,6 +217,33 @@ export async function expectSetupFieldGuarded(
   }
 }
 
+export type OpOutcome = { calls: Call[]; ok: boolean; code?: string; message?: string };
+
+/**
+ * SEC-PATH-2c-2: runs one action or sync exactly as given (no field pruning) and
+ * reports the outbound requests plus the failure code/message, so tests can
+ * assert "INVALID_ACTION_INPUT with 0 fetches" for credential and href guards.
+ */
+export async function outcomeOf(connector: string, op: string, input: Record<string, unknown>, kind: "action" | "sync" | "healthcheck" = "action"): Promise<OpOutcome> {
+  const original = globalThis.fetch;
+  globalThis.fetch = stub;
+  calls = [];
+  try {
+    const r: any = kind === "sync"
+      ? defaultConnectorRegistry.executeSync(connector, op, input)
+      : kind === "healthcheck"
+        ? (defaultConnectorRegistry.healthcheck(connector, input) ?? { ok: false, code: "NO_HEALTHCHECK" })
+        : defaultConnectorRegistry.executeAction(connector, op, input);
+    if (!r.ok) return { calls: [...calls], ok: false, code: r.code, message: r.message };
+    await Promise.resolve(r.output);
+    return { calls: [...calls], ok: true };
+  } catch (error: any) {
+    return { calls: [...calls], ok: false, code: error?.code, message: error?.message ?? String(error) };
+  } finally {
+    globalThis.fetch = original;
+  }
+}
+
 export async function requestsFor(connector: string, action: string, input: Record<string, unknown>) {
   return (await run(connector, action, input, [])).calls;
 }

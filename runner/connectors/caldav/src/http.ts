@@ -41,6 +41,79 @@ export function resolveBaseUrl(baseUrl?: string): string {
   return ICLOUD_BASE_URL;
 }
 
+export type HrefKind = "resource" | "collection";
+
+function invalidHref(field: string, detail: string): never {
+  throw { ok: false, code: "INVALID_ACTION_INPUT", message: `${field} ${detail}` };
+}
+
+/**
+ * iCloud serves each account from a numbered partition host. When (and only when)
+ * the configured server is caldav.icloud.com, an https href on exactly
+ * pNN-caldav.icloud.com on the default port 443 counts as the same origin, where
+ * NN is exactly two digits 01-99: the same p01..p99 the manifest's network
+ * allowlist names, so the href check admits nothing the allowlist would not.
+ * Hard-coded on purpose: no other host, port or scheme is admitted.
+ */
+export const ICLOUD_PARTITION_HOST = /^p(?:0[1-9]|[1-9][0-9])-caldav\.icloud\.com$/;
+
+function isICloudPartition(resolved: URL, collection: URL): boolean {
+  return collection.protocol === "https:" && collection.hostname === "caldav.icloud.com" && collection.port === ""
+    && resolved.protocol === "https:" && resolved.port === "" && ICLOUD_PARTITION_HOST.test(resolved.hostname);
+}
+
+/**
+ * resolveCollectionHref (SEC-PATH-2c-2, linus's caldav rulings) resolves a
+ * caller-supplied DAV href per RFC 3986 against the configured server URL (the
+ * baseUrl setup field, iCloud by default). The trust boundary is the origin, not
+ * the base path, so an absolute-path href such as "/x" against
+ * https://caldav.fastmail.com/dav resolves to https://caldav.fastmail.com/x. It is
+ * admitted only when:
+ *   - it is https on the configured origin, or on an iCloud partition host
+ *     (see ICLOUD_PARTITION_HOST) when the configured server is caldav.icloud.com;
+ *   - no segment is a dot segment, raw or percent-encoded in any case
+ *     ("." / ".." / "%2e" / "%2E%2e" / ".%2e"), empty ("//" anywhere), blank or
+ *     whitespace-only;
+ *   - there is no backslash, control character, userinfo, query or fragment;
+ *   - a "resource" (event .ics) has a non-empty last segment; a "collection"
+ *     (principal, calendar home, calendar) may end in one trailing "/".
+ * Anything else is INVALID_ACTION_INPUT before any request. Returns the absolute
+ * URL to request.
+ */
+export function resolveCollectionHref(baseUrl: string | undefined, href: unknown, field: string, kind: HrefKind): string {
+  if (typeof href !== "string" || href.trim().length === 0) return invalidHref(field, "is required");
+  if (href !== href.trim() || /[\\\u0000-\u001f\u007f-\u009f]/u.test(href)) return invalidHref(field, "must not have surrounding whitespace, backslashes or control characters");
+  if (/[?#]/.test(href)) return invalidHref(field, "must not contain a query or fragment");
+  const collection = new URL(`${resolveBaseUrl(baseUrl)}/`);
+  let resolved: URL;
+  try {
+    resolved = new URL(href, collection);
+  } catch {
+    return invalidHref(field, "is not a valid href");
+  }
+  if (resolved.username || resolved.password) return invalidHref(field, "must not contain userinfo");
+  const sameOrigin = resolved.protocol === "https:" && resolved.origin === collection.origin;
+  if (!sameOrigin && !isICloudPartition(resolved, collection)) return invalidHref(field, "must be on the configured CalDAV server");
+  // Inspect the caller's own path text: WHATWG URL parsing already collapsed
+  // "." / ".." / "%2e" segments in `resolved`, which is exactly what must not
+  // happen silently.
+  const rawPath = /^[a-z][a-z0-9+.-]*:\/\/[^/]*/i.test(href) ? href.replace(/^[a-z][a-z0-9+.-]*:\/\/[^/]*/i, "") : href;
+  const segments = rawPath.split("/").slice(rawPath.startsWith("/") ? 1 : 0);
+  for (let i = 0; i < segments.length; i++) {
+    const segment = segments[i]!;
+    let decoded = segment;
+    try { decoded = decodeURIComponent(segment); } catch { /* keep raw */ }
+    if (/^(?:\.|%2e)+$/i.test(segment) || /^\.+$/.test(decoded)) return invalidHref(field, "must not contain dot segments");
+    const last = i === segments.length - 1;
+    if (segment.length === 0) {
+      if (last && kind === "collection" && i > 0) continue;
+      return invalidHref(field, last ? "must not end with an empty segment" : "must not contain empty segments");
+    }
+    if (decoded.trim().length === 0) return invalidHref(field, "must not contain blank segments");
+  }
+  return resolved.href;
+}
+
 export function createCalDAVClient(options: CalDAVClientOptions) {
   const operation = options.operation ?? "calendars.list";
   const operationSpec = (manifest.operations as Record<string, { maxResponseBytes?: number; timeoutMs?: number }>)[operation];

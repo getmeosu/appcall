@@ -51,7 +51,7 @@ export function renderPath(path: string, context: TemplateContext): string {
   const renderedPath = path.replace(placeholderPattern, (match, expression: string, offset: number) => {
     const value = resolvePath(expression, context);
     // SEC-PATH-2b: a whitespace-only id is never a valid path segment.
-    if (value === undefined || value === null || value === "" || (typeof value === "string" && value.trim() === "")) {
+    if (isBlankPathValue(value)) {
       throw new Error(`${lastSegment(expression)} is required`);
     }
     const rendered = encodeURIComponent(String(value));
@@ -60,6 +60,18 @@ export function renderPath(path: string, context: TemplateContext): string {
   });
   assertSafePathSegments(renderedPath);
   return renderedPath;
+}
+
+/**
+ * A path placeholder value that cannot be a path segment: missing, empty or
+ * whitespace-only (SEC-PATH-2b), or an array that is empty or has a missing,
+ * empty or whitespace-only item. SEC-PATH-2c-2: arrays render as their joined
+ * items, so [""] or [" "] produced an empty or %20 segment (fuzzed on jira
+ * components.search, trello bulk.get, coingecko onchain *.multi.get).
+ */
+export function isBlankPathValue(value: unknown): boolean {
+  if (value === undefined || value === null || value === "" || (typeof value === "string" && value.trim() === "")) return true;
+  return Array.isArray(value) && (value.length === 0 || value.some((item) => item === undefined || item === null || String(item).trim() === ""));
 }
 
 /** Reject substitutions that would make a complete URL path segment traversal token. */

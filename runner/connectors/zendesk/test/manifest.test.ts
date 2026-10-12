@@ -987,7 +987,7 @@ function deepEqual(a: unknown, b: unknown): boolean {
 describe("zendesk manifest", () => {
   test("has subdomain host, API token basic auth, version, and compiles", () => {
     expect(manifest.key).toBe("zendesk");
-    expect(manifest.version).toBe("0.2.1");
+    expect(manifest.version).toBe("0.2.2");
     expect(manifest.runtime).toBe("bun");
     expect(manifest.categories).toEqual(["crm"]);
     expect(manifest.network.allowedHosts).toEqual(["*.zendesk.com"]);
