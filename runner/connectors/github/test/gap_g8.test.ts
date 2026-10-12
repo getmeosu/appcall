@@ -63,9 +63,9 @@ function empty(status: number) {
 
 describe("github gap G8 codespaces + dependabot secret delete", () => {
   test("version is 0.79.0 at 852 ops with the read/write breakdown", () => {
-    expect(manifest.version).toBe("0.86.10");
+    expect(manifest.version).toBe("0.86.11");
     const ops = manifest.operations as Record<string, Record<string, unknown>>;
-    expect(Object.keys(ops)).toHaveLength(847);
+    expect(Object.keys(ops)).toHaveLength(848);
     const kinds = { action: 0, sync: 0, webhook: 0 };
     const side = { read: 0, write: 0, destructive: 0, absent: 0 };
     for (const op of Object.values(ops)) {
@@ -77,7 +77,7 @@ describe("github gap G8 codespaces + dependabot secret delete", () => {
         else side.absent += 1;
       }
     }
-    expect(kinds).toEqual({ action: 797, sync: 4, webhook: 46 });
+    expect(kinds).toEqual({ action: 797, sync: 4, webhook: 47 });
     expect(side).toEqual({ read: 422, write: 283, destructive: 77, absent: 15 });
   });
 

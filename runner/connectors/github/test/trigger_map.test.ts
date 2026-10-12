@@ -4,6 +4,8 @@ import coverage from "../fixtures/composio-coverage.json";
 import specActions from "../fixtures/trigger_actions_spec.json";
 import { GITHUB_TRIGGERS, matchesTrigger, triggerOperations, type TriggerEntry } from "../src/trigger_map";
 
+// GitHub TRIG-4 (v0.86.11, +1 webhook op; 797 actions + 47 webhook + 4 sync = 848; 46 Composio triggers,
+// 37 covered / 0 partial / 9 missing): webhook.branch_protection_configuration completes BRANCH_CHANGED.
 // GitHub TRIG-2 (v0.86.10, +0 ops; 797 actions + 46 webhook triggers + 4 sync = 847). The typed
 // Composio trigger map (src/trigger_map.ts) and the coverage map's triggers section agree, every
 // mapped action is a real webhook action in the pinned spec, and matchesTrigger() fires exactly on
@@ -31,8 +33,8 @@ describe("TRIG-2: the trigger map and the coverage map", () => {
       expect(e.status, slug).toBe(want);
       counts[e.status] = (counts[e.status] ?? 0) + 1;
     }
-    expect(counts).toEqual({ covered: 36, partial: 1, missing: 9 });
-    expect(GITHUB_TRIGGERS.GITHUB_BRANCH_CHANGED_TRIGGER!.status).toBe("partial");
+    expect(counts).toEqual({ covered: 37, missing: 9 });
+    expect(GITHUB_TRIGGERS.GITHUB_BRANCH_CHANGED_TRIGGER!.status).toBe("covered");
   });
 
   test("the coverage map's triggers section mirrors the typed map", () => {
@@ -46,7 +48,7 @@ describe("TRIG-2: the trigger map and the coverage map", () => {
       expect(c.duplicateOf, slug).toBe(e.duplicateOf);
       expect(c.polling, slug).toEqual(e.polling);
     }
-    expect(cov.counts).toEqual({ total: 46, covered: 36, partial: 1, missing: 9, runtimeServed: 0, distinctAfterDedupe: 44 });
+    expect(cov.counts).toEqual({ total: 46, covered: 37, partial: 0, missing: 9, runtimeServed: 0, distinctAfterDedupe: 44 });
   });
 
   test("no slug is runtime-served yet (no GitHub webhook handler; see github-trig-0-trace.md)", () => {
@@ -91,12 +93,12 @@ describe("TRIG-2: the trigger map and the coverage map", () => {
 });
 
 describe("TRIG-2: op accounting (actions and triggers counted separately)", () => {
-  test("v0.86.10: 797 actions + 46 webhook triggers + 4 sync = 847 ops", () => {
-    expect(manifest.version).toBe("0.86.10");
+  test("v0.86.11: 797 actions + 47 webhook ops + 4 sync = 848 ops (46 Composio triggers)", () => {
+    expect(manifest.version).toBe("0.86.11");
     const kinds: Record<string, number> = {};
     for (const op of Object.values(ops)) kinds[op.kind] = (kinds[op.kind] ?? 0) + 1;
-    expect(kinds).toEqual({ action: 797, webhook: 46, sync: 4 });
-    expect(Object.keys(ops)).toHaveLength(847);
+    expect(kinds).toEqual({ action: 797, webhook: 47, sync: 4 });
+    expect(Object.keys(ops)).toHaveLength(848);
   });
 });
 
