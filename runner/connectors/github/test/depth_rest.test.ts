@@ -18,6 +18,7 @@ const ADDED = [
   "graphql.discussions.comments.delete",
   "graphql.discussions.delete",
   "rest.issues.add_blocked_by_dependency",
+  "rest.issues.remove_blocked_by_dependency",
   "rest.issues.get_parent",
   "rest.orgs.list_issue_types",
   "rest.packages.list_docker_migration_conflicting_packages_for_user"
@@ -25,8 +26,8 @@ const ADDED = [
 
 describe("github full-depth REST additions", () => {
   test("version and runnable request blocks", () => {
-    expect(manifest.version).toBe("0.89.1");
-    expect(Object.keys(manifest.operations)).toHaveLength(859);
+    expect(manifest.version).toBe("0.89.2");
+    expect(Object.keys(manifest.operations)).toHaveLength(860);
     expect(manifest.network.allowedHosts).not.toContain("models.github.ai");
     for (const key of ADDED) {
       const op = manifest.operations[key] as Record<string, any>;

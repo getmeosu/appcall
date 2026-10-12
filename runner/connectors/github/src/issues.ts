@@ -165,7 +165,7 @@ export function validateGetIssueInput(input: unknown): GetIssueInput {
 
 // ─── Update Issue ─────────────────────────────────────────────────────────────
 
-export type UpdateIssueInput = { owner: string; repo: string; issueNumber: number; title?: string; body?: string; state?: string; labels?: string[]; assignees?: string[] };
+export type UpdateIssueInput = { owner: string; repo: string; issueNumber: number; title?: string; body?: string; state?: string; stateReason?: string; labels?: string[]; assignees?: string[] };
 
 export function validateUpdateIssueInput(input: unknown): UpdateIssueInput {
   if (!isRecord(input)) throw new Error("update issue input must be an object");
@@ -176,9 +176,21 @@ export function validateUpdateIssueInput(input: unknown): UpdateIssueInput {
     title: typeof input.title === "string" ? input.title : undefined,
     body: typeof input.body === "string" ? input.body : undefined,
     state: typeof input.state === "string" ? input.state : undefined,
+    stateReason: validateStateReason(input.stateReason ?? input.state_reason),
     labels: Array.isArray(input.labels) ? input.labels.filter((l): l is string => typeof l === "string") : undefined,
     assignees: Array.isArray(input.assignees) ? input.assignees.filter((a): a is string => typeof a === "string") : undefined,
   };
+}
+
+// REFRESH-1: GITHUB_CLOSE_ISSUE / GITHUB_REOPEN_ISSUE. The pinned spec's state_reason enum.
+const ISSUE_STATE_REASONS = ["completed", "not_planned", "duplicate", "reopened"];
+
+function validateStateReason(value: unknown): string | undefined {
+  if (value === undefined) return undefined;
+  if (typeof value !== "string" || !ISSUE_STATE_REASONS.includes(value)) {
+    throw new Error("stateReason must be completed, not_planned, duplicate, or reopened");
+  }
+  return value;
 }
 
 // ─── Add Labels ───────────────────────────────────────────────────────────────
@@ -494,6 +506,7 @@ export function createIssuesClient(options: { accessToken: string; fetch?: typeo
           title: payload.title,
           body: payload.body,
           state: payload.state,
+          state_reason: payload.stateReason,
           labels: payload.labels,
           assignees: payload.assignees,
         }),

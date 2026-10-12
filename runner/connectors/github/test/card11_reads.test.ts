@@ -53,9 +53,9 @@ const runner = {
 
 describe("github card11 runner and social reads", () => {
   test("version stays 0.79.0 and the thirteen reads omit effect fields", () => {
-    expect(manifest.version).toBe("0.89.1");
+    expect(manifest.version).toBe("0.89.2");
     expect(READS).toHaveLength(13);
-    expect(Object.keys(manifest.operations)).toHaveLength(859);
+    expect(Object.keys(manifest.operations)).toHaveLength(860);
     for (const key of READS) {
       const op = manifest.operations[key] as Record<string, unknown>;
       expect(op.kind).toBe("action");
