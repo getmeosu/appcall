@@ -1,4 +1,7 @@
 import { createMailchimpClient, parseMailchimpRateLimit } from "./http";
+import { assertMailchimpHost } from "./host";
+import { compileDeclarativeConnector } from "../../../bun/src/declarative/compile";
+import manifest from "../manifest.json";
 import { normalizeContact } from "./objects";
 import {
   validateGetMemberInput,
@@ -436,3 +439,29 @@ function requireString(value: unknown, field: string): string {
 }
 
 function isRecord(v: unknown): v is Record<string, unknown> { return typeof v === "object" && v !== null && !Array.isArray(v); }
+
+// SEC-PATH-2c-2: the registry runs most Mailchimp actions from the manifest, whose
+// base URL renders `https://{{host}}/3.0` from the stored `host` setup field.
+// Each compiled action is registered behind the same host check the hand-written
+// client uses; the fixture path (no credential, no host) is left to the compiled
+// handler's echo.
+const compiledDeclarative = compileDeclarativeConnector(manifest as never);
+
+function withHostGuard(handler: (input: unknown) => unknown): (input: unknown) => unknown {
+  return (input: unknown) => {
+    if (!input || typeof input !== "object" || Array.isArray(input)) return handler(input);
+    const record = input as Record<string, unknown>;
+    if (record.host === undefined && record.apiKey === undefined && record.accessToken === undefined) return handler(input);
+    let host: string;
+    try {
+      host = assertMailchimpHost(record.host);
+    } catch (error) {
+      return Promise.reject(error);
+    }
+    return handler({ ...record, host });
+  };
+}
+
+export const mailchimpGuardedActions: Record<string, (input: unknown) => unknown> = Object.fromEntries(
+  Object.entries(compiledDeclarative.actions).map(([key, handler]) => [key, withHostGuard(handler)]),
+);

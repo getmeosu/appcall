@@ -167,15 +167,19 @@ export async function executePipelineStagesListSync(
     operation: "pipeline_stages.list",
   });
 
-  if (input.offerId) {
-    const offerId = encodeURIComponent(String(input.offerId));
+  // SEC-PATH-2c-2: a supplied offerId / pipelineTemplateId is a path segment.
+  // Blank, whitespace, dot-only and %2e values are rejected before any request
+  // (".." used to collapse GET /offers/.. to the company root, and "" silently
+  // fell through to the next branch).
+  if (input.offerId !== undefined && input.offerId !== null) {
+    const offerId = encodeURIComponent(assertSafePathSegment(String(input.offerId), "offerId"));
     const raw = await client.getJSON(`/offers/${offerId}`);
     const { stages } = parseStagesFromOfferResponse(raw);
     return { stages, total: stages.length };
   }
 
-  if (input.pipelineTemplateId) {
-    const templateId = encodeURIComponent(String(input.pipelineTemplateId));
+  if (input.pipelineTemplateId !== undefined && input.pipelineTemplateId !== null) {
+    const templateId = encodeURIComponent(assertSafePathSegment(String(input.pipelineTemplateId), "pipelineTemplateId"));
     const raw = await client.getJSON(`/pipeline_templates/${templateId}`);
     const { stages } = parseStagesFromPipelineTemplateResponse(raw);
     return { stages, total: stages.length };

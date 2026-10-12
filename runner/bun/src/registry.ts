@@ -11,6 +11,7 @@ import { slackExpandedActionHandlers } from "../../connectors/slack/src/expanded
 import { healthcheck as slackHealthcheck } from "../../connectors/slack/src/healthcheck";
 import { binaryActions } from "../../connectors/stripe/src/binary";
 import { zendeskActions } from "../../connectors/zendesk/src/actions";
+import { workableGuardedActions } from "../../connectors/workable/src/actions";
 import { executeMessagesListSync as listSlackMessages } from "../../connectors/slack/src/sync";
 import telegramManifest from "../../connectors/telegram/manifest.json";
 import {
@@ -901,6 +902,7 @@ import {
   listTemplates as mcListTemplates, getTemplate as mcGetTemplate,
   getReportSummary as mcGetReportSummary, getReportOpens as mcGetReportOpens, getReportClicks as mcGetReportClicks, getReportUnsubscribed as mcGetReportUnsubscribed,
   listAutomations as mcListAutomations, getAutomation as mcGetAutomation,
+  mailchimpGuardedActions,
 } from "../../connectors/mailchimp/src/actions";
 import { healthcheck as mailchimpHealthcheck } from "../../connectors/mailchimp/src/healthcheck";
 import { executeContactsListSync as listMailchimpContacts, executeAudiencesListSync as listMailchimpAudiences, executeCampaignsListSync as listMailchimpCampaigns } from "../../connectors/mailchimp/src/sync";
@@ -1746,6 +1748,8 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
     caldav: caldavHealthcheck,
     resend: resendHealthcheck,
     googlemeet: googlemeetHealthcheck,
+    // SEC-PATH-2c-2: the guarded declarative healthcheck (subdomain host label).
+    zendesk: (healthcheckInput?: unknown) => zendeskActions.healthcheck!(healthcheckInput ?? {}),
   },
   actions: {
     chaserhq: {
@@ -1759,6 +1763,10 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
     },
     zendesk: {
       ...zendeskActions,
+    },
+    // SEC-PATH-2c-2: declarative Workable actions behind the account host-label check.
+    workable: {
+      ...workableGuardedActions,
     },
     shortcut: {
       "files.upload": shortcutUploadFiles,
@@ -2812,7 +2820,10 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
       "myself.get": jiraGetMyself,
       "fields.list": jiraListFields,
     },
+    // SEC-PATH-2c-2: declarative Mailchimp actions behind the host setup-field check;
+    // the hand-written handlers below win and use the same check in their client.
     mailchimp: {
+      ...mailchimpGuardedActions,
       "contacts.create": createMailchimpContact,
       "lists.members.get": mcGetMember,
       "lists.members.update": mcUpdateMember,

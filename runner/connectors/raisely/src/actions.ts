@@ -1,5 +1,6 @@
 import { createConnectorHttpClient } from "../../../bun/src/http";
 import manifest from "../manifest.json";
+import { isUnsafePathSegment } from "../../_shared/jobboard";
 
 const maxUploadBytes = 18 * 1024 * 1024;
 
@@ -68,9 +69,11 @@ export function uploadCampaignMedia(inputValue: unknown): Record<string, unknown
 function validateInput(value: unknown): UploadInput {
   if (!isRecord(value)) return invalidInput();
   if (typeof value.apiKey !== "string" || value.apiKey.length === 0) return invalidInput();
-  if (typeof value.campaign !== "string" || value.campaign.length === 0) return invalidInput();
+  // SEC-PATH-2c-2: campaign and folder_uuid are path segments; blank, whitespace,
+  // dot-only and %2e forms are rejected before any request.
+  if (isUnsafePathSegment(value.campaign)) return invalidInput();
   const folder = typeof value.folder_uuid === "string" ? value.folder_uuid : typeof value.folderUuid === "string" ? value.folderUuid : "";
-  if (folder.length === 0) return invalidInput();
+  if (isUnsafePathSegment(folder)) return invalidInput();
   if (!isRecord(value.file)) return invalidInput();
   const name = typeof value.file.name === "string" && value.file.name.length > 0
     ? value.file.name

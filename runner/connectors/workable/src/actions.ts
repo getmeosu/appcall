@@ -1,6 +1,7 @@
 import { createConnectorHttpClient } from "../../../bun/src/http";
 import manifest from "../manifest.json";
-import { assertSafePathSegment } from "../../_shared/jobboard";
+import { assertHostLabel, assertSafePathSegment } from "../../_shared/jobboard";
+import { compileDeclarativeConnector } from "../../../bun/src/declarative/compile";
 
 function upstreamErrorFor(
   provider: string,
@@ -325,7 +326,7 @@ export async function executeWorkableAction(operation: string, rawInput: unknown
   const input = rawInput as ActionInput;
   const request = requests[operation];
   if (!request) throw new Error(`Unsupported Workable action: ${operation}`);
-  const account = assertSafePathSegment(input.account, "account");
+  const account = assertHostLabel(input.account, "account");
   if (typeof input.accessToken !== "string" || input.accessToken.length === 0) throw new Error("accessToken is required");
   const baseUrl =
     request.host === "public"
@@ -372,3 +373,30 @@ export function createWorkableActionHandlers(): Record<string, (input: unknown) 
     ]),
   );
 }
+
+// SEC-PATH-2c-2: the registry runs Workable actions from the manifest, whose base
+// URL renders `https://{{account}}.workable.com` from the stored credential, so
+// `.`/`..`/`%2e` reached `https://..workable.com` and `acme.evil` added a label.
+// Each compiled action is registered behind the same host-label check the sync
+// client uses; the fixture path (no credential, no account) is left to the
+// compiled handler's echo.
+const compiledDeclarative = compileDeclarativeConnector(manifest as never);
+
+function withAccountGuard(handler: (input: unknown) => unknown): (input: unknown) => unknown {
+  return (input: unknown) => {
+    if (!input || typeof input !== "object" || Array.isArray(input)) return handler(input);
+    const record = input as Record<string, unknown>;
+    if (record.account === undefined && record.accessToken === undefined) return handler(input);
+    let account: string;
+    try {
+      account = assertHostLabel(record.account, "account");
+    } catch (error) {
+      return Promise.reject(error);
+    }
+    return handler({ ...record, account });
+  };
+}
+
+export const workableGuardedActions: Record<string, (input: unknown) => unknown> = Object.fromEntries(
+  Object.entries(compiledDeclarative.actions).map(([key, handler]) => [key, withAccountGuard(handler)]),
+);

@@ -169,3 +169,50 @@ export function assertNoTraversalSegment(value: unknown, field: string): string 
 export function encodePathSegment(value: unknown, field: string): string {
   return encodeURIComponent(assertNoTraversalSegment(value, field));
 }
+
+/**
+ * assertHostLabel validates a tenant subdomain credential (Workable `account`,
+ * Zendesk `subdomain`) that is interpolated as the leftmost label of a fixed
+ * provider host (`https://{label}.workable.com`). SEC-PATH-2c-2: it must be a
+ * single RFC 1123 label, 1-63 characters of [a-z0-9-] with no leading or trailing
+ * hyphen, so a stored value cannot add labels (`acme.evil`), empty labels
+ * (`.`, `..` -> `https://..zendesk.com`) or percent forms. DNS labels are
+ * case-insensitive, so letters are accepted in any case and returned lowercased;
+ * surrounding whitespace is trimmed. Failures are INVALID_ACTION_INPUT.
+ */
+export function assertHostLabel(value: unknown, field: string): string {
+  const fail = (detail: string): never => {
+    throw { ok: false, code: "INVALID_ACTION_INPUT", message: `${field} ${detail}` };
+  };
+  if (typeof value !== "string" || value.trim().length === 0) return fail("is required");
+  const trimmed = (value as string).trim();
+  if (/^\.+$/.test(trimmed)) return fail("must not be a dot segment");
+  if (!/^[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?$/.test(trimmed)) {
+    return fail("must be a single hostname label (1-63 letters, digits or hyphens, not starting or ending with a hyphen)");
+  }
+  return trimmed.toLowerCase();
+}
+
+/**
+ * isUnsafePathSegment reports whether a caller id would change the request path
+ * once interpolated, even after one round of percent-decoding: missing, blank or
+ * whitespace-only, dot-only (".", ".."), a percent-encoded dot or blank form
+ * ("%2e", "%2E%2e", ".%2e", "%20"), a path separator or a control character.
+ * Connectors with their own error shape (SEC-PATH-2c-2 upload handlers) call it
+ * and raise their usual INVALID_ACTION_INPUT; callers still encodeURIComponent.
+ */
+export function isUnsafePathSegment(value: unknown): boolean {
+  if (typeof value !== "string") return true;
+  let decoded = value;
+  try {
+    decoded = decodeURIComponent(value);
+  } catch {
+    /* malformed escapes stay raw and are encoded by the caller */
+  }
+  for (const text of [value, decoded]) {
+    const trimmed = text.trim();
+    if (trimmed.length === 0 || /^\.+$/.test(trimmed)) return true;
+    if (/[\/\\]/.test(text) || /[\u0000-\u001f\u007f-\u009f]/u.test(text)) return true;
+  }
+  return false;
+}

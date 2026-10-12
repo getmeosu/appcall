@@ -6,8 +6,8 @@ describe("Recruitee manifest", () => {
     expect(manifest.key).toBe("recruitee");
   });
 
-  it("has version 0.3.0", () => {
-    expect(manifest.version).toBe("0.3.0");
+  it("has version 0.3.1", () => {
+    expect(manifest.version).toBe("0.3.1");
   });
 
   it("uses bun runtime", () => {

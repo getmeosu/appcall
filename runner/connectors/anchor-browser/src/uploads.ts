@@ -1,5 +1,6 @@
 import { createConnectorHttpClient } from "../../../bun/src/http";
 import manifest from "../manifest.json";
+import { isUnsafePathSegment } from "../../_shared/jobboard";
 
 const maxUploadBytes = 18 * 1024 * 1024;
 
@@ -27,15 +28,15 @@ export function uploadExtension(inputValue: unknown) {
 
 export function uploadAgentFile(inputValue: unknown) {
   return upload("agent", "sessions.agent.files.upload", inputValue, (input) => {
-    if (typeof input.session_id !== "string" || input.session_id.length === 0) return invalidInput();
-    return `${manifest.http.baseUrl}/v1/sessions/${encodeURIComponent(input.session_id)}/agent/files`;
+    if (isUnsafePathSegment(input.session_id)) return invalidInput();
+    return `${manifest.http.baseUrl}/v1/sessions/${encodeURIComponent(input.session_id!)}/agent/files`;
   });
 }
 
 export function uploadSessionFile(inputValue: unknown) {
   return upload("session", "sessions.uploads.create", inputValue, (input) => {
-    if (typeof input.session_id !== "string" || input.session_id.length === 0) return invalidInput();
-    return `${manifest.http.baseUrl}/v1/sessions/${encodeURIComponent(input.session_id)}/uploads`;
+    if (isUnsafePathSegment(input.session_id)) return invalidInput();
+    return `${manifest.http.baseUrl}/v1/sessions/${encodeURIComponent(input.session_id!)}/uploads`;
   });
 }
 
@@ -116,7 +117,9 @@ function validateInput(kind: UploadKind, value: unknown): UploadInput {
     return invalidInput();
   }
   if (kind === "extension" && (typeof value.name !== "string" || value.name.length === 0)) return invalidInput();
-  if ((kind === "agent" || kind === "session") && (typeof value.session_id !== "string" || value.session_id.length === 0)) {
+  // SEC-PATH-2c-2: session_id is a path segment; blank, whitespace, dot-only and
+  // %2e forms are rejected here, before the multipart body is built or sent.
+  if ((kind === "agent" || kind === "session") && isUnsafePathSegment(value.session_id)) {
     return invalidInput();
   }
   return {

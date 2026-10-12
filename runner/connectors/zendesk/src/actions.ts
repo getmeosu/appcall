@@ -1,7 +1,7 @@
 import { compileDeclarativeConnector } from "../../../bun/src/declarative/compile";
 import { ConnectorHttpError, createConnectorHttpClient, hostIsAllowed } from "../../../bun/src/http";
 import manifest from "../manifest.json";
-import { assertSafePathSegment } from "../../_shared/jobboard";
+import { assertHostLabel, assertSafePathSegment } from "../../_shared/jobboard";
 
 const compiled = compileDeclarativeConnector(manifest as never);
 const allowedHosts = ["*.zendesk.com"];
@@ -30,12 +30,9 @@ function credentials(input: unknown): { email: string; apiToken: string; subdoma
   if (!isRecord(input)) invalidInput();
   const email = input.email;
   const apiToken = input.apiToken;
-  const subdomain = input.subdomain;
   if (typeof email !== "string" || email.length === 0 || email.length > 254 || /[\r\n]/.test(email)) invalidInput("email is required");
   if (typeof apiToken !== "string" || apiToken.length === 0 || apiToken.length > 256 || /[\r\n]/.test(apiToken)) invalidInput("apiToken is required");
-  if (typeof subdomain !== "string" || !/^[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?$/.test(subdomain)) {
-    invalidInput("subdomain is required");
-  }
+  const subdomain = assertHostLabel(input.subdomain, "subdomain");
   return { email, apiToken, subdomain };
 }
 
@@ -138,7 +135,7 @@ async function sendJson(
 
 async function deleteResourceTags(action: string, input: unknown, idName: string, path: (id: string) => string): Promise<unknown> {
   const tags = isRecord(input) ? tagList(input.tags) : undefined;
-  if (!tags) return compiled.actions[action]!(input);
+  if (!tags) return withSubdomainGuard(compiled.actions[action]!)(input);
   const id = requireId(isRecord(input) ? input[idName] : undefined, idName);
   const data = await sendJson(action, input as ZendeskInput, "DELETE", path(id), { tags });
   return envelope(action, data);
@@ -319,7 +316,30 @@ export async function downloadCustomObjectRecordAttachment(input: unknown): Prom
   return envelope("custom_objects.records.attachments.download", file);
 }
 
+// SEC-PATH-2c-2: the declarative operations render `https://{{subdomain}}.zendesk.com`
+// straight from the stored credential, so `.`/`..`/`%2e` produced `https://..zendesk.com`
+// and `acme.evil` added a label. Every compiled operation is re-registered behind the
+// same host-label check the hand-written ones use; the fixture path (no credential,
+// no subdomain) is left to the compiled handler's echo.
+function withSubdomainGuard(handler: (input: unknown) => unknown): (input: unknown) => unknown {
+  return (input: unknown) => {
+    if (!isRecord(input) || (input.subdomain === undefined && input.apiToken === undefined)) return handler(input);
+    let subdomain: string;
+    try {
+      subdomain = assertHostLabel(input.subdomain, "subdomain");
+    } catch (error) {
+      return Promise.reject(error);
+    }
+    return handler({ ...input, subdomain });
+  };
+}
+
+const guardedDeclarativeActions = Object.fromEntries(
+  Object.entries(compiled.actions).map(([key, handler]) => [key, withSubdomainGuard(handler)]),
+);
+
 export const zendeskActions: Record<string, (input: unknown) => unknown> = {
+  ...guardedDeclarativeActions,
   "tickets.tags.delete": deleteTicketTags,
   "users.tags.delete": deleteUserTags,
   "organizations.tags.delete": deleteOrganizationTags,

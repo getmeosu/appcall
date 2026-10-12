@@ -1,5 +1,7 @@
 import { createConnectorHttpClient } from "../../../bun/src/http";
 import manifest from "../manifest.json";
+import { assertMailchimpHost } from "./host";
+export { assertMailchimpHost } from "./host";
 
 export function parseMailchimpRateLimit(status: number, headers: Record<string, string>): { limited: boolean; retryAfterSeconds: number } {
   if (status === 429) {
@@ -19,8 +21,8 @@ export function extractDataCenter(apiKey: string): string {
 export type MailchimpClientOptions = { apiKey: string; host?: string; fetch?: typeof fetch; operation?: string };
 
 function mailchimpHost(options: MailchimpClientOptions): string {
-  const raw = typeof options.host === "string" && options.host.trim() ? options.host.trim() : `${extractDataCenter(options.apiKey)}.api.mailchimp.com`;
-  return raw.replace(/^https?:\/\//i, "").replace(/\/.*$/, "");
+  if (options.host !== undefined && options.host !== null) return assertMailchimpHost(options.host);
+  return `${extractDataCenter(options.apiKey)}.api.mailchimp.com`;
 }
 
 export function createMailchimpClient(options: MailchimpClientOptions) {
