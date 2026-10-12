@@ -199,6 +199,12 @@ async function handleConnectorActionExecute(envelope: RequestEnvelope): Promise<
     // otherwise swallowed (the Go gateway maps them to a generic code), which
     // made e.g. Apollo's "endpoint deprecated (422)" invisible during triage.
     console.error(logLine({ component: "runner", event: "action_failed", requestID: envelope.id, connector: connectorKey, action, code: actionResult.code, message: actionResult.message }));
+    if ("cause" in actionResult) {
+      // SRV-ERR-2: a synchronous healthcheck throw maps exactly like the async
+      // rejection below (same fallback, same capability fields and status).
+      const failure = errorResponseForExecutionFailure(actionResult.cause, "INVALID_ACTION_INPUT", "Action input is invalid.");
+      return jsonResponse(failure.status, envelope.id, { ok: false, error: failure.error });
+    }
     return jsonResponse(statusForRegistryFailure(actionResult.code), envelope.id, {
       ok: false,
       error: { code: actionResult.code, message: actionResult.message },
@@ -376,10 +382,15 @@ async function handleConnectorHealthcheck(envelope: RequestEnvelope): Promise<Re
     });
   }
   if (!healthcheckResult.ok) {
-    return jsonResponse(statusForExecutionErrorCode(healthcheckResult.code), envelope.id, {
-      ok: false,
-      error: { code: healthcheckResult.code, message: healthcheckResult.message, retryAfterSeconds: healthcheckResult.retryAfterSeconds },
-    });
+    // SRV-ERR-2: map a synchronous throw (kept as `cause`) and registry
+    // failures through the same function as the async rejection below, so
+    // code, message, retryAfterSeconds and capability fields all survive.
+    const failure = errorResponseForExecutionFailure(
+      "cause" in healthcheckResult ? healthcheckResult.cause : healthcheckResult,
+      "CONNECTOR_UPSTREAM_ERROR",
+      "Connector healthcheck failed.",
+    );
+    return jsonResponse(failure.status, envelope.id, { ok: false, error: failure.error });
   }
 
   let result;
