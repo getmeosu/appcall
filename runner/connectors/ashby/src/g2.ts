@@ -12,6 +12,7 @@
  * - other creates omitted (none); reads omit
  */
 import { createAuthClient } from "./http";
+import { parseJobInfoResponse } from "./objects";
 
 export interface AshbyAuthInput {
   apiKey: string;
@@ -210,12 +211,16 @@ export async function executeJobsUpdate(input: ExecuteJobsUpdateInput) {
     throw new Error("at least one field other than jobId is required");
   }
   const client = authClient(input, "jobs.update");
-  await client.postJSON("/job.update", body);
-  return { job: null };
+  const raw = await client.postJSON("/job.update", body);
+  // job.update returns the updated Job in `results` (official docs). The
+  // runner's Reconcile replaces this with jobs.get output; never surface null.
+  const { job } = parseJobInfoResponse(raw);
+  if (job == null) throw new Error("Ashby job.update response is missing results");
+  return { job };
 }
 
 // ---------------------------------------------------------------------------
-// 5. jobs.set_status — POST /job.setStatus · Reconcile → jobs.get
+// 5. jobs.set_status — POST /job.setStatus · returns the updated Job (no effect policy)
 // ---------------------------------------------------------------------------
 
 export interface ExecuteJobsSetStatusInput extends AshbyAuthInput {
@@ -228,11 +233,15 @@ export async function executeJobsSetStatus(input: ExecuteJobsSetStatusInput) {
   const jobId = requireNonEmptyString(input.jobId, "jobId");
   const status = requireNonEmptyString(input.status, "status");
   const client = authClient(input, "jobs.set_status");
-  await client.postJSON(
+  const raw = await client.postJSON(
     "/job.setStatus",
     compactBody({ jobId, status, closeReasonId: input.closeReasonId }),
   );
-  return { job: null };
+  // job.setStatus returns the updated Job in `results` (official docs).
+  // No effect policy (FX-ashby-1): jobs.get cannot observe closeReasonId.
+  const { job } = parseJobInfoResponse(raw);
+  if (job == null) throw new Error("Ashby job.setStatus response is missing results");
+  return { job };
 }
 
 // ---------------------------------------------------------------------------
