@@ -15,8 +15,8 @@ const ISSUE_TYPE_COLORS = ["gray", "blue", "green", "yellow", "orange", "red", "
 
 export type NormalizedPublicKey = { keyId: string; key: string };
 export type NormalizedSelectedActions = {
-  githubOwnedAllowed: boolean;
-  verifiedAllowed: boolean;
+  githubOwnedAllowed: boolean | null;
+  verifiedAllowed: boolean | null;
   patternsAllowed: string[];
 };
 export type NormalizedOrgSecret = {
@@ -24,7 +24,7 @@ export type NormalizedOrgSecret = {
   created_at: string;
   updated_at: string;
   visibility: string;
-  selectedRepositoriesUrl: string;
+  selectedRepositoriesUrl: string | null;
 };
 export type NormalizedRepoCacheUsage = {
   fullName: string;
@@ -35,11 +35,11 @@ export type NormalizedIssueType = {
   id: number;
   nodeId: string;
   name: string;
-  description: string;
-  color: string;
-  createdAt: string;
-  updatedAt: string;
-  isEnabled: boolean;
+  description: string | null;
+  color: string | null;
+  createdAt: string | null;
+  updatedAt: string | null;
+  isEnabled: boolean | null;
 };
 export type NormalizedRepoSummary = {
   id: number;
@@ -473,23 +473,23 @@ function normalizePublicKey(item: Record<string, unknown>): NormalizedPublicKey 
   };
 }
 
-function normalizeSelectedActions(item: Record<string, unknown>): NormalizedSelectedActions {
+export function normalizeSelectedActions(item: Record<string, unknown>): NormalizedSelectedActions {
   return {
-    githubOwnedAllowed: item.github_owned_allowed === true,
-    verifiedAllowed: item.verified_allowed === true,
+    githubOwnedAllowed: typeof item.github_owned_allowed === "boolean" ? item.github_owned_allowed : null,
+    verifiedAllowed: typeof item.verified_allowed === "boolean" ? item.verified_allowed : null,
     patternsAllowed: Array.isArray(item.patterns_allowed)
       ? item.patterns_allowed.filter((entry): entry is string => typeof entry === "string")
       : [],
   };
 }
 
-function normalizeOrgSecret(item: Record<string, unknown>): NormalizedOrgSecret {
+export function normalizeOrgSecret(item: Record<string, unknown>): NormalizedOrgSecret {
   return {
     name: typeof item.name === "string" ? item.name : "",
     created_at: typeof item.created_at === "string" ? item.created_at : "",
     updated_at: typeof item.updated_at === "string" ? item.updated_at : "",
     visibility: typeof item.visibility === "string" ? item.visibility : "",
-    selectedRepositoriesUrl: typeof item.selected_repositories_url === "string" ? item.selected_repositories_url : "",
+    selectedRepositoriesUrl: typeof item.selected_repositories_url === "string" ? item.selected_repositories_url : null,
   };
 }
 
@@ -501,16 +501,16 @@ function normalizeRepoCacheUsage(item: Record<string, unknown>): NormalizedRepoC
   };
 }
 
-function normalizeIssueType(item: Record<string, unknown>): NormalizedIssueType {
+export function normalizeIssueType(item: Record<string, unknown>): NormalizedIssueType {
   return {
     id: typeof item.id === "number" ? item.id : 0,
     nodeId: typeof item.node_id === "string" ? item.node_id : "",
     name: typeof item.name === "string" ? item.name : "",
-    description: typeof item.description === "string" ? item.description : "",
-    color: typeof item.color === "string" ? item.color : "",
-    createdAt: typeof item.created_at === "string" ? item.created_at : "",
-    updatedAt: typeof item.updated_at === "string" ? item.updated_at : "",
-    isEnabled: item.is_enabled === true,
+    description: typeof item.description === "string" ? item.description : null,
+    color: typeof item.color === "string" ? item.color : null,
+    createdAt: typeof item.created_at === "string" ? item.created_at : null,
+    updatedAt: typeof item.updated_at === "string" ? item.updated_at : null,
+    isEnabled: typeof item.is_enabled === "boolean" ? item.is_enabled : null,
   };
 }
 

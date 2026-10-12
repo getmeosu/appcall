@@ -26,7 +26,7 @@ const READS = [
 
 describe("github N10 fork sync and scan", () => {
   test("manifest keeps the base version and the N10 effect policies", () => {
-    expect(manifest.version).toBe("0.89.4");
+    expect(manifest.version).toBe("0.89.5");
     expect(Object.keys(manifest.operations).length).toBe(860);
     for (const key of READS) {
       const op = manifest.operations[key] as Record<string, unknown>;

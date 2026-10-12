@@ -25,12 +25,12 @@ export type NormalizedRepoSummary = {
 export type NormalizedCustomPropertySchema = {
   propertyName: string;
   valueType: string;
-  required: boolean;
-  description: string;
+  required: boolean | null;
+  description: string | null;
   defaultValue: string | string[] | null;
   allowedValues: string[];
-  valuesEditableBy: string;
-  requireExplicitValues: boolean;
+  valuesEditableBy: string | null;
+  requireExplicitValues: boolean | null;
 };
 export type NormalizedCustomPropertyValue = { propertyName: string; value: string | string[] | null };
 export type NormalizedDeploymentRuleApp = {
@@ -497,7 +497,7 @@ function normalizeRepoSummary(item: Record<string, unknown>): NormalizedRepoSumm
   };
 }
 
-function normalizeCustomPropertySchema(item: Record<string, unknown>): NormalizedCustomPropertySchema {
+export function normalizeCustomPropertySchema(item: Record<string, unknown>): NormalizedCustomPropertySchema {
   const allowed = Array.isArray(item.allowed_values)
     ? item.allowed_values.filter((value): value is string => typeof value === "string")
     : [];
@@ -509,12 +509,12 @@ function normalizeCustomPropertySchema(item: Record<string, unknown>): Normalize
   return {
     propertyName: typeof item.property_name === "string" ? item.property_name : "",
     valueType: typeof item.value_type === "string" ? item.value_type : "",
-    required: item.required === true,
-    description: typeof item.description === "string" ? item.description : "",
+    required: typeof item.required === "boolean" ? item.required : null,
+    description: typeof item.description === "string" ? item.description : null,
     defaultValue,
     allowedValues: allowed,
-    valuesEditableBy: typeof item.values_editable_by === "string" ? item.values_editable_by : "",
-    requireExplicitValues: item.require_explicit_values === true,
+    valuesEditableBy: typeof item.values_editable_by === "string" ? item.values_editable_by : null,
+    requireExplicitValues: typeof item.require_explicit_values === "boolean" ? item.require_explicit_values : null,
   };
 }
 

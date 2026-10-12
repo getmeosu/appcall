@@ -13,14 +13,14 @@ const VISIBILITIES = ["all", "private", "selected"] as const;
 type Visibility = (typeof VISIBILITIES)[number];
 
 export type NormalizedCodespace = { id: number; name: string; state: string };
-export type NormalizedDevcontainer = { path: string; name: string; displayName: string };
+export type NormalizedDevcontainer = { path: string; name: string | null; displayName: string | null };
 export type NormalizedPermissionsCheck = { accepted: boolean };
 export type NormalizedOrgCodespaceSecret = {
   name: string;
   createdAt: string;
   updatedAt: string;
   visibility: string;
-  selectedRepositoriesUrl: string;
+  selectedRepositoriesUrl: string | null;
 };
 export type NormalizedRepoCodespaceSecret = { name: string; createdAt: string; updatedAt: string };
 export type NormalizedPublicKey = { keyId: string; key: string };
@@ -426,11 +426,11 @@ function normalizeCodespace(item: Record<string, unknown>): NormalizedCodespace 
   };
 }
 
-function normalizeDevcontainer(item: Record<string, unknown>): NormalizedDevcontainer {
+export function normalizeDevcontainer(item: Record<string, unknown>): NormalizedDevcontainer {
   return {
     path: typeof item.path === "string" ? item.path : "",
-    name: typeof item.name === "string" ? item.name : "",
-    displayName: typeof item.display_name === "string" ? item.display_name : "",
+    name: typeof item.name === "string" ? item.name : null,
+    displayName: typeof item.display_name === "string" ? item.display_name : null,
   };
 }
 
@@ -438,13 +438,13 @@ function normalizePermissionsCheck(item: Record<string, unknown>): NormalizedPer
   return { accepted: item.accepted === true };
 }
 
-function normalizeOrgCodespaceSecret(item: Record<string, unknown>): NormalizedOrgCodespaceSecret {
+export function normalizeOrgCodespaceSecret(item: Record<string, unknown>): NormalizedOrgCodespaceSecret {
   return {
     name: typeof item.name === "string" ? item.name : "",
     createdAt: typeof item.created_at === "string" ? item.created_at : "",
     updatedAt: typeof item.updated_at === "string" ? item.updated_at : "",
     visibility: typeof item.visibility === "string" ? item.visibility : "",
-    selectedRepositoriesUrl: typeof item.selected_repositories_url === "string" ? item.selected_repositories_url : "",
+    selectedRepositoriesUrl: typeof item.selected_repositories_url === "string" ? item.selected_repositories_url : null,
   };
 }
 

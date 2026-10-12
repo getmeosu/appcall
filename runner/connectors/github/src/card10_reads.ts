@@ -45,9 +45,9 @@ export type NormalizedReaction = {
 };
 
 export type NormalizedRunnerLabel = {
-  id: number;
+  id: number | null;
   name: string;
-  type: string;
+  type: string | null;
 };
 
 export type NormalizedRunner = {
@@ -56,8 +56,8 @@ export type NormalizedRunner = {
   os: string;
   status: string;
   busy: boolean;
-  ephemeral: boolean;
-  version: string;
+  ephemeral: boolean | null;
+  version: string | null;
   labels: NormalizedRunnerLabel[];
 };
 
@@ -128,9 +128,9 @@ export function normalizeReaction(item: Record<string, unknown>): NormalizedReac
 
 export function normalizeRunnerLabel(item: Record<string, unknown>): NormalizedRunnerLabel {
   return {
-    id: typeof item.id === "number" ? item.id : 0,
+    id: typeof item.id === "number" ? item.id : null,
     name: typeof item.name === "string" ? item.name : "",
-    type: typeof item.type === "string" ? item.type : "",
+    type: typeof item.type === "string" ? item.type : null,
   };
 }
 
@@ -142,8 +142,8 @@ export function normalizeRunner(item: Record<string, unknown>): NormalizedRunner
     os: typeof item.os === "string" ? item.os : "",
     status: typeof item.status === "string" ? item.status : "",
     busy: item.busy === true,
-    ephemeral: item.ephemeral === true,
-    version: typeof item.version === "string" ? item.version : "",
+    ephemeral: typeof item.ephemeral === "boolean" ? item.ephemeral : null,
+    version: typeof item.version === "string" ? item.version : null,
     labels,
   };
 }
