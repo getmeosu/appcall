@@ -327,8 +327,8 @@ export type NormalizedCodeownersError = {
   line: number;
   column: number;
   kind: string;
-  source: string;
-  suggestion: string;
+  source: string | null;
+  suggestion: string | null;
   message: string;
   path: string;
 };
@@ -338,8 +338,8 @@ export function normalizeCodeownersError(item: Record<string, unknown>): Normali
     line: typeof item.line === "number" ? item.line : 0,
     column: typeof item.column === "number" ? item.column : 0,
     kind: typeof item.kind === "string" ? item.kind : "",
-    source: typeof item.source === "string" ? item.source : "",
-    suggestion: typeof item.suggestion === "string" ? item.suggestion : "",
+    source: typeof item.source === "string" ? item.source : null,
+    suggestion: typeof item.suggestion === "string" ? item.suggestion : null,
     message: typeof item.message === "string" ? item.message : "",
     path: typeof item.path === "string" ? item.path : "",
   };
@@ -351,8 +351,8 @@ export type NormalizedDependencyChange = {
   ecosystem: string;
   name: string;
   version: string;
-  packageUrl: string;
-  license: string;
+  packageUrl: string | null;
+  license: string | null;
   scope: string;
 };
 
@@ -363,8 +363,8 @@ export function normalizeDependencyChange(item: Record<string, unknown>): Normal
     ecosystem: typeof item.ecosystem === "string" ? item.ecosystem : "",
     name: typeof item.name === "string" ? item.name : "",
     version: typeof item.version === "string" ? item.version : "",
-    packageUrl: typeof item.package_url === "string" ? item.package_url : "",
-    license: typeof item.license === "string" ? item.license : "",
+    packageUrl: typeof item.package_url === "string" ? item.package_url : null,
+    license: typeof item.license === "string" ? item.license : null,
     scope: typeof item.scope === "string" ? item.scope : "",
   };
 }

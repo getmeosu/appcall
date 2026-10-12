@@ -18,7 +18,7 @@ export type NormalizedPackage = { id: number; name: string; packageType: string;
 export type NormalizedPackageVersion = { id: number; name: string; createdAt: string };
 export type NormalizedCodespace = { id: number; name: string; state: string };
 export type NormalizedMachine = { name: string; displayName: string; os: string };
-export type NormalizedCodespaceDefaults = { location: string; devcontainerPath: string; billableOwner: string };
+export type NormalizedCodespaceDefaults = { location: string; devcontainerPath: string | null; billableOwner: string | null };
 export type NormalizedCodespaceExport = { id: string; state: string; completedAt: string };
 
 const PACKAGE_TYPES = new Set(["npm", "maven", "rubygems", "docker", "nuget", "container"]);
@@ -210,13 +210,13 @@ function normalizeMachine(item: Record<string, unknown>): NormalizedMachine {
   };
 }
 
-function normalizeCodespaceDefaults(item: Record<string, unknown>): NormalizedCodespaceDefaults {
+export function normalizeCodespaceDefaults(item: Record<string, unknown>): NormalizedCodespaceDefaults {
   const defaults = isRecord(item.defaults) ? item.defaults : item;
   const owner = isRecord(item.billable_owner) ? item.billable_owner : {};
   return {
     location: typeof defaults.location === "string" ? defaults.location : "",
-    devcontainerPath: typeof defaults.devcontainer_path === "string" ? defaults.devcontainer_path : "",
-    billableOwner: typeof owner.login === "string" ? owner.login : "",
+    devcontainerPath: typeof defaults.devcontainer_path === "string" ? defaults.devcontainer_path : null,
+    billableOwner: typeof owner.login === "string" ? owner.login : null,
   };
 }
 

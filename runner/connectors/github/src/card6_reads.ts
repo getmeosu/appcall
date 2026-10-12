@@ -8,8 +8,8 @@ export type NormalizedCodeOfConduct = {
   key: string;
   name: string;
   url: string;
-  htmlUrl: string;
-  body: string;
+  htmlUrl: string | null;
+  body: string | null;
 };
 
 export type NormalizedAssignee = { id: number; login: string; type: string };
@@ -87,13 +87,13 @@ export function createCard6ReadsClient(options: { accessToken: string; fetch?: t
   };
 }
 
-function normalizeCodeOfConduct(item: Record<string, unknown>): NormalizedCodeOfConduct {
+export function normalizeCodeOfConduct(item: Record<string, unknown>): NormalizedCodeOfConduct {
   return {
     key: typeof item.key === "string" ? item.key : "",
     name: typeof item.name === "string" ? item.name : "",
     url: typeof item.url === "string" ? item.url : "",
-    htmlUrl: typeof item.html_url === "string" ? item.html_url : "",
-    body: typeof item.body === "string" ? item.body : "",
+    htmlUrl: typeof item.html_url === "string" ? item.html_url : null,
+    body: typeof item.body === "string" ? item.body : null,
   };
 }
 

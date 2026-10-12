@@ -16,7 +16,7 @@ const LIMITS = ["existing_users", "contributors_only", "collaborators_only"] as 
 const EXPIRIES = ["one_day", "three_days", "one_week", "one_month", "six_months"] as const;
 
 export type NormalizedUserPackage = { id: number; name: string; packageType: string; visibility: string };
-export type NormalizedAttestation = { repositoryId: number; bundleUrl: string; bundle: Record<string, unknown> };
+export type NormalizedAttestation = { repositoryId: number | null; bundleUrl: string | null; bundle: Record<string, unknown> };
 export type NormalizedBillingTimePeriod = { year: number; month: number; day: number };
 export type NormalizedPremiumRequestUsageItem = {
   product: string;
@@ -304,10 +304,10 @@ function normalizePackage(item: Record<string, unknown>): NormalizedUserPackage 
   };
 }
 
-function normalizeAttestation(item: Record<string, unknown>): NormalizedAttestation {
+export function normalizeAttestation(item: Record<string, unknown>): NormalizedAttestation {
   return {
-    repositoryId: typeof item.repository_id === "number" ? item.repository_id : 0,
-    bundleUrl: typeof item.bundle_url === "string" ? item.bundle_url : "",
+    repositoryId: typeof item.repository_id === "number" ? item.repository_id : null,
+    bundleUrl: typeof item.bundle_url === "string" ? item.bundle_url : null,
     bundle: isRecord(item.bundle) ? item.bundle : {},
   };
 }

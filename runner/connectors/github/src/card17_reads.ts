@@ -21,7 +21,7 @@ export type NormalizedRepoComment = {
   path: string;
   commitId: string;
   htmlUrl: string;
-  userLogin: string;
+  userLogin: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -77,7 +77,7 @@ export function normalizeRepoComment(item: Record<string, unknown>): NormalizedR
     path: typeof item.path === "string" ? item.path : "",
     commitId: typeof item.commit_id === "string" ? item.commit_id : "",
     htmlUrl: typeof item.html_url === "string" ? item.html_url : "",
-    userLogin: typeof user.login === "string" ? user.login : "",
+    userLogin: typeof user.login === "string" ? user.login : null,
     createdAt: typeof item.created_at === "string" ? item.created_at : "",
     updatedAt: typeof item.updated_at === "string" ? item.updated_at : "",
   };

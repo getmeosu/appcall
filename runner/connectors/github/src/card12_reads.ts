@@ -11,12 +11,12 @@ type IssueAssignee = Repo & { issueNumber: number; assignee: string };
 type IssueEvent = Repo & { eventId: number };
 type MilestoneLabels = Repo & { milestoneNumber: number };
 
-export type NormalizedGist = { id: string; description: string | null; public: boolean; owner: string };
+export type NormalizedGist = { id: string; description: string | null; public: boolean; owner: string | null };
 export type NormalizedGistComment = { id: number; body: string; user: string | null; createdAt: string };
-export type NormalizedGistCommit = { sha: string; user: string; committedAt: string };
+export type NormalizedGistCommit = { sha: string; user: string | null; committedAt: string };
 export type NormalizedIssue = { number: number; title: string; state: string };
-export type NormalizedIssueComment = { id: number; body: string; user: string; createdAt: string };
-export type NormalizedIssueEvent = { id: number; event: string; actor: string; createdAt: string };
+export type NormalizedIssueComment = { id: number; body: string; user: string | null; createdAt: string };
+export type NormalizedIssueEvent = { id: number; event: string; actor: string | null; createdAt: string };
 export type NormalizedLabel = { name: string; color: string; description: string | null };
 
 export function validateCheckGistStarInput(input: unknown): GistId {
@@ -213,7 +213,7 @@ export function normalizeGist(item: Record<string, unknown>): NormalizedGist {
     id: typeof item.id === "string" ? item.id : "",
     description: typeof item.description === "string" ? item.description : null,
     public: item.public === true,
-    owner: typeof owner.login === "string" ? owner.login : "",
+    owner: typeof owner.login === "string" ? owner.login : null,
   };
 }
 
@@ -228,11 +228,11 @@ function normalizeGistComment(item: Record<string, unknown>): NormalizedGistComm
   };
 }
 
-function normalizeGistCommit(item: Record<string, unknown>): NormalizedGistCommit {
+export function normalizeGistCommit(item: Record<string, unknown>): NormalizedGistCommit {
   const user = isRecord(item.user) ? item.user : {};
   return {
     sha: typeof item.version === "string" ? item.version : (typeof item.sha === "string" ? item.sha : ""),
-    user: typeof user.login === "string" ? user.login : "",
+    user: typeof user.login === "string" ? user.login : null,
     committedAt: typeof item.committed_at === "string" ? item.committed_at : "",
   };
 }
@@ -245,22 +245,22 @@ function normalizeIssue(item: Record<string, unknown>): NormalizedIssue {
   };
 }
 
-function normalizeIssueComment(item: Record<string, unknown>): NormalizedIssueComment {
+export function normalizeIssueComment(item: Record<string, unknown>): NormalizedIssueComment {
   const user = isRecord(item.user) ? item.user : {};
   return {
     id: typeof item.id === "number" ? item.id : 0,
     body: typeof item.body === "string" ? item.body : "",
-    user: typeof user.login === "string" ? user.login : "",
+    user: typeof user.login === "string" ? user.login : null,
     createdAt: typeof item.created_at === "string" ? item.created_at : "",
   };
 }
 
-function normalizeIssueEvent(item: Record<string, unknown>): NormalizedIssueEvent {
+export function normalizeIssueEvent(item: Record<string, unknown>): NormalizedIssueEvent {
   const actor = isRecord(item.actor) ? item.actor : {};
   return {
     id: typeof item.id === "number" ? item.id : 0,
     event: typeof item.event === "string" ? item.event : "",
-    actor: typeof actor.login === "string" ? actor.login : "",
+    actor: typeof actor.login === "string" ? actor.login : null,
     createdAt: typeof item.created_at === "string" ? item.created_at : "",
   };
 }

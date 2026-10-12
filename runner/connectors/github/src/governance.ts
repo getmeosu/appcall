@@ -21,8 +21,8 @@ export type NormalizedHook = {
   active: boolean;
   events: string[];
   url: string;
-  configUrl: string;
-  contentType: string;
+  configUrl: string | null;
+  contentType: string | null;
   modelVersion: "2026-05-16";
   raw: GitHubHook;
 };
@@ -110,8 +110,8 @@ export function normalizeGitHubHook(hook: GitHubHook): NormalizedHook {
     active: hook.active === true,
     events: Array.isArray(hook.events) ? hook.events.filter((event) => typeof event === "string") : [],
     url: hook.url ?? "",
-    configUrl: typeof config.url === "string" ? config.url : "",
-    contentType: typeof config.content_type === "string" ? config.content_type : "",
+    configUrl: typeof config.url === "string" ? config.url : null,
+    contentType: typeof config.content_type === "string" ? config.content_type : null,
     modelVersion: "2026-05-16",
     raw: hook,
   };

@@ -13,7 +13,7 @@ export type RunnerDownload = {
   sha256_checksum: string | null;
 };
 
-export type RunnerLabel = { id: number; name: string; type: string };
+export type RunnerLabel = { id: number | null; name: string; type: string | null };
 
 export type Runner = {
   id: number;
@@ -213,11 +213,11 @@ export function normalizeDownload(item: Record<string, unknown>): RunnerDownload
   };
 }
 
-function normalizeRunner(item: Record<string, unknown>): Runner {
+export function normalizeRunner(item: Record<string, unknown>): Runner {
   const labels = Array.isArray(item.labels) ? item.labels.filter(isRecord).map((label) => ({
-    id: typeof label.id === "number" ? label.id : 0,
+    id: typeof label.id === "number" ? label.id : null,
     name: typeof label.name === "string" ? label.name : "",
-    type: typeof label.type === "string" ? label.type : "",
+    type: typeof label.type === "string" ? label.type : null,
   })) : [];
   return {
     id: typeof item.id === "number" ? item.id : 0,
