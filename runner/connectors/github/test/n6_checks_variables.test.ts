@@ -1,4 +1,5 @@
 import { effectOf } from "./effects_final";
+import { mutating } from "./destructive_keys";
 import { describe, expect, test } from "bun:test";
 import manifest from "../manifest.json";
 import suiteFixture from "../fixtures/get_check_suite.json";
@@ -38,7 +39,7 @@ const N6_READS = [
 
 describe("github N6 checks and actions variables", () => {
   test("manifest stays on the N5 tip version and wires the 14 N6 policies", () => {
-    expect(manifest.version).toBe("0.86.4");
+    expect(manifest.version).toBe("0.86.5");
     expect(Object.keys(manifest.operations).length).toBe(847);
     for (const key of N6_READS) {
       const op = manifest.operations[key] as Record<string, unknown>;
@@ -56,7 +57,7 @@ describe("github N6 checks and actions variables", () => {
     expect(variableUpdate.reconcile).toBe(effectOf("actions.variables.update").reconcile);
     for (const key of ["actions.variables.create", "actions.variables.delete"] as const) {
       const op = manifest.operations[key] as Record<string, unknown>;
-      expect(op.sideEffect).toBe("write");
+      expect(op.sideEffect, key).toBe(mutating(key));
       expect(op.effectPolicy).toBe(effectOf(key).policy);
       expect(op.reconcile).toBe(effectOf(key).reconcile);
     }

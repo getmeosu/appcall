@@ -36,7 +36,7 @@ const READS = [
 
 describe("github hook reads", () => {
   test("manifest stays v0.79.0 at 852 ops and these reads omit effect policy", () => {
-    expect(manifest.version).toBe("0.86.4");
+    expect(manifest.version).toBe("0.86.5");
     expect(Object.keys(manifest.operations).length).toBe(847);
     for (const key of READS) {
       const op = manifest.operations[key] as Record<string, unknown>;
@@ -49,8 +49,8 @@ describe("github hook reads", () => {
     expect(manifest.operations["repos.hooks.list"].sideEffect).toBe("read");
     expect(manifest.operations["repos.hooks.create"].effectPolicy).toBe(effectOf("repos.hooks.create").policy);
     expect(manifest.operations["orgs.hooks.create"].sideEffect).toBe("write");
-    expect(manifest.operations["orgs.hooks.delete"].sideEffect).toBe("write");
-    expect(manifest.operations["repos.hooks.delete"].sideEffect).toBe("write");
+    expect(manifest.operations["orgs.hooks.delete"].sideEffect).toBe("destructive");
+    expect(manifest.operations["repos.hooks.delete"].sideEffect).toBe("destructive");
   });
 
   test("validates ids, cursor pagination, and rejects page-style mistakes", () => {

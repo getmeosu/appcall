@@ -43,17 +43,17 @@ const callFn = (fn: keyof typeof actions, input: Record<string, unknown>) =>
   Promise.resolve((actions[fn] as (i: unknown) => Record<string, unknown> | Promise<Record<string, unknown>>)(input));
 
 describe("github FIX-G14C: manifest", () => {
-  test("version 0.86.4 at 847 ops (+graphql.mutate, +issues.comments.edits.list); auth.scopes unchanged", () => {
-    expect(manifest.version).toBe("0.86.4");
+  test("version 0.86.5 at 847 ops (+graphql.mutate, +issues.comments.edits.list); auth.scopes unchanged", () => {
+    expect(manifest.version).toBe("0.86.5");
     expect(Object.keys(opsOf)).toHaveLength(847);
     expect(manifest.auth.scopes).toEqual(["repo", "read:org", "admin:repo_hook", "admin:org_hook", "gist", "notifications", "admin:org"]);
     expect(manifest.auth.scopes).not.toContain("read:audit_log");
   });
 
-  test("graphql.mutate: write, no effect keys, no requiredScopes, closed body, warning, unmapped", () => {
+  test("graphql.mutate: destructive, no effect keys, no requiredScopes, closed body, warning, unmapped", () => {
     const op = opsOf["graphql.mutate"]!;
     expect(op.kind).toBe("action");
-    expect(op.sideEffect).toBe("write");
+    expect(op.sideEffect).toBe("destructive"); // FIX-DESTRUCTIVE (0.86.5)
     expect(op.effectPolicy).toBeUndefined();
     expect(op.reconcile).toBeUndefined();
     expect(op.requiredScopes).toBeUndefined();

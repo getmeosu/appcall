@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { mutating } from "./destructive_keys";
 import manifest from "../manifest.json";
 import * as actions from "../src/actions";
 import { defaultConnectorRegistry } from "../../../bun/src/registry";
@@ -80,8 +81,8 @@ function call(op: string, input: Record<string, unknown>) {
 const opsOf = manifest.operations as Record<string, Record<string, any>>;
 
 describe("github FIX-G12C: G12 GraphQL ops via gqlRequest", () => {
-  test("version 0.86.4 at 847 ops; auth.scopes unchanged (per-op scopes only)", () => {
-    expect(manifest.version).toBe("0.86.4");
+  test("version 0.86.5 at 847 ops; auth.scopes unchanged (per-op scopes only)", () => {
+    expect(manifest.version).toBe("0.86.5");
     expect(Object.keys(opsOf)).toHaveLength(847);
     expect(manifest.auth.scopes).toEqual(["repo", "read:org", "admin:repo_hook", "admin:org_hook", "gist", "notifications", "admin:org"]);
     expect(manifest.auth.scopes).not.toContain("user");
@@ -92,7 +93,7 @@ describe("github FIX-G12C: G12 GraphQL ops via gqlRequest", () => {
     for (const op of Object.keys(OPS)) {
       const spec = opsOf[op]!;
       expect(spec.request, op).toBeUndefined();
-      expect(spec.sideEffect, op).toBe(READS.has(op) ? "read" : "write");
+      expect(spec.sideEffect, op).toBe(READS.has(op) ? "read" : mutating(op));
       expect(spec.inputSchema.additionalProperties, op).toBe(false);
       const scopes = G12C_REQUIRED_SCOPES[op]!;
       if (scopes.length === 0) expect(spec.requiredScopes, op).toBeUndefined();

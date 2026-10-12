@@ -67,8 +67,8 @@ const CREATES = [
 ] as const;
 
 describe("github FIX-EFFECTS: manifest guards", () => {
-  test("version 0.86.4 at 847 ops", () => {
-    expect(manifest.version).toBe("0.86.4");
+  test("version 0.86.5 at 847 ops", () => {
+    expect(manifest.version).toBe("0.86.5");
     expect(Object.keys(ops)).toHaveLength(847);
   });
 
@@ -76,6 +76,22 @@ describe("github FIX-EFFECTS: manifest guards", () => {
     const idempotent = Object.keys(ops).filter((key) => ops[key]!.effectPolicy === "Idempotent");
     expect(idempotent).toEqual([]);
     const claims = Object.keys(ops).filter((key) => /\bIdempotent\b/.test(String(ops[key]!.description)));
+    // FIX-DESTRUCTIVE amend: field-level descriptions (input and output schemas, any depth) too.
+    const fieldClaims: string[] = [];
+    const walk = (s: unknown, path: string) => {
+      if (Array.isArray(s)) s.forEach((v, i) => walk(v, `${path}[${i}]`));
+      else if (s && typeof s === "object") {
+        for (const [k, v] of Object.entries(s)) {
+          if (k === "description" && typeof v === "string" && /idempotent/i.test(v)) fieldClaims.push(path);
+          else walk(v, `${path}.${k}`);
+        }
+      }
+    };
+    for (const key of Object.keys(ops)) {
+      walk(ops[key]!.inputSchema, `${key}.inputSchema`);
+      walk(ops[key]!.outputSchema, `${key}.outputSchema`);
+    }
+    expect(fieldClaims).toEqual([]);
     expect(claims).toEqual([]);
     for (const op of Object.values(ops)) {
       if (op.effectPolicy !== undefined) expect(op.effectPolicy).toBe("Reconcile");
@@ -532,7 +548,7 @@ describe("github FIX-EFFECTS-c: kept-op field mappings (observe reads back every
     }
     expect(ops["releases.get"]!.outputSchema.properties.release.properties).toEqual(ops["releases.update"]!.outputSchema.properties.release.properties);
     expect(ops["releases.get"]!.outputSchema.properties.release.properties).toMatchObject({
-      providerReleaseId: { type: "number" }, body: { type: "string" }, draft: { type: "boolean" }, prerelease: { type: "boolean" }, targetBranch: { type: "string" },
+      providerReleaseId: { type: ["number", "null"] }, body: { type: "string" }, draft: { type: "boolean" }, prerelease: { type: "boolean" }, targetBranch: { type: "string" },
     });
   });
 
@@ -542,6 +558,7 @@ describe("github FIX-EFFECTS-c: kept-op field mappings (observe reads back every
     if (!r.ok) throw new Error(JSON.stringify(r));
     const out = (await Promise.resolve(r.output)) as { release: Record<string, unknown> };
     expect(schemaErrors(out, ops["releases.get"]!.outputSchema)).toEqual([]);
-    expect([out.release.providerReleaseId, out.release.body, out.release.draft, out.release.prerelease, out.release.targetBranch]).toEqual([0, "", false, false, "main"]);
+    // FIX-DESTRUCTIVE amend: providerReleaseId is null for a non-numeric id (was a fabricated 0).
+    expect([out.release.providerReleaseId, out.release.body, out.release.draft, out.release.prerelease, out.release.targetBranch]).toEqual([null, "", false, false, "main"]);
   });
 });
