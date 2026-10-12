@@ -58,12 +58,12 @@ function json(body: unknown, status = 200) {
 
 describe("github card-19 reads", () => {
   test("version stays 0.79.0 at 852 ops and these reads omit effect policy", () => {
-    expect(manifest.version).toBe("0.84.0");
+    expect(manifest.version).toBe("0.85.0");
     const ops = manifest.operations as Record<string, Record<string, unknown>>;
-    expect(Object.keys(ops).length).toBe(867);
+    expect(Object.keys(ops).length).toBe(853);
     const kinds = { action: 0, sync: 0, webhook: 0 };
     for (const op of Object.values(ops)) kinds[op.kind as keyof typeof kinds] += 1;
-    expect(kinds).toEqual({ action: 817, sync: 4, webhook: 46 });
+    expect(kinds).toEqual({ action: 803, sync: 4, webhook: 46 });
     for (const key of READS) {
       const op = ops[key];
       expect(op.kind).toBe("action");
@@ -243,7 +243,8 @@ describe("github card-19 reads", () => {
     expect(String(op.description)).toContain("generate-report");
     expect(op.timeoutMs).toBe(60000);
     expect(manifest.network.allowedHosts).toContain("objects.githubusercontent.com");
-    expect(manifest.network.allowedHosts).toContain("models.github.ai");
+    // PRUNE-4 (0.85.0): GitHub Models retired 2026-07-30; models.github.ai left allowedHosts.
+    expect(manifest.network.allowedHosts).not.toContain("models.github.ai");
   });
 
   test("sbom async poll exhaustion (15 polls) is CONNECTOR_UPSTREAM_ERROR not ready within timeout", async () => {

@@ -8,21 +8,13 @@ import { compileDeclarativeConnector } from "../../../bun/src/declarative/compil
 // https://docs.github.com/rest/teams/members#list-team-members-legacy); teams.members.list is the org-scoped route.
 // PRUNE-3 (0.84.0): the 4 Source Imports rest.migrations.* ops left it (API retired 2024-04-12,
 // https://github.blog/changelog/2023-10-11-deprecation-source-imports-rest-api/).
+// PRUNE-4 (0.85.0): the 11 second-auth rest.apps.* ops (Basic client_id:secret, app JWT, installation token or
+// GitHub App user token only) and the 3 GitHub Models rest.x.* ops (CHAT/EMBED/MODELS; retired 2026-07-30,
+// https://github.blog/changelog/2026-07-30-github-models-is-now-retired/) left it; models.github.ai left allowedHosts.
 // FIX-G14C: the 5 GHEC rest.x.* ops (AUDIT, ORG_ROLE_*, ORG_FINE_PERMS) left it too; they run via src/gap_g14c.ts (test/g14c.test.ts).
 const ADDED = [
   "graphql.discussions.comments.delete",
   "graphql.discussions.delete",
-  "rest.apps.check_token",
-  "rest.apps.create_from_manifest",
-  "rest.apps.delete_authorization",
-  "rest.apps.delete_token",
-  "rest.apps.list_installation_repos_for_authenticated_user",
-  "rest.apps.list_installation_requests_for_authenticated_app",
-  "rest.apps.list_installations_for_authenticated_user",
-  "rest.apps.list_repos_accessible_to_installation",
-  "rest.apps.reset_token",
-  "rest.apps.revoke_installation_access_token",
-  "rest.apps.scope_token",
   "rest.issues.add_blocked_by_dependency",
   "rest.issues.get_parent",
   "rest.orgs.list_issue_types",
@@ -32,17 +24,14 @@ const ADDED = [
   "rest.orgs.review_pat_grant_requests_in_bulk",
   "rest.orgs.update_pat_access",
   "rest.orgs.update_pat_accesses",
-  "rest.packages.list_docker_migration_conflicting_packages_for_user",
-  "rest.x.CHAT",
-  "rest.x.EMBED",
-  "rest.x.MODELS"
+  "rest.packages.list_docker_migration_conflicting_packages_for_user"
 ] as const;
 
 describe("github full-depth REST additions", () => {
   test("version and runnable request blocks", () => {
-    expect(manifest.version).toBe("0.84.0");
-    expect(Object.keys(manifest.operations)).toHaveLength(867);
-    expect(manifest.network.allowedHosts).toContain("models.github.ai");
+    expect(manifest.version).toBe("0.85.0");
+    expect(Object.keys(manifest.operations)).toHaveLength(853);
+    expect(manifest.network.allowedHosts).not.toContain("models.github.ai");
     for (const key of ADDED) {
       const op = manifest.operations[key] as Record<string, any>;
       expect(op.kind, key).toBe("action");
