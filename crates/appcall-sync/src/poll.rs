@@ -11,7 +11,7 @@ use crate::service::SyncCall;
 use crate::*;
 use appcall_connectors::{OperationKind, PollChange, PollSpec};
 use appcall_events::{append_polled, PolledEvent};
-use postgres::Transaction;
+use postgres::{GenericClient, Transaction};
 use serde_json::{json, Map};
 use sha2::{Digest, Sha256};
 use std::collections::BTreeSet;
@@ -50,6 +50,25 @@ impl PollSubscription {
             return Err(Error::InvalidInput);
         }
         Ok(())
+    }
+}
+
+/// Seen-item retention for one subscription. Items observed by the current
+/// poll are always kept (so nothing still on the pages is re-emitted); of
+/// the rest, items unobserved for longer than `ttl` are pruned, and only
+/// the `cap` most recently observed are kept. A prune renews the epoch.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct PollRetention {
+    pub cap: u32,
+    pub ttl: Duration,
+}
+
+impl Default for PollRetention {
+    fn default() -> Self {
+        Self {
+            cap: 10_000,
+            ttl: Duration::from_secs(30 * 24 * 3600),
+        }
     }
 }
 
@@ -94,6 +113,8 @@ pub struct PollReport {
     pub emitted: usize,
     /// True when this run seeded the seen state.
     pub seeded: bool,
+    /// Seen items dropped by retention in this run.
+    pub pruned: u64,
 }
 
 fn hex(bytes: &[u8]) -> String {
@@ -305,48 +326,119 @@ fn lock_emission(tx: &mut Transaction<'_>, claim: &PollClaim) -> Result<()> {
     }
 }
 
+/// Which connection rows a subscription write may target. The default
+/// admits any connection of the request's project (trusted callers); API
+/// callers narrow it to their account and to the connector whose manifest
+/// they validated the request against.
+#[derive(Clone, Copy, Debug, Default)]
+pub(crate) struct ConnectionFilter<'a> {
+    /// Empty for the whole project, else the caller's external account.
+    pub(crate) account_id: &'a str,
+    pub(crate) connector: Option<&'a str>,
+}
+
+/// The connection's generation if the filter admits it; `NotFound` otherwise
+/// (never revealing whether the row exists outside the caller's scope).
+/// Same account predicate as run controls.
+pub(crate) fn scoped_connection<C: GenericClient>(
+    db: &mut C,
+    project_id: &str,
+    connection_id: &str,
+    filter: &ConnectionFilter<'_>,
+) -> Result<i64> {
+    let row = db
+        .query_opt(
+            "SELECT connection_generation,connector FROM connections WHERE project_id=$1 AND id=$2 AND ($3='' OR (external_account_id=$3 AND credential_owner<>'platform')) FOR SHARE",
+            &[&project_id, &connection_id, &filter.account_id],
+        )?
+        .ok_or(Error::NotFound)?;
+    match filter.connector {
+        Some(connector) if row.get::<_, &str>(1) != connector => Err(Error::NotFound),
+        _ => Ok(row.get(0)),
+    }
+}
+
+/// Create or refresh one subscription inside `db`'s transaction. Returns
+/// whether a new row was created. Idempotent for an unchanged input.
+pub(crate) fn subscribe_in<C: GenericClient>(
+    db: &mut C,
+    request: &PollSubscription,
+    filter: &ConnectionFilter<'_>,
+) -> Result<bool> {
+    request.validate()?;
+    let mut tx = db.transaction()?;
+    let generation =
+        scoped_connection(&mut tx, &request.project_id, &request.connection_id, filter)?;
+    let existing = tx.query_opt(
+        "SELECT input FROM poll_subscriptions WHERE project_id=$1 AND connection_id=$2 AND operation=$3 FOR UPDATE",
+        &[&request.project_id, &request.connection_id, &request.operation],
+    )?;
+    let created = existing.is_none();
+    match existing.map(|row| row.get::<_, Value>(0)) {
+        None => {
+            tx.execute(
+                "INSERT INTO poll_subscriptions(project_id,connection_id,operation,input,connection_generation) VALUES($1,$2,$3,$4,$5)",
+                &[&request.project_id, &request.connection_id, &request.operation, &request.input, &generation],
+            )?;
+        }
+        Some(input) if input == request.input => {
+            tx.execute(
+                "UPDATE poll_subscriptions SET status='active',updated_at=clock_timestamp() WHERE project_id=$1 AND connection_id=$2 AND operation=$3",
+                &[&request.project_id, &request.connection_id, &request.operation],
+            )?;
+        }
+        Some(_) => {
+            tx.execute(
+                "DELETE FROM poll_seen_items WHERE project_id=$1 AND connection_id=$2 AND operation=$3",
+                &[&request.project_id, &request.connection_id, &request.operation],
+            )?;
+            tx.execute(
+                "UPDATE poll_subscriptions SET input=$4,connection_generation=$5,epoch=nextval('poll_subscription_epoch'),status='active',seeded=false,attempts=0,last_error='',worker_id='',leased_until=NULL,next_run_at=clock_timestamp(),updated_at=clock_timestamp() WHERE project_id=$1 AND connection_id=$2 AND operation=$3",
+                &[&request.project_id, &request.connection_id, &request.operation, &request.input, &generation],
+            )?;
+        }
+    }
+    tx.commit()?;
+    Ok(created)
+}
+
+/// Refresh `last_seen_at` for the observed items (at most hourly per item),
+/// then prune unobserved items past the TTL or beyond the cap, most
+/// recently observed kept. Any prune renews the epoch: a pruned item that
+/// reappears restarts at revision 0 and must not reuse an old event key.
+fn prune_seen(
+    tx: &mut Transaction<'_>,
+    claim: &PollClaim,
+    observed: &[String],
+    cap: u32,
+    ttl_ms: i64,
+) -> Result<u64> {
+    let scope: [&(dyn postgres::types::ToSql + Sync); 3] =
+        [&claim.project_id, &claim.connection_id, &claim.operation];
+    tx.execute(
+        "UPDATE poll_seen_items SET last_seen_at=clock_timestamp() WHERE project_id=$1 AND connection_id=$2 AND operation=$3 AND item_key=ANY($4) AND last_seen_at<clock_timestamp()-interval '1 hour'",
+        &[scope[0], scope[1], scope[2], &observed],
+    )?;
+    let pruned = tx.execute(
+        "DELETE FROM poll_seen_items WHERE project_id=$1 AND connection_id=$2 AND operation=$3 AND NOT item_key=ANY($4) AND (last_seen_at<clock_timestamp()-($5::bigint*interval '1 millisecond') OR item_key IN (SELECT item_key FROM poll_seen_items WHERE project_id=$1 AND connection_id=$2 AND operation=$3 AND NOT item_key=ANY($4) ORDER BY last_seen_at DESC,item_key DESC OFFSET $6))",
+        &[scope[0], scope[1], scope[2], &observed, &ttl_ms, &i64::from(cap)],
+    )?;
+    if pruned > 0 {
+        tx.execute(
+            "UPDATE poll_subscriptions SET epoch=nextval('poll_subscription_epoch') WHERE project_id=$1 AND connection_id=$2 AND operation=$3",
+            &scope,
+        )?;
+    }
+    Ok(pruned)
+}
+
 impl Repository {
     /// Create or refresh a subscription. Changing the input resets the seen
     /// state (and any in-flight lease) under a fresh epoch so the next run
     /// seeds again. Refreshing with the same input keeps the seen state.
     pub fn poll_subscribe(&mut self, request: &PollSubscription) -> Result<()> {
-        request.validate()?;
         let mut tx = self.client.transaction()?;
-        let generation: i64 = tx
-            .query_opt(
-                "SELECT connection_generation FROM connections WHERE project_id=$1 AND id=$2 FOR SHARE",
-                &[&request.project_id, &request.connection_id],
-            )?
-            .ok_or(Error::NotFound)?
-            .get(0);
-        let existing = tx.query_opt(
-            "SELECT input FROM poll_subscriptions WHERE project_id=$1 AND connection_id=$2 AND operation=$3 FOR UPDATE",
-            &[&request.project_id, &request.connection_id, &request.operation],
-        )?;
-        match existing.map(|row| row.get::<_, Value>(0)) {
-            None => {
-                tx.execute(
-                    "INSERT INTO poll_subscriptions(project_id,connection_id,operation,input,connection_generation) VALUES($1,$2,$3,$4,$5)",
-                    &[&request.project_id, &request.connection_id, &request.operation, &request.input, &generation],
-                )?;
-            }
-            Some(input) if input == request.input => {
-                tx.execute(
-                    "UPDATE poll_subscriptions SET status='active',updated_at=clock_timestamp() WHERE project_id=$1 AND connection_id=$2 AND operation=$3",
-                    &[&request.project_id, &request.connection_id, &request.operation],
-                )?;
-            }
-            Some(_) => {
-                tx.execute(
-                    "DELETE FROM poll_seen_items WHERE project_id=$1 AND connection_id=$2 AND operation=$3",
-                    &[&request.project_id, &request.connection_id, &request.operation],
-                )?;
-                tx.execute(
-                    "UPDATE poll_subscriptions SET input=$4,connection_generation=$5,epoch=nextval('poll_subscription_epoch'),status='active',seeded=false,attempts=0,last_error='',worker_id='',leased_until=NULL,next_run_at=clock_timestamp(),updated_at=clock_timestamp() WHERE project_id=$1 AND connection_id=$2 AND operation=$3",
-                    &[&request.project_id, &request.connection_id, &request.operation, &request.input, &generation],
-                )?;
-            }
-        }
+        subscribe_in(&mut tx, request, &ConnectionFilter::default())?;
         tx.commit()?;
         Ok(())
     }
@@ -435,7 +527,20 @@ impl Repository {
         spec: &PollSpec,
         items: Vec<PollItem>,
     ) -> Result<PollReport> {
+        self.poll_commit_with(claim, spec, items, PollRetention::default())
+    }
+
+    /// [`Self::poll_commit`] with explicit seen-item retention.
+    pub fn poll_commit_with(
+        &mut self,
+        claim: &PollClaim,
+        spec: &PollSpec,
+        items: Vec<PollItem>,
+        retention: PollRetention,
+    ) -> Result<PollReport> {
+        let ttl_ms = i64::try_from(retention.ttl.as_millis()).map_err(|_| Error::InvalidInput)?;
         let items = dedup_items(items);
+        let observed: Vec<String> = items.iter().map(|item| item.key.clone()).collect();
         let mut tx = self.client.transaction()?;
         lock_claim(&mut tx, claim)?;
         // The per-project event lock serializes all event appends of the
@@ -512,6 +617,7 @@ impl Repository {
                 Err(_) => return Err(Error::Storage),
             }
         }
+        report.pruned = prune_seen(&mut tx, claim, &observed, retention.cap, ttl_ms)?;
         let interval_ms = i64::from(spec.interval_seconds) * 1000;
         tx.execute(
             "UPDATE poll_subscriptions SET seeded=true,attempts=0,last_error='',worker_id='',leased_until=NULL,next_run_at=clock_timestamp()+($4::bigint*interval '1 millisecond'),updated_at=clock_timestamp() WHERE project_id=$1 AND connection_id=$2 AND operation=$3",
@@ -606,7 +712,8 @@ impl<C: CredentialResolver> Service<C> {
             Ok((spec, items)) => match self.poll_renew(&mut claim).await {
                 Ok(()) => {
                     let committed = claim.clone();
-                    self.db(move |r| r.poll_commit(&committed, &spec, items))
+                    let retention = self.config.poll_retention;
+                    self.db(move |r| r.poll_commit_with(&committed, &spec, items, retention))
                         .await
                 }
                 Err(error) => Err(error),

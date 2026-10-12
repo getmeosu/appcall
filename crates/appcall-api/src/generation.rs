@@ -305,6 +305,13 @@ impl<B: ManagedBackend> Backend for Generation<B> {
     async fn public_route(&self, r: &Request) -> Result<Option<Response>> {
         self.snapshot()?.backend.public_route(r).await
     }
+    async fn poll_subscriptions(
+        &self,
+        i: &Identity,
+        c: crate::poll_routes::PollCommand,
+    ) -> Result<crate::poll_routes::PollReply> {
+        self.snapshot()?.backend.poll_subscriptions(i, c).await
+    }
     async fn auxiliary_route(&self, i: &Identity, r: &Request) -> Result<Option<Response>> {
         self.snapshot()?.backend.auxiliary_route(i, r).await
     }

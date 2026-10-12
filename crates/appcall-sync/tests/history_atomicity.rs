@@ -445,6 +445,7 @@ fn service_claim_records_nondefault_policy_without_truncating_retry_base() {
             lease_duration: Duration::from_secs(17),
             retry_base: Duration::from_millis(1500),
             max_retry_delay: Duration::from_secs(42),
+            poll_retention: PollRetention::default(),
         },
     )
     .unwrap();

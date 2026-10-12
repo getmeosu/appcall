@@ -136,6 +136,69 @@ impl<K: ApiKeyVerifier + 'static, E: Executor, C: CredentialResolver> Backend
         })
         .await
     }
+    async fn poll_subscriptions(
+        &self,
+        identity: &Identity,
+        command: crate::poll_routes::PollCommand,
+    ) -> Result<crate::poll_routes::PollReply> {
+        use crate::poll_routes::{PollCommand, PollReply};
+        let (project_id, account_id) = (identity.project_id.clone(), identity.account_id.clone());
+        let reply = self
+            .database(move |store| {
+                store.transaction(|tx| {
+                    let caller = appcall_sync::PollCaller {
+                        project_id: &project_id,
+                        account_id: &account_id,
+                    };
+                    Ok(match command {
+                        PollCommand::Subscribe {
+                            connection_id,
+                            connector,
+                            operation,
+                            input,
+                        } => appcall_sync::poll_subscribe_scoped(
+                            tx.client(),
+                            &caller,
+                            &connector,
+                            &appcall_sync::PollSubscription {
+                                project_id: project_id.clone(),
+                                connection_id,
+                                operation,
+                                input,
+                            },
+                        )
+                        .map(|(subscription, created)| {
+                            PollReply::Subscribed {
+                                subscription,
+                                created,
+                            }
+                        }),
+                        PollCommand::Unsubscribe {
+                            connection_id,
+                            operation,
+                        } => appcall_sync::poll_unsubscribe_scoped(
+                            tx.client(),
+                            &caller,
+                            &connection_id,
+                            &operation,
+                        )
+                        .map(|removed| PollReply::Unsubscribed { removed }),
+                        PollCommand::List {
+                            connection_id,
+                            operation,
+                        } => appcall_sync::poll_subscriptions_scoped(
+                            tx.client(),
+                            &caller,
+                            &connection_id,
+                            operation.as_deref(),
+                        )
+                        .map(PollReply::Listed),
+                    })
+                })
+            })
+            .await?;
+        reply.map_err(crate::poll_routes::sync_error)
+    }
     async fn authorize_sync_control(&self, _identity: &Identity, _request: &Request) -> Result<()> {
         // API keys currently carry no trusted operator capability. Keep this
         // explicit at the service boundary so direct adapter calls cannot

@@ -8,6 +8,7 @@ pub mod development_browser;
 pub mod development_memory;
 pub mod event_routes;
 pub mod generation;
+pub mod poll_routes;
 pub mod provider_routes;
 pub mod rate_limit;
 pub mod run_operator;
@@ -204,6 +205,17 @@ pub trait Backend: Send + Sync {
     /// backend defaults to deny until it explicitly implements this hook.
     async fn authorize_sync_control(&self, _identity: &Identity, _request: &Request) -> Result<()> {
         Err(ApiError::new("FORBIDDEN"))
+    }
+
+    /// Poll subscription management (OXIDE-POLL-2), already validated
+    /// against the manifest by [`poll_routes`]. Backends without durable
+    /// polling do not serve these routes.
+    async fn poll_subscriptions(
+        &self,
+        _identity: &Identity,
+        _command: poll_routes::PollCommand,
+    ) -> Result<poll_routes::PollReply> {
+        Err(ApiError::new("ROUTE_NOT_FOUND"))
     }
 
     async fn authorize(&self, headers: &[(String, String)]) -> Result<Identity>;
@@ -423,6 +435,10 @@ impl<B: Backend> Api<B> {
                     },
                 )?)
             }
+            (method, segments) if poll_routes::matches(method, segments) => {
+                poll_routes::handle(&self.registry, &self.backend, &identity, &request, segments)
+                    .await
+            }
             _ => {
                 if request.method == "POST"
                     && matches!(
@@ -525,6 +541,11 @@ pub(crate) fn error_response(error: ApiError) -> Response {
         "ENTITLEMENTS_FAILED" => (500, "Entitlements could not be loaded."),
         "CONNECTION_NOT_FOUND" => (404, "Connection was not found."),
         "CONNECTOR_NOT_FOUND" => (404, "Connector was not found."),
+        "UNKNOWN_OPERATION" => (404, "Operation was not found."),
+        "OPERATION_NOT_POLLABLE" => (422, "Operation does not support polling."),
+        "INVALID_SUBSCRIPTION_INPUT" => (400, "Subscription input is invalid."),
+        "POLL_SUBSCRIPTION_NOT_FOUND" => (404, "Poll subscription was not found."),
+        "POLL_SUBSCRIPTIONS_FAILED" => (500, "Poll subscriptions could not be updated."),
         "UNKNOWN_ACTION" => (404, "Action was not found."),
         "INVALID_ACTION_INPUT" => (400, "Action input is invalid."),
         "MISSING_ACCOUNT_SCOPE" => (
