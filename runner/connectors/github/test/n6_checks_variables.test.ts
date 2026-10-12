@@ -38,8 +38,8 @@ const N6_READS = [
 
 describe("github N6 checks and actions variables", () => {
   test("manifest stays on the N5 tip version and wires the 14 N6 policies", () => {
-    expect(manifest.version).toBe("0.83.0");
-    expect(Object.keys(manifest.operations).length).toBe(882);
+    expect(manifest.version).toBe("0.84.0");
+    expect(Object.keys(manifest.operations).length).toBe(867);
     for (const key of N6_READS) {
       const op = manifest.operations[key] as Record<string, unknown>;
       expect(op.kind).toBe("action");

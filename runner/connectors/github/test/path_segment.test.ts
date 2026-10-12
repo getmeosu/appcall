@@ -31,7 +31,6 @@ const SINGLE: Case[] = [
   { family: "card9_reads", fn: "getUserPackageVersion", op: "users.packages.versions.get", field: "username", input: {"username": "..", "packageType": "x", "packageName": "x", "packageVersionId": 1} },
   { family: "gap_g1", fn: "checkAuthenticatedUserFollowing", op: "user.following.check", field: "username", input: {"username": ".."} },
   { family: "gap_g10", fn: "getRepoDependabotSecretsPublicKey", op: "dependabot.secrets.public_key.get", field: "owner", input: {"owner": "..", "repo": "x"} },
-  { family: "gap_g12", fn: "listTeamDiscussions", op: "teams.discussions.list", field: "org", input: {"org": "..", "teamSlug": "x"} },
   { family: "gap_g2", fn: "listOrgPropertySchemas", op: "orgs.properties.schema.list", field: "org", input: {"org": ".."} },
   { family: "gap_g3", fn: "listOrgActionsCacheUsageByRepository", op: "orgs.actions.cache.usage_by_repository.list", field: "org", input: {"org": ".."} },
   { family: "gap_g4", fn: "getRepoActionsSecretsPublicKey", op: "actions.secrets.public_key.get", field: "owner", input: {"owner": "..", "repo": "x"} },
@@ -92,9 +91,9 @@ async function run(fn: string, input: Record<string, unknown>) {
 }
 
 describe("github FIX-SEGMENT: manifest", () => {
-  test("PRUNE-2 bump to 0.83.0 at 882 ops", () => {
-    expect(manifest.version).toBe("0.83.0");
-    expect(Object.keys(manifest.operations)).toHaveLength(882);
+  test("PRUNE-3 bump to 0.84.0 at 867 ops", () => {
+    expect(manifest.version).toBe("0.84.0");
+    expect(Object.keys(manifest.operations)).toHaveLength(867);
   });
 });
 
@@ -130,9 +129,10 @@ describe("github FIX-SEGMENT: shared helper", () => {
 });
 
 describe("github FIX-SEGMENT: every call-site family rejects dot segments before HTTP", () => {
-  test("covers all 46 families", () => {
+  test("covers all 45 families", () => {
+    // PRUNE-3 (0.84.0) deleted src/gap_g12.ts (its last ops, Classroom and team discussions, are gone): 46 -> 45.
     expect(new Set(SINGLE.map((c) => c.family)).size).toBe(SINGLE.length);
-    expect(SINGLE.length).toBe(46);
+    expect(SINGLE.length).toBe(45);
   });
   for (const c of SINGLE) {
     for (const bad of ["..", "."]) {

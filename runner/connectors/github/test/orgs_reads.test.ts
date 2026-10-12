@@ -39,10 +39,10 @@ const event = { id: "9", type: "PushEvent", actor: { login: "octocat" }, repo: {
 
 describe("github organization reads", () => {
   test("version string is 0.79.0 and the new reads omit effect policy", () => {
-    expect(manifest.version).toBe("0.83.0");
+    expect(manifest.version).toBe("0.84.0");
     expect(manifest.version).not.toBe("0.29.0");
     expect(READS).toHaveLength(11);
-    expect(Object.keys(manifest.operations)).toHaveLength(882);
+    expect(Object.keys(manifest.operations)).toHaveLength(867);
     for (const key of READS) {
       const op = manifest.operations[key] as Record<string, unknown>;
       expect(op.kind).toBe("action");

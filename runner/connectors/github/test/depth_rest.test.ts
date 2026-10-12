@@ -6,6 +6,8 @@ import { compileDeclarativeConnector } from "../../../bun/src/declarative/compil
 // FIX-G12C / FIX-G13C: the 12 G12 and 10 G13 GraphQL ops left this declarative list; they run via src/gap_g12c.ts / src/gap_g13c.ts (test/g12c.test.ts, test/g13c.test.ts).
 // PRUNE-2 (0.83.0): rest.teams.list_members_legacy left it (legacy GET /teams/{team_id}/members, closing-down notice
 // https://docs.github.com/rest/teams/members#list-team-members-legacy); teams.members.list is the org-scoped route.
+// PRUNE-3 (0.84.0): the 4 Source Imports rest.migrations.* ops left it (API retired 2024-04-12,
+// https://github.blog/changelog/2023-10-11-deprecation-source-imports-rest-api/).
 // FIX-G14C: the 5 GHEC rest.x.* ops (AUDIT, ORG_ROLE_*, ORG_FINE_PERMS) left it too; they run via src/gap_g14c.ts (test/g14c.test.ts).
 const ADDED = [
   "graphql.discussions.comments.delete",
@@ -23,10 +25,6 @@ const ADDED = [
   "rest.apps.scope_token",
   "rest.issues.add_blocked_by_dependency",
   "rest.issues.get_parent",
-  "rest.migrations.get_commit_authors",
-  "rest.migrations.get_large_files",
-  "rest.migrations.map_commit_author",
-  "rest.migrations.set_lfs_preference",
   "rest.orgs.list_issue_types",
   "rest.orgs.list_pat_grant_requests",
   "rest.orgs.list_pat_grants",
@@ -42,8 +40,8 @@ const ADDED = [
 
 describe("github full-depth REST additions", () => {
   test("version and runnable request blocks", () => {
-    expect(manifest.version).toBe("0.83.0");
-    expect(Object.keys(manifest.operations)).toHaveLength(882);
+    expect(manifest.version).toBe("0.84.0");
+    expect(Object.keys(manifest.operations)).toHaveLength(867);
     expect(manifest.network.allowedHosts).toContain("models.github.ai");
     for (const key of ADDED) {
       const op = manifest.operations[key] as Record<string, any>;
@@ -76,14 +74,14 @@ describe("github full-depth REST additions", () => {
     }
   });
 
-  test("PRUNE-2: the legacy team-members route is gone and its Composio slug is recorded with the cite", () => {
+  test("PRUNE-2/3: the legacy team-members route is gone; its Composio slug maps to the documented replacement", () => {
     const ops = manifest.operations as Record<string, unknown>;
     expect(ops["rest.teams.list_members_legacy"]).toBeUndefined();
     expect(ops["teams.members.list"]).toBeDefined();
     const mapped = coverage.mapped as Record<string, string>;
-    expect(mapped.GITHUB_GET_TEAM_MEMBERS).toBeUndefined();
-    const entry = (coverage.missing_still as Array<{ slug: string; reason: string }>).find((m) => m.slug === "GITHUB_GET_TEAM_MEMBERS");
-    expect(entry?.reason).toContain("https://docs.github.com/rest/teams/members#list-team-members-legacy");
+    // linus (PRUNE-3): map to teams.members.list (GET /orgs/{org}/teams/{team_slug}/members), not missing_still.
+    expect(mapped.GITHUB_GET_TEAM_MEMBERS).toBe("teams.members.list");
+    expect((coverage.missing_still as Array<{ slug: string }>).map((m) => m.slug)).not.toContain("GITHUB_GET_TEAM_MEMBERS");
     expect(coverage.added as string[]).not.toContain("rest.teams.list_members_legacy");
   });
 
