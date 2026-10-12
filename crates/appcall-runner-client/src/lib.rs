@@ -496,6 +496,9 @@ fn runner_error_outcome(status: reqwest::StatusCode, code: &str) -> DispatchOutc
             | "ACTION_INPUT_TOO_LARGE"
             | "REQUEST_TOO_LARGE"
             | "UNSUPPORTED_OPERATION_BUDGET"
+            // The runner rejects a missing credential before any handler or
+            // network call runs (PLAT-NOCRED-1).
+            | "MISSING_CREDENTIAL"
     ) {
         return DispatchOutcome::NotDispatched;
     }

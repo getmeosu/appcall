@@ -57,10 +57,9 @@ function resetMocks(status: number, body: unknown) {
 }
 
 describe("unscheduleCampaign action", () => {
-  it("validates input without apiKey", () => {
-    const result = unscheduleCampaign({ campaignId: "camp001" });
-    expect((result as any).action).toBe("campaigns.unschedule");
-    expect((result as any).validated.campaignId).toBe("camp001");
+  it("validates input without apiKey", async () => {
+    // PLAT-NOCRED-1: input is validated, then the missing credential fails closed.
+    await expect(Promise.resolve().then(() => unscheduleCampaign({ campaignId: "camp001" }))).rejects.toMatchObject({ ok: false, code: "MISSING_CREDENTIAL" });
   });
 
   it("throws when campaignId is missing", () => {
@@ -90,10 +89,9 @@ describe("unscheduleCampaign action", () => {
 });
 
 describe("scheduleCampaign action", () => {
-  it("validates input without apiKey", () => {
-    const result = scheduleCampaign({ campaignId: "camp001", scheduleTime: "2026-06-01T08:00:00Z" });
-    expect((result as any).action).toBe("campaigns.schedule");
-    expect((result as any).validated.scheduleTime).toBe("2026-06-01T08:00:00Z");
+  it("validates input without apiKey", async () => {
+    // PLAT-NOCRED-1: input is validated, then the missing credential fails closed.
+    await expect(Promise.resolve().then(() => scheduleCampaign({ campaignId: "camp001", scheduleTime: "2026-06-01T08:00:00Z" }))).rejects.toMatchObject({ ok: false, code: "MISSING_CREDENTIAL" });
   });
 
   it("throws when scheduleTime is missing", () => {
@@ -124,9 +122,9 @@ describe("scheduleCampaign action", () => {
 });
 
 describe("deleteCampaign action", () => {
-  it("validates input without apiKey", () => {
-    const result = deleteCampaign({ campaignId: "camp001" });
-    expect((result as any).action).toBe("campaigns.delete");
+  it("validates input without apiKey", async () => {
+    // PLAT-NOCRED-1: input is validated, then the missing credential fails closed.
+    await expect(Promise.resolve().then(() => deleteCampaign({ campaignId: "camp001" }))).rejects.toMatchObject({ ok: false, code: "MISSING_CREDENTIAL" });
   });
 
   it("throws when campaignId is missing", () => {
@@ -149,9 +147,9 @@ describe("deleteCampaign action", () => {
 });
 
 describe("replicateCampaign action", () => {
-  it("validates input without apiKey", () => {
-    const result = replicateCampaign({ campaignId: "camp001" });
-    expect((result as any).action).toBe("campaigns.replicate");
+  it("validates input without apiKey", async () => {
+    // PLAT-NOCRED-1: input is validated, then the missing credential fails closed.
+    await expect(Promise.resolve().then(() => replicateCampaign({ campaignId: "camp001" }))).rejects.toMatchObject({ ok: false, code: "MISSING_CREDENTIAL" });
   });
 
   it("replicates a campaign", async () => {
@@ -170,10 +168,9 @@ describe("replicateCampaign action", () => {
 });
 
 describe("updateList action", () => {
-  it("validates input without apiKey", () => {
-    const result = updateList({ listId: "list001", name: "Updated Newsletter" });
-    expect((result as any).action).toBe("lists.update");
-    expect((result as any).validated.name).toBe("Updated Newsletter");
+  it("validates input without apiKey", async () => {
+    // PLAT-NOCRED-1: input is validated, then the missing credential fails closed.
+    await expect(Promise.resolve().then(() => updateList({ listId: "list001", name: "Updated Newsletter" }))).rejects.toMatchObject({ ok: false, code: "MISSING_CREDENTIAL" });
   });
 
   it("throws when listId is missing", () => {
@@ -197,9 +194,9 @@ describe("updateList action", () => {
 });
 
 describe("deleteList action", () => {
-  it("validates input without apiKey", () => {
-    const result = deleteList({ listId: "list001" });
-    expect((result as any).action).toBe("lists.delete");
+  it("validates input without apiKey", async () => {
+    // PLAT-NOCRED-1: input is validated, then the missing credential fails closed.
+    await expect(Promise.resolve().then(() => deleteList({ listId: "list001" }))).rejects.toMatchObject({ ok: false, code: "MISSING_CREDENTIAL" });
   });
 
   it("throws when listId is missing", () => {
@@ -222,10 +219,9 @@ describe("deleteList action", () => {
 });
 
 describe("createMemberNote action", () => {
-  it("validates input without apiKey", () => {
-    const result = createMemberNote({ listId: "list001", email: "member@example.com", note: "VIP" });
-    expect((result as any).action).toBe("members.notes.create");
-    expect((result as any).validated.note).toBe("VIP");
+  it("validates input without apiKey", async () => {
+    // PLAT-NOCRED-1: input is validated, then the missing credential fails closed.
+    await expect(Promise.resolve().then(() => createMemberNote({ listId: "list001", email: "member@example.com", note: "VIP" }))).rejects.toMatchObject({ ok: false, code: "MISSING_CREDENTIAL" });
   });
 
   it("throws when note is missing", () => {
@@ -259,9 +255,9 @@ describe("createMemberNote action", () => {
 });
 
 describe("listTemplates action", () => {
-  it("validates input without apiKey", () => {
-    const result = listTemplates({});
-    expect((result as any).action).toBe("templates.list");
+  it("validates input without apiKey", async () => {
+    // PLAT-NOCRED-1: input is validated, then the missing credential fails closed.
+    await expect(Promise.resolve().then(() => listTemplates({}))).rejects.toMatchObject({ ok: false, code: "MISSING_CREDENTIAL" });
   });
 
   it("lists templates", async () => {
@@ -281,10 +277,9 @@ describe("listTemplates action", () => {
 });
 
 describe("getTemplate action", () => {
-  it("validates input without apiKey", () => {
-    const result = getTemplate({ templateId: "1001" });
-    expect((result as any).action).toBe("templates.get");
-    expect((result as any).validated.templateId).toBe("1001");
+  it("validates input without apiKey", async () => {
+    // PLAT-NOCRED-1: input is validated, then the missing credential fails closed.
+    await expect(Promise.resolve().then(() => getTemplate({ templateId: "1001" }))).rejects.toMatchObject({ ok: false, code: "MISSING_CREDENTIAL" });
   });
 
   it("throws when templateId is missing", () => {
@@ -306,9 +301,9 @@ describe("getTemplate action", () => {
 });
 
 describe("getReportSummary action", () => {
-  it("validates input without apiKey", () => {
-    const result = getReportSummary({ campaignId: "camp001" });
-    expect((result as any).action).toBe("reports.summary");
+  it("validates input without apiKey", async () => {
+    // PLAT-NOCRED-1: input is validated, then the missing credential fails closed.
+    await expect(Promise.resolve().then(() => getReportSummary({ campaignId: "camp001" }))).rejects.toMatchObject({ ok: false, code: "MISSING_CREDENTIAL" });
   });
 
   it("throws when campaignId is missing", () => {
@@ -332,9 +327,9 @@ describe("getReportSummary action", () => {
 });
 
 describe("getReportOpens action", () => {
-  it("validates input without apiKey", () => {
-    const result = getReportOpens({ campaignId: "camp001" });
-    expect((result as any).action).toBe("reports.opens");
+  it("validates input without apiKey", async () => {
+    // PLAT-NOCRED-1: input is validated, then the missing credential fails closed.
+    await expect(Promise.resolve().then(() => getReportOpens({ campaignId: "camp001" }))).rejects.toMatchObject({ ok: false, code: "MISSING_CREDENTIAL" });
   });
 
   it("fetches open details", async () => {
@@ -353,9 +348,9 @@ describe("getReportOpens action", () => {
 });
 
 describe("getReportClicks action", () => {
-  it("validates input without apiKey", () => {
-    const result = getReportClicks({ campaignId: "camp001" });
-    expect((result as any).action).toBe("reports.clicks");
+  it("validates input without apiKey", async () => {
+    // PLAT-NOCRED-1: input is validated, then the missing credential fails closed.
+    await expect(Promise.resolve().then(() => getReportClicks({ campaignId: "camp001" }))).rejects.toMatchObject({ ok: false, code: "MISSING_CREDENTIAL" });
   });
 
   it("fetches click details", async () => {
@@ -373,9 +368,9 @@ describe("getReportClicks action", () => {
 });
 
 describe("getReportUnsubscribed action", () => {
-  it("validates input without apiKey", () => {
-    const result = getReportUnsubscribed({ campaignId: "camp001" });
-    expect((result as any).action).toBe("reports.unsubscribed");
+  it("validates input without apiKey", async () => {
+    // PLAT-NOCRED-1: input is validated, then the missing credential fails closed.
+    await expect(Promise.resolve().then(() => getReportUnsubscribed({ campaignId: "camp001" }))).rejects.toMatchObject({ ok: false, code: "MISSING_CREDENTIAL" });
   });
 
   it("fetches unsubscribed members", async () => {
@@ -393,9 +388,9 @@ describe("getReportUnsubscribed action", () => {
 });
 
 describe("listAutomations action", () => {
-  it("validates input without apiKey", () => {
-    const result = listAutomations({});
-    expect((result as any).action).toBe("automations.list");
+  it("validates input without apiKey", async () => {
+    // PLAT-NOCRED-1: input is validated, then the missing credential fails closed.
+    await expect(Promise.resolve().then(() => listAutomations({}))).rejects.toMatchObject({ ok: false, code: "MISSING_CREDENTIAL" });
   });
 
   it("lists automations", async () => {
@@ -414,9 +409,9 @@ describe("listAutomations action", () => {
 });
 
 describe("getAutomation action", () => {
-  it("validates input without apiKey", () => {
-    const result = getAutomation({ automationId: "auto001" });
-    expect((result as any).action).toBe("automations.get");
+  it("validates input without apiKey", async () => {
+    // PLAT-NOCRED-1: input is validated, then the missing credential fails closed.
+    await expect(Promise.resolve().then(() => getAutomation({ automationId: "auto001" }))).rejects.toMatchObject({ ok: false, code: "MISSING_CREDENTIAL" });
   });
 
   it("throws when automationId is missing", () => {

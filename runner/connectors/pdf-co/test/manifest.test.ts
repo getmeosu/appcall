@@ -67,7 +67,7 @@ function requestOf(key: string): Record<string, unknown> {
 describe("pdf-co manifest", () => {
   test("keeps origin auth, hosts, and bodyErrorPaths", () => {
     expect(manifest.key).toBe("pdf-co");
-    expect(manifest.version).toBe("0.2.0");
+    expect(manifest.version).toBe("0.2.1");
     expect(manifest.network.allowedHosts).toEqual(["api.pdf.co"]);
     expect(manifest.http.baseUrl).toBe("https://api.pdf.co");
     expect(manifest.http.auth).toEqual({

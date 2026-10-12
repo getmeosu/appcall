@@ -3,6 +3,7 @@ import { compileDeclarativeConnector } from "../../../bun/src/declarative/compil
 import manifest from "../manifest.json";
 import fixtures from "../fixtures/contracts.json";
 import qa from "../qa.json";
+const settle = (run: () => unknown): Promise<unknown> => Promise.resolve().then(run).catch((error: unknown) => error);
 
 type Assertion = {path:string; op:string; value?:unknown};
 function accepts(output: unknown, assertion: Assertion): boolean {
@@ -28,7 +29,8 @@ for (const scenario of qa.scenarios) {
     }});
     expect(calls).toBe(1);
     expect(scenario.expect.assertions.every(a=>accepts(output,a))).toBe(true);
-    const echo = await actions[scenario.operation]!(scenario.input);
+    const echo = await settle(() => actions[scenario.operation]!(scenario.input));
+    if (scenario.operation !== "healthcheck") expect(echo).toMatchObject({ ok: false, code: "MISSING_CREDENTIAL" });
     expect(scenario.expect.assertions.every(a=>accepts(echo,a))).toBe(false);
     expect(scenario.expect.assertions.every(a=>accepts({...output,source:"connector"},a))).toBe(false);
   });

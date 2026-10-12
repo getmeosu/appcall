@@ -281,13 +281,12 @@ describe("runner protocol", () => {
       }),
     );
 
-    expect(response.status).toBe(200);
+    // PLAT-NOCRED-1: no credential in the input, so the runner refuses
+    // before the handler runs instead of returning a fake "validated" 200.
+    expect(response.status).toBe(422);
     const body = await response.json();
-    expect(body.ok).toBe(true);
-    expect(body.result.output.connector).toBe("telegram");
-    expect(body.result.output.action).toBe("messages.send");
-    expect(body.result.output.source).toBe("connector");
-    expect(body.result.output.validated.chatId).toBe("1001");
+    expect(body.ok).toBe(false);
+    expect(body.error.code).toBe("MISSING_CREDENTIAL");
   });
 
   test("connector.action.execute validates telegram credentials", async () => {
@@ -328,12 +327,12 @@ describe("runner protocol", () => {
       }),
     );
 
-    expect(response.status).toBe(200);
+    // PLAT-NOCRED-1: no credential in the input, so the runner refuses
+    // before the handler runs instead of returning a fake "validated" 200.
+    expect(response.status).toBe(422);
     const body = await response.json();
-    expect(body.ok).toBe(true);
-    expect(body.result.output.connector).toBe("notion");
-    expect(body.result.output.action).toBe("credentials.validate");
-    expect(body.result.output.validated).toEqual({});
+    expect(body.ok).toBe(false);
+    expect(body.error.code).toBe("MISSING_CREDENTIAL");
   });
 
   test("connector.action.execute validates notion comments list", async () => {
@@ -354,15 +353,12 @@ describe("runner protocol", () => {
       }),
     );
 
-    expect(response.status).toBe(200);
+    // PLAT-NOCRED-1: no credential in the input, so the runner refuses
+    // before the handler runs instead of returning a fake "validated" 200.
+    expect(response.status).toBe(422);
     const body = await response.json();
-    expect(body.ok).toBe(true);
-    expect(body.result.output.connector).toBe("notion");
-    expect(body.result.output.action).toBe("comments.list");
-    expect(body.result.output.validated).toEqual({
-      blockId: "33333333-3333-3333-3333-333333333333",
-      pageSize: 25,
-    });
+    expect(body.ok).toBe(false);
+    expect(body.error.code).toBe("MISSING_CREDENTIAL");
   });
 
   test("connector.action.execute validates notion comment create", async () => {
@@ -383,15 +379,12 @@ describe("runner protocol", () => {
       }),
     );
 
-    expect(response.status).toBe(200);
+    // PLAT-NOCRED-1: no credential in the input, so the runner refuses
+    // before the handler runs instead of returning a fake "validated" 200.
+    expect(response.status).toBe(422);
     const body = await response.json();
-    expect(body.ok).toBe(true);
-    expect(body.result.output.connector).toBe("notion");
-    expect(body.result.output.action).toBe("comments.create");
-    expect(body.result.output.validated).toEqual({
-      pageId: "33333333-3333-3333-3333-333333333333",
-      text: "Ship the connector.",
-    });
+    expect(body.ok).toBe(false);
+    expect(body.error.code).toBe("MISSING_CREDENTIAL");
   });
 
   test("connector.action.execute validates notion document search", async () => {
@@ -409,15 +402,12 @@ describe("runner protocol", () => {
       }),
     );
 
-    expect(response.status).toBe(200);
+    // PLAT-NOCRED-1: no credential in the input, so the runner refuses
+    // before the handler runs instead of returning a fake "validated" 200.
+    expect(response.status).toBe(422);
     const body = await response.json();
-    expect(body.ok).toBe(true);
-    expect(body.result.output.connector).toBe("notion");
-    expect(body.result.output.action).toBe("documents.search");
-    expect(body.result.output.validated).toEqual({
-      query: "Appcall",
-      pageSize: 20,
-    });
+    expect(body.ok).toBe(false);
+    expect(body.error.code).toBe("MISSING_CREDENTIAL");
   });
 
   test("connector.action.execute validates notion document get", async () => {
@@ -435,14 +425,12 @@ describe("runner protocol", () => {
       }),
     );
 
-    expect(response.status).toBe(200);
+    // PLAT-NOCRED-1: no credential in the input, so the runner refuses
+    // before the handler runs instead of returning a fake "validated" 200.
+    expect(response.status).toBe(422);
     const body = await response.json();
-    expect(body.ok).toBe(true);
-    expect(body.result.output.connector).toBe("notion");
-    expect(body.result.output.action).toBe("documents.get");
-    expect(body.result.output.validated).toEqual({
-      pageId: "33333333-3333-3333-3333-333333333333",
-    });
+    expect(body.ok).toBe(false);
+    expect(body.error.code).toBe("MISSING_CREDENTIAL");
   });
 
   test("connector.action.execute validates notion document create", async () => {
@@ -463,15 +451,12 @@ describe("runner protocol", () => {
       }),
     );
 
-    expect(response.status).toBe(200);
+    // PLAT-NOCRED-1: no credential in the input, so the runner refuses
+    // before the handler runs instead of returning a fake "validated" 200.
+    expect(response.status).toBe(422);
     const body = await response.json();
-    expect(body.ok).toBe(true);
-    expect(body.result.output.connector).toBe("notion");
-    expect(body.result.output.action).toBe("documents.create");
-    expect(body.result.output.validated).toEqual({
-      parentPageId: "33333333-3333-3333-3333-333333333333",
-      title: "Launch Notes",
-    });
+    expect(body.ok).toBe(false);
+    expect(body.error.code).toBe("MISSING_CREDENTIAL");
   });
 
   test("connector.action.execute validates notion document trash and restore", async () => {
@@ -492,14 +477,12 @@ describe("runner protocol", () => {
         }),
       );
 
-      expect(response.status).toBe(200);
+      // PLAT-NOCRED-1: no credential in the input, so the runner refuses
+      // before the handler runs instead of returning a fake "validated" 200.
+      expect(response.status).toBe(422);
       const body = await response.json();
-      expect(body.ok).toBe(true);
-      expect(body.result.output.connector).toBe("notion");
-      expect(body.result.output.action).toBe(action);
-      expect(body.result.output.validated).toEqual({
-        pageId: "33333333-3333-3333-3333-333333333333",
-      });
+      expect(body.ok).toBe(false);
+      expect(body.error.code).toBe("MISSING_CREDENTIAL");
     }
   });
 
@@ -520,14 +503,12 @@ describe("runner protocol", () => {
       }),
     );
 
-    expect(response.status).toBe(200);
+    // PLAT-NOCRED-1: no credential in the input, so the runner refuses
+    // before the handler runs instead of returning a fake "validated" 200.
+    expect(response.status).toBe(422);
     const body = await response.json();
-    expect(body.ok).toBe(true);
-    expect(body.result.output.connector).toBe("notion");
-    expect(body.result.output.action).toBe("databases.get");
-    expect(body.result.output.validated).toEqual({
-      databaseId: "44444444-4444-4444-4444-444444444444",
-    });
+    expect(body.ok).toBe(false);
+    expect(body.error.code).toBe("MISSING_CREDENTIAL");
   });
 
   test("connector.action.execute validates notion database item query", async () => {
@@ -548,15 +529,12 @@ describe("runner protocol", () => {
       }),
     );
 
-    expect(response.status).toBe(200);
+    // PLAT-NOCRED-1: no credential in the input, so the runner refuses
+    // before the handler runs instead of returning a fake "validated" 200.
+    expect(response.status).toBe(422);
     const body = await response.json();
-    expect(body.ok).toBe(true);
-    expect(body.result.output.connector).toBe("notion");
-    expect(body.result.output.action).toBe("databases.items.query");
-    expect(body.result.output.validated).toEqual({
-      databaseId: "44444444-4444-4444-4444-444444444444",
-      filter: { property: "Status", status: { equals: "Todo" } },
-    });
+    expect(body.ok).toBe(false);
+    expect(body.error.code).toBe("MISSING_CREDENTIAL");
   });
 
   test("connector.action.execute validates notion database item get", async () => {
@@ -576,14 +554,12 @@ describe("runner protocol", () => {
       }),
     );
 
-    expect(response.status).toBe(200);
+    // PLAT-NOCRED-1: no credential in the input, so the runner refuses
+    // before the handler runs instead of returning a fake "validated" 200.
+    expect(response.status).toBe(422);
     const body = await response.json();
-    expect(body.ok).toBe(true);
-    expect(body.result.output.connector).toBe("notion");
-    expect(body.result.output.action).toBe("databases.items.get");
-    expect(body.result.output.validated).toEqual({
-      pageId: "66666666-6666-6666-6666-666666666666",
-    });
+    expect(body.ok).toBe(false);
+    expect(body.error.code).toBe("MISSING_CREDENTIAL");
   });
 
   test("connector.action.execute validates notion database item create", async () => {
@@ -606,17 +582,12 @@ describe("runner protocol", () => {
       }),
     );
 
-    expect(response.status).toBe(200);
+    // PLAT-NOCRED-1: no credential in the input, so the runner refuses
+    // before the handler runs instead of returning a fake "validated" 200.
+    expect(response.status).toBe(422);
     const body = await response.json();
-    expect(body.ok).toBe(true);
-    expect(body.result.output.connector).toBe("notion");
-    expect(body.result.output.action).toBe("databases.items.create");
-    expect(body.result.output.validated).toEqual({
-      databaseId: "44444444-4444-4444-4444-444444444444",
-      properties: {
-        Name: { type: "title", value: "Ship database create" },
-      },
-    });
+    expect(body.ok).toBe(false);
+    expect(body.error.code).toBe("MISSING_CREDENTIAL");
   });
 
   test("connector.action.execute validates notion database item update", async () => {
@@ -639,17 +610,12 @@ describe("runner protocol", () => {
       }),
     );
 
-    expect(response.status).toBe(200);
+    // PLAT-NOCRED-1: no credential in the input, so the runner refuses
+    // before the handler runs instead of returning a fake "validated" 200.
+    expect(response.status).toBe(422);
     const body = await response.json();
-    expect(body.ok).toBe(true);
-    expect(body.result.output.connector).toBe("notion");
-    expect(body.result.output.action).toBe("databases.items.update");
-    expect(body.result.output.validated).toEqual({
-      pageId: "66666666-6666-6666-6666-666666666666",
-      properties: {
-        Status: { type: "status", value: "Done" },
-      },
-    });
+    expect(body.ok).toBe(false);
+    expect(body.error.code).toBe("MISSING_CREDENTIAL");
   });
 
   test("connector.action.execute validates notion database item trash and restore", async () => {
@@ -670,14 +636,12 @@ describe("runner protocol", () => {
         }),
       );
 
-      expect(response.status).toBe(200);
+      // PLAT-NOCRED-1: no credential in the input, so the runner refuses
+      // before the handler runs instead of returning a fake "validated" 200.
+      expect(response.status).toBe(422);
       const body = await response.json();
-      expect(body.ok).toBe(true);
-      expect(body.result.output.connector).toBe("notion");
-      expect(body.result.output.action).toBe(action);
-      expect(body.result.output.validated).toEqual({
-        pageId: "66666666-6666-6666-6666-666666666666",
-      });
+      expect(body.ok).toBe(false);
+      expect(body.error.code).toBe("MISSING_CREDENTIAL");
     }
   });
 
@@ -699,15 +663,12 @@ describe("runner protocol", () => {
       }),
     );
 
-    expect(response.status).toBe(200);
+    // PLAT-NOCRED-1: no credential in the input, so the runner refuses
+    // before the handler runs instead of returning a fake "validated" 200.
+    expect(response.status).toBe(422);
     const body = await response.json();
-    expect(body.ok).toBe(true);
-    expect(body.result.output.connector).toBe("notion");
-    expect(body.result.output.action).toBe("documents.blocks.list");
-    expect(body.result.output.validated).toEqual({
-      blockId: "33333333-3333-3333-3333-333333333333",
-      pageSize: 50,
-    });
+    expect(body.ok).toBe(false);
+    expect(body.error.code).toBe("MISSING_CREDENTIAL");
   });
 
   test("connector.action.execute validates notion document block append", async () => {
@@ -728,15 +689,12 @@ describe("runner protocol", () => {
       }),
     );
 
-    expect(response.status).toBe(200);
+    // PLAT-NOCRED-1: no credential in the input, so the runner refuses
+    // before the handler runs instead of returning a fake "validated" 200.
+    expect(response.status).toBe(422);
     const body = await response.json();
-    expect(body.ok).toBe(true);
-    expect(body.result.output.connector).toBe("notion");
-    expect(body.result.output.action).toBe("documents.blocks.append");
-    expect(body.result.output.validated).toEqual({
-      blockId: "33333333-3333-3333-3333-333333333333",
-      text: "Append this paragraph.",
-    });
+    expect(body.ok).toBe(false);
+    expect(body.error.code).toBe("MISSING_CREDENTIAL");
   });
 
   test("connector.action.execute validates slack messages.send", async () => {
@@ -754,13 +712,12 @@ describe("runner protocol", () => {
       }),
     );
 
-    expect(response.status).toBe(200);
+    // PLAT-NOCRED-1: no credential in the input, so the runner refuses
+    // before the handler runs instead of returning a fake "validated" 200.
+    expect(response.status).toBe(422);
     const body = await response.json();
-    expect(body.ok).toBe(true);
-    expect(body.result.output.connector).toBe("slack");
-    expect(body.result.output.action).toBe("messages.send");
-    expect(body.result.output.source).toBe("connector");
-    expect(body.result.output.validated.channel).toBe("C123");
+    expect(body.ok).toBe(false);
+    expect(body.error.code).toBe("MISSING_CREDENTIAL");
   });
 
   test("connector.action.execute validates whatsapp messages.send", async () => {
@@ -778,13 +735,12 @@ describe("runner protocol", () => {
       }),
     );
 
-    expect(response.status).toBe(200);
+    // PLAT-NOCRED-1: no credential in the input, so the runner refuses
+    // before the handler runs instead of returning a fake "validated" 200.
+    expect(response.status).toBe(422);
     const body = await response.json();
-    expect(body.ok).toBe(true);
-    expect(body.result.output.connector).toBe("whatsapp");
-    expect(body.result.output.action).toBe("messages.send");
-    expect(body.result.output.source).toBe("connector");
-    expect(body.result.output.validated.phoneNumberId).toBe("123456789");
+    expect(body.ok).toBe(false);
+    expect(body.error.code).toBe("MISSING_CREDENTIAL");
   });
 
   test("connector.action.execute validates whatsapp credentials", async () => {
@@ -866,7 +822,9 @@ describe("runner protocol", () => {
           params: {
             connectorKey: "slack",
             action: "messages.send",
-            input: { channel: "", text: "hello" },
+            // A credential is present so the request reaches the handler's
+            // own input validation (PLAT-NOCRED-1 refuses credential-less input first).
+            input: { channel: "", text: "hello", token: "xoxb-test", accessToken: "xoxb-test" },
           },
         }),
       }),
@@ -991,12 +949,12 @@ describe("runner protocol", () => {
       }),
     );
 
-    expect(response.status).toBe(200);
+    // PLAT-NOCRED-1: no credential in the input, so the runner refuses
+    // before the handler runs instead of returning a fake "validated" 200.
+    expect(response.status).toBe(422);
     const body = await response.json();
-    expect(body.ok).toBe(true);
-    expect(body.result.output.connector).toBe("notion");
-    expect(body.result.output.action).toBe("users.list");
-    expect(body.result.output.validated).toEqual({ pageSize: 25 });
+    expect(body.ok).toBe(false);
+    expect(body.error.code).toBe("MISSING_CREDENTIAL");
   });
 
   test("connector.sync.list rejects manifest action operations", async () => {

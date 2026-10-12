@@ -2,6 +2,7 @@ import { describe, expect, it } from "bun:test";
 import { existsSync, readFileSync } from "node:fs";
 import { compileDeclarativeConnector } from "../../../bun/src/declarative/compile";
 import cases from "../fixtures/contracts.json";
+const settle = (run: () => unknown): Promise<unknown> => Promise.resolve().then(run).catch((error: unknown) => error);
 const manifestPath = new URL("../manifest.json", import.meta.url);
 const exists = existsSync(manifestPath);
 it("has an executable manifest", () => expect(exists).toBe(true));
@@ -10,8 +11,8 @@ const { actions } = compileDeclarativeConnector(manifest);
 for (const c of cases) describe(c.op, () => {
   it("validates without exposing undeclared data", async () => {
     expect(actions[c.op]).toBeFunction();
-    const result = await actions[c.op]!({...c.input, unexpected:"ignored"});
-    expect(result).toMatchObject(c.op === "healthcheck" ? {status:"ok"} : {validated:c.input});
+    const result = await settle(() => actions[c.op]!({...c.input, unexpected:"ignored"}));
+    expect(result).toMatchObject(c.op === "healthcheck" ? {status:"ok"} : { ok: false, code: "MISSING_CREDENTIAL" });
     expect(JSON.stringify(result)).not.toContain("ignored");
   });
   it("uses the documented request and maps provider output", async () => {

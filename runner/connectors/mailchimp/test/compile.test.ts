@@ -57,7 +57,7 @@ async function invoke(
 describe("mailchimp declarative compile", () => {
   test("requires stored host, compiles, and pins open-connector", () => {
     expect(manifest.key).toBe("mailchimp");
-    expect(manifest.version).toBe("0.5.0");
+    expect(manifest.version).toBe("0.5.3");
     expect(manifest.runtime).toBe("bun");
     expect(manifest.auth.type).toBe("oauth2");
     expect(manifest.auth.scopes).toEqual([]);

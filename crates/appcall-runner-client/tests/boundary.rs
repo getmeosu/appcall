@@ -94,6 +94,7 @@ async fn runner_error_outcomes_distinguish_preflight_provider_and_ambiguous_fail
         ("ACTION_NOT_DECLARED", DispatchOutcome::NotDispatched),
         ("UNKNOWN_CONNECTOR", DispatchOutcome::NotDispatched),
         ("INPUT_TOO_LARGE", DispatchOutcome::NotDispatched),
+        ("MISSING_CREDENTIAL", DispatchOutcome::NotDispatched),
         (
             "UNSUPPORTED_OPERATION_BUDGET",
             DispatchOutcome::NotDispatched,

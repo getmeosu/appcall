@@ -4,7 +4,7 @@ import manifest from "../manifest.json";
 describe("mailchimp manifest", () => {
   it("has correct key and version", () => {
     expect(manifest.key).toBe("mailchimp");
-    expect(manifest.version).toBe("0.5.0");
+    expect(manifest.version).toBe("0.5.3");
     expect(manifest.runtime).toBe("bun");
   });
 

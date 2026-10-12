@@ -40,14 +40,9 @@ describe("apify composio deepening", () => {
     expect(actions["actors.options"]).toBeUndefined();
   });
 
-  test("echoes validated input without calling Apify when no apiKey is present", () => {
-    const result = actions["actors.create"]!({ name: "demo-actor" });
-    expect(result).toMatchObject({
-      connector: "apify",
-      action: "actors.create",
-      source: "connector",
-      validated: { name: "demo-actor" },
-    });
+  test("fails closed without calling Apify when no apiKey is present", async () => {
+    // PLAT-NOCRED-1: a valid input without a credential fails closed.
+    await expect(Promise.resolve().then(() => actions["actors.create"]!({ name: "demo-actor" }))).rejects.toMatchObject({ ok: false, code: "MISSING_CREDENTIAL" });
   });
 
   test("rejects missing required fields as INVALID_ACTION_INPUT", async () => {

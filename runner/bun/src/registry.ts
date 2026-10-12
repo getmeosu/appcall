@@ -1593,6 +1593,7 @@ import { uploadInvoicePdf as uploadChaserInvoicePdf } from "../../connectors/cha
 import { createField as lapostaCreateField, createMember as lapostaCreateMember, updateMember as lapostaUpdateMember } from "../../connectors/laposta/src/actions";
 import { getMeetingAnalysis as avomaGetMeetingAnalysis } from "../../connectors/avoma/src/handlers";
 import { createConnectorHttpClient, type ConnectorHttpClient } from "./http";
+import { credentialKeys, hasCredentialInput, missingCredentialFailure } from "./credentials";
 import { withDeclarativeConnectors } from "./declarative/loader";
 import { buildInputValidators, validateDispatchInput } from "./input_schema";
 import { heyzineWriteHandlers } from "../../connectors/heyzine/src/writes";
@@ -3741,6 +3742,19 @@ export function createConnectorRegistry(input: {
   // Every inputSchema is checked here; each operation's validator is compiled
   // once on first dispatch and cached (input_schema.ts).
   const inputValidators = buildInputValidators(input.manifests);
+  // PLAT-NOCRED-1: per-connector credential keys from the manifest auth
+  // declaration. Actions and syncs of a connector that requires a credential
+  // fail with MISSING_CREDENTIAL before any handler (and so any fetch) runs.
+  const requiredCredentials = new Map(
+    input.manifests.flatMap((manifest) => {
+      const keys = credentialKeys(manifest as { auth?: unknown; http?: unknown });
+      return keys ? [[manifest.key, keys] as const] : [];
+    }),
+  );
+  const credentialFailure = (connectorKey: string, inputValue: unknown) => {
+    const keys = requiredCredentials.get(connectorKey);
+    return keys && !hasCredentialInput(inputValue, keys) ? missingCredentialFailure() : undefined;
+  };
 
   return {
     describe(connectorKey: string): Record<string, unknown> | undefined {
@@ -3842,6 +3856,11 @@ export function createConnectorRegistry(input: {
         if (schemaFailure) {
           return schemaFailure;
         }
+        // Healthchecks keep their own credential semantics (HEALTH-1).
+        const missingCredential = credentialFailure(connectorKey, inputValue);
+        if (missingCredential) {
+          return missingCredential;
+        }
       }
       // Everything that could make the post-write observe fail for a reason
       // known up front is checked here, before the write is sent.
@@ -3939,6 +3958,14 @@ export function createConnectorRegistry(input: {
       const schemaFailure = validateDispatchInput(inputValidators, connectorKey, sync, inputValue);
       if (schemaFailure) {
         return schemaFailure;
+      }
+      // A sync handed the provider page as `response` (the worker-owned
+      // messages.list parsers) only parses caller-supplied data and never
+      // calls the provider, so it needs no credential.
+      const parseOnly = typeof inputValue === "object" && inputValue !== null && Object.hasOwn(inputValue, "response");
+      const missingCredential = parseOnly ? undefined : credentialFailure(connectorKey, inputValue);
+      if (missingCredential) {
+        return missingCredential;
       }
       return { ok: true, output: runExecution(() => boundedOutput(handler(inputValue), operationSpec.maxResponseBytes), operationSpec.timeoutMs) };
     },

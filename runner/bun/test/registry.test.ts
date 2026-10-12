@@ -442,11 +442,8 @@ describe("runner connector registry", () => {
       text: "hello",
     });
 
-    expect(result.ok).toBe(true);
-    expect(result.output).toMatchObject({
-      source: "connector",
-      validated: { phoneNumberId: "123456789", to: "15551234567", text: "hello" },
-    });
+    // PLAT-NOCRED-1: no credential, so the registry refuses before the handler.
+    expect(result).toMatchObject({ ok: false, code: "MISSING_CREDENTIAL" });
   });
 
   test("routes microsoft-365 messages.send through the registered action", async () => {
