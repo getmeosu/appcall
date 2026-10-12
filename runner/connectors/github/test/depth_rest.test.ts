@@ -11,6 +11,8 @@ import { compileDeclarativeConnector } from "../../../bun/src/declarative/compil
 // PRUNE-4 (0.85.0): the 11 second-auth rest.apps.* ops (Basic client_id:secret, app JWT, installation token or
 // GitHub App user token only) and the 3 GitHub Models rest.x.* ops (CHAT/EMBED/MODELS; retired 2026-07-30,
 // https://github.blog/changelog/2026-07-30-github-models-is-now-retired/) left it; models.github.ai left allowedHosts.
+// PRUNE-5 (0.86.0): the 6 rest.orgs.*pat* fine-grained-PAT admin ops left it ("Only GitHub Apps can use this
+// endpoint", https://docs.github.com/rest/orgs/personal-access-tokens; rest-api-description main @ 58b1e0c0).
 // FIX-G14C: the 5 GHEC rest.x.* ops (AUDIT, ORG_ROLE_*, ORG_FINE_PERMS) left it too; they run via src/gap_g14c.ts (test/g14c.test.ts).
 const ADDED = [
   "graphql.discussions.comments.delete",
@@ -18,19 +20,13 @@ const ADDED = [
   "rest.issues.add_blocked_by_dependency",
   "rest.issues.get_parent",
   "rest.orgs.list_issue_types",
-  "rest.orgs.list_pat_grant_requests",
-  "rest.orgs.list_pat_grants",
-  "rest.orgs.review_pat_grant_request",
-  "rest.orgs.review_pat_grant_requests_in_bulk",
-  "rest.orgs.update_pat_access",
-  "rest.orgs.update_pat_accesses",
   "rest.packages.list_docker_migration_conflicting_packages_for_user"
 ] as const;
 
 describe("github full-depth REST additions", () => {
   test("version and runnable request blocks", () => {
-    expect(manifest.version).toBe("0.85.0");
-    expect(Object.keys(manifest.operations)).toHaveLength(853);
+    expect(manifest.version).toBe("0.86.0");
+    expect(Object.keys(manifest.operations)).toHaveLength(847);
     expect(manifest.network.allowedHosts).not.toContain("models.github.ai");
     for (const key of ADDED) {
       const op = manifest.operations[key] as Record<string, any>;

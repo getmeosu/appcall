@@ -7,11 +7,13 @@ import * as actions from "../src/actions";
 
 // PRUNE chain (audit a1549a6d §5A). Each pruned op is gone from the manifest and, when it
 // was hand-written, from the action exports. The G12 module (src/gap_g12.ts) is deleted in
-// PRUNE-3 because all 40 of its ops are pruned. PRUNE-4 (0.85.0) removes 14 declarative ops.
+// PRUNE-3 because all 40 of its ops are pruned. PRUNE-4 (0.85.0) removes 14 declarative ops; PRUNE-5 (0.86.0) 6 more.
 
 const PROJECTS_CLASSIC = "https://github.blog/changelog/2024-05-23-sunset-notice-projects-classic/";
 const CLASSROOM = "https://github.blog/changelog/2026-08-27-github-classroom-deprecated/";
 const SOURCE_IMPORTS = "https://github.blog/changelog/2023-10-11-deprecation-source-imports-rest-api/";
+const PAT_ADMIN = "https://docs.github.com/rest/orgs/personal-access-tokens";
+const SPEC_PIN = "58b1e0c00b39b9e46c24dc4a0ba6a2669c90e9c1";
 const GITHUB_MODELS = "https://github.blog/changelog/2026-07-30-github-models-is-now-retired/";
 
 // op -> exported action function (null = declarative manifest op, no export)
@@ -89,6 +91,16 @@ const PRUNE_4: Record<string, string | null> = {
   "rest.x.MODELS": null,
 };
 
+// PRUNE-5: fine-grained-PAT admin routes. Live, NOT deprecated; spec + docs: "Only GitHub Apps can use this endpoint."
+const PRUNE_5: Record<string, string | null> = {
+  "rest.orgs.list_pat_grants": null,
+  "rest.orgs.list_pat_grant_requests": null,
+  "rest.orgs.review_pat_grant_request": null,
+  "rest.orgs.review_pat_grant_requests_in_bulk": null,
+  "rest.orgs.update_pat_accesses": null,
+  "rest.orgs.update_pat_access": null,
+};
+
 function expectGone(table: Record<string, string | null>) {
   const ops = manifest.operations as Record<string, unknown>;
   const exported = actions as Record<string, unknown>;
@@ -102,9 +114,9 @@ function expectGone(table: Record<string, string | null>) {
 }
 
 describe("github PRUNE chain", () => {
-  test("version 0.85.0 at 853 ops", () => {
-    expect(manifest.version).toBe("0.85.0");
-    expect(Object.keys(manifest.operations)).toHaveLength(853);
+  test("version 0.86.0 at 847 ops", () => {
+    expect(manifest.version).toBe("0.86.0");
+    expect(Object.keys(manifest.operations)).toHaveLength(847);
   });
 
   test("PRUNE-1: 15 Projects (classic) project/column ops are gone", () => {
@@ -140,6 +152,18 @@ describe("github PRUNE chain", () => {
     }
   });
 
+  test("PRUNE-5: GitHub-Apps-only fine-grained-PAT admin ops are gone", () => {
+    expect(Object.keys(PRUNE_5)).toHaveLength(6);
+    expectGone(PRUNE_5);
+    for (const op of Object.keys(PRUNE_5)) {
+      expect(existsSync(join(import.meta.dir, "..", "fixtures", "cases", `${op.replaceAll(".", "_")}.json`)), op).toBe(false);
+    }
+    for (const spec of Object.values(manifest.operations)) {
+      const path = (spec as { request?: { path?: string } }).request?.path;
+      if (path !== undefined) expect(path.includes("/personal-access-token"), path).toBe(false);
+    }
+  });
+
   test("pruned Composio slugs are recorded in missing_still with their cite", () => {
     const missing = new Map((coverage.missing_still as Array<{ slug: string; reason: string }>).map((m) => [m.slug, m.reason]));
     for (const slug of ["GITHUB_GET_A_PROJECT", "GITHUB_LIST_PROJECT_CARDS", "GITHUB_LIST_TEAM_PROJECTS"]) {
@@ -157,6 +181,20 @@ describe("github PRUNE chain", () => {
     }
     for (const slug of ["GITHUB_GET_COMMIT_AUTHORS", "GITHUB_GET_LARGE_FILES", "GITHUB_MAP_A_COMMIT_AUTHOR", "GITHUB_UPDATE_GIT_LFS_PREFERENCE"]) {
       expect(missing.get(slug), slug).toContain(SOURCE_IMPORTS);
+    }
+    for (const slug of [
+      "GITHUB_LIST_ORG_RESOURCE_ACCESS_TOKENS",
+      "GITHUB_LIST_ORG_RESOURCES_WITH_PERSONAL_TOKENS",
+      "GITHUB_REVIEW_ACCESS_WITH_PERSONAL_TOKEN",
+      "GITHUB_REVIEW_RESOURCE_REQUESTS_WITH_FINE_GRAINED_TOKENS",
+      "GITHUB_UPDATE_RESOURCE_ACCESS_WITH_TOKENS",
+      "GITHUB_UPDATE_TOKEN_ORG_ACCESS",
+    ]) {
+      const reason = missing.get(slug) ?? "";
+      expect(reason, slug).toContain(PAT_ADMIN);
+      expect(reason, slug).toContain(SPEC_PIN);
+      expect(reason, slug).toContain("Only GitHub Apps can use this endpoint.");
+      expect(reason, slug).toContain("not a deprecation");
     }
     for (const slug of ["GITHUB_CREATE_INFERENCE_CHAT_COMPLETIONS", "GITHUB_CREATE_INFERENCE_EMBEDDINGS", "GITHUB_GET_CATALOG_MODELS"]) {
       expect(missing.get(slug), slug).toContain(GITHUB_MODELS);

@@ -33,9 +33,9 @@ const pkg = {
 
 describe("github card8 app and package reads", () => {
   test("version stays 0.79.0 and the five reads omit effect fields", () => {
-    expect(manifest.version).toBe("0.85.0");
+    expect(manifest.version).toBe("0.86.0");
     expect(READS).toHaveLength(5);
-    expect(Object.keys(manifest.operations)).toHaveLength(853);
+    expect(Object.keys(manifest.operations)).toHaveLength(847);
     for (const key of READS) {
       const op = manifest.operations[key] as Record<string, unknown>;
       expect(op.kind).toBe("action");

@@ -39,8 +39,8 @@ const READS = [
 
 describe("github traffic and repository statistics reads", () => {
   test("manifest is v0.79.0 with 715 ops and these reads omit effect policy", () => {
-    expect(manifest.version).toBe("0.85.0");
-    expect(Object.keys(manifest.operations).length).toBe(853);
+    expect(manifest.version).toBe("0.86.0");
+    expect(Object.keys(manifest.operations).length).toBe(847);
     expect(READS).toHaveLength(9);
     for (const key of READS) {
       const op = manifest.operations[key] as Record<string, unknown>;
