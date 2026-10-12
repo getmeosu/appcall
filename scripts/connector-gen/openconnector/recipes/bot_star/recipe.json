@@ -649,19 +649,9 @@
     }
   },
   "manifest": {
-    "key": "bot-star",
-    "name": "BotStar",
-    "version": "0.2.0",
-    "runtime": "bun",
-    "visibility": "public",
-    "categories": [
-      "messaging"
-    ],
     "auth": {
-      "type": "api_key",
       "scopes": [],
       "setup": {
-        "mode": "api_key",
         "fields": [
           {
             "key": "apiKey",
@@ -669,150 +659,92 @@
             "required": true,
             "secret": true
           }
-        ]
+        ],
+        "mode": "api_key"
+      },
+      "type": "api_key"
+    },
+    "categories": [
+      "messaging"
+    ],
+    "evidence": {
+      "fixture": {
+        "status": "supplied"
+      },
+      "live": {
+        "status": "unverified"
       }
     },
-    "network": {
-      "allowedHosts": [
-        "apis.botstar.com"
-      ]
-    },
-    "models": [
-      "bot",
-      "bot-attribute",
-      "cms-entity",
-      "cms-entity-item",
-      "message"
-    ],
     "http": {
-      "baseUrl": "https://apis.botstar.com/v1",
       "auth": {
         "field": "apiKey",
         "in": "header",
         "name": "Authorization",
         "value": "Bearer {{apiKey}}"
       },
-      "headers": {
-        "Accept": "application/json",
-        "Content-Type": "application/json"
-      },
+      "baseUrl": "https://apis.botstar.com/v1",
       "errors": {
-        "rateLimitStatuses": [
-          429
-        ],
-        "retryAfterHeader": "retry-after",
         "defaultRetryAfterSeconds": 30,
         "messagePaths": [
           "message",
           "error"
-        ]
+        ],
+        "rateLimitStatuses": [
+          429
+        ],
+        "retryAfterHeader": "retry-after"
+      },
+      "headers": {
+        "Accept": "application/json",
+        "Content-Type": "application/json"
       }
     },
+    "key": "bot-star",
+    "models": [
+      "bot",
+      "bot-attribute",
+      "cms-entity",
+      "cms-entity-field",
+      "cms-entity-item",
+      "user",
+      "user-attribute"
+    ],
+    "name": "BotStar",
+    "network": {
+      "allowedHosts": [
+        "apis.botstar.com",
+        "graph.botstar.com"
+      ]
+    },
     "operations": {
-      "healthcheck": {
-        "timeoutMs": 5000,
-        "maxInputBytes": 4096,
-        "maxResponseBytes": 65536,
-        "kind": "action",
-        "sideEffect": "read",
-        "title": "Healthcheck",
-        "description": "Validate the BotStar API token by listing bots.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {},
-          "additionalProperties": false
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": [
-                "array",
-                "object"
-              ]
-            }
-          },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "GET",
-          "path": "/bots/",
-          "success": [
-            200
-          ]
-        },
+      "bot-attributes.list": {
+        "description": "List attributes configured for a BotStar bot.",
         "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "bots.list": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 1048576,
-        "kind": "action",
-        "sideEffect": "read",
-        "title": "List bots",
-        "description": "List bots available to the configured BotStar API token.",
         "inputSchema": {
-          "type": "object",
-          "properties": {},
-          "additionalProperties": false
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": [
-                "array",
-                "object"
-              ]
-            }
-          },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "GET",
-          "path": "/bots/",
-          "success": [
-            200
-          ]
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "bots.get": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 1048576,
-        "kind": "action",
-        "sideEffect": "read",
-        "title": "Get bot",
-        "description": "Get one BotStar bot by ID.",
-        "inputSchema": {
-          "type": "object",
+          "additionalProperties": false,
           "properties": {
             "botId": {
-              "type": "string",
-              "minLength": 1
+              "minLength": 1,
+              "type": "string"
+            },
+            "env": {
+              "enum": [
+                "draft",
+                "live"
+              ],
+              "type": "string"
             }
           },
-          "additionalProperties": false,
           "required": [
             "botId"
-          ]
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
           ],
+          "type": "object"
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
+        "outputSchema": {
+          "additionalProperties": false,
           "properties": {
             "data": {
               "type": [
@@ -821,7 +753,60 @@
               ]
             }
           },
-          "additionalProperties": false
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        },
+        "request": {
+          "method": "GET",
+          "path": "/bots/{{botId}}/attributes",
+          "success": [
+            200
+          ],
+          "query": {
+            "env": "{{env}}"
+          }
+        },
+        "responseFormat": "json",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "title": "List bot attributes",
+        "validationMode": "strict-generated"
+      },
+      "bots.get": {
+        "description": "Get one BotStar bot by ID.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "botId": {
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "botId"
+          ],
+          "type": "object"
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": [
+                "array",
+                "object"
+              ]
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
         },
         "request": {
           "method": "GET",
@@ -830,43 +815,46 @@
             200
           ]
         },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "bot-attributes.list": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 1048576,
-        "kind": "action",
+        "responseFormat": "json",
         "sideEffect": "read",
-        "title": "List bot attributes",
-        "description": "List attributes configured for a BotStar bot.",
+        "timeoutMs": 15000,
+        "title": "Get bot",
+        "validationMode": "strict-generated"
+      },
+      "bots.list": {
+        "description": "List bots available to the configured BotStar API token. Optional page and limit match Composio LIST_BOTS. Also used for BOTSTAR_GET_BOT_APP_ID because livechat appId is the bot id.",
+        "enforceOutputSchema": true,
         "inputSchema": {
-          "type": "object",
+          "additionalProperties": false,
           "properties": {
-            "botId": {
-              "type": "string",
-              "minLength": 1
+            "page": {
+              "minimum": 1,
+              "type": "integer"
             },
-            "env": {
-              "type": "string",
-              "enum": [
-                "draft",
-                "live"
+            "limit": {
+              "minimum": 1,
+              "type": "integer"
+            },
+            "bot_id": {
+              "description": "Optional Composio BOTSTAR_GET_BOT_APP_ID filter; unused by GET /bots/.",
+              "type": [
+                "integer",
+                "string"
               ]
+            },
+            "bot_name": {
+              "description": "Optional Composio BOTSTAR_GET_BOT_APP_ID name filter; unused by GET /bots/.",
+              "minLength": 1,
+              "type": "string"
             }
           },
-          "additionalProperties": false,
-          "required": [
-            "botId"
-          ]
+          "type": "object"
         },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
         "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
+          "additionalProperties": false,
           "properties": {
             "data": {
               "type": [
@@ -875,55 +863,56 @@
               ]
             }
           },
-          "additionalProperties": false
+          "required": [
+            "data"
+          ],
+          "type": "object"
         },
         "request": {
           "method": "GET",
-          "path": "/bots/{{botId}}/attributes",
+          "path": "/bots/",
           "success": [
             200
           ],
           "query": {
-            "env": "{{env}}"
+            "page": "{{page}}",
+            "limit": "{{limit}}"
           }
         },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
+        "responseFormat": "json",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "title": "List bots",
+        "validationMode": "strict-generated"
       },
       "cms-entities.list": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 1048576,
-        "kind": "action",
-        "sideEffect": "read",
-        "title": "List CMS entities",
         "description": "List CMS entities configured for a BotStar bot.",
+        "enforceOutputSchema": true,
         "inputSchema": {
-          "type": "object",
+          "additionalProperties": false,
           "properties": {
             "botId": {
-              "type": "string",
-              "minLength": 1
+              "minLength": 1,
+              "type": "string"
             },
             "env": {
-              "type": "string",
               "enum": [
                 "draft",
                 "live"
-              ]
+              ],
+              "type": "string"
             }
           },
-          "additionalProperties": false,
           "required": [
             "botId"
-          ]
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
           ],
+          "type": "object"
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
+        "outputSchema": {
+          "additionalProperties": false,
           "properties": {
             "data": {
               "type": [
@@ -932,7 +921,10 @@
               ]
             }
           },
-          "additionalProperties": false
+          "required": [
+            "data"
+          ],
+          "type": "object"
         },
         "request": {
           "method": "GET",
@@ -944,37 +936,25 @@
             "env": "{{env}}"
           }
         },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "bots.create": {
-        "kind": "action",
-        "sideEffect": "write",
+        "responseFormat": "json",
+        "sideEffect": "read",
         "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "title": "Create bot",
-        "description": "Create a BotStar bot.",
+        "title": "List CMS entities",
+        "validationMode": "strict-generated"
+      },
+      "healthcheck": {
+        "description": "Validate the BotStar API token by listing bots.",
+        "enforceOutputSchema": true,
         "inputSchema": {
-          "type": "object",
-          "properties": {
-            "name": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Bot name."
-            }
-          },
           "additionalProperties": false,
-          "required": [
-            "name"
-          ]
+          "properties": {},
+          "type": "object"
         },
+        "kind": "action",
+        "maxInputBytes": 4096,
+        "maxResponseBytes": 65536,
         "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
+          "additionalProperties": false,
           "properties": {
             "data": {
               "type": [
@@ -983,11 +963,58 @@
               ]
             }
           },
-          "additionalProperties": false
+          "required": [
+            "data"
+          ],
+          "type": "object"
         },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
+        "request": {
+          "method": "GET",
+          "path": "/bots/",
+          "success": [
+            200
+          ]
+        },
         "responseFormat": "json",
+        "sideEffect": "read",
+        "timeoutMs": 5000,
+        "title": "Healthcheck",
+        "validationMode": "strict-generated"
+      },
+      "bots.create": {
+        "description": "Create a new BotStar bot with a name.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "name": {
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "name"
+          ],
+          "type": "object"
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": [
+                "array",
+                "object"
+              ]
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        },
         "request": {
           "method": "POST",
           "path": "/bots/",
@@ -997,44 +1024,44 @@
           ],
           "body": {
             "name": "{{name}}"
+          },
+          "headers": {
+            "Content-Type": "application/json"
           }
-        }
+        },
+        "responseFormat": "json",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "title": "Create bot",
+        "validationMode": "strict-generated"
       },
       "bots.publish": {
-        "kind": "action",
-        "sideEffect": "write",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "title": "Publish bot",
-        "description": "Publish a BotStar bot to the live environment.",
+        "description": "Publish BotStar bot changes to the live environment.",
+        "enforceOutputSchema": true,
         "inputSchema": {
-          "type": "object",
+          "additionalProperties": false,
           "properties": {
             "botId": {
-              "type": "string",
+              "description": "Your bot ID.",
               "minLength": 1,
-              "description": "BotStar bot id."
+              "type": "string"
             },
-            "env": {
-              "type": "string",
-              "enum": [
-                "draft",
-                "live"
-              ],
-              "description": "Bot environment."
+            "bot_id": {
+              "description": "Alias of botId.",
+              "minLength": 1,
+              "type": "string"
             }
           },
-          "additionalProperties": false,
           "required": [
             "botId"
-          ]
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
           ],
+          "type": "object"
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
+        "outputSchema": {
+          "additionalProperties": false,
           "properties": {
             "data": {
               "type": [
@@ -1043,67 +1070,92 @@
               ]
             }
           },
-          "additionalProperties": false
+          "required": [
+            "data"
+          ],
+          "type": "object"
         },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
         "request": {
-          "method": "PUT",
+          "method": "POST",
           "path": "/bots/{{botId}}/publish",
           "success": [
-            200
-          ],
-          "query": {
-            "env": "{{env}}"
-          }
-        }
-      },
-      "bot-attributes.create": {
-        "kind": "action",
-        "sideEffect": "write",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "title": "Create bot attribute",
-        "description": "Create an attribute on a BotStar bot.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "botId": {
-              "type": "string",
-              "minLength": 1,
-              "description": "BotStar bot id."
-            },
-            "name": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Attribute name."
-            },
-            "type": {
-              "type": "string",
-              "description": "Attribute type."
-            },
-            "env": {
-              "type": "string",
-              "enum": [
-                "draft",
-                "live"
-              ],
-              "description": "Bot environment."
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "botId",
-            "name"
+            200,
+            201
           ]
         },
-        "outputSchema": {
-          "type": "object",
+        "responseFormat": "json",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "title": "Publish bot",
+        "validationMode": "strict-generated"
+      },
+      "bot-attributes.create": {
+        "description": "Create a bot attribute (global variable) with optional multilingual values.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "botId": {
+              "description": "Your bot ID.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "bot_id": {
+              "description": "Alias of botId.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "env": {
+              "enum": [
+                "draft",
+                "draft,live"
+              ],
+              "type": "string"
+            },
+            "name": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "data_type": {
+              "enum": [
+                "date",
+                "string",
+                "number"
+              ],
+              "type": "string",
+              "description": "Attribute data type."
+            },
+            "desc": {
+              "type": "string"
+            },
+            "value": {
+              "type": [
+                "string",
+                "number"
+              ]
+            },
+            "additional_values": {
+              "additionalProperties": true,
+              "description": "Language-specific values such as value_es.",
+              "type": "object"
+            },
+            "localizedValues": {
+              "additionalProperties": true,
+              "type": "object"
+            }
+          },
           "required": [
-            "data"
+            "botId",
+            "name",
+            "data_type"
           ],
+          "type": "object"
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
+        "outputSchema": {
+          "additionalProperties": false,
           "properties": {
             "data": {
               "type": [
@@ -1112,11 +1164,11 @@
               ]
             }
           },
-          "additionalProperties": false
+          "required": [
+            "data"
+          ],
+          "type": "object"
         },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
         "request": {
           "method": "POST",
           "path": "/bots/{{botId}}/attributes",
@@ -1129,59 +1181,82 @@
           },
           "body": {
             "name": "{{name}}",
-            "type": "{{type}}"
+            "data_type": "{{data_type}}",
+            "desc": "{{desc}}",
+            "value": "{{value}}"
+          },
+          "headers": {
+            "Content-Type": "application/json"
           }
-        }
-      },
-      "bot-attributes.update": {
-        "kind": "action",
+        },
+        "responseFormat": "json",
         "sideEffect": "write",
         "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "title": "Update bot attribute",
-        "description": "Update a BotStar bot attribute.",
+        "title": "Create bot attribute",
+        "validationMode": "strict-generated"
+      },
+      "bot-attributes.update": {
+        "description": "Update a bot attribute description, value, or multilingual values.",
+        "enforceOutputSchema": true,
         "inputSchema": {
-          "type": "object",
+          "additionalProperties": false,
           "properties": {
             "botId": {
-              "type": "string",
+              "description": "Your bot ID.",
               "minLength": 1,
-              "description": "BotStar bot id."
+              "type": "string"
+            },
+            "bot_id": {
+              "description": "Alias of botId.",
+              "minLength": 1,
+              "type": "string"
             },
             "attributeId": {
-              "type": "string",
+              "description": "Bot attribute ID.",
               "minLength": 1,
-              "description": "Attribute id."
+              "type": "string"
             },
-            "name": {
-              "type": "string",
-              "description": "Attribute name."
-            },
-            "type": {
-              "type": "string",
-              "description": "Attribute type."
+            "attribute_id": {
+              "description": "Alias of attributeId.",
+              "minLength": 1,
+              "type": "string"
             },
             "env": {
-              "type": "string",
               "enum": [
                 "draft",
-                "live"
+                "draft,live"
               ],
-              "description": "Bot environment."
+              "type": "string"
+            },
+            "desc": {
+              "type": "string"
+            },
+            "value": {
+              "type": [
+                "string",
+                "number"
+              ]
+            },
+            "additional_values": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "localizedValues": {
+              "additionalProperties": true,
+              "type": "object"
             }
           },
-          "additionalProperties": false,
           "required": [
             "botId",
             "attributeId"
-          ]
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
           ],
+          "type": "object"
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
+        "outputSchema": {
+          "additionalProperties": false,
           "properties": {
             "data": {
               "type": [
@@ -1190,13 +1265,13 @@
               ]
             }
           },
-          "additionalProperties": false
+          "required": [
+            "data"
+          ],
+          "type": "object"
         },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
         "request": {
-          "method": "PUT",
+          "method": "PATCH",
           "path": "/bots/{{botId}}/attributes/{{attributeId}}",
           "success": [
             200
@@ -1205,66 +1280,77 @@
             "env": "{{env}}"
           },
           "body": {
-            "name": "{{name}}",
-            "type": "{{type}}"
+            "desc": "{{desc}}",
+            "value": "{{value}}"
+          },
+          "headers": {
+            "Content-Type": "application/json"
           }
-        }
+        },
+        "responseFormat": "json",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "title": "Update bot attribute",
+        "validationMode": "strict-generated"
       },
       "bot-attributes.delete": {
-        "kind": "action",
-        "sideEffect": "destructive",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "title": "Delete bot attribute",
-        "description": "Delete a BotStar bot attribute.",
+        "description": "Delete a bot attribute by ID.",
+        "enforceOutputSchema": true,
         "inputSchema": {
-          "type": "object",
+          "additionalProperties": false,
           "properties": {
             "botId": {
-              "type": "string",
+              "description": "Your bot ID.",
               "minLength": 1,
-              "description": "BotStar bot id."
+              "type": "string"
+            },
+            "bot_id": {
+              "description": "Alias of botId.",
+              "minLength": 1,
+              "type": "string"
             },
             "attributeId": {
-              "type": "string",
+              "description": "Bot attribute ID.",
               "minLength": 1,
-              "description": "Attribute id."
+              "type": "string"
+            },
+            "attribute_id": {
+              "description": "Alias of attributeId.",
+              "minLength": 1,
+              "type": "string"
             },
             "env": {
-              "type": "string",
               "enum": [
                 "draft",
-                "live"
+                "draft,live"
               ],
-              "description": "Bot environment."
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "botId",
-            "attributeId"
-          ]
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "deleted",
-            "attributeId"
-          ],
-          "properties": {
-            "deleted": {
-              "type": "boolean"
-            },
-            "attributeId": {
               "type": "string"
             }
           },
-          "additionalProperties": false
+          "required": [
+            "botId",
+            "attributeId"
+          ],
+          "type": "object"
         },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": [
+                "array",
+                "object"
+              ]
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        },
         "request": {
           "method": "DELETE",
           "path": "/bots/{{botId}}/attributes/{{attributeId}}",
@@ -1274,54 +1360,59 @@
           ],
           "query": {
             "env": "{{env}}"
-          },
-          "result": {
-            "deleted": true,
-            "attributeId": "{{input.attributeId}}"
           }
-        }
+        },
+        "responseFormat": "json",
+        "sideEffect": "destructive",
+        "timeoutMs": 15000,
+        "title": "Delete bot attribute",
+        "validationMode": "strict-generated"
       },
       "cms-entities.get": {
-        "kind": "action",
-        "sideEffect": "read",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "title": "Get CMS entity",
-        "description": "Get one CMS entity for a BotStar bot.",
+        "description": "Get one CMS entity including its field configuration.",
+        "enforceOutputSchema": true,
         "inputSchema": {
-          "type": "object",
+          "additionalProperties": false,
           "properties": {
             "botId": {
-              "type": "string",
+              "description": "Your bot ID.",
               "minLength": 1,
-              "description": "BotStar bot id."
+              "type": "string"
+            },
+            "bot_id": {
+              "description": "Alias of botId.",
+              "minLength": 1,
+              "type": "string"
             },
             "entityId": {
-              "type": "string",
+              "description": "CMS entity ID.",
               "minLength": 1,
-              "description": "CMS entity id."
+              "type": "string"
+            },
+            "entity_id": {
+              "description": "Alias of entityId.",
+              "minLength": 1,
+              "type": "string"
             },
             "env": {
-              "type": "string",
               "enum": [
                 "draft",
                 "live"
               ],
-              "description": "Bot environment."
+              "type": "string"
             }
           },
-          "additionalProperties": false,
           "required": [
             "botId",
             "entityId"
-          ]
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
           ],
+          "type": "object"
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
+        "outputSchema": {
+          "additionalProperties": false,
           "properties": {
             "data": {
               "type": [
@@ -1330,11 +1421,11 @@
               ]
             }
           },
-          "additionalProperties": false
+          "required": [
+            "data"
+          ],
+          "type": "object"
         },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
         "request": {
           "method": "GET",
           "path": "/bots/{{botId}}/cms_entities/{{entityId}}",
@@ -1344,49 +1435,78 @@
           "query": {
             "env": "{{env}}"
           }
-        }
+        },
+        "responseFormat": "json",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "title": "Get CMS entity",
+        "validationMode": "strict-generated"
       },
       "cms-entities.create": {
-        "kind": "action",
-        "sideEffect": "write",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "title": "Create CMS entity",
-        "description": "Create a CMS entity on a BotStar bot.",
+        "description": "Create a CMS entity with a name and optional field definitions.",
+        "enforceOutputSchema": true,
         "inputSchema": {
-          "type": "object",
+          "additionalProperties": false,
           "properties": {
             "botId": {
-              "type": "string",
+              "description": "Your bot ID.",
               "minLength": 1,
-              "description": "BotStar bot id."
+              "type": "string"
             },
-            "name": {
-              "type": "string",
+            "bot_id": {
+              "description": "Alias of botId.",
               "minLength": 1,
-              "description": "Entity name."
+              "type": "string"
             },
             "env": {
-              "type": "string",
               "enum": [
                 "draft",
-                "live"
+                "draft,live"
               ],
-              "description": "Bot environment."
+              "type": "string"
+            },
+            "name": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "fields": {
+              "items": {
+                "additionalProperties": false,
+                "type": "object",
+                "properties": {
+                  "unique_name": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "name": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "data_type": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "options": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  }
+                }
+              },
+              "minItems": 1,
+              "type": "array"
             }
           },
-          "additionalProperties": false,
           "required": [
             "botId",
             "name"
-          ]
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
           ],
+          "type": "object"
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
+        "outputSchema": {
+          "additionalProperties": false,
           "properties": {
             "data": {
               "type": [
@@ -1395,11 +1515,11 @@
               ]
             }
           },
-          "additionalProperties": false
+          "required": [
+            "data"
+          ],
+          "type": "object"
         },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
         "request": {
           "method": "POST",
           "path": "/bots/{{botId}}/cms_entities",
@@ -1411,465 +1531,22 @@
             "env": "{{env}}"
           },
           "body": {
-            "name": "{{name}}"
+            "name": "{{name}}",
+            "fields": "{{fields}}"
+          },
+          "headers": {
+            "Content-Type": "application/json"
           }
-        }
-      },
-      "cms-entities.delete": {
-        "kind": "action",
-        "sideEffect": "destructive",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "title": "Delete CMS entity",
-        "description": "Delete a CMS entity from a BotStar bot.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "botId": {
-              "type": "string",
-              "minLength": 1,
-              "description": "BotStar bot id."
-            },
-            "entityId": {
-              "type": "string",
-              "minLength": 1,
-              "description": "CMS entity id."
-            },
-            "env": {
-              "type": "string",
-              "enum": [
-                "draft",
-                "live"
-              ],
-              "description": "Bot environment."
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "botId",
-            "entityId"
-          ]
         },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "deleted",
-            "entityId"
-          ],
-          "properties": {
-            "deleted": {
-              "type": "boolean"
-            },
-            "entityId": {
-              "type": "string"
-            }
-          },
-          "additionalProperties": false
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
         "responseFormat": "json",
-        "request": {
-          "method": "DELETE",
-          "path": "/bots/{{botId}}/cms_entities/{{entityId}}",
-          "success": [
-            200,
-            204
-          ],
-          "query": {
-            "env": "{{env}}"
-          },
-          "result": {
-            "deleted": true,
-            "entityId": "{{input.entityId}}"
-          }
-        }
-      },
-      "cms-entity-items.list": {
-        "kind": "action",
-        "sideEffect": "read",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "title": "List CMS entity items",
-        "description": "List items in a BotStar CMS entity.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "botId": {
-              "type": "string",
-              "minLength": 1,
-              "description": "BotStar bot id."
-            },
-            "entityId": {
-              "type": "string",
-              "minLength": 1,
-              "description": "CMS entity id."
-            },
-            "env": {
-              "type": "string",
-              "enum": [
-                "draft",
-                "live"
-              ],
-              "description": "Bot environment."
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "botId",
-            "entityId"
-          ]
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": [
-                "array",
-                "object"
-              ]
-            }
-          },
-          "additionalProperties": false
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
-        "request": {
-          "method": "GET",
-          "path": "/bots/{{botId}}/cms_entities/{{entityId}}/items",
-          "success": [
-            200
-          ],
-          "query": {
-            "env": "{{env}}"
-          }
-        }
-      },
-      "cms-entity-items.get": {
-        "kind": "action",
-        "sideEffect": "read",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "title": "Get CMS entity item",
-        "description": "Get one item from a BotStar CMS entity.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "botId": {
-              "type": "string",
-              "minLength": 1,
-              "description": "BotStar bot id."
-            },
-            "entityId": {
-              "type": "string",
-              "minLength": 1,
-              "description": "CMS entity id."
-            },
-            "itemId": {
-              "type": "string",
-              "minLength": 1,
-              "description": "CMS entity item id."
-            },
-            "env": {
-              "type": "string",
-              "enum": [
-                "draft",
-                "live"
-              ],
-              "description": "Bot environment."
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "botId",
-            "entityId",
-            "itemId"
-          ]
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": [
-                "array",
-                "object"
-              ]
-            }
-          },
-          "additionalProperties": false
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
-        "request": {
-          "method": "GET",
-          "path": "/bots/{{botId}}/cms_entities/{{entityId}}/items/{{itemId}}",
-          "success": [
-            200
-          ],
-          "query": {
-            "env": "{{env}}"
-          }
-        }
-      },
-      "cms-entity-items.create": {
-        "kind": "action",
         "sideEffect": "write",
         "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "title": "Create CMS entity item",
-        "description": "Create an item in a BotStar CMS entity.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "botId": {
-              "type": "string",
-              "minLength": 1,
-              "description": "BotStar bot id."
-            },
-            "entityId": {
-              "type": "string",
-              "minLength": 1,
-              "description": "CMS entity id."
-            },
-            "name": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Item name."
-            },
-            "status": {
-              "type": "string",
-              "description": "Item status."
-            },
-            "env": {
-              "type": "string",
-              "enum": [
-                "draft",
-                "live"
-              ],
-              "description": "Bot environment."
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "botId",
-            "entityId",
-            "name"
-          ]
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": [
-                "array",
-                "object"
-              ]
-            }
-          },
-          "additionalProperties": false
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
-        "request": {
-          "method": "POST",
-          "path": "/bots/{{botId}}/cms_entities/{{entityId}}/items",
-          "success": [
-            200,
-            201
-          ],
-          "query": {
-            "env": "{{env}}"
-          },
-          "body": {
-            "name": "{{name}}",
-            "status": "{{status}}"
-          }
-        }
-      },
-      "cms-entity-items.update": {
-        "kind": "action",
-        "sideEffect": "write",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "title": "Update CMS entity item",
-        "description": "Update an item in a BotStar CMS entity.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "botId": {
-              "type": "string",
-              "minLength": 1,
-              "description": "BotStar bot id."
-            },
-            "entityId": {
-              "type": "string",
-              "minLength": 1,
-              "description": "CMS entity id."
-            },
-            "itemId": {
-              "type": "string",
-              "minLength": 1,
-              "description": "CMS entity item id."
-            },
-            "name": {
-              "type": "string",
-              "description": "Item name."
-            },
-            "status": {
-              "type": "string",
-              "description": "Item status."
-            },
-            "env": {
-              "type": "string",
-              "enum": [
-                "draft",
-                "live"
-              ],
-              "description": "Bot environment."
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "botId",
-            "entityId",
-            "itemId"
-          ]
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": [
-                "array",
-                "object"
-              ]
-            }
-          },
-          "additionalProperties": false
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
-        "request": {
-          "method": "PUT",
-          "path": "/bots/{{botId}}/cms_entities/{{entityId}}/items/{{itemId}}",
-          "success": [
-            200
-          ],
-          "query": {
-            "env": "{{env}}"
-          },
-          "body": {
-            "name": "{{name}}",
-            "status": "{{status}}"
-          }
-        }
-      },
-      "cms-entity-items.delete": {
-        "kind": "action",
-        "sideEffect": "destructive",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "title": "Delete CMS entity item",
-        "description": "Delete an item from a BotStar CMS entity.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "botId": {
-              "type": "string",
-              "minLength": 1,
-              "description": "BotStar bot id."
-            },
-            "entityId": {
-              "type": "string",
-              "minLength": 1,
-              "description": "CMS entity id."
-            },
-            "itemId": {
-              "type": "string",
-              "minLength": 1,
-              "description": "CMS entity item id."
-            },
-            "env": {
-              "type": "string",
-              "enum": [
-                "draft",
-                "live"
-              ],
-              "description": "Bot environment."
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "botId",
-            "entityId",
-            "itemId"
-          ]
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "deleted",
-            "itemId"
-          ],
-          "properties": {
-            "deleted": {
-              "type": "boolean"
-            },
-            "itemId": {
-              "type": "string"
-            }
-          },
-          "additionalProperties": false
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
-        "request": {
-          "method": "DELETE",
-          "path": "/bots/{{botId}}/cms_entities/{{entityId}}/items/{{itemId}}",
-          "success": [
-            200,
-            204
-          ],
-          "query": {
-            "env": "{{env}}"
-          },
-          "result": {
-            "deleted": true,
-            "itemId": "{{input.itemId}}"
-          }
-        }
+        "title": "Create CMS entity",
+        "validationMode": "strict-generated"
       },
       "cms-entities.update": {
-        "kind": "action",
-        "sideEffect": "write",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 1048576,
-        "title": "Update CMS entity",
         "description": "Update a CMS entity name.",
+        "enforceOutputSchema": true,
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
@@ -1912,6 +1589,9 @@
           ],
           "type": "object"
         },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
         "outputSchema": {
           "additionalProperties": false,
           "properties": {
@@ -1927,9 +1607,6 @@
           ],
           "type": "object"
         },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
         "request": {
           "method": "PATCH",
           "path": "/bots/{{botId}}/cms_entities/{{entityId}}",
@@ -1945,16 +1622,91 @@
           "headers": {
             "Content-Type": "application/json"
           }
-        }
-      },
-      "cms-entity-fields.create": {
-        "kind": "action",
+        },
+        "responseFormat": "json",
         "sideEffect": "write",
         "timeoutMs": 15000,
+        "title": "Update CMS entity",
+        "validationMode": "strict-generated"
+      },
+      "cms-entities.delete": {
+        "description": "Delete a CMS entity by ID.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "botId": {
+              "description": "Your bot ID.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "bot_id": {
+              "description": "Alias of botId.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "entityId": {
+              "description": "CMS entity ID.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "entity_id": {
+              "description": "Alias of entityId.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "env": {
+              "enum": [
+                "draft",
+                "draft,live"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "botId",
+            "entityId"
+          ],
+          "type": "object"
+        },
+        "kind": "action",
         "maxInputBytes": 65536,
         "maxResponseBytes": 1048576,
-        "title": "Create CMS entity fields",
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": [
+                "array",
+                "object"
+              ]
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        },
+        "request": {
+          "method": "DELETE",
+          "path": "/bots/{{botId}}/cms_entities/{{entityId}}",
+          "success": [
+            200,
+            204
+          ],
+          "query": {
+            "env": "{{env}}"
+          }
+        },
+        "responseFormat": "json",
+        "sideEffect": "destructive",
+        "timeoutMs": 15000,
+        "title": "Delete CMS entity",
+        "validationMode": "strict-generated"
+      },
+      "cms-entity-fields.create": {
         "description": "Create one or more fields on an existing CMS entity. The request body is a JSON array of field objects.",
+        "enforceOutputSchema": true,
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
@@ -2024,6 +1776,9 @@
           ],
           "type": "object"
         },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
         "outputSchema": {
           "additionalProperties": false,
           "properties": {
@@ -2039,9 +1794,6 @@
           ],
           "type": "object"
         },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
         "request": {
           "method": "POST",
           "path": "/bots/{{botId}}/cms_entities/{{entityId}}/fields",
@@ -2056,16 +1808,16 @@
           "headers": {
             "Content-Type": "application/json"
           }
-        }
-      },
-      "cms-entity-fields.update": {
-        "kind": "action",
+        },
+        "responseFormat": "json",
         "sideEffect": "write",
         "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 1048576,
-        "title": "Update CMS entity fields",
+        "title": "Create CMS entity fields",
+        "validationMode": "strict-generated"
+      },
+      "cms-entity-fields.update": {
         "description": "Update CMS entity field names or options. The request body is a JSON array of field objects.",
+        "enforceOutputSchema": true,
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
@@ -2129,6 +1881,9 @@
           ],
           "type": "object"
         },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
         "outputSchema": {
           "additionalProperties": false,
           "properties": {
@@ -2144,9 +1899,6 @@
           ],
           "type": "object"
         },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
         "request": {
           "method": "PATCH",
           "path": "/bots/{{botId}}/cms_entities/{{entityId}}/fields",
@@ -2160,16 +1912,16 @@
           "headers": {
             "Content-Type": "application/json"
           }
-        }
+        },
+        "responseFormat": "json",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "title": "Update CMS entity fields",
+        "validationMode": "strict-generated"
       },
       "cms-entity-fields.delete": {
-        "kind": "action",
-        "sideEffect": "destructive",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 1048576,
-        "title": "Delete CMS entity fields",
         "description": "Delete CMS entity fields by comma-separated unique_names.",
+        "enforceOutputSchema": true,
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
@@ -2213,6 +1965,9 @@
           ],
           "type": "object"
         },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
         "outputSchema": {
           "additionalProperties": false,
           "properties": {
@@ -2228,9 +1983,6 @@
           ],
           "type": "object"
         },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
         "request": {
           "method": "DELETE",
           "path": "/bots/{{botId}}/cms_entities/{{entityId}}/fields",
@@ -2242,16 +1994,506 @@
             "env": "{{env}}",
             "unique_names": "{{unique_names}}"
           }
-        }
-      },
-      "user-attributes.create": {
-        "kind": "action",
-        "sideEffect": "write",
+        },
+        "responseFormat": "json",
+        "sideEffect": "destructive",
         "timeoutMs": 15000,
+        "title": "Delete CMS entity fields",
+        "validationMode": "strict-generated"
+      },
+      "cms-entity-items.list": {
+        "description": "List CMS entity items with optional name, status, and pagination filters.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "botId": {
+              "description": "Your bot ID.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "bot_id": {
+              "description": "Alias of botId.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "entityId": {
+              "description": "CMS entity ID.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "entity_id": {
+              "description": "Alias of entityId.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "env": {
+              "enum": [
+                "draft",
+                "live"
+              ],
+              "type": "string"
+            },
+            "name": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "page": {
+              "minimum": 1,
+              "type": "integer"
+            },
+            "limit": {
+              "maximum": 1000,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "status": {
+              "enum": [
+                "enabled",
+                "disabled"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "botId",
+            "entityId"
+          ],
+          "type": "object"
+        },
+        "kind": "action",
         "maxInputBytes": 65536,
         "maxResponseBytes": 1048576,
-        "title": "Create user attribute",
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": [
+                "array",
+                "object"
+              ]
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        },
+        "request": {
+          "method": "GET",
+          "path": "/bots/{{botId}}/cms_entities/{{entityId}}/items",
+          "success": [
+            200
+          ],
+          "query": {
+            "env": "{{env}}",
+            "name": "{{name}}",
+            "page": "{{page}}",
+            "limit": "{{limit}}",
+            "status": "{{status}}"
+          }
+        },
+        "responseFormat": "json",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "title": "List CMS entity items",
+        "validationMode": "strict-generated"
+      },
+      "cms-entity-items.get": {
+        "description": "Get one CMS entity item including custom field values.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "botId": {
+              "description": "Your bot ID.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "bot_id": {
+              "description": "Alias of botId.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "entityId": {
+              "description": "CMS entity ID.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "entity_id": {
+              "description": "Alias of entityId.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "entityItemId": {
+              "description": "CMS entity item ID.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "entity_item_id": {
+              "description": "Alias of entityItemId.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "env": {
+              "enum": [
+                "draft",
+                "live"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "botId",
+            "entityId",
+            "entityItemId"
+          ],
+          "type": "object"
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": [
+                "array",
+                "object"
+              ]
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        },
+        "request": {
+          "method": "GET",
+          "path": "/bots/{{botId}}/cms_entities/{{entityId}}/items/{{entityItemId}}",
+          "success": [
+            200
+          ],
+          "query": {
+            "env": "{{env}}"
+          }
+        },
+        "responseFormat": "json",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "title": "Get CMS entity item",
+        "validationMode": "strict-generated"
+      },
+      "cms-entity-items.create": {
+        "description": "Create a CMS entity item. Custom field values in additional_fields are merged into the JSON body.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "botId": {
+              "description": "Your bot ID.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "bot_id": {
+              "description": "Alias of botId.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "entityId": {
+              "description": "CMS entity ID.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "entity_id": {
+              "description": "Alias of entityId.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "env": {
+              "enum": [
+                "draft",
+                "draft,live"
+              ],
+              "type": "string"
+            },
+            "name": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "status": {
+              "enum": [
+                "enabled",
+                "disabled"
+              ],
+              "type": "string"
+            },
+            "additional_fields": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "data": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "custom_fields": {
+              "additionalProperties": true,
+              "type": "object"
+            }
+          },
+          "required": [
+            "botId",
+            "entityId",
+            "name"
+          ],
+          "type": "object"
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": [
+                "array",
+                "object"
+              ]
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        },
+        "request": {
+          "method": "POST",
+          "path": "/bots/{{botId}}/cms_entities/{{entityId}}/items",
+          "success": [
+            200,
+            201
+          ],
+          "query": {
+            "env": "{{env}}"
+          },
+          "body": {
+            "name": "{{name}}",
+            "status": "{{status}}"
+          },
+          "headers": {
+            "Content-Type": "application/json"
+          }
+        },
+        "responseFormat": "json",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "title": "Create CMS entity item",
+        "validationMode": "strict-generated"
+      },
+      "cms-entity-items.update": {
+        "description": "Update a CMS entity item name, status, or custom field values.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "botId": {
+              "description": "Your bot ID.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "bot_id": {
+              "description": "Alias of botId.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "entityId": {
+              "description": "CMS entity ID.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "entity_id": {
+              "description": "Alias of entityId.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "entityItemId": {
+              "description": "CMS entity item ID.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "entity_item_id": {
+              "description": "Alias of entityItemId.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "env": {
+              "enum": [
+                "draft",
+                "draft,live"
+              ],
+              "type": "string"
+            },
+            "name": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "status": {
+              "enum": [
+                "enabled",
+                "disabled"
+              ],
+              "type": "string"
+            },
+            "custom_fields": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "additional_fields": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "data": {
+              "additionalProperties": true,
+              "type": "object"
+            }
+          },
+          "required": [
+            "botId",
+            "entityId",
+            "entityItemId"
+          ],
+          "type": "object"
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": [
+                "array",
+                "object"
+              ]
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        },
+        "request": {
+          "method": "PATCH",
+          "path": "/bots/{{botId}}/cms_entities/{{entityId}}/items/{{entityItemId}}",
+          "success": [
+            200
+          ],
+          "query": {
+            "env": "{{env}}"
+          },
+          "body": {
+            "name": "{{name}}",
+            "status": "{{status}}"
+          },
+          "headers": {
+            "Content-Type": "application/json"
+          }
+        },
+        "responseFormat": "json",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "title": "Update CMS entity item",
+        "validationMode": "strict-generated"
+      },
+      "cms-entity-items.delete": {
+        "description": "Delete a CMS entity item by ID.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "botId": {
+              "description": "Your bot ID.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "bot_id": {
+              "description": "Alias of botId.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "entityId": {
+              "description": "CMS entity ID.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "entity_id": {
+              "description": "Alias of entityId.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "entityItemId": {
+              "description": "CMS entity item ID.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "entity_item_id": {
+              "description": "Alias of entityItemId.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "env": {
+              "enum": [
+                "draft",
+                "draft,live"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "botId",
+            "entityId",
+            "entityItemId"
+          ],
+          "type": "object"
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": [
+                "array",
+                "object"
+              ]
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        },
+        "request": {
+          "method": "DELETE",
+          "path": "/bots/{{botId}}/cms_entities/{{entityId}}/items/{{entityItemId}}",
+          "success": [
+            200,
+            204
+          ],
+          "query": {
+            "env": "{{env}}"
+          }
+        },
+        "responseFormat": "json",
+        "sideEffect": "destructive",
+        "timeoutMs": 15000,
+        "title": "Delete CMS entity item",
+        "validationMode": "strict-generated"
+      },
+      "user-attributes.create": {
         "description": "Create a custom user attribute field for a BotStar bot.",
+        "enforceOutputSchema": true,
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
@@ -2286,6 +2528,9 @@
           ],
           "type": "object"
         },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
         "outputSchema": {
           "additionalProperties": false,
           "properties": {
@@ -2301,9 +2546,6 @@
           ],
           "type": "object"
         },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
         "request": {
           "method": "POST",
           "path": "/bots/{{botId}}/users/attributes",
@@ -2318,16 +2560,16 @@
           "headers": {
             "Content-Type": "application/json"
           }
-        }
+        },
+        "responseFormat": "json",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "title": "Create user attribute",
+        "validationMode": "strict-generated"
       },
       "livechat.boot": {
-        "kind": "action",
-        "sideEffect": "read",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 1048576,
-        "title": "Boot livechat widget",
         "description": "Validate a BotStar livechat appId (bot id) and optionally update the audience user. Server equivalent of BotStarApi('boot').",
+        "enforceOutputSchema": true,
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
@@ -2429,6 +2671,9 @@
           ],
           "type": "object"
         },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
         "outputSchema": {
           "additionalProperties": false,
           "properties": {
@@ -2444,25 +2689,22 @@
           ],
           "type": "object"
         },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
         "request": {
           "method": "GET",
           "path": "/bots/{{appId}}",
           "success": [
             200
           ]
-        }
-      },
-      "users.get": {
-        "kind": "action",
+        },
+        "responseFormat": "json",
         "sideEffect": "read",
         "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 1048576,
-        "title": "Get audience user",
+        "title": "Boot livechat widget",
+        "validationMode": "strict-generated"
+      },
+      "users.get": {
         "description": "Get a BotStar audience user by bot ID and user ID. Also used for BOTSTAR_WEBVIEW_GET_PARAMETER when the named value is stored on the user.",
+        "enforceOutputSchema": true,
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
@@ -2503,6 +2745,9 @@
           ],
           "type": "object"
         },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
         "outputSchema": {
           "additionalProperties": false,
           "properties": {
@@ -2518,25 +2763,22 @@
           ],
           "type": "object"
         },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
         "request": {
           "method": "GET",
           "path": "/bots/{{botId}}/users/{{userId}}",
           "success": [
             200
           ]
-        }
+        },
+        "responseFormat": "json",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "title": "Get audience user",
+        "validationMode": "strict-generated"
       },
       "users.update": {
-        "kind": "action",
-        "sideEffect": "write",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 1048576,
-        "title": "Update audience user",
         "description": "Update BotStar audience user attributes. Server equivalent of BotStarApi('update').",
+        "enforceOutputSchema": true,
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
@@ -2630,6 +2872,9 @@
           ],
           "type": "object"
         },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
         "outputSchema": {
           "additionalProperties": false,
           "properties": {
@@ -2645,9 +2890,6 @@
           ],
           "type": "object"
         },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
         "request": {
           "method": "PATCH",
           "path": "/bots/{{botId}}/users/{{userId}}",
@@ -2668,16 +2910,16 @@
           "headers": {
             "Content-Type": "application/json"
           }
-        }
-      },
-      "webview.send-response": {
-        "kind": "action",
+        },
+        "responseFormat": "json",
         "sideEffect": "write",
         "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 1048576,
-        "title": "Send webview response",
+        "title": "Update audience user",
+        "validationMode": "strict-generated"
+      },
+      "webview.send-response": {
         "description": "Send webview outputs back to the BotStar chatbot via the documented graph.botstar.com webview endpoint (BotStarWebview sendResponse).",
+        "enforceOutputSchema": true,
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
@@ -2741,6 +2983,9 @@
           ],
           "type": "object"
         },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
         "outputSchema": {
           "additionalProperties": false,
           "properties": {
@@ -2756,9 +3001,6 @@
           ],
           "type": "object"
         },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
         "request": {
           "method": "POST",
           "baseUrl": "https://graph.botstar.com",
@@ -2778,22 +3020,22 @@
           "headers": {
             "Content-Type": "application/json"
           }
-        }
+        },
+        "responseFormat": "json",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "title": "Send webview response",
+        "validationMode": "strict-generated"
       }
     },
     "provenance": {
       "source": {
-        "url": "https://github.com/oomol-lab/open-connector",
-        "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"
+        "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
+        "url": "https://github.com/oomol-lab/open-connector"
       }
     },
-    "evidence": {
-      "fixture": {
-        "status": "supplied"
-      },
-      "live": {
-        "status": "unverified"
-      }
-    }
+    "runtime": "bun",
+    "version": "0.2.0",
+    "visibility": "public"
   }
 }

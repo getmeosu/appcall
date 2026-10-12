@@ -1001,9 +1001,8 @@
   "manifest": {
     "key": "ashby",
     "name": "Ashby",
-    "version": "0.11.0",
+    "version": "0.11.1",
     "runtime": "bun",
-    "visibility": "public",
     "categories": [
       "ats-recruitment"
     ],
@@ -1022,31 +1021,11 @@
         ]
       }
     },
-    "provenance": {
-      "source": {
-        "url": "https://github.com/oomol-lab/open-connector",
-        "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"
-      }
-    },
     "network": {
       "allowedHosts": [
         "api.ashbyhq.com"
       ]
     },
-    "models": [
-      "job",
-      "candidate",
-      "application",
-      "interview",
-      "interview_schedule",
-      "offer",
-      "department",
-      "user",
-      "source",
-      "archive_reason",
-      "interview_stage",
-      "opening"
-    ],
     "http": {
       "baseUrl": "https://api.ashbyhq.com",
       "auth": {
@@ -1634,7 +1613,7 @@
         "maxInputBytes": 65536,
         "maxResponseBytes": 1048576,
         "title": "Get job",
-        "description": "Fetch a single job via authenticated POST /job.info. Requires id."
+        "description": "Fetch a single job via authenticated POST /job.info. Requires id (jobId is accepted as an alias; id wins when both are given)."
       },
       "candidates.update": {
         "kind": "action",
@@ -1895,7 +1874,7 @@
         "maxInputBytes": 65536,
         "maxResponseBytes": 1048576,
         "title": "Add candidate tag",
-        "description": "Add a tag to a candidate via authenticated POST /candidate.addTag. Requires candidateId and tagId.get does not expose tags. EffectPolicy Reconcile observes via candidates.get (tags).",
+        "description": "Add a tag to a candidate via authenticated POST /candidate.addTag. Requires candidateId and tagId. Returns the updated candidate. No effect policy: candidates.get returns tag titles, not tag ids, so the write is not exactly observable.",
         "inputSchema": {
           "type": "object",
           "additionalProperties": false,
@@ -1914,8 +1893,103 @@
             }
           }
         },
-        "effectPolicy": "Reconcile",
-        "reconcile": "candidates.get"
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "candidate"
+          ],
+          "properties": {
+            "candidate": {
+              "type": "object",
+              "description": "Normalized Ashby Candidate (same shape as candidates.get).",
+              "additionalProperties": false,
+              "required": [
+                "id",
+                "provider",
+                "name",
+                "emails",
+                "phones",
+                "applicationIds",
+                "profileUrl",
+                "source",
+                "tags",
+                "createdAt",
+                "updatedAt"
+              ],
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "description": "Prefixed Ashby candidate id (ash-candidate:<uuid>)."
+                },
+                "provider": {
+                  "type": "string",
+                  "description": "Always \"ashby\"."
+                },
+                "name": {
+                  "type": "string",
+                  "description": "Candidate name."
+                },
+                "emails": {
+                  "type": "array",
+                  "description": "Email addresses.",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "phones": {
+                  "type": "array",
+                  "description": "Phone numbers.",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "applicationIds": {
+                  "type": "array",
+                  "description": "Application UUIDs.",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "profileUrl": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "description": "Ashby profile URL."
+                },
+                "source": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "description": "Source title."
+                },
+                "tags": {
+                  "type": "array",
+                  "description": "Tag titles.",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "createdAt": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "description": "Created timestamp (ISO-8601)."
+                },
+                "updatedAt": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "description": "Updated timestamp (ISO-8601)."
+                }
+              }
+            }
+          },
+          "description": "The updated candidate returned by candidate.addTag."
+        }
       },
       "candidate_tags.list": {
         "kind": "action",
@@ -2459,7 +2533,7 @@
         "maxInputBytes": 65536,
         "maxResponseBytes": 1048576,
         "title": "Update job",
-        "description": "Update a job via authenticated POST /job.update. Requires jobId and at least one other field. EffectPolicy Reconcile observes via jobs.get.",
+        "description": "Update a job via authenticated POST /job.update. Requires jobId and at least one other field. EffectPolicy Reconcile observes via jobs.get with the same jobId (title, departmentId = teamId, locationId, defaultInterviewPlanId, employmentType, customRequisitionId).",
         "inputSchema": {
           "type": "object",
           "additionalProperties": false,
@@ -2497,6 +2571,111 @@
             "jobId"
           ]
         },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "job"
+          ],
+          "properties": {
+            "job": {
+              "type": "object",
+              "description": "Normalized Ashby Job (same shape as jobs.get).",
+              "additionalProperties": false,
+              "required": [
+                "id",
+                "provider",
+                "title",
+                "location",
+                "department",
+                "employmentType",
+                "createdAt",
+                "status",
+                "locationId",
+                "departmentId",
+                "defaultInterviewPlanId",
+                "customRequisitionId"
+              ],
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "description": "Prefixed Ashby job id (ash-job:<uuid>)."
+                },
+                "provider": {
+                  "type": "string",
+                  "description": "Always \"ashby\"."
+                },
+                "title": {
+                  "type": "string",
+                  "description": "Job title."
+                },
+                "location": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "description": "Location name."
+                },
+                "department": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "description": "Department name."
+                },
+                "employmentType": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "description": "FullTime, PartTime, Intern, Contract or Temporary."
+                },
+                "createdAt": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "description": "Published or created timestamp (ISO-8601)."
+                },
+                "status": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "description": "Draft, Open, Closed or Archived."
+                },
+                "locationId": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "description": "Ashby location UUID."
+                },
+                "departmentId": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "description": "Ashby department/team UUID."
+                },
+                "defaultInterviewPlanId": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "description": "Default interview plan UUID."
+                },
+                "customRequisitionId": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "description": "Custom requisition id."
+                }
+              }
+            }
+          },
+          "description": "The updated job as observed via jobs.get (Reconcile)."
+        },
         "effectPolicy": "Reconcile",
         "reconcile": "jobs.get"
       },
@@ -2507,7 +2686,7 @@
         "maxInputBytes": 65536,
         "maxResponseBytes": 1048576,
         "title": "Set job status",
-        "description": "Set a job status via authenticated POST /job.setStatus. Requires jobId and status. Optional closeReasonId when Closed. EffectPolicy Reconcile observes via jobs.get.",
+        "description": "Set a job status via authenticated POST /job.setStatus. Requires jobId and status. Optional closeReasonId when Closed. Returns the updated job. No effect policy: jobs.get does not return the close reason, so the write is not exactly observable.",
         "inputSchema": {
           "type": "object",
           "additionalProperties": false,
@@ -2530,8 +2709,111 @@
             "status"
           ]
         },
-        "effectPolicy": "Reconcile",
-        "reconcile": "jobs.get"
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "job"
+          ],
+          "properties": {
+            "job": {
+              "type": "object",
+              "description": "Normalized Ashby Job (same shape as jobs.get).",
+              "additionalProperties": false,
+              "required": [
+                "id",
+                "provider",
+                "title",
+                "location",
+                "department",
+                "employmentType",
+                "createdAt",
+                "status",
+                "locationId",
+                "departmentId",
+                "defaultInterviewPlanId",
+                "customRequisitionId"
+              ],
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "description": "Prefixed Ashby job id (ash-job:<uuid>)."
+                },
+                "provider": {
+                  "type": "string",
+                  "description": "Always \"ashby\"."
+                },
+                "title": {
+                  "type": "string",
+                  "description": "Job title."
+                },
+                "location": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "description": "Location name."
+                },
+                "department": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "description": "Department name."
+                },
+                "employmentType": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "description": "FullTime, PartTime, Intern, Contract or Temporary."
+                },
+                "createdAt": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "description": "Published or created timestamp (ISO-8601)."
+                },
+                "status": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "description": "Draft, Open, Closed or Archived."
+                },
+                "locationId": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "description": "Ashby location UUID."
+                },
+                "departmentId": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "description": "Ashby department/team UUID."
+                },
+                "defaultInterviewPlanId": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "description": "Default interview plan UUID."
+                },
+                "customRequisitionId": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "description": "Custom requisition id."
+                }
+              }
+            }
+          },
+          "description": "The updated job returned by job.setStatus."
+        }
       },
       "job_templates.list": {
         "kind": "action",
@@ -3892,13 +4174,19 @@
         }
       }
     },
-    "evidence": {
-      "fixture": {
-        "status": "supplied"
-      },
-      "live": {
-        "status": "unverified"
-      }
-    }
+    "models": [
+      "job",
+      "candidate",
+      "application",
+      "interview",
+      "interview_schedule",
+      "offer",
+      "department",
+      "user",
+      "source",
+      "archive_reason",
+      "interview_stage",
+      "opening"
+    ]
   }
 }
