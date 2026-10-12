@@ -31,15 +31,66 @@ export function pageIdParam(
   return value;
 }
 
-/** Extract `pageId` from the rel="next" entry of an RFC 5988 Link header; null when absent. */
+/**
+ * Split `text` on `sep`, ignoring separators inside `<...>` URI references and
+ * quoted-string parameter values (RFC 8288 section 3; backslash escapes honoured).
+ */
+function splitOutsideQuotes(text: string, sep: string): string[] {
+  const parts: string[] = [];
+  let current = "";
+  let inQuotes = false;
+  let inUri = false;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i]!;
+    if (inQuotes) {
+      current += ch;
+      if (ch === "\\" && i + 1 < text.length) current += text[++i];
+      else if (ch === '"') inQuotes = false;
+      continue;
+    }
+    if (inUri) {
+      current += ch;
+      if (ch === ">") inUri = false;
+      continue;
+    }
+    if (ch === '"') inQuotes = true;
+    else if (ch === "<") inUri = true;
+    else if (ch === sep) {
+      parts.push(current);
+      current = "";
+      continue;
+    }
+    current += ch;
+  }
+  parts.push(current);
+  return parts;
+}
+
+function unquote(value: string): string {
+  const v = value.trim();
+  if (v.length >= 2 && v.startsWith('"') && v.endsWith('"')) return v.slice(1, -1).replace(/\\(.)/g, "$1");
+  return v;
+}
+
+/**
+ * Extract `pageId` from the rel="next" entry of an RFC 5988/8288 Link header;
+ * null when absent. Link-values are split on commas outside URI references and
+ * quoted strings, so a parameter such as title="a, b" does not split an entry.
+ */
 export function nextPageIdFromLink(header: string | null | undefined): string | null {
   if (typeof header !== "string" || header.length === 0) return null;
-  const entries = header.match(/<[^>]*>[^,<]*/g) ?? [];
-  for (const entry of entries) {
-    const url = /^<([^>]*)>/.exec(entry)?.[1];
-    if (!url) continue;
-    const rel = /;\s*rel\s*=\s*(?:"([^"]*)"|([^;\s]+))/i.exec(entry);
-    const rels = (rel?.[1] ?? rel?.[2] ?? "").toLowerCase().split(/\s+/);
+  for (const entry of splitOutsideQuotes(header, ",")) {
+    const [target, ...params] = splitOutsideQuotes(entry, ";");
+    const url = /^\s*<([^>]*)>\s*$/.exec(target ?? "")?.[1];
+    if (url == null || url.length === 0) continue;
+    let rels: string[] = [];
+    for (const param of params) {
+      const eq = param.indexOf("=");
+      if (eq < 0) continue;
+      if (param.slice(0, eq).trim().toLowerCase() !== "rel") continue;
+      rels = unquote(param.slice(eq + 1)).toLowerCase().split(/\s+/).filter(Boolean);
+      break; // RFC 8288: only the first rel parameter counts.
+    }
     if (!rels.includes("next")) continue;
     try {
       const pageId = new URL(url, "https://api.smartrecruiters.com").searchParams.get("pageId");

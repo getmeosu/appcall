@@ -132,8 +132,8 @@ describe("SmartRecruiters manifest", () => {
     expect(manifest.key).toBe("smartrecruiters");
   });
 
-  it("has version 0.7.0", () => {
-    expect(manifest.version).toBe("0.7.0");
+  it("has version 0.7.1", () => {
+    expect(manifest.version).toBe("0.7.1");
   });
 
   it("uses bun runtime", () => {
