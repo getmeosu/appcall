@@ -25,7 +25,7 @@ export type NormalizedNotification = {
   subjectUrl: string;
   repository: string;
   updatedAt: string;
-  lastReadAt: string;
+  lastReadAt: string | null;
   url: string;
   modelVersion: "2026-05-16";
   raw: GitHubNotification;
@@ -43,7 +43,7 @@ export function normalizeGitHubNotification(thread: GitHubNotification): Normali
     subjectUrl: thread.subject?.url ?? "",
     repository: thread.repository?.full_name ?? "",
     updatedAt: thread.updated_at ?? "",
-    lastReadAt: thread.last_read_at ?? "",
+    lastReadAt: thread.last_read_at ?? null,
     url: thread.url ?? "",
     modelVersion: "2026-05-16",
     raw: thread,
@@ -67,8 +67,8 @@ export type NormalizedTeam = {
   teamId: number;
   name: string;
   slug: string;
-  description: string;
-  privacy: string;
+  description: string | null;
+  privacy: string | null;
   permission: string;
   url: string;
   modelVersion: "2026-05-16";
@@ -82,8 +82,8 @@ export function normalizeGitHubTeam(team: GitHubTeam): NormalizedTeam {
     teamId: team.id,
     name: team.name ?? "",
     slug: team.slug ?? "",
-    description: typeof team.description === "string" ? team.description : "",
-    privacy: team.privacy ?? "",
+    description: typeof team.description === "string" ? team.description : null,
+    privacy: team.privacy ?? null,
     permission: team.permission ?? "",
     url: team.html_url ?? "",
     modelVersion: "2026-05-16",

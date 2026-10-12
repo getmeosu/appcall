@@ -31,9 +31,9 @@ export type SearchLabelsInput = {
 
 export type NormalizedTopic = {
   name: string;
-  displayName: string;
-  shortDescription: string;
-  description: string;
+  displayName: string | null;
+  shortDescription: string | null;
+  description: string | null;
   featured: boolean;
   curated: boolean;
   score: number;
@@ -46,7 +46,7 @@ export type NormalizedLabelSearch = {
   name: string;
   color: string;
   default: boolean;
-  description: string;
+  description: string | null;
   score: number;
   url: string;
 };
@@ -89,9 +89,9 @@ export function validateSearchLabelsInput(input: unknown): SearchLabelsInput {
 export function normalizeTopic(item: Record<string, unknown>): NormalizedTopic {
   return {
     name: typeof item.name === "string" ? item.name : "",
-    displayName: typeof item.display_name === "string" ? item.display_name : "",
-    shortDescription: typeof item.short_description === "string" ? item.short_description : "",
-    description: typeof item.description === "string" ? item.description : "",
+    displayName: typeof item.display_name === "string" ? item.display_name : null,
+    shortDescription: typeof item.short_description === "string" ? item.short_description : null,
+    description: typeof item.description === "string" ? item.description : null,
     featured: item.featured === true,
     curated: item.curated === true,
     score: typeof item.score === "number" ? item.score : 0,
@@ -106,7 +106,7 @@ export function normalizeLabelSearch(item: Record<string, unknown>): NormalizedL
     name: typeof item.name === "string" ? item.name : "",
     color: typeof item.color === "string" ? item.color : "",
     default: item.default === true,
-    description: typeof item.description === "string" ? item.description : "",
+    description: typeof item.description === "string" ? item.description : null,
     score: typeof item.score === "number" ? item.score : 0,
     url: typeof item.url === "string" ? item.url : "",
   };

@@ -69,7 +69,7 @@ export type NormalizedLabel = {
   providerLabelId: number;
   name: string;
   color: string;
-  description: string;
+  description: string | null;
   default: boolean;
   url: string;
   modelVersion: "2026-05-16";
@@ -83,7 +83,7 @@ export function normalizeLabel(item: Record<string, unknown>): NormalizedLabel {
     providerLabelId: typeof item.id === "number" ? item.id : 0,
     name: typeof item.name === "string" ? item.name : "",
     color: typeof item.color === "string" ? item.color : "",
-    description: typeof item.description === "string" ? item.description : "",
+    description: typeof item.description === "string" ? item.description : null,
     default: item.default === true,
     url: typeof item.url === "string" ? item.url : "",
     modelVersion: "2026-05-16",
