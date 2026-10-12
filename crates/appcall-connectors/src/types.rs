@@ -534,6 +534,11 @@ pub const POLL_MAX_TRIGGER_LEN: usize = 128;
 /// changed; otherwise the item's canonical JSON does. Items new to the seen
 /// state emit `onNew` trigger names; changed items emit `onChanged`.
 ///
+/// `triggerFilters` narrows individual triggers: a filtered trigger is
+/// emitted for an item only when the subscription input carries
+/// `inputField` (a string or integer) and the item's `itemField` equals it.
+/// A subscription without that input never emits the filtered trigger.
+///
 /// ```
 /// let spec: appcall_connectors::PollSpec = serde_json::from_value(serde_json::json!({
 ///     "intervalSeconds": 300, "itemKey": "id", "versionKey": "updatedAt",
@@ -554,8 +559,43 @@ pub struct PollSpec {
     pub on_new: Vec<String>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub on_changed: Vec<String>,
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub trigger_filters: BTreeMap<String, PollTriggerFilter>,
+}
+/// Per-trigger field filter of a [`PollSpec`]: item `itemField` must equal
+/// subscription input `inputField`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct PollTriggerFilter {
+    pub item_field: String,
+    pub input_field: String,
+}
+impl PollTriggerFilter {
+    /// Whether `item` passes for a subscription with `input`. A missing,
+    /// null or non-scalar input value fails closed.
+    pub fn matches(&self, item: &Value, input: &Value) -> bool {
+        match input.get(&self.input_field) {
+            Some(want @ (Value::String(_) | Value::Number(_))) => {
+                item.get(&self.item_field) == Some(want)
+            }
+            _ => false,
+        }
+    }
 }
 impl PollSpec {
+    /// Trigger names for `change` that pass their filters for `item` under
+    /// the subscription `input`; empty means "do not emit".
+    pub fn triggers_for(&self, change: PollChange, item: &Value, input: &Value) -> Vec<String> {
+        self.triggers(change)
+            .iter()
+            .filter(|t| {
+                self.trigger_filters
+                    .get(t.as_str())
+                    .is_none_or(|f| f.matches(item, input))
+            })
+            .cloned()
+            .collect()
+    }
     const fn default_max_pages() -> u8 {
         1
     }

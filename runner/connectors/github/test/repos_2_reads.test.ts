@@ -41,8 +41,8 @@ const READS = [
 
 describe("github repos-2 repository metadata reads", () => {
   test("manifest wires exactly 9 reads with no effect meta", () => {
-    expect(manifest.version).toBe("0.88.0");
-    expect(Object.keys(manifest.operations).length).toBe(855);
+    expect(manifest.version).toBe("0.89.0");
+    expect(Object.keys(manifest.operations).length).toBe(859);
     expect(READS).toHaveLength(9);
     for (const key of READS) {
       const op = manifest.operations[key] as Record<string, unknown>;

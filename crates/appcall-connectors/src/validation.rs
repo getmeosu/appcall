@@ -209,6 +209,18 @@ fn validate_poll(
             FIELD,
         )?;
     }
+    for (trigger, filter) in &poll.trigger_filters {
+        require(
+            poll.on_new.contains(trigger) || poll.on_changed.contains(trigger),
+            FIELD,
+        )?;
+        require(
+            [&filter.item_field, &filter.input_field]
+                .iter()
+                .all(|f| key(f) && f.len() <= 64),
+            FIELD,
+        )?;
+    }
     Ok(())
 }
 impl SetupConfig {

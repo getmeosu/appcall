@@ -523,6 +523,13 @@ fn github_trig3a_poll_specs_load_through_the_manifest_loader() {
         s(&["GITHUB_DEPLOYMENT_STATE_CHANGED_TRIGGER"]),
         s(&["GITHUB_FOLLOWER_EVENT"]),
     );
+    // TRIG-3b (v0.89.0).
+    let (asset, content, notification, readme) = (
+        s(&["GITHUB_RELEASE_ASSET_ADDED_TRIGGER"]),
+        s(&["GITHUB_REPOSITORY_CONTENT_CHANGED_TRIGGER"]),
+        s(&["GITHUB_REPOSITORY_NOTIFICATION_RECEIVED_TRIGGER"]),
+        s(&["GITHUB_README_CHANGED_TRIGGER"]),
+    );
     let expected: Vec<PollRow> = vec![
         ("actions.artifacts.sync", 300, 1, None, &artifact, &[]),
         ("actions.workflows.sync", 900, 3, None, &workflow, &[]),
@@ -534,7 +541,82 @@ fn github_trig3a_poll_specs_load_through_the_manifest_loader() {
             &[],
             &deployment,
         ),
+        ("releases.assets.sync", 300, 1, None, &asset, &[]),
+        ("repos.contents.sync", 300, 1, None, &content, &[]),
+        (
+            "repos.notifications.sync",
+            60,
+            1,
+            Some("updatedAt"),
+            &notification,
+            &notification,
+        ),
+        ("repos.readme.sync", 300, 1, Some("sha"), &readme, &readme),
         ("user.followers.sync", 900, 10, None, &follower, &[]),
     ];
     assert_eq!(polled, expected);
+}
+
+#[test]
+fn poll_trigger_filters_narrow_one_trigger_and_fail_closed() {
+    use appcall_connectors::{PollChange, PollSpec};
+    use serde_json::json;
+    let spec: PollSpec = serde_json::from_value(json!({
+        "intervalSeconds": 300, "itemKey": "id",
+        "onNew": ["created", "run.added"],
+        "triggerFilters": {"run.added": {"itemField": "runId", "inputField": "runId"}}
+    }))
+    .unwrap();
+    let item = json!({"id": "a", "runId": 7});
+    let new = PollChange::New;
+    assert_eq!(
+        spec.triggers_for(new, &item, &json!({"runId": 7})),
+        ["created", "run.added"]
+    );
+    assert_eq!(
+        spec.triggers_for(new, &item, &json!({"runId": 8})),
+        ["created"]
+    );
+    // No run filter on the subscription: the filtered trigger is never emitted.
+    assert_eq!(spec.triggers_for(new, &item, &json!({})), ["created"]);
+    assert_eq!(
+        spec.triggers_for(new, &item, &json!({"runId": null})),
+        ["created"]
+    );
+    assert_eq!(
+        spec.triggers_for(new, &item, &json!({"runId": "7"})),
+        ["created"]
+    );
+    assert!(spec
+        .triggers_for(PollChange::Changed, &item, &json!({"runId": 7}))
+        .is_empty());
+
+    // The GitHub manifest carries the run filter on actions.artifacts.sync.
+    let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../runner/connectors/github/manifest.json");
+    let github = Connector::from_bytes(&std::fs::read(path).unwrap()).unwrap();
+    let artifacts = github.manifest().operations["actions.artifacts.sync"]
+        .poll
+        .clone()
+        .unwrap();
+    let filter = &artifacts.trigger_filters["GITHUB_WORKFLOW_RUN_ARTIFACT_ADDED"];
+    assert_eq!(
+        (filter.item_field.as_str(), filter.input_field.as_str()),
+        ("runId", "runId")
+    );
+}
+
+#[test]
+fn poll_trigger_filter_must_name_a_declared_trigger() {
+    let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../runner/connectors/github/manifest.json");
+    let mut manifest: serde_json::Value =
+        serde_json::from_slice(&std::fs::read(path).unwrap()).unwrap();
+    manifest["operations"]["actions.artifacts.sync"]["poll"]["triggerFilters"] =
+        serde_json::json!({"NOT_DECLARED": {"itemField": "runId", "inputField": "runId"}});
+    assert!(Connector::from_bytes(&serde_json::to_vec(&manifest).unwrap()).is_err());
+    manifest["operations"]["actions.artifacts.sync"]["poll"]["triggerFilters"] = serde_json::json!(
+        {"GITHUB_WORKFLOW_RUN_ARTIFACT_ADDED": {"itemField": "", "inputField": "runId"}}
+    );
+    assert!(Connector::from_bytes(&serde_json::to_vec(&manifest).unwrap()).is_err());
 }

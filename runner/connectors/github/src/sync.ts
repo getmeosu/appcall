@@ -4,7 +4,8 @@ import { requireSingleSegment } from "./path_segment";
 import { normalizeGitHubCommit, parseCommitsResponse, type NormalizedCommit } from "./commits";
 import { normalizeGitHubRepository, parseRepositoriesResponse, type NormalizedRepository } from "./repositories";
 import { createGitHubClient, parseGitHubRateLimit, parseNextPageFromLinkHeader } from "./http";
-import { listArtifacts, listAuthenticatedUserFollowers, listDeploymentStatuses, listDeployments, listWorkflows } from "./actions";
+import { getRepoReadme, listArtifacts, listAuthenticatedUserFollowers, listDeploymentStatuses, listDeployments, listReleases, listRepoCommits, listRepoNotifications, listWorkflows } from "./actions";
+import { normalizeGitHubReleaseAsset, type GitHubReleaseAsset } from "./releases";
 
 // GitHub sync ops.
 //
@@ -80,33 +81,17 @@ export function executeRepositoriesListSync(input: RepositoriesListSyncInput): R
 // Each one runs the matching read action with the same input (`cursor` becomes `page`), so the
 // request is byte-identical to that action's and the items are its normalized output.
 
-/**
- * Field filters for polled triggers. A trigger in a poll block's onNew/onChanged applies to an
- * emitted item only when its filter passes; the filter's parameter comes from the trigger
- * subscription's config. GITHUB_WORKFLOW_RUN_ARTIFACT_ADDED is tagged on every new artifact from
- * actions.artifacts.sync and narrows to one run by the item's provider workflow_run.id. (When this
- * stack sits on the TRIG-2 trigger map, this becomes its FieldFilter { kind: "workflowRunId" }.)
- */
-export const POLLED_TRIGGER_FILTERS: Readonly<Record<string, { kind: "workflowRunId"; param: "runId" }>> = {
-  GITHUB_WORKFLOW_RUN_ARTIFACT_ADDED: { kind: "workflowRunId", param: "runId" },
-};
-
-export function matchesPolledTrigger(trigger: string, item: unknown, params: Record<string, unknown> = {}): boolean {
-  const filter = POLLED_TRIGGER_FILTERS[trigger];
-  if (!filter) return true;
-  const runId = params[filter.param];
-  if (typeof runId !== "number" || !Number.isSafeInteger(runId) || runId <= 0) return false;
-  const raw = isRecord(item) && isRecord(item.raw) ? item.raw : {};
-  const run = isRecord(raw.workflow_run) ? raw.workflow_run : {};
-  return run.id === runId;
-}
+// GITHUB_WORKFLOW_RUN_ARTIFACT_ADDED is narrowed to one run by the manifest poll block's
+// triggerFilters (item runId == subscription input runId), applied by the platform's poll emit
+// path (appcall-sync, PollSpec::triggers_for). A subscription without runId never emits it;
+// GITHUB_ARTIFACT_CREATED_TRIGGER is unfiltered.
 
 export function executeArtifactsSync(input: unknown): Promise<SyncPage<Record<string, unknown>>> {
-  return viaAction(input, "actions.artifacts.sync", listArtifacts, "artifacts", "providerArtifactId");
+  return viaAction(input, "actions.artifacts.sync", listArtifacts, "artifacts", positiveId("providerArtifactId"));
 }
 
 export function executeWorkflowsSync(input: unknown): Promise<SyncPage<Record<string, unknown>>> {
-  return viaAction(input, "actions.workflows.sync", listWorkflows, "workflows", "providerWorkflowId");
+  return viaAction(input, "actions.workflows.sync", listWorkflows, "workflows", positiveId("providerWorkflowId"));
 }
 
 /**
@@ -120,11 +105,8 @@ export function executeWorkflowsSync(input: unknown): Promise<SyncPage<Record<st
 export async function executeDeploymentsSync(input: unknown): Promise<SyncPage<Record<string, unknown>>> {
   const operation = "deployments.sync";
   const payload = requireCredentials(input, operation);
-  const perPage = payload.perPage ?? DEPLOYMENTS_DEFAULT_PER_PAGE;
-  if (typeof perPage !== "number" || !Number.isInteger(perPage) || perPage < 1 || perPage > DEPLOYMENTS_MAX_PER_PAGE) {
-    throw new Error(`${operation}: perPage must be an integer from 1 to ${DEPLOYMENTS_MAX_PER_PAGE}`);
-  }
-  const page = await viaAction({ ...payload, perPage }, operation, listDeployments, "deployments", "providerDeploymentId");
+  const perPage = boundedPerPage(payload.perPage, operation, DEPLOYMENTS_DEFAULT_PER_PAGE, DEPLOYMENTS_MAX_PER_PAGE);
+  const page = await viaAction({ ...payload, perPage }, operation, listDeployments, "deployments", positiveId("providerDeploymentId"));
   const items = await mapLimit(page.items, STATUS_CONCURRENCY, async (item) => {
     const output = await listDeploymentStatuses({
       owner: payload.owner, repo: payload.repo, deploymentId: item.providerDeploymentId, perPage: 1,
@@ -141,7 +123,145 @@ export async function executeDeploymentsSync(input: unknown): Promise<SyncPage<R
 }
 
 export function executeFollowersSync(input: unknown): Promise<SyncPage<Record<string, unknown>>> {
-  return viaAction(input, "user.followers.sync", listAuthenticatedUserFollowers, "users", "providerUserId");
+  return viaAction(input, "user.followers.sync", listAuthenticatedUserFollowers, "users", positiveId("providerUserId"));
+}
+
+// ─── TRIG-3b polling syncs ────────────────────────────────────────────────────
+// Same pattern as TRIG-3a: each runs the matching read action with the same input.
+
+/**
+ * Release assets of the newest releases (releases.list page; GitHub embeds each release's assets),
+ * one item per asset, normalized like releases.assets.list plus `release` {providerReleaseId,
+ * tagName}. A new asset id emits GITHUB_RELEASE_ASSET_ADDED_TRIGGER. perPage counts releases
+ * (default 10, max 30) to bound the response; only assets of releases on that page are seen.
+ */
+export async function executeReleaseAssetsSync(input: unknown): Promise<SyncPage<Record<string, unknown>>> {
+  const operation = "releases.assets.sync";
+  const payload = requireCredentials(input, operation);
+  const perPage = boundedPerPage(payload.perPage, operation, RELEASES_DEFAULT_PER_PAGE, RELEASES_MAX_PER_PAGE);
+  const page = await viaAction({ ...payload, perPage }, operation, listReleases, "releases", positiveId("providerReleaseId"));
+  const items = page.items.flatMap((release) => {
+    const raw = isRecord(release.raw) ? release.raw : {};
+    if (!Array.isArray(raw.assets)) throw upstream(`${operation}: GitHub returned a release without an assets list`);
+    return raw.assets.filter(isRecord).map((asset) => {
+      const item = normalizeGitHubReleaseAsset(asset as GitHubReleaseAsset) as unknown as Record<string, unknown>;
+      if (!positiveId("providerAssetId")(item)) throw upstream(`${operation}: GitHub returned an asset without an id`);
+      return { ...item, release: { providerReleaseId: release.providerReleaseId, tagName: release.tagName } };
+    });
+  });
+  return { ...page, items };
+}
+
+/**
+ * Repository notification threads (repos.notifications.list page 1, newest updated first). A
+ * thread is keyed by its id with version `updatedAt`, so both a new thread and a new notification
+ * on an existing thread emit GITHUB_REPOSITORY_NOTIFICATION_RECEIVED_TRIGGER. `since`/`before`
+ * are not accepted (the poll diff replaces them); GitHub's Last-Modified/X-Poll-Interval are
+ * not honoured beyond the fixed 60 s poll interval.
+ */
+export async function executeRepoNotificationsSync(input: unknown): Promise<SyncPage<Record<string, unknown>>> {
+  const operation = "repos.notifications.sync";
+  const payload = requireCredentials(input, operation);
+  for (const key of ["since", "before"]) if (key in payload) throw new Error(`${operation}: ${key} is not accepted; the poll tracks new notifications`);
+  const baseFetch = typeof payload.fetch === "function" ? (payload.fetch as typeof fetch) : fetch;
+  let forbidden: { headers: Headers; body: unknown } | null = null;
+  const capture = (async (url: string | URL | Request, init?: RequestInit) => {
+    const response = await baseFetch(url, init);
+    if (response.status === 403) {
+      let body: unknown = null;
+      try { body = await response.clone().json(); } catch { body = null; }
+      forbidden = { headers: response.headers, body };
+    }
+    return response;
+  }) as typeof fetch;
+  try {
+    return await viaAction({ ...payload, fetch: capture }, operation, listRepoNotifications, "notifications", (item) =>
+      typeof item.threadId === "string" && item.threadId.length > 0 && typeof item.updatedAt === "string" && item.updatedAt.length > 0);
+  } catch (error) {
+    const missing = forbidden ? notificationsCapabilityMissing(forbidden) : null;
+    if (missing) throw missing;
+    throw error;
+  }
+}
+
+/**
+ * GitHub's notifications endpoints only accept OAuth user tokens and classic PATs with the
+ * `notifications` scope ("This endpoint does not work with GitHub App user access tokens, GitHub
+ * App installation access tokens, or fine-grained personal access tokens."). A 403 maps to
+ * CONNECTOR_CAPABILITY_MISSING (meta-ads-g3 shape, see graphql.ts):
+ * - X-OAuth-Scopes present without `notifications`: reason permission_missing, re-consent fixes it;
+ * - X-OAuth-Scopes absent (fine-grained PAT / GitHub App token; GitHub sends that header only for
+ *   OAuth and classic tokens): reason unsupported_token, re-consent alone does not fix it;
+ * - X-OAuth-Scopes includes `notifications`: not a capability problem; the provider error stands.
+ */
+function notificationsCapabilityMissing(forbidden: { headers: Headers; body: unknown }): Error | null {
+  const operation = "repos.notifications.sync";
+  const requiredScopes = ["notifications"];
+  const header = forbidden.headers.get("x-oauth-scopes");
+  const granted = header === null ? null : header.split(",").map((scope) => scope.trim()).filter((scope) => scope.length > 0);
+  if (granted !== null && granted.includes("notifications")) return null;
+  const unsupported = granted === null;
+  const message = unsupported
+    ? `GitHub ${operation} needs an OAuth user token or a classic personal access token with the notifications scope; fine-grained personal access tokens and GitHub App tokens are rejected (403). Reconnect GitHub with OAuth.`
+    : `GitHub ${operation} is missing permission notifications. Reconnect GitHub to re-consent with notifications.`;
+  return Object.assign(new Error(message), {
+    ok: false,
+    code: "CONNECTOR_CAPABILITY_MISSING",
+    status: 403,
+    reason: unsupported ? "unsupported_token" : "permission_missing",
+    missingScopes: unsupported ? [] : requiredScopes,
+    requiredScopes,
+    reconsentRequired: !unsupported,
+    providerCode: null,
+    providerSubcode: null,
+    providerError: isRecord(forbidden.body) ? forbidden.body : null,
+  });
+}
+
+/**
+ * The repository README (repos.readme.get) as at most one item with the constant key "readme" and
+ * version `sha` (blob sha), so any README change, including a rename, emits
+ * GITHUB_README_CHANGED_TRIGGER; a README that appears later is new and emits too. `content` is
+ * dropped (the event payload is bounded; read it with repos.readme.get). A repository without a
+ * README (404) yields no item, not an error; a deleted README emits nothing.
+ */
+export async function executeReadmeSync(input: unknown): Promise<SyncPage<Record<string, unknown>>> {
+  const operation = "repos.readme.sync";
+  const payload = requireCredentials(input, operation);
+  if ("cursor" in payload && payload.cursor !== undefined && payload.cursor !== null && payload.cursor !== "") {
+    throw new Error(`${operation}: cursor must be a cursor returned by this sync`);
+  }
+  const baseFetch = typeof payload.fetch === "function" ? (payload.fetch as typeof fetch) : fetch;
+  let status = 0;
+  const capture = (async (url: string | URL | Request, init?: RequestInit) => {
+    const response = await baseFetch(url, init);
+    status = response.status;
+    return response;
+  }) as typeof fetch;
+  const { cursor: _cursor, ...rest } = payload;
+  let output: Record<string, unknown>;
+  try {
+    output = await getRepoReadme({ ...rest, fetch: capture });
+  } catch (error) {
+    if (status === 404) return { provider: "github", operation, items: [], cursor: null };
+    throw error;
+  }
+  if (!isRecord(output.readme)) throw upstream(`${operation}: GitHub returned no readme`);
+  const { content: _content, ...readme } = output.readme;
+  if (typeof readme.sha !== "string" || readme.sha.length === 0) throw upstream(`${operation}: GitHub returned a readme without a sha`);
+  return { provider: "github", operation, items: [{ id: "readme", ...readme }], cursor: null };
+}
+
+/**
+ * Commits touching `path` (repos.commits.list with path, page 1, newest first), keyed by sha. A
+ * new commit for the path emits GITHUB_REPOSITORY_CONTENT_CHANGED_TRIGGER. `path` is required:
+ * without it this would be a generic push feed.
+ */
+export function executeContentsSync(input: unknown): Promise<SyncPage<Record<string, unknown>>> {
+  const operation = "repos.contents.sync";
+  const payload = requireCredentials(input, operation);
+  if (typeof payload.path !== "string" || payload.path.length === 0) throw new Error(`${operation}: path is required`);
+  return viaAction(payload, operation, listRepoCommits, "commits", (item) => typeof item.sha === "string" && /^[0-9a-f]{40}$/.test(item.sha));
 }
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
@@ -152,6 +272,8 @@ const DEFAULT_PER_PAGE = 100;
 const DEPLOYMENTS_DEFAULT_PER_PAGE = 20;
 const DEPLOYMENTS_MAX_PER_PAGE = 30;
 const STATUS_CONCURRENCY = 5;
+const RELEASES_DEFAULT_PER_PAGE = 10;
+const RELEASES_MAX_PER_PAGE = 30;
 type Rule = readonly string[] | "string";
 
 function hasCredentials(input: unknown): input is Input {
@@ -169,7 +291,7 @@ async function viaAction(
   operation: string,
   action: (input: unknown) => Record<string, unknown> | Promise<Record<string, unknown>>,
   listKey: string,
-  idKey: string,
+  hasProviderId: (item: Record<string, unknown>) => boolean,
 ): Promise<SyncPage<Record<string, unknown>>> {
   const payload = requireCredentials(input, operation);
   const page = pageFromCursor(payload.cursor, operation);
@@ -185,11 +307,8 @@ async function viaAction(
   const list = output[listKey];
   if (!Array.isArray(list)) throw upstream(`${operation}: GitHub returned no ${listKey} list`);
   const items = list.filter(isRecord);
-  for (const item of items) {
-    // The shared normalizers default a missing id to 0; a poll keyed on that would collapse items.
-    const id = item[idKey];
-    if (typeof id !== "number" || !Number.isSafeInteger(id) || id <= 0) throw upstream(`${operation}: GitHub returned an item without an id`);
-  }
+  // The shared normalizers default a missing id; a poll keyed on that would collapse items.
+  for (const item of items) if (!hasProviderId(item)) throw upstream(`${operation}: GitHub returned an item without an id`);
   return { provider: "github", operation, items, cursor: nextCursor(link, operation) };
 }
 
@@ -236,6 +355,21 @@ function filters(input: Input, operation: string, rules: Record<string, Rule>): 
   }
   query.per_page = String(perPage(input.perPage, operation));
   return query;
+}
+
+function positiveId(key: string): (item: Record<string, unknown>) => boolean {
+  return (item) => {
+    const id = item[key];
+    return typeof id === "number" && Number.isSafeInteger(id) && id > 0;
+  };
+}
+
+function boundedPerPage(value: unknown, operation: string, fallback: number, max: number): number {
+  const perPage = value ?? fallback;
+  if (typeof perPage !== "number" || !Number.isInteger(perPage) || perPage < 1 || perPage > max) {
+    throw new Error(`${operation}: perPage must be an integer from 1 to ${max}`);
+  }
+  return perPage;
 }
 
 function perPage(value: unknown, operation: string): number {

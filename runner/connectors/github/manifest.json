@@ -1,7 +1,7 @@
 {
   "key": "github",
   "name": "GitHub",
-  "version": "0.88.0",
+  "version": "0.89.0",
   "runtime": "bun",
   "categories": [
     "dev-tools"
@@ -19,7 +19,8 @@
     ],
     "setup": {
       "mode": "oauth2",
-      "fields": []
+      "fields": [],
+      "help": "Connect with GitHub OAuth (scopes: repo, read:org, admin:repo_hook, admin:org_hook, gist, notifications, admin:org). Notification reads and the repos.notifications.sync trigger need an OAuth user token or a classic personal access token with the notifications scope; fine-grained personal access tokens and GitHub App tokens get a 403 from GitHub's notifications endpoints."
     }
   },
   "network": {
@@ -1890,7 +1891,7 @@
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
       "title": "Poll Artifacts",
-      "description": "Poll workflow artifacts via the same request as actions.artifacts.list: GET /repos/{owner}/{repo}/actions/artifacts, or .../actions/runs/{run_id}/artifacts when runId is set. Items are actions.artifacts.list artifacts. A new artifact id emits GITHUB_ARTIFACT_CREATED_TRIGGER and GITHUB_WORKFLOW_RUN_ARTIFACT_ADDED; the latter is narrowed by its field filter on the item's workflow_run.id (the trigger's runId). Live only: needs the connection's credentials. Input cursor (from the previous page's cursor) selects the page; the output is {provider, operation, items, cursor}, with cursor null on the last page.",
+      "description": "Poll workflow artifacts via the same request as actions.artifacts.list: GET /repos/{owner}/{repo}/actions/artifacts, or .../actions/runs/{run_id}/artifacts when runId is set. Items are actions.artifacts.list artifacts. A new artifact id emits GITHUB_ARTIFACT_CREATED_TRIGGER and GITHUB_WORKFLOW_RUN_ARTIFACT_ADDED; GITHUB_WORKFLOW_RUN_ARTIFACT_ADDED is emitted only when the subscription input has runId and the artifact's runId (workflow_run.id) equals it (poll.triggerFilters); a subscription without runId never emits it. Live only: needs the connection's credentials. Input cursor (from the previous page's cursor) selects the page; the output is {provider, operation, items, cursor}, with cursor null on the last page.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -1928,7 +1929,13 @@
         "onNew": [
           "GITHUB_ARTIFACT_CREATED_TRIGGER",
           "GITHUB_WORKFLOW_RUN_ARTIFACT_ADDED"
-        ]
+        ],
+        "triggerFilters": {
+          "GITHUB_WORKFLOW_RUN_ARTIFACT_ADDED": {
+            "itemField": "runId",
+            "inputField": "runId"
+          }
+        }
       }
     },
     "actions.workflows.sync": {
@@ -48849,6 +48856,185 @@
             ]
           }
         }
+      }
+    },
+    "releases.assets.sync": {
+      "kind": "sync",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Poll Release Assets",
+      "description": "Poll release assets via the same request as releases.list: GET /repos/{owner}/{repo}/releases (newest first; GitHub embeds each release's assets). Items are one per asset, normalized like releases.assets.list, plus release {providerReleaseId, tagName}. A new asset id emits GITHUB_RELEASE_ASSET_ADDED_TRIGGER. perPage counts releases (default 10, max 30); assets of releases beyond that page are not seen. Live only: needs the connection's credentials. The output is {provider, operation, items, cursor}; cursor selects the next releases page, null on the last page.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "perPage": {
+            "type": "number",
+            "description": "Releases per page, 1 to 30. Defaults to 10 for this sync."
+          }
+        },
+        "required": [
+          "owner",
+          "repo"
+        ],
+        "additionalProperties": false
+      },
+      "poll": {
+        "intervalSeconds": 300,
+        "itemKey": "id",
+        "maxPages": 1,
+        "onNew": [
+          "GITHUB_RELEASE_ASSET_ADDED_TRIGGER"
+        ]
+      }
+    },
+    "repos.notifications.sync": {
+      "kind": "sync",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Poll Repository Notifications",
+      "description": "Poll the authenticated user's notification threads for a repository via the same request as repos.notifications.list: GET /repos/{owner}/{repo}/notifications (most recently updated first). Items are repos.notifications.list threads keyed by thread id with version updatedAt, so a new thread and a new notification on an existing thread both emit GITHUB_REPOSITORY_NOTIFICATION_RECEIVED_TRIGGER. since and before are not accepted; GitHub's Last-Modified and X-Poll-Interval are not used beyond the fixed 60-second interval. Needs an OAuth user token or a classic personal access token with the notifications scope; fine-grained personal access tokens and GitHub App tokens get a 403, reported as CONNECTOR_CAPABILITY_MISSING (reason unsupported_token; a token without the notifications scope gets reason permission_missing with missingScopes [notifications] and reconsentRequired). Live only: needs the connection's credentials. The output is {provider, operation, items, cursor}; cursor selects the next page, null on the last page.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "all": {
+            "type": "boolean",
+            "description": "When true, include read notifications."
+          },
+          "participating": {
+            "type": "boolean",
+            "description": "When true, only notifications the user participates in."
+          },
+          "perPage": {
+            "type": "number",
+            "description": "Results per page, 1 to 100. Defaults to 100 for this sync."
+          }
+        },
+        "required": [
+          "owner",
+          "repo"
+        ],
+        "additionalProperties": false
+      },
+      "poll": {
+        "intervalSeconds": 60,
+        "itemKey": "id",
+        "versionKey": "updatedAt",
+        "maxPages": 1,
+        "onNew": [
+          "GITHUB_REPOSITORY_NOTIFICATION_RECEIVED_TRIGGER"
+        ],
+        "onChanged": [
+          "GITHUB_REPOSITORY_NOTIFICATION_RECEIVED_TRIGGER"
+        ]
+      }
+    },
+    "repos.readme.sync": {
+      "kind": "sync",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Poll README",
+      "description": "Poll the repository README via the same request as repos.readme.get: GET /repos/{owner}/{repo}/readme (optionally ?ref=). At most one item, with the constant id \"readme\", the repos.readme.get fields except content, and version sha (the blob sha). Any README change, including a rename, emits GITHUB_README_CHANGED_TRIGGER, as does a README that appears after subscribing. A repository without a README yields no item; deleting the README emits nothing. Live only: needs the connection's credentials. The output is {provider, operation, items, cursor}; cursor is always null.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "ref": {
+            "type": "string",
+            "description": "The commit, branch, or tag to read the README from. Default: the repository's default branch."
+          }
+        },
+        "required": [
+          "owner",
+          "repo"
+        ],
+        "additionalProperties": false
+      },
+      "poll": {
+        "intervalSeconds": 300,
+        "itemKey": "id",
+        "versionKey": "sha",
+        "maxPages": 1,
+        "onNew": [
+          "GITHUB_README_CHANGED_TRIGGER"
+        ],
+        "onChanged": [
+          "GITHUB_README_CHANGED_TRIGGER"
+        ]
+      }
+    },
+    "repos.contents.sync": {
+      "kind": "sync",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Poll Repository Content Changes",
+      "description": "Poll commits that touch a path via the same request as repos.commits.list: GET /repos/{owner}/{repo}/commits?path= (newest first). Items are repos.commits.list commits keyed by sha. A new commit for the path emits GITHUB_REPOSITORY_CONTENT_CHANGED_TRIGGER. path is required (a file or directory). Live only: needs the connection's credentials. The output is {provider, operation, items, cursor}; cursor selects the next page, null on the last page.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "path": {
+            "type": "string",
+            "minLength": 1,
+            "description": "File or directory path whose changes are tracked."
+          },
+          "sha": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Branch or SHA to list commits from. Default: the repository's default branch."
+          },
+          "perPage": {
+            "type": "number",
+            "description": "Results per page, 1 to 100. Defaults to 100 for this sync."
+          }
+        },
+        "required": [
+          "owner",
+          "repo",
+          "path"
+        ],
+        "additionalProperties": false
+      },
+      "poll": {
+        "intervalSeconds": 300,
+        "itemKey": "id",
+        "maxPages": 1,
+        "onNew": [
+          "GITHUB_REPOSITORY_CONTENT_CHANGED_TRIGGER"
+        ]
       }
     }
   },
