@@ -55,7 +55,7 @@ function formObject(raw: string | null): Record<string, string> {
 describe("stripe manifest", () => {
   test("has bounded host, Bearer secret-key auth, version, and compiles", () => {
     expect(manifest.key).toBe("stripe");
-    expect(manifest.version).toBe("0.2.2");
+    expect(manifest.version).toBe("0.2.3");
     expect(manifest.runtime).toBe("bun");
     expect(manifest.categories).toEqual(["payments"]);
     expect(manifest.network.allowedHosts).toEqual(["api.stripe.com", "files.stripe.com"]);
@@ -104,6 +104,17 @@ describe("stripe manifest", () => {
     }
   });
 
+  test("readOnlyPost is explicit, POST-only, and limited to the create_preview reroutes", () => {
+    const overridden = Object.entries(operations).filter(([, operation]) => "readOnlyPost" in operation).map(([key]) => key).sort();
+    expect(overridden).toEqual(["invoices.upcoming.get", "invoices.upcoming.lines.list"]);
+    for (const key of overridden) {
+      const operation = operations[key]!;
+      expect(operation.readOnlyPost, key).toBe(true);
+      expect((operation.request as Record<string, unknown>).method, key).toBe("POST");
+      expect(operation.sideEffect, key).toBe("read");
+    }
+  });
+
   test("classifies mutating HTTP methods as write or destructive", () => {
     for (const [key, operation] of Object.entries(operations)) {
       if (!operation.request) {
@@ -113,6 +124,9 @@ describe("stripe manifest", () => {
       }
       const method = String((operation.request as Record<string, unknown>).method);
       if (method === "DELETE") expect(operation.sideEffect, key).toBe("destructive");
+      // ST-0b: a POST that only reads (e.g. invoices/create_preview) may opt out
+      // of the blanket rule with an explicit per-op `readOnlyPost: true`.
+      else if (method === "POST" && operation.readOnlyPost === true) expect(operation.sideEffect, key).toBe("read");
       else if (["POST", "PUT", "PATCH"].includes(method)) expect(operation.sideEffect, key).toBe("write");
       else expect(operation.sideEffect, key).toBe("read");
     }
