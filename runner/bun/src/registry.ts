@@ -1638,7 +1638,26 @@ export type RegistryFailure = {
   code: string;
   message: string;
   retryAfterSeconds?: number;
+  // SRV-ERR-2: the value a handler threw synchronously, kept (non-enumerable)
+  // so the server maps it exactly like the same value rejected asynchronously,
+  // including CONNECTOR_CAPABILITY_MISSING scope fields.
+  cause?: unknown;
 };
+
+// healthcheckThrowFailure turns a synchronous healthcheck throw into a
+// RegistryFailure while preserving the thrown value as `cause` (SRV-ERR-2).
+function healthcheckThrowFailure(error: unknown): RegistryFailure {
+  const failure: RegistryFailure = isRecord(error) && typeof error.code === "string" && error.code.length > 0
+    ? {
+      ok: false,
+      code: error.code,
+      ...(typeof error.retryAfterSeconds === "number" && Number.isSafeInteger(error.retryAfterSeconds) && error.retryAfterSeconds > 0 ? { retryAfterSeconds: error.retryAfterSeconds } : {}),
+      message: typeof error.message === "string" ? error.message : "Connector healthcheck failed.",
+    }
+    : { ok: false, code: "CONNECTOR_UPSTREAM_ERROR", message: error instanceof Error ? error.message : "Connector healthcheck failed." };
+  Object.defineProperty(failure, "cause", { value: error, enumerable: false });
+  return failure;
+}
 
 export type RegistryActionResult =
   | { ok: true; output: unknown }
@@ -3795,19 +3814,7 @@ export function createConnectorRegistry(input: {
           ),
         };
       } catch (error) {
-        if (isRecord(error) && typeof error.code === "string" && error.code.length > 0) {
-          return {
-            ok: false,
-            code: error.code,
-            ...(typeof error.retryAfterSeconds === "number" && Number.isSafeInteger(error.retryAfterSeconds) && error.retryAfterSeconds>0 ? {retryAfterSeconds:error.retryAfterSeconds}:{}),
-            message: typeof error.message === "string" ? error.message : "Connector healthcheck failed.",
-          };
-        }
-        return {
-          ok: false,
-          code: "CONNECTOR_UPSTREAM_ERROR",
-          message: error instanceof Error ? error.message : "Connector healthcheck failed.",
-        };
+        return healthcheckThrowFailure(error);
       }
     },
     executeAction(connectorKey: string, action: string, inputValue: unknown): RegistryActionResult {
@@ -3891,19 +3898,7 @@ export function createConnectorRegistry(input: {
             ),
           };
         } catch (error) {
-          if (isRecord(error) && typeof error.code === "string" && error.code.length > 0) {
-            return {
-              ok: false,
-              code: error.code,
-              ...(typeof error.retryAfterSeconds === "number" && Number.isSafeInteger(error.retryAfterSeconds) && error.retryAfterSeconds > 0 ? { retryAfterSeconds: error.retryAfterSeconds } : {}),
-              message: typeof error.message === "string" ? error.message : "Connector healthcheck failed.",
-            };
-          }
-          return {
-            ok: false,
-            code: "CONNECTOR_UPSTREAM_ERROR",
-            message: error instanceof Error ? error.message : "Connector healthcheck failed.",
-          };
+          return healthcheckThrowFailure(error);
         }
       }
       return {
