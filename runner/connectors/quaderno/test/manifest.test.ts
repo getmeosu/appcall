@@ -10,7 +10,7 @@ const operations = manifest.operations as Record<string, Record<string, unknown>
 describe("quaderno manifest", () => {
   it("keeps the connector identity and bumps the deepened version", () => {
     expect(manifest.key).toBe("quaderno");
-    expect(manifest.version).toBe("0.3.0");
+    expect(manifest.version).toBe("0.3.1");
     expect(manifest.runtime).toBe("bun");
     expect(manifest.categories).toEqual(["accounting"]);
   });

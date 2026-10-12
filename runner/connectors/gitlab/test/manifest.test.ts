@@ -10,7 +10,7 @@ describe("gitlab manifest", () => {
   it("declares the connector identity the control plane keys on", () => {
     expect(manifest.key).toBe("gitlab");
     expect(manifest.runtime).toBe("bun");
-    expect(manifest.version).toBe("0.3.0");
+    expect(manifest.version).toBe("0.3.1");
     expect(manifest.categories).toEqual(["productivity"]);
     expect(manifest.models.length).toBeGreaterThan(0);
   });

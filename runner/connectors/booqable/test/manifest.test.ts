@@ -13,7 +13,7 @@ describe("booqable manifest", () => {
   it("keeps connector identity, bun runtime, and api key auth", () => {
     expect(manifest.key).toBe("booqable");
     expect(manifest.runtime).toBe("bun");
-    expect(manifest.version).toBe("0.2.0");
+    expect(manifest.version).toBe("0.2.1");
     expect(manifest.auth.type).toBe("api_key");
     expect(manifest.http.baseUrl).toBe("https://{{companySlug}}.booqable.com/api/4");
     expect(manifest.http.auth).toEqual({

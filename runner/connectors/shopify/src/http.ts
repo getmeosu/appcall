@@ -1,5 +1,19 @@
 import { createConnectorHttpClient } from "../../../bun/src/http";
 import manifest from "../manifest.json";
+import { assertHostLabel } from "../../_shared/jobboard";
+
+/**
+ * SEC-SETUP-1: the shop subdomain is the leftmost label of `<shop>.myshopify.com`
+ * and must be one RFC 1123 label. Stored spellings keep working: surrounding
+ * whitespace, a scheme, trailing slashes and the `.myshopify.com` suffix (any
+ * case) are dropped first.
+ */
+export function normalizeShopDomain(value: unknown): string {
+  const text = typeof value === "string"
+    ? value.trim().replace(/^https?:\/\//i, "").replace(/\/+$/, "").replace(/\.myshopify\.com$/i, "")
+    : value;
+  return assertHostLabel(text, "shopDomain");
+}
 
 // Admin REST API version pin. Shopify-0 bumps 2025-01→2026-10 (2025-01 past
 // 12-mo support; fall-forward is not a pin). Keep REST routes; GraphQL migrate
@@ -33,7 +47,7 @@ export type ShopifyClientOptions = { accessToken: string; shopDomain: string; fe
 export function createShopifyClient(options: ShopifyClientOptions) {
   const operation = options.operation ?? "products.list";
   const maxResponseBytes = (manifest.operations as Record<string, { maxResponseBytes?: number }>)[operation]?.maxResponseBytes ?? 5242880;
-  const shop = options.shopDomain.replace(/\.myshopify\.com$/, "").replace(/^https?:\/\//, "").toLowerCase();
+  const shop = normalizeShopDomain(options.shopDomain);
   const baseUrl = `https://${shop}.myshopify.com`;
   const httpClient = createConnectorHttpClient({ allowedHosts: [`${shop}.myshopify.com`], maxResponseBytes, fetch: options.fetch });
   return {

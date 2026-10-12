@@ -10,7 +10,7 @@ const response = (body: unknown, status = 200, headers: Record<string, string> =
 describe("big-commerce depth", () => {
   test("keeps the connector key and bumps to 0.2.0 with 16 HTTP actions", () => {
     expect(manifest.key).toBe("big-commerce");
-    expect(manifest.version).toBe("0.2.0");
+    expect(manifest.version).toBe("0.2.1");
     const ops = Object.entries(manifest.operations);
     expect(ops.filter(([, spec]) => spec.kind === "action")).toHaveLength(16);
     expect(ops.filter(([, spec]) => spec.kind === "webhook")).toEqual([]);
