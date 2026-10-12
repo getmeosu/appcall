@@ -73,14 +73,15 @@ describe("authentication", () => {
     });
   });
 
-  it("never leaks basicAuth into the validated echo, because it is not a declared inputSchema property", () => {
-    const echoed = actions["page.create"]!({
+  it("never leaks basicAuth into the credential-free result, because it is not a declared inputSchema property", async () => {
+    const echoed = await Promise.resolve().then(() => actions["page.create"]!({
       site: "acme.atlassian.net",
       email: "me@acme.com",
       basicAuth: "bWU6dG9rMTIz",
       spaceId: "98765",
       title: "Draft",
-    }) as Record<string, unknown>;
+    })).catch((error: unknown) => error);
+    expect(echoed).toMatchObject({ ok: false, code: "MISSING_CREDENTIAL" });
     expect(JSON.stringify(echoed)).not.toContain("basicAuth");
     expect(JSON.stringify(echoed)).not.toContain("bWU6dG9rMTIz");
   });

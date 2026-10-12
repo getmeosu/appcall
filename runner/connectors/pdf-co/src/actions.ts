@@ -62,7 +62,11 @@ function assertValid(operation: string, input: Record<string, unknown>): void {
   delete rest.apiKey;
   delete rest.fetch;
   try {
-    compiled.actions[operation]!(rest);
+    // Validation throws synchronously. Valid input without a credential then
+    // settles as MISSING_CREDENTIAL (PLAT-NOCRED-1); this caller only wants
+    // the validation, so absorb that rejection instead of leaving it unhandled.
+    const pending = compiled.actions[operation]!(rest);
+    if (pending instanceof Promise) pending.catch(() => undefined);
   } catch (error) {
     throw {
       ok: false,

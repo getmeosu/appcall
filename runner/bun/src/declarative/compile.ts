@@ -13,6 +13,7 @@
 // escape hatch open for providers whose calls are genuinely irregular.
 
 import { createConnectorHttpClient, ConnectorHttpError } from "../http";
+import { missingCredentialFailure } from "../credentials";
 import { maxOperationResponseBytes } from "../budget";
 import { assertSafePathSegment, assertSafePathSegments, isRecord, renderPath, renderTemplate, resolvePath } from "./template";
 import { assertOutputSchema, validateAgainstSchema } from "./validate";
@@ -170,12 +171,18 @@ function compileOperation(
   };
 
   return function execute(input: unknown): unknown {
-    // No credential means this is the fixture-safe validation path: echo what
-    // the input would have been without touching the network. The control
-    // plane refuses to dispatch a credentialed connector without a credential,
-    // so this branch never surfaces from a real action.
+    // PLAT-NOCRED-1: no credential fails closed. Input is still validated
+    // first (an invalid call reports INVALID_ACTION_INPUT, as before), then a
+    // valid call without the declared credential rejects with the typed
+    // MISSING_CREDENTIAL error. Nothing is fetched and nothing is echoed as a
+    // fake "validated" success.
+    // The healthcheck keeps its static no-credential echo: its credential
+    // semantics are owned by HEALTH-1 and are out of scope here.
     if (!hasCredential(input, credentialField)) {
       validateInput(input);
+      if (operationKey !== "healthcheck") {
+        return Promise.reject(missingCredentialFailure());
+      }
       const echo = request.echo === undefined
         ? { validated: validateInput(input) }
         : renderTemplate(request.echo, isRecord(input) ? input : {});

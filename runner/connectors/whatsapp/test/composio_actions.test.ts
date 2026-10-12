@@ -190,10 +190,8 @@ describe("whatsapp declarative composio fixtures", () => {
       const handler = compiled.actions[item.operation];
       expect(handler, item.operation).toBeDefined();
 
-      const validated = handler(item.input) as Record<string, unknown>;
-      expect(validated.connector).toBe("whatsapp");
-      expect(validated.action).toBe(item.operation);
-      expect(validated.source).toBe("connector");
+      // PLAT-NOCRED-1: a valid input without a credential fails closed.
+      await expect(Promise.resolve().then(() => handler(item.input))).rejects.toMatchObject({ ok: false, code: "MISSING_CREDENTIAL" });
 
       let calls = 0;
       const result = await handler({

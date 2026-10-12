@@ -1,6 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import { compileDeclarativeConnector } from "../../../bun/src/declarative/compile";
 import cases from "../fixtures/contracts.json";
+const settle = (run: () => unknown): Promise<unknown> => Promise.resolve().then(run).catch((error: unknown) => error);
 
 const file = Bun.file(new URL("../manifest.json", import.meta.url));
 const manifest = await file.exists() ? await file.json() : { operations: {} };
@@ -13,9 +14,9 @@ describe("discord contracts", () => {
     expect(new Set(cases.map(c => c.operation)).size).toBe(cases.length);
   });
   for (const c of cases) {
-    it(`${c.operation}: fixture-safe echo excludes credentials and unknown input`, () => {
+    it(`${c.operation}: fixture-safe echo excludes credentials and unknown input`, async () => {
       expect(actions[c.operation]).toBeFunction();
-      expect(actions[c.operation]!({ ...c.input, unknown: "drop" })).toMatchObject(c.operation === "healthcheck" ? { source: "connector", status: "ok" } : { source: "connector", validated: c.input });
+      expect(await settle(() => actions[c.operation]!({ ...c.input, unknown: "drop" }))).toMatchObject(c.operation === "healthcheck" ? { source: "connector", status: "ok" } : { ok: false, code: "MISSING_CREDENTIAL" });
     });
     it(`${c.operation}: authenticated request and mapped response`, async () => {
       expect(actions[c.operation]).toBeFunction();

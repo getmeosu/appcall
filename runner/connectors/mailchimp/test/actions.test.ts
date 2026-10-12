@@ -21,12 +21,9 @@ describe("createContact action", () => {
     mockFetchJSON.mockClear();
   });
 
-  it("validates input without apiKey", () => {
-    const result = createContact({ listId: "list001", email: "test@example.com", firstName: "Test", lastName: "User" });
-    expect(result.connector).toBe("mailchimp");
-    expect(result.action).toBe("contacts.create");
-    expect((result as any).validated.email).toBe("test@example.com");
-    expect((result as any).validated.listId).toBe("list001");
+  it("validates input without apiKey", async () => {
+    // PLAT-NOCRED-1: input is validated, then the missing credential fails closed.
+    await expect(Promise.resolve().then(() => createContact({ listId: "list001", email: "test@example.com", firstName: "Test", lastName: "User" }))).rejects.toMatchObject({ ok: false, code: "MISSING_CREDENTIAL" });
   });
 
   it("throws when listId is missing", () => {

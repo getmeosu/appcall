@@ -429,6 +429,9 @@ function statusForRegistryFailure(code: string): number {
   if (code === "UNSUPPORTED_OPERATION_BUDGET" || code === "INVALID_ACTION_INPUT") {
     return 400;
   }
+  if (code === "MISSING_CREDENTIAL") {
+    return 422;
+  }
   return 404;
 }
 
@@ -455,6 +458,10 @@ export function statusForExecutionErrorCode(code: string): number {
       // 423 Locked: the upstream account is flagged/checkpointed. The control
       // plane quarantines the connection on this signal.
       return 423;
+    case "MISSING_CREDENTIAL":
+      // 422, matching the control plane's MISSING_CREDENTIAL mapping
+      // (crates/appcall-api/src/lib.rs): reconnect the connection.
+      return 422;
     case "CONNECTOR_ACTION_NOT_PERMITTED":
       // 422 Unprocessable: the provider refused this specific action (e.g. invite
       // cooldown). Not a whole-connection failure.

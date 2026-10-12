@@ -3,6 +3,7 @@ import { compileDeclarativeConnector } from "../../../bun/src/declarative/compil
 import cases from "../fixtures/contracts.json";
 import errors from "../fixtures/errors.json";
 import tools from "../fixtures/composio-tools.json";
+const settle = (run: () => unknown): Promise<unknown> => Promise.resolve().then(run).catch((error: unknown) => error);
 const credentials = { accessToken: "test-secret", instagramUserId: "17841400000000001" };
 const originOps = ["healthcheck", "users.get", "media.list", "media.get", "containers.createImage", "containers.createReel", "containers.get", "media.publish", "publishing.limit"];
 async function load() {
@@ -40,8 +41,8 @@ for (const c of cases) {
     expect(op.inputSchema.type).toBe("object");
     expect(op.outputSchema.type).toBe("object");
     expect(op.description.length).toBeGreaterThan(10);
-    const echo = await actions[c.op]!({ ...c.input });
-    expect(echo).toMatchObject(c.op === "healthcheck" ? { status: "ok" } : { validated: c.input });
+    const echo = await settle(() => actions[c.op]!({ ...c.input }));
+    expect(echo).toMatchObject(c.op === "healthcheck" ? { status: "ok" } : { ok: false, code: "MISSING_CREDENTIAL" });
   });
 }
 it("declares complete manual token contracts and bound account ID", async () => {

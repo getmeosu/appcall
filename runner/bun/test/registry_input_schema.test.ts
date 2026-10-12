@@ -118,10 +118,9 @@ describe("registry input schema validation", () => {
       expect(net.calls[0]).toContain("limit=10");
     });
 
-    test("the fixture-safe echo path (no credential) still validates and echoes", async () => {
+    test("valid input without a credential fails closed (PLAT-NOCRED-1), not a fake echo", () => {
       const result = defaultConnectorRegistry.executeAction("emailoctopus", "lists.list", { limit: 5 });
-      expect(result.ok).toBe(true);
-      if (result.ok) expect(await Promise.resolve(result.output)).toMatchObject({ connector: "emailoctopus", action: "lists.list", source: "connector" });
+      expect(result).toMatchObject({ ok: false, code: "MISSING_CREDENTIAL" });
     });
   });
 

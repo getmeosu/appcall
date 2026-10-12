@@ -115,7 +115,9 @@ export type DeclarativeRequest = {
   // body is returned under `data`.
   result?: unknown;
   // echo replaces the default `{ validated }` body of the no-credential
-  // response. A healthcheck uses it to keep the static setup-validation shape
+  // healthcheck response. Since PLAT-NOCRED-1 only a healthcheck (bolt's
+  // HEALTH-1 owns its semantics) renders it; every other operation rejects with
+  // MISSING_CREDENTIAL when the credential is missing. A healthcheck uses it to keep the static setup-validation shape
   // (`{ status: "ok" }`) that the control plane already understands.
   echo?: Record<string, unknown>;
 };

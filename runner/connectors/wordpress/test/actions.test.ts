@@ -1,6 +1,7 @@
 import { beforeAll, describe, expect, it } from "bun:test";
 import { existsSync, readFileSync } from "node:fs";
 import { compileDeclarativeConnector } from "../../../bun/src/declarative/compile";
+const settle = (run: () => unknown): Promise<unknown> => Promise.resolve().then(run).catch((error: unknown) => error);
 const cases = [
   {
     op: "healthcheck",
@@ -173,15 +174,15 @@ const fixture = (name: string) =>
 for (const c of cases)
   describe(c.op, () => {
     it("validates echo without leaking undeclared input", async () => {
-      const result = await actions[c.op]!({
+      const result = await settle(() => actions[c.op]!({
         ...c.input,
         host: "site.example",
         ignored: "secret",
-      });
+      }));
       expect(result).toMatchObject(
         c.op === "healthcheck"
           ? { status: "ok", source: "connector" }
-          : { validated: c.input, source: "connector" },
+          : { ok: false, code: "MISSING_CREDENTIAL" },
       );
       expect(JSON.stringify(result)).not.toContain("secret");
     });

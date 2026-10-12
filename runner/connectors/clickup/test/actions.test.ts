@@ -141,10 +141,9 @@ describe("hierarchy discovery", () => {
 });
 
 describe("tasks.list", () => {
-  it("returns the validated payload without a credential", () => {
-    const result = actions["tasks.list"]!({ listId: "901300000000", page: 0 }) as Record<string, unknown>;
-    expect(result.source).toBe("connector");
-    expect(result.validated).toEqual({ listId: "901300000000", page: 0 });
+  it("fails closed without a credential", async () => {
+    // PLAT-NOCRED-1: a valid input without a credential fails closed.
+    await expect(Promise.resolve().then(() => actions["tasks.list"]!({ listId: "901300000000", page: 0 }))).rejects.toMatchObject({ ok: false, code: "MISSING_CREDENTIAL" });
   });
 
   it("requires listId", () => {

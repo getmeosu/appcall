@@ -140,13 +140,11 @@ describe("pdf-co actions", () => {
     expect(paths).toEqual(["/v1/pdf/convert/to/png", "/v1/pdf/convert/to/jpg", "/v1/pdf/convert/to/tiff"]);
   });
 
-  test("echoes validated input without credentials and demotes error:true", async () => {
-    const echoed = await compiled.actions["pdf.merge"]!({ urls: `${SAMPLE},${SAMPLE}` });
-    expect(echoed).toMatchObject({
-      connector: "pdf-co",
-      action: "pdf.merge",
-      source: "connector",
-      validated: { urls: `${SAMPLE},${SAMPLE}` },
+  test("fails closed without credentials and demotes error:true", async () => {
+    // PLAT-NOCRED-1: valid input without a credential is MISSING_CREDENTIAL.
+    await expect(compiled.actions["pdf.merge"]!({ urls: `${SAMPLE},${SAMPLE}` })).rejects.toMatchObject({
+      ok: false,
+      code: "MISSING_CREDENTIAL",
     });
     await expect(
       compiled.actions["pdf.merge"]!({

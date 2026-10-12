@@ -22,5 +22,5 @@ describe("strict generated declarative integration", () => {
     await expect(action({ apiKey: "k", nested: { values: [Infinity] }, fetch: async () => { calls++; return new Response("{}"); } })).rejects.toMatchObject({ code: "INVALID_ACTION_INPUT" });
     expect(calls).toBe(0);
   });
-  test("legacy operation remains available without strict flags", async () => { const m = manifest(); (m.operations as any).check.validationMode = undefined; delete (m.operations as any).check.responseFormat; const action = compileDeclarativeConnector(m).actions.check!; const result = await action({ id: "x" }); expect(result).toMatchObject({ connector: "strict-fixture", action: "check" }); });
+  test("legacy operation remains available without strict flags", async () => { const m = manifest(); (m.operations as any).check.validationMode = undefined; delete (m.operations as any).check.responseFormat; const action = compileDeclarativeConnector(m).actions.check!; await expect(Promise.resolve().then(() => action({ id: "x" }))).rejects.toMatchObject({ code: "MISSING_CREDENTIAL" }); });
 });

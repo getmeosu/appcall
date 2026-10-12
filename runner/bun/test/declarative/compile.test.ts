@@ -155,15 +155,10 @@ describe("compileDeclarativeConnector", () => {
     expect(compiled.actions["contacts.list"]).toBeUndefined();
   });
 
-  it("returns a validated echo when the credential field is absent", () => {
+  it("fails closed with MISSING_CREDENTIAL when the credential field is absent (PLAT-NOCRED-1)", async () => {
     const compiled = compileDeclarativeConnector(manifest);
-    const result = compiled.actions["contacts.create"]!({ email: "a@x.com", firstName: "Ada" }) as Record<string, unknown>;
-    expect(result).toEqual({
-      connector: "demo",
-      action: "contacts.create",
-      source: "connector",
-      validated: { email: "a@x.com", firstName: "Ada" },
-    });
+    await expect(Promise.resolve().then(() => compiled.actions["contacts.create"]!({ email: "a@x.com", firstName: "Ada" })))
+      .rejects.toMatchObject({ ok: false, code: "MISSING_CREDENTIAL" });
   });
 
   it("throws the schema validation error when the echo input is invalid", () => {

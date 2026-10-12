@@ -56,12 +56,9 @@ describe("airtable manifest compiles to handlers", () => {
 });
 
 describe("records.list", () => {
-  it("returns the validated payload without a credential", () => {
-    const result = actions["records.list"]!({ baseId: "appX", tableIdOrName: "Contacts", pageSize: 25 }) as Record<string, unknown>;
-    expect(result.connector).toBe("airtable");
-    expect(result.action).toBe("records.list");
-    expect(result.source).toBe("connector");
-    expect(result.validated).toEqual({ baseId: "appX", tableIdOrName: "Contacts", pageSize: 25 });
+  it("fails closed without a credential", async () => {
+    // PLAT-NOCRED-1: a valid input without a credential fails closed.
+    await expect(Promise.resolve().then(() => actions["records.list"]!({ baseId: "appX", tableIdOrName: "Contacts", pageSize: 25 }))).rejects.toMatchObject({ ok: false, code: "MISSING_CREDENTIAL" });
   });
 
   it("requires baseId and tableIdOrName", () => {

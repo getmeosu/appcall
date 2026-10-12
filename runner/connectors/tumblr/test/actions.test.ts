@@ -2,11 +2,12 @@ import { describe, expect, it } from "bun:test";
 import { compileDeclarativeConnector } from "../../../bun/src/declarative/compile";
 import manifest from "../manifest.json";
 import cases from "../fixtures/contracts.json";
+const settle = (run: () => unknown): Promise<unknown> => Promise.resolve().then(run).catch((error: unknown) => error);
 const { actions } = compileDeclarativeConnector(manifest as never);
 for (const c of cases) describe(c.op, () => {
   it("validates without credentials", async () => {
-    const r = await actions[c.op]!({...c.input, unexpected:"ignored"});
-    expect(r).toMatchObject(c.op === "healthcheck" ? {status:"ok"} : {validated:c.input});
+    const r = await settle(() => actions[c.op]!({...c.input, unexpected:"ignored"}));
+    expect(r).toMatchObject(c.op === "healthcheck" ? {status:"ok"} : { ok: false, code: "MISSING_CREDENTIAL" });
     expect(JSON.stringify(r)).not.toContain("ignored");
   });
   it("sends the documented URL, method, authentication and body", async () => {

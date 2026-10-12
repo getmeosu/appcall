@@ -1,3 +1,4 @@
+import { missingCredentialFailure } from "../../../bun/src/credentials";
 import { createMailchimpClient, parseMailchimpRateLimit } from "./http";
 import { normalizeContact } from "./objects";
 import {
@@ -51,7 +52,9 @@ export function createContact(input: unknown): Record<string, unknown> | Promise
         throw { ok: false, code: "CONNECTOR_UPSTREAM_ERROR", message: "Mailchimp rejected the request." };
       });
   }
-  return { connector: "mailchimp", action: "contacts.create", source: "connector", validated: validateCreateContactInput(input) };
+  validateCreateContactInput(input);
+  // PLAT-NOCRED-1: no credential fails closed, never a fake "validated" success.
+  return Promise.reject(missingCredentialFailure());
 }
 
 function validateCreateContactInput(input: unknown): CreateContactInput {
@@ -78,7 +81,9 @@ export function getMember(input: unknown): Record<string, unknown> | Promise<Rec
         throw { ok: false, code: result.error.code, message: result.error.message };
       });
   }
-  return { connector: "mailchimp", action: "lists.members.get", source: "connector", validated: validateGetMemberInput(input) };
+  validateGetMemberInput(input);
+  // PLAT-NOCRED-1: no credential fails closed, never a fake "validated" success.
+  return Promise.reject(missingCredentialFailure());
 }
 
 // ─── lists.members.update ─────────────────────────────────────────────────────
@@ -94,7 +99,9 @@ export function updateMember(input: unknown): Record<string, unknown> | Promise<
         throw { ok: false, code: result.error.code, message: result.error.message };
       });
   }
-  return { connector: "mailchimp", action: "lists.members.update", source: "connector", validated: validateUpdateMemberInput(input) };
+  validateUpdateMemberInput(input);
+  // PLAT-NOCRED-1: no credential fails closed, never a fake "validated" success.
+  return Promise.reject(missingCredentialFailure());
 }
 
 // ─── lists.members.upsert ─────────────────────────────────────────────────────
@@ -110,7 +117,9 @@ export function upsertMember(input: unknown): Record<string, unknown> | Promise<
         throw { ok: false, code: result.error.code, message: result.error.message };
       });
   }
-  return { connector: "mailchimp", action: "lists.members.upsert", source: "connector", validated: validateUpsertMemberInput(input) };
+  validateUpsertMemberInput(input);
+  // PLAT-NOCRED-1: no credential fails closed, never a fake "validated" success.
+  return Promise.reject(missingCredentialFailure());
 }
 
 // ─── lists.members.delete ─────────────────────────────────────────────────────
@@ -126,7 +135,9 @@ export function deleteMember(input: unknown): Record<string, unknown> | Promise<
         throw { ok: false, code: result.error.code, message: result.error.message };
       });
   }
-  return { connector: "mailchimp", action: "lists.members.delete", source: "connector", validated: validateDeleteMemberInput(input) };
+  validateDeleteMemberInput(input);
+  // PLAT-NOCRED-1: no credential fails closed, never a fake "validated" success.
+  return Promise.reject(missingCredentialFailure());
 }
 
 // ─── lists.members.tags.add ───────────────────────────────────────────────────
@@ -142,7 +153,9 @@ export function addMemberTags(input: unknown): Record<string, unknown> | Promise
         throw { ok: false, code: result.error.code, message: result.error.message };
       });
   }
-  return { connector: "mailchimp", action: "lists.members.tags.add", source: "connector", validated: validateAddMemberTagsInput(input) };
+  validateAddMemberTagsInput(input);
+  // PLAT-NOCRED-1: no credential fails closed, never a fake "validated" success.
+  return Promise.reject(missingCredentialFailure());
 }
 
 // ─── lists.create ─────────────────────────────────────────────────────────────
@@ -158,7 +171,9 @@ export function createList(input: unknown): Record<string, unknown> | Promise<Re
         throw { ok: false, code: result.error.code, message: result.error.message };
       });
   }
-  return { connector: "mailchimp", action: "lists.create", source: "connector", validated: validateCreateListInput(input) };
+  validateCreateListInput(input);
+  // PLAT-NOCRED-1: no credential fails closed, never a fake "validated" success.
+  return Promise.reject(missingCredentialFailure());
 }
 
 // ─── lists.get ────────────────────────────────────────────────────────────────
@@ -174,7 +189,9 @@ export function getList(input: unknown): Record<string, unknown> | Promise<Recor
         throw { ok: false, code: result.error.code, message: result.error.message };
       });
   }
-  return { connector: "mailchimp", action: "lists.get", source: "connector", validated: validateGetListInput(input) };
+  validateGetListInput(input);
+  // PLAT-NOCRED-1: no credential fails closed, never a fake "validated" success.
+  return Promise.reject(missingCredentialFailure());
 }
 
 // ─── campaigns.create ─────────────────────────────────────────────────────────
@@ -190,7 +207,9 @@ export function createCampaign(input: unknown): Record<string, unknown> | Promis
         throw { ok: false, code: result.error.code, message: result.error.message };
       });
   }
-  return { connector: "mailchimp", action: "campaigns.create", source: "connector", validated: validateCreateCampaignInput(input) };
+  validateCreateCampaignInput(input);
+  // PLAT-NOCRED-1: no credential fails closed, never a fake "validated" success.
+  return Promise.reject(missingCredentialFailure());
 }
 
 // ─── campaigns.get ────────────────────────────────────────────────────────────
@@ -206,7 +225,9 @@ export function getCampaign(input: unknown): Record<string, unknown> | Promise<R
         throw { ok: false, code: result.error.code, message: result.error.message };
       });
   }
-  return { connector: "mailchimp", action: "campaigns.get", source: "connector", validated: validateGetCampaignInput(input) };
+  validateGetCampaignInput(input);
+  // PLAT-NOCRED-1: no credential fails closed, never a fake "validated" success.
+  return Promise.reject(missingCredentialFailure());
 }
 
 // ─── campaigns.send ───────────────────────────────────────────────────────────
@@ -222,7 +243,9 @@ export function sendCampaign(input: unknown): Record<string, unknown> | Promise<
         throw { ok: false, code: result.error.code, message: result.error.message };
       });
   }
-  return { connector: "mailchimp", action: "campaigns.send", source: "connector", validated: validateSendCampaignInput(input) };
+  validateSendCampaignInput(input);
+  // PLAT-NOCRED-1: no credential fails closed, never a fake "validated" success.
+  return Promise.reject(missingCredentialFailure());
 }
 
 export function unscheduleCampaign(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
@@ -235,7 +258,9 @@ export function unscheduleCampaign(input: unknown): Record<string, unknown> | Pr
         throwConnectorError(result.error);
       });
   }
-  return { connector: "mailchimp", action: "campaigns.unschedule", source: "connector", validated: validateUnscheduleCampaignInput(input) };
+  validateUnscheduleCampaignInput(input);
+  // PLAT-NOCRED-1: no credential fails closed, never a fake "validated" success.
+  return Promise.reject(missingCredentialFailure());
 }
 
 export function scheduleCampaign(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
@@ -248,7 +273,9 @@ export function scheduleCampaign(input: unknown): Record<string, unknown> | Prom
         throwConnectorError(result.error);
       });
   }
-  return { connector: "mailchimp", action: "campaigns.schedule", source: "connector", validated: validateScheduleCampaignInput(input) };
+  validateScheduleCampaignInput(input);
+  // PLAT-NOCRED-1: no credential fails closed, never a fake "validated" success.
+  return Promise.reject(missingCredentialFailure());
 }
 
 export function deleteCampaign(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
@@ -261,7 +288,9 @@ export function deleteCampaign(input: unknown): Record<string, unknown> | Promis
         throwConnectorError(result.error);
       });
   }
-  return { connector: "mailchimp", action: "campaigns.delete", source: "connector", validated: validateDeleteCampaignInput(input) };
+  validateDeleteCampaignInput(input);
+  // PLAT-NOCRED-1: no credential fails closed, never a fake "validated" success.
+  return Promise.reject(missingCredentialFailure());
 }
 
 export function replicateCampaign(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
@@ -274,7 +303,9 @@ export function replicateCampaign(input: unknown): Record<string, unknown> | Pro
         throwConnectorError(result.error);
       });
   }
-  return { connector: "mailchimp", action: "campaigns.replicate", source: "connector", validated: validateReplicateCampaignInput(input) };
+  validateReplicateCampaignInput(input);
+  // PLAT-NOCRED-1: no credential fails closed, never a fake "validated" success.
+  return Promise.reject(missingCredentialFailure());
 }
 
 export function updateList(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
@@ -287,7 +318,9 @@ export function updateList(input: unknown): Record<string, unknown> | Promise<Re
         throwConnectorError(result.error);
       });
   }
-  return { connector: "mailchimp", action: "lists.update", source: "connector", validated: validateUpdateListInput(input) };
+  validateUpdateListInput(input);
+  // PLAT-NOCRED-1: no credential fails closed, never a fake "validated" success.
+  return Promise.reject(missingCredentialFailure());
 }
 
 export function deleteList(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
@@ -300,7 +333,9 @@ export function deleteList(input: unknown): Record<string, unknown> | Promise<Re
         throwConnectorError(result.error);
       });
   }
-  return { connector: "mailchimp", action: "lists.delete", source: "connector", validated: validateDeleteListInput(input) };
+  validateDeleteListInput(input);
+  // PLAT-NOCRED-1: no credential fails closed, never a fake "validated" success.
+  return Promise.reject(missingCredentialFailure());
 }
 
 export function createMemberNote(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
@@ -313,7 +348,9 @@ export function createMemberNote(input: unknown): Record<string, unknown> | Prom
         throwConnectorError(result.error);
       });
   }
-  return { connector: "mailchimp", action: "members.notes.create", source: "connector", validated: validateCreateMemberNoteInput(input) };
+  validateCreateMemberNoteInput(input);
+  // PLAT-NOCRED-1: no credential fails closed, never a fake "validated" success.
+  return Promise.reject(missingCredentialFailure());
 }
 
 export function listTemplates(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
@@ -326,7 +363,9 @@ export function listTemplates(input: unknown): Record<string, unknown> | Promise
         throwConnectorError(result.error);
       });
   }
-  return { connector: "mailchimp", action: "templates.list", source: "connector", validated: validateListTemplatesInput(input) };
+  validateListTemplatesInput(input);
+  // PLAT-NOCRED-1: no credential fails closed, never a fake "validated" success.
+  return Promise.reject(missingCredentialFailure());
 }
 
 export function getTemplate(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
@@ -339,7 +378,9 @@ export function getTemplate(input: unknown): Record<string, unknown> | Promise<R
         throwConnectorError(result.error);
       });
   }
-  return { connector: "mailchimp", action: "templates.get", source: "connector", validated: validateGetTemplateInput(input) };
+  validateGetTemplateInput(input);
+  // PLAT-NOCRED-1: no credential fails closed, never a fake "validated" success.
+  return Promise.reject(missingCredentialFailure());
 }
 
 export function getReportSummary(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
@@ -352,7 +393,9 @@ export function getReportSummary(input: unknown): Record<string, unknown> | Prom
         throwConnectorError(result.error);
       });
   }
-  return { connector: "mailchimp", action: "reports.summary", source: "connector", validated: validateCampaignReportInput(input) };
+  validateCampaignReportInput(input);
+  // PLAT-NOCRED-1: no credential fails closed, never a fake "validated" success.
+  return Promise.reject(missingCredentialFailure());
 }
 
 export function getReportOpens(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
@@ -365,7 +408,9 @@ export function getReportOpens(input: unknown): Record<string, unknown> | Promis
         throwConnectorError(result.error);
       });
   }
-  return { connector: "mailchimp", action: "reports.opens", source: "connector", validated: validateCampaignReportInput(input) };
+  validateCampaignReportInput(input);
+  // PLAT-NOCRED-1: no credential fails closed, never a fake "validated" success.
+  return Promise.reject(missingCredentialFailure());
 }
 
 export function getReportClicks(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
@@ -378,7 +423,9 @@ export function getReportClicks(input: unknown): Record<string, unknown> | Promi
         throwConnectorError(result.error);
       });
   }
-  return { connector: "mailchimp", action: "reports.clicks", source: "connector", validated: validateCampaignReportInput(input) };
+  validateCampaignReportInput(input);
+  // PLAT-NOCRED-1: no credential fails closed, never a fake "validated" success.
+  return Promise.reject(missingCredentialFailure());
 }
 
 export function getReportUnsubscribed(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
@@ -391,7 +438,9 @@ export function getReportUnsubscribed(input: unknown): Record<string, unknown> |
         throwConnectorError(result.error);
       });
   }
-  return { connector: "mailchimp", action: "reports.unsubscribed", source: "connector", validated: validateCampaignReportInput(input) };
+  validateCampaignReportInput(input);
+  // PLAT-NOCRED-1: no credential fails closed, never a fake "validated" success.
+  return Promise.reject(missingCredentialFailure());
 }
 
 export function listAutomations(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
@@ -404,7 +453,9 @@ export function listAutomations(input: unknown): Record<string, unknown> | Promi
         throwConnectorError(result.error);
       });
   }
-  return { connector: "mailchimp", action: "automations.list", source: "connector", validated: validateListAutomationsInput(input) };
+  validateListAutomationsInput(input);
+  // PLAT-NOCRED-1: no credential fails closed, never a fake "validated" success.
+  return Promise.reject(missingCredentialFailure());
 }
 
 export function getAutomation(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
@@ -417,7 +468,9 @@ export function getAutomation(input: unknown): Record<string, unknown> | Promise
         throwConnectorError(result.error);
       });
   }
-  return { connector: "mailchimp", action: "automations.get", source: "connector", validated: validateGetAutomationInput(input) };
+  validateGetAutomationInput(input);
+  // PLAT-NOCRED-1: no credential fails closed, never a fake "validated" success.
+  return Promise.reject(missingCredentialFailure());
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────

@@ -392,14 +392,13 @@ describe("xero HTTP tools", () => {
     expect(result.status).toBe("ok");
   });
 
-  it("echoes validation without a credential", () => {
-    const result = compiled.actions["xero.create_invoice"]!({
+  it("fails closed without a credential", async () => {
+    // PLAT-NOCRED-1: a valid input without a credential fails closed.
+    await expect(Promise.resolve().then(() => compiled.actions["xero.create_invoice"]!({
       Type: "ACCREC",
       tenant_id: TENANT,
       LineItems: [{ Description: "Consulting", Quantity: 1, UnitAmount: 100, AccountCode: "200" }],
-    }) as Record<string, unknown>;
-    expect(result.source).toBe("connector");
-    expect(result.connector).toBe("xero");
+    }))).rejects.toMatchObject({ ok: false, code: "MISSING_CREDENTIAL" });
   });
 
   it("issues an authenticated request for every Composio tool", async () => {
