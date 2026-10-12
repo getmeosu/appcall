@@ -1,3 +1,4 @@
+import { effectOf } from "./effects_final";
 import { describe, expect, test } from "bun:test";
 import manifest from "../manifest.json";
 import reviewFixture from "../fixtures/pr_review_create.json";
@@ -36,36 +37,41 @@ const N2_READS = [
 const N2_RECONCILE = [
   ["pull_requests.reviews.submit", "pull_requests.reviews.get"],
   ["pull_requests.review_comments.update", "pull_requests.review_comments.list"],
-  ["pull_requests.review_comments.delete", "pull_requests.review_comments.list"],
   ["checks.runs.create", "checks.runs.get"],
   ["commits.comments.update", "commits.comments.list"],
-  ["commits.comments.delete", "commits.comments.list"],
 ] as const;
 
 describe("github N2 reviews comments timeline checks", () => {
   test("manifest wires exactly the N2 effect policies on the N1 tip", () => {
-    expect(manifest.version).toBe("0.81.1");
+    expect(manifest.version).toBe("0.81.2");
     expect(Object.keys(manifest.operations).length).toBe(912);
     for (const key of N2_READS) {
       const op = manifest.operations[key] as Record<string, unknown>;
       expect(op.kind).toBe("action");
       expect(op.sideEffect).toBe("read");
-      expect(op.effectPolicy).toBeUndefined();
-      expect(op.reconcile).toBeUndefined();
+      expect(op.effectPolicy).toBe(effectOf(key).policy);
+      expect(op.reconcile).toBe(effectOf(key).reconcile);
     }
     for (const [key, reconcile] of N2_RECONCILE) {
       const op = manifest.operations[key] as Record<string, unknown>;
       expect(op.sideEffect).toBe("write");
-      expect(op.effectPolicy).toBe("Reconcile");
-      expect(op.reconcile).toBe(reconcile);
+      expect(op.effectPolicy).toBe(effectOf(key).policy);
+      expect(op.reconcile).toBe(effectOf(key).reconcile);
+    }
+    // FIX-EFFECTS: resource deletes carry no effect keys.
+    for (const key of ["pull_requests.review_comments.delete", "commits.comments.delete"] as const) {
+      const op = manifest.operations[key] as Record<string, unknown>;
+      expect(op.sideEffect).toBe("write");
+      expect(op.effectPolicy).toBe(effectOf(key).policy);
+      expect(op.reconcile).toBe(effectOf(key).reconcile);
     }
     const pending = manifest.operations["pull_requests.reviews.delete_pending"] as Record<string, unknown>;
     expect(pending.sideEffect).toBe("write");
-    expect(pending.effectPolicy).toBe("Idempotent");
-    expect(pending.reconcile).toBeUndefined();
+    expect(pending.effectPolicy).toBe(effectOf("pull_requests.reviews.delete_pending").policy);
+    expect(pending.reconcile).toBe(effectOf("pull_requests.reviews.delete_pending").reconcile);
     expect(manifest.operations["pull_requests.review_comments.list"].sideEffect).toBe("read");
     expect(manifest.operations["contents.put"]).toBeUndefined();
-    expect(manifest.operations["repos.contents.put"].effectPolicy).toBe("Reconcile");
+    expect(manifest.operations["repos.contents.put"].effectPolicy).toBe(effectOf("repos.contents.put").policy);
   });
 
   test("reviews.get encodes owner and repo", async () => {

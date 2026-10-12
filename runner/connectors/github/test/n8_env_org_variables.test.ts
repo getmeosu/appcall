@@ -1,3 +1,4 @@
+import { effectOf } from "./effects_final";
 import { describe, expect, test } from "bun:test";
 import manifest from "../manifest.json";
 import envListFixture from "../fixtures/environment_variables.json";
@@ -29,14 +30,14 @@ const READS = [
 
 describe("github N8 environment and org action variables", () => {
   test("manifest stays on the base version and wires Idempotent reconcile like milestones.create", () => {
-    expect(manifest.version).toBe("0.81.1");
+    expect(manifest.version).toBe("0.81.2");
     expect(Object.keys(manifest.operations).length).toBe(912);
     for (const key of READS) {
       const op = manifest.operations[key] as Record<string, unknown>;
       expect(op.kind).toBe("action");
       expect(op.sideEffect).toBe("read");
-      expect(op.effectPolicy).toBeUndefined();
-      expect(op.reconcile).toBeUndefined();
+      expect(op.effectPolicy).toBe(effectOf(key).policy);
+      expect(op.reconcile).toBe(effectOf(key).reconcile);
       expect(op.observe).toBeUndefined();
     }
     for (const [key, reconcile] of [
@@ -45,8 +46,10 @@ describe("github N8 environment and org action variables", () => {
     ] as const) {
       const op = manifest.operations[key] as Record<string, unknown>;
       expect(op.sideEffect).toBe("write");
-      expect(op.effectPolicy).toBe("Idempotent");
-      expect(op.reconcile).toBe(reconcile);
+      // FIX-EFFECTS: creates carry no effect keys (was Idempotent observing via ${reconcile}).
+      expect(op.effectPolicy).toBe(effectOf(key).policy);
+      expect(op.reconcile).toBe(effectOf(key).reconcile);
+      expect(manifest.operations[reconcile].sideEffect).toBe("read");
       expect(op.observe).toBeUndefined();
     }
     for (const key of [
@@ -55,8 +58,8 @@ describe("github N8 environment and org action variables", () => {
     ] as const) {
       const op = manifest.operations[key] as Record<string, unknown>;
       expect(op.sideEffect).toBe("write");
-      expect(op.effectPolicy).toBe("Idempotent");
-      expect(op.reconcile).toBeUndefined();
+      expect(op.effectPolicy).toBe(effectOf(key).policy);
+      expect(op.reconcile).toBe(effectOf(key).reconcile);
       expect(op.observe).toBeUndefined();
       expect(String(op.description)).not.toContain("observes via");
     }
@@ -77,8 +80,8 @@ describe("github N8 environment and org action variables", () => {
     ] as const) {
       const op = manifest.operations[key] as Record<string, unknown>;
       expect(op.sideEffect).toBe("write");
-      expect(op.effectPolicy).toBe("Reconcile");
-      expect(op.reconcile).toBe(reconcile);
+      expect(op.effectPolicy).toBe(effectOf(key).policy);
+      expect(op.reconcile).toBe(effectOf(key).reconcile);
       expect(op.observe).toBeUndefined();
     }
     expect(manifest.operations["actions.org_variables.list"].description).toContain("admin:org");

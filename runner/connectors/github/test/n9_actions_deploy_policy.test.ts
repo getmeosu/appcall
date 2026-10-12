@@ -35,7 +35,7 @@ const READS = [
 
 describe("github N9 actions permissions and deployment branch policies", () => {
   test("manifest is v0.79.0 with 715 ops and the N9 effect policies", () => {
-    expect(manifest.version).toBe("0.81.1");
+    expect(manifest.version).toBe("0.81.2");
     expect(Object.keys(manifest.operations).length).toBe(912);
     for (const key of READS) {
       const op = manifest.operations[key] as Record<string, unknown>;
@@ -53,14 +53,14 @@ describe("github N9 actions permissions and deployment branch policies", () => {
     expect(selectedSet.effectPolicy).toBe("Reconcile");
     expect(selectedSet.reconcile).toBe("actions.permissions.selected_actions.get");
     const created = manifest.operations["deployments.branch_policies.create"] as Record<string, unknown>;
-    expect(created.effectPolicy).toBe("Idempotent");
-    expect(created.reconcile).toBe("deployments.branch_policies.list");
-    expect(String(created.description)).toContain("not Reconcile");
+    expect(created.effectPolicy).toBeUndefined();
+    expect(created.reconcile).toBeUndefined();
+    expect(String(created.description)).toContain("No effectPolicy and no reconcile (create)");
     const updated = manifest.operations["deployments.branch_policies.update"] as Record<string, unknown>;
     expect(updated.effectPolicy).toBe("Reconcile");
     expect(updated.reconcile).toBe("deployments.branch_policies.get");
     const deleted = manifest.operations["deployments.branch_policies.delete"] as Record<string, unknown>;
-    expect(deleted.effectPolicy).toBe("Idempotent");
+    expect(deleted.effectPolicy).toBeUndefined();
     expect(deleted.reconcile).toBeUndefined();
     expect(String(deleted.description)).not.toContain("observes via");
   });

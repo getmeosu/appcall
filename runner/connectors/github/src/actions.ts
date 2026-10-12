@@ -6309,7 +6309,7 @@ export function checkGistStar(input: unknown): Record<string, unknown> | Promise
   if (isRecord(input) && typeof input.accessToken === "string") {
     return liveCard12Client(input, "gists.star.check").checkGistStar(input).then((result) => {
       if (!result.ok) throwVariable(result);
-      return { connector: "github", action: "gists.star.check", source: "connector", starred: result.starred };
+      return { connector: "github", action: "gists.star.check", source: "connector", starred: result.starred, gistId: result.gistId };
     });
   }
   return { connector: "github", action: "gists.star.check", source: "connector", validated: validateCheckGistStarInput(input) };
@@ -8350,7 +8350,7 @@ export function deleteRepoActionsRunner(input: unknown): Record<string, unknown>
 export function followUser(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
   if (isRecord(input) && typeof input.accessToken === "string") {
     return liveWriteCard11Client(input, "user.following.follow").followUser(input).then((result) => {
-      if (!result.ok) throwGitHub(result);
+      if (!result.ok) throwGitHubGraphql(result);
       return { connector: "github", action: "user.following.follow", source: "connector", followed: result.followed, username: result.username };
     });
   }
@@ -8371,7 +8371,7 @@ function liveWriteCard12Client(input: Record<string, unknown>, operation: string
 export function unfollowUser(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
   if (isRecord(input) && typeof input.accessToken === "string") {
     return liveWriteCard12Client(input, "user.following.unfollow").unfollowUser(input).then((result) => {
-      if (!result.ok) throwGitHub(result);
+      if (!result.ok) throwGitHubGraphql(result);
       return { connector: "github", action: "user.following.unfollow", source: "connector", unfollowed: result.unfollowed, username: result.username };
     });
   }

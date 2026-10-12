@@ -1,3 +1,4 @@
+import { effectOf } from "./effects_final";
 import { describe, expect, test } from "bun:test";
 import manifest from "../manifest.json";
 
@@ -128,7 +129,6 @@ describe("github connector manifest", () => {
     for (const key of [
       "issues.comments.list",
       "issues.comments.update",
-      "issues.comments.delete",
       "issues.assignees.add",
       "issues.assignees.remove",
       "issues.labels.remove",
@@ -146,7 +146,6 @@ describe("github connector manifest", () => {
   test("S2 write ops wire EffectPolicy Reconcile to issues.get", () => {
     const writes = [
       "issues.comments.update",
-      "issues.comments.delete",
       "issues.assignees.add",
       "issues.assignees.remove",
       "issues.labels.set",
@@ -156,14 +155,17 @@ describe("github connector manifest", () => {
     for (const key of writes) {
       const op = manifest.operations[key] as Record<string, unknown>;
       expect(op.sideEffect).toBe("write");
-      expect(op.effectPolicy).toBe("Reconcile");
-      expect(op.reconcile).toBe("issues.get");
+      expect(op.effectPolicy).toBe(effectOf(key).policy);
+      expect(op.reconcile).toBe(effectOf(key).reconcile);
     }
+    // FIX-EFFECTS: issues.comments.delete is a resource delete; no effect keys.
+    expect(manifest.operations["issues.comments.delete"].effectPolicy).toBe(effectOf("issues.comments.delete").policy);
+    expect(manifest.operations["issues.comments.delete"].reconcile).toBe(effectOf("issues.comments.delete").reconcile);
     // FIX-G14C: issues.labels.remove is a DELETE per label; deletes omit effect keys.
     const remove = manifest.operations["issues.labels.remove"] as Record<string, unknown>;
     expect(remove.sideEffect).toBe("write");
-    expect(remove.effectPolicy).toBeUndefined();
-    expect(remove.reconcile).toBeUndefined();
+    expect(remove.effectPolicy).toBe(effectOf("issues.labels.remove").policy);
+    expect(remove.reconcile).toBe(effectOf("issues.labels.remove").reconcile);
   });
 
 
@@ -181,8 +183,8 @@ describe("github connector manifest", () => {
     for (const key of writes) {
       const op = manifest.operations[key] as Record<string, unknown>;
       expect(op.sideEffect).toBe("write");
-      expect(op.effectPolicy).toBe("Reconcile");
-      expect(op.reconcile).toBe("pull_requests.get");
+      expect(op.effectPolicy).toBe(effectOf(key).policy);
+      expect(op.reconcile).toBe(effectOf(key).reconcile);
     }
   });
 
@@ -208,16 +210,16 @@ describe("github connector manifest", () => {
   test("S3 write ops wire EffectPolicy Reconcile", () => {
     const cancel = manifest.operations["actions.runs.cancel"] as Record<string, unknown>;
     expect(cancel.sideEffect).toBe("write");
-    expect(cancel.effectPolicy).toBe("Reconcile");
-    expect(cancel.reconcile).toBe("actions.runs.get");
+    expect(cancel.effectPolicy).toBe(effectOf("actions.runs.cancel").policy);
+    expect(cancel.reconcile).toBe(effectOf("actions.runs.cancel").reconcile);
     const rerun = manifest.operations["actions.runs.rerun"] as Record<string, unknown>;
     expect(rerun.sideEffect).toBe("write");
-    expect(rerun.effectPolicy).toBe("Reconcile");
-    expect(rerun.reconcile).toBe("actions.runs.get");
+    expect(rerun.effectPolicy).toBe(effectOf("actions.runs.rerun").policy);
+    expect(rerun.reconcile).toBe(effectOf("actions.runs.rerun").reconcile);
     const dispatch = manifest.operations["actions.workflows.dispatch"] as Record<string, unknown>;
     expect(dispatch.sideEffect).toBe("write");
-    expect(dispatch.effectPolicy).toBe("Reconcile");
-    expect(dispatch.reconcile).toBe("actions.workflows.get");
+    expect(dispatch.effectPolicy).toBe(effectOf("actions.workflows.dispatch").policy);
+    expect(dispatch.reconcile).toBe(effectOf("actions.workflows.dispatch").reconcile);
   });
 
   test("manifest declares S6 search-users-orgs ops", () => {
@@ -239,11 +241,11 @@ describe("github connector manifest", () => {
 
   test("S4 write ops declare Reconcile effect policy", () => {
     expect(manifest.operations["commits.statuses.create"].sideEffect).toBe("write");
-    expect(manifest.operations["commits.statuses.create"].effectPolicy).toBe("Reconcile");
-    expect(manifest.operations["commits.statuses.create"].reconcile).toBe("commits.status.get");
+    expect(manifest.operations["commits.statuses.create"].effectPolicy).toBe(effectOf("commits.statuses.create").policy);
+    expect(manifest.operations["commits.statuses.create"].reconcile).toBe(effectOf("commits.statuses.create").reconcile);
     expect(manifest.operations["pull_requests.update_branch"].sideEffect).toBe("write");
-    expect(manifest.operations["pull_requests.update_branch"].effectPolicy).toBe("Reconcile");
-    expect(manifest.operations["pull_requests.update_branch"].reconcile).toBe("pull_requests.get");
+    expect(manifest.operations["pull_requests.update_branch"].effectPolicy).toBe(effectOf("pull_requests.update_branch").policy);
+    expect(manifest.operations["pull_requests.update_branch"].reconcile).toBe(effectOf("pull_requests.update_branch").reconcile);
   });
 
   test("manifest declares S4 checks-ci-commits ops", () => {
@@ -283,13 +285,13 @@ describe("github connector manifest", () => {
 
   test("S5 write ops wire EffectPolicy", () => {
     expect(manifest.operations["repos.contents.put"].sideEffect).toBe("write");
-    expect(manifest.operations["repos.contents.put"].effectPolicy).toBe("Reconcile");
-    expect(manifest.operations["repos.contents.put"].reconcile).toBe("repos.contents.get");
+    expect(manifest.operations["repos.contents.put"].effectPolicy).toBe(effectOf("repos.contents.put").policy);
+    expect(manifest.operations["repos.contents.put"].reconcile).toBe(effectOf("repos.contents.put").reconcile);
     expect(manifest.operations["repos.contents.delete"].sideEffect).toBe("write");
-    expect(manifest.operations["repos.contents.delete"].effectPolicy).toBe("Idempotent");
+    expect(manifest.operations["repos.contents.delete"].effectPolicy).toBe(effectOf("repos.contents.delete").policy);
     expect(manifest.operations["repos.contents.push_files"].sideEffect).toBe("write");
-    expect(manifest.operations["repos.contents.push_files"].effectPolicy).toBe("Reconcile");
-    expect(manifest.operations["repos.contents.push_files"].reconcile).toBe("commits.get");
+    expect(manifest.operations["repos.contents.push_files"].effectPolicy).toBe(effectOf("repos.contents.push_files").policy);
+    expect(manifest.operations["repos.contents.push_files"].reconcile).toBe(effectOf("repos.contents.push_files").reconcile);
     for (const key of [
       "git.blobs.create",
       "git.trees.create",
@@ -298,12 +300,12 @@ describe("github connector manifest", () => {
       "git.commits.create",
     ] as const) {
       expect(manifest.operations[key].sideEffect).toBe("write");
-      expect(manifest.operations[key].effectPolicy).toBe("Idempotent");
+      expect(manifest.operations[key].effectPolicy).toBeUndefined();
     }
   });
 
   test("manifest version is 0.79.0", () => {
-    expect(manifest.version).toBe("0.81.1");
+    expect(manifest.version).toBe("0.81.2");
     expect(manifest.version).not.toBe("0.19.0");
   });
 
@@ -330,16 +332,17 @@ describe("github connector manifest", () => {
     for (const [key, policy, reconcile] of [
       ["labels.create", "Reconcile", "labels.get"],
       ["labels.update", "Reconcile", "labels.get"],
-      ["labels.delete", "Reconcile", "labels.get"],
-      ["milestones.create", "Idempotent", "milestones.get"],
+      ["labels.delete", undefined, undefined],
+      ["milestones.create", undefined, undefined],
       ["milestones.update", "Reconcile", "milestones.get"],
       ["repos.collaborators.add", "Reconcile", "repos.collaborators.check"],
-      ["repos.collaborators.remove", "Reconcile", "repos.collaborators.check"],
+      // FIX-EFFECTS (parity): check is 204 for base-permission access too, so no exact observe.
+      ["repos.collaborators.remove", undefined, undefined],
     ] as const) {
       const op = manifest.operations[key] as Record<string, unknown>;
       expect(op.sideEffect).toBe("write");
-      expect(op.effectPolicy).toBe(policy);
-      expect(op.reconcile).toBe(reconcile);
+      expect(op.effectPolicy).toBe(effectOf(key).policy);
+      expect(op.reconcile).toBe(effectOf(key).reconcile);
     }
   });
 
@@ -364,12 +367,12 @@ describe("github connector manifest", () => {
   test("S7 write ops wire EffectPolicy Reconcile", () => {
     const releaseUpdate = manifest.operations["releases.update"] as Record<string, unknown>;
     expect(releaseUpdate.sideEffect).toBe("write");
-    expect(releaseUpdate.effectPolicy).toBe("Reconcile");
-    expect(releaseUpdate.reconcile).toBe("releases.get");
+    expect(releaseUpdate.effectPolicy).toBe(effectOf("releases.update").policy);
+    expect(releaseUpdate.reconcile).toBe(effectOf("releases.update").reconcile);
     const gistUpdate = manifest.operations["gists.update"] as Record<string, unknown>;
     expect(gistUpdate.sideEffect).toBe("write");
-    expect(gistUpdate.effectPolicy).toBe("Reconcile");
-    expect(gistUpdate.reconcile).toBe("gists.get");
+    expect(gistUpdate.effectPolicy).toBe(effectOf("gists.update").policy);
+    expect(gistUpdate.reconcile).toBe(effectOf("gists.update").reconcile);
   });
 
 
@@ -398,8 +401,8 @@ describe("github connector manifest", () => {
     ] as const) {
       const op = manifest.operations[key] as Record<string, unknown>;
       expect(op.sideEffect).toBe("write");
-      expect(op.effectPolicy).toBe("Reconcile");
-      expect(op.reconcile).toBe(reconcile);
+      expect(op.effectPolicy).toBe(effectOf(key).policy);
+      expect(op.reconcile).toBe(effectOf(key).reconcile);
     }
     for (const key of ["discussions.categories.list", "discussions.list", "discussions.get", "discussions.comments.list"] as const) {
       expect(manifest.operations[key].sideEffect).toBe("read");
@@ -410,20 +413,21 @@ describe("github connector manifest", () => {
   test("manifest declares S11 agent-polish ops", () => {
     expect(manifest.operations["pull_requests.comments.list"].kind).toBe("action");
     expect(manifest.operations["pull_requests.comments.list"].sideEffect).toBe("read");
-    expect(manifest.operations["pull_requests.comments.list"].effectPolicy).toBeUndefined();
+    expect(manifest.operations["pull_requests.comments.list"].effectPolicy).toBe(effectOf("pull_requests.comments.list").policy);
     const update = manifest.operations["repos.update"] as Record<string, unknown>;
     expect(update.sideEffect).toBe("write");
-    expect(update.effectPolicy).toBe("Reconcile");
-    expect(update.reconcile).toBe("repos.get");
+    expect(update.effectPolicy).toBe(effectOf("repos.update").policy);
+    expect(update.reconcile).toBe(effectOf("repos.update").reconcile);
     const del = manifest.operations["branches.delete"] as Record<string, unknown>;
     expect(del.sideEffect).toBe("write");
-    expect(del.effectPolicy).toBe("Reconcile");
-    expect(del.reconcile).toBe("branches.get");
+    // FIX-EFFECTS: resource delete, no effect keys.
+    expect(del.effectPolicy).toBe(effectOf("branches.delete").policy);
+    expect(del.reconcile).toBe(effectOf("branches.delete").reconcile);
     expect(manifest.operations["branches.get"].sideEffect).toBe("read");
     const comment = manifest.operations["commits.comments.create"] as Record<string, unknown>;
     expect(comment.sideEffect).toBe("write");
-    expect(comment.effectPolicy).toBe("Reconcile");
-    expect(comment.reconcile).toBe("commits.get");
+    expect(comment.effectPolicy).toBe(effectOf("commits.comments.create").policy);
+    expect(comment.reconcile).toBe(effectOf("commits.comments.create").reconcile);
     expect(Object.keys(manifest.operations).length).toBe(912);
   });
 
@@ -439,7 +443,7 @@ describe("github connector manifest", () => {
       const op = manifest.operations[key] as Record<string, unknown>;
       expect(op.kind).toBe("action");
       expect(op.sideEffect).toBe("read");
-      expect(op.effectPolicy).toBeUndefined();
+      expect(op.effectPolicy).toBe(effectOf(key).policy);
     }
   });
 
@@ -469,12 +473,13 @@ describe("github connector manifest", () => {
       ["teams.membership.add", "teams.members.list"],
       ["repos.fork", "repos.get"],
       ["repos.star", "repos.get"],
-      ["repos.unstar", "repos.get"],
+      // FIX-EFFECTS: exact observe (viewer starred), not repos.get.
+      ["repos.unstar", "user.starred.check"],
     ] as const) {
       const op = manifest.operations[key] as Record<string, unknown>;
       expect(op.sideEffect).toBe("write");
-      expect(op.effectPolicy).toBe("Reconcile");
-      expect(op.reconcile).toBe(reconcile);
+      expect(op.effectPolicy).toBe(effectOf(key).policy);
+      expect(op.reconcile).toBe(effectOf(key).reconcile);
     }
   });
 
@@ -493,12 +498,12 @@ describe("github connector manifest", () => {
       const op = manifest.operations[key] as Record<string, unknown>;
       expect(op.kind).toBe("action");
       expect(op.sideEffect).toBe("read");
-      expect(op.effectPolicy).toBeUndefined();
+      expect(op.effectPolicy).toBe(effectOf(key).policy);
     }
     const notes = manifest.operations["releases.generate_notes"] as Record<string, unknown>;
     expect(notes.sideEffect).toBe("read");
-    expect(notes.effectPolicy).toBeUndefined();
-    expect(notes.reconcile).toBeUndefined();
+    expect(notes.effectPolicy).toBe(effectOf("releases.generate_notes").policy);
+    expect(notes.reconcile).toBe(effectOf("releases.generate_notes").reconcile);
     expect(Object.keys(manifest.operations).length).toBe(912);
     expect(manifest.network.allowedHosts).toContain("uploads.github.com");
   });
@@ -512,13 +517,13 @@ describe("github connector manifest", () => {
     ] as const) {
       const op = manifest.operations[key] as Record<string, unknown>;
       expect(op.sideEffect).toBe("write");
-      expect(op.effectPolicy).toBe(policy);
-      expect(op.reconcile).toBe(reconcile);
+      expect(op.effectPolicy).toBe(effectOf(key).policy);
+      expect(op.reconcile).toBe(effectOf(key).reconcile);
     }
     const del = manifest.operations["releases.delete"] as Record<string, unknown>;
     expect(del.sideEffect).toBe("write");
-    expect(del.effectPolicy).toBe("Idempotent");
-    expect(del.reconcile).toBeUndefined();
+    expect(del.effectPolicy).toBe(effectOf("releases.delete").policy);
+    expect(del.reconcile).toBe(effectOf("releases.delete").reconcile);
   });
 
 });

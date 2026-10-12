@@ -113,8 +113,8 @@ export function createCard12ReadsClient(options: { accessToken: string; fetch?: 
       const payload = validateCheckGistStarInput(input);
       const response = await client.fetchJSON(`/gists/${seg(payload.gistId)}/star`);
       // Docs: 204 if starred, 404 if not starred. Neither is an error.
-      if (response.status === 204) return { ok: true as const, starred: true as const };
-      if (response.status === 404) return { ok: true as const, starred: false as const };
+      if (response.status === 204) return { ok: true as const, starred: true as const, gistId: payload.gistId };
+      if (response.status === 404) return { ok: true as const, starred: false as const, gistId: payload.gistId };
       return mapRateOrUpstream(response, "GitHub rejected the check gist star request.");
     },
     async getGistComment(input: unknown) {

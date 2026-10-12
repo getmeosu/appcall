@@ -131,7 +131,7 @@ const card = { id: 3, note: "n", column_url: "https://api.github.com/projects/co
 
 describe("github gap G12 classic projects, classroom, and team discussions", () => {
   test("version is 0.79.0 at 852 ops with the read/write breakdown", () => {
-    expect(manifest.version).toBe("0.81.1");
+    expect(manifest.version).toBe("0.81.2");
     const ops = manifest.operations as Record<string, Record<string, unknown>>;
     expect(Object.keys(ops)).toHaveLength(912);
     const kinds = { action: 0, sync: 0, webhook: 0 };

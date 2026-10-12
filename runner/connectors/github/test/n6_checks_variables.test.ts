@@ -1,3 +1,4 @@
+import { effectOf } from "./effects_final";
 import { describe, expect, test } from "bun:test";
 import manifest from "../manifest.json";
 import suiteFixture from "../fixtures/get_check_suite.json";
@@ -37,33 +38,33 @@ const N6_READS = [
 
 describe("github N6 checks and actions variables", () => {
   test("manifest stays on the N5 tip version and wires the 14 N6 policies", () => {
-    expect(manifest.version).toBe("0.81.1");
+    expect(manifest.version).toBe("0.81.2");
     expect(Object.keys(manifest.operations).length).toBe(912);
     for (const key of N6_READS) {
       const op = manifest.operations[key] as Record<string, unknown>;
       expect(op.kind).toBe("action");
       expect(op.sideEffect).toBe("read");
-      expect(op.effectPolicy).toBeUndefined();
-      expect(op.reconcile).toBeUndefined();
+      expect(op.effectPolicy).toBe(effectOf(key).policy);
+      expect(op.reconcile).toBe(effectOf(key).reconcile);
     }
     const update = manifest.operations["checks.runs.update"] as Record<string, unknown>;
     expect(update.sideEffect).toBe("write");
-    expect(update.effectPolicy).toBe("Reconcile");
-    expect(update.reconcile).toBe("checks.runs.get");
+    expect(update.effectPolicy).toBe(effectOf("checks.runs.update").policy);
+    expect(update.reconcile).toBe(effectOf("checks.runs.update").reconcile);
     const variableUpdate = manifest.operations["actions.variables.update"] as Record<string, unknown>;
-    expect(variableUpdate.effectPolicy).toBe("Reconcile");
-    expect(variableUpdate.reconcile).toBe("actions.variables.get");
+    expect(variableUpdate.effectPolicy).toBe(effectOf("actions.variables.update").policy);
+    expect(variableUpdate.reconcile).toBe(effectOf("actions.variables.update").reconcile);
     for (const key of ["actions.variables.create", "actions.variables.delete"] as const) {
       const op = manifest.operations[key] as Record<string, unknown>;
       expect(op.sideEffect).toBe("write");
-      expect(op.effectPolicy).toBe("Idempotent");
-      expect(op.reconcile).toBeUndefined();
+      expect(op.effectPolicy).toBe(effectOf(key).policy);
+      expect(op.reconcile).toBe(effectOf(key).reconcile);
     }
     for (const key of ["checks.runs.rerequest", "checks.suites.rerequest"] as const) {
       const op = manifest.operations[key] as Record<string, unknown>;
       expect(op.sideEffect).toBe("write");
-      expect(op.effectPolicy).toBeUndefined();
-      expect(op.reconcile).toBeUndefined();
+      expect(op.effectPolicy).toBe(effectOf(key).policy);
+      expect(op.reconcile).toBe(effectOf(key).reconcile);
     }
     // N4 owns actions.variables.list; N6 adds get/create/update/delete only.
     expect(manifest.operations["actions.variables.list"]).toBeDefined();
@@ -72,7 +73,7 @@ describe("github N6 checks and actions variables", () => {
     expect(manifest.operations["contents.push_files"]).toBeUndefined();
     expect(manifest.operations["repos.delete"]).toBeDefined();
     expect(manifest.operations["actions.secrets.create"]).toBeUndefined();
-    expect(manifest.operations["checks.runs.get"].effectPolicy).toBeUndefined();
+    expect(manifest.operations["checks.runs.get"].effectPolicy).toBe(effectOf("checks.runs.get").policy);
   });
 
   test("check run update strips annotations and rerequest is one POST", async () => {

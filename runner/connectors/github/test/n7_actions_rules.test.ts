@@ -1,3 +1,4 @@
+import { effectOf } from "./effects_final";
 import { describe, expect, test } from "bun:test";
 import manifest from "../manifest.json";
 import jobFixture from "../fixtures/workflow_job_get.json";
@@ -34,33 +35,33 @@ const N7_READS = [
 
 describe("github N7 actions rules", () => {
   test("manifest is v0.79.0 with 715 ops and the N7 policies", () => {
-    expect(manifest.version).toBe("0.81.1");
+    expect(manifest.version).toBe("0.81.2");
     expect(Object.keys(manifest.operations).length).toBe(912);
     for (const key of N7_READS) {
       const op = manifest.operations[key] as Record<string, unknown>;
       expect(op.sideEffect).toBe("read");
-      expect(op.effectPolicy).toBeUndefined();
-      expect(op.reconcile).toBeUndefined();
+      expect(op.effectPolicy).toBe(effectOf(key).policy);
+      expect(op.reconcile).toBe(effectOf(key).reconcile);
     }
     for (const key of ["actions.jobs.rerun", "actions.runs.approve"] as const) {
       const op = manifest.operations[key] as Record<string, unknown>;
       expect(op.sideEffect).toBe("write");
-      expect(op.effectPolicy).toBeUndefined();
-      expect(op.reconcile).toBeUndefined();
+      expect(op.effectPolicy).toBe(effectOf(key).policy);
+      expect(op.reconcile).toBe(effectOf(key).reconcile);
       expect(String(op.description)).toContain("not a retry key");
       expect(String(op.description)).toContain("not desired state");
     }
-    expect(manifest.operations["actions.caches.delete"].effectPolicy).toBe("Idempotent");
-    expect(manifest.operations["actions.caches.delete"].reconcile).toBe("actions.caches.list");
-    expect(manifest.operations["actions.caches.delete_by_key"].effectPolicy).toBe("Idempotent");
-    expect(manifest.operations["actions.caches.delete_by_key"].reconcile).toBe("actions.caches.list");
-    expect(manifest.operations["actions.runs.delete"].effectPolicy).toBe("Idempotent");
-    expect(manifest.operations["actions.runs.delete"].reconcile).toBe("actions.runs.get");
+    expect(manifest.operations["actions.caches.delete"].effectPolicy).toBe(effectOf("actions.caches.delete").policy);
+    expect(manifest.operations["actions.caches.delete"].reconcile).toBe(effectOf("actions.caches.delete").reconcile);
+    expect(manifest.operations["actions.caches.delete_by_key"].effectPolicy).toBe(effectOf("actions.caches.delete_by_key").policy);
+    expect(manifest.operations["actions.caches.delete_by_key"].reconcile).toBe(effectOf("actions.caches.delete_by_key").reconcile);
+    expect(manifest.operations["actions.runs.delete"].effectPolicy).toBe(effectOf("actions.runs.delete").policy);
+    expect(manifest.operations["actions.runs.delete"].reconcile).toBe(effectOf("actions.runs.delete").reconcile);
     expect(String(manifest.operations["actions.runs.delete"].description)).toContain("artifacts");
     expect(manifest.operations["actions.runs.list"].inputSchema.properties.workflowId).toBeUndefined();
-    expect(manifest.operations["actions.runs.rerun"].effectPolicy).toBe("Reconcile");
-    expect(manifest.operations["actions.runs.rerun_failed"].effectPolicy).toBe("Reconcile");
-    expect(manifest.operations["actions.runs.pending_deployments.review"].effectPolicy).toBeUndefined();
+    expect(manifest.operations["actions.runs.rerun"].effectPolicy).toBe(effectOf("actions.runs.rerun").policy);
+    expect(manifest.operations["actions.runs.rerun_failed"].effectPolicy).toBe(effectOf("actions.runs.rerun_failed").policy);
+    expect(manifest.operations["actions.runs.pending_deployments.review"].effectPolicy).toBe(effectOf("actions.runs.pending_deployments.review").policy);
     expect(manifest.operations["contents.put"]).toBeUndefined();
     expect(manifest.operations["contents.delete"]).toBeUndefined();
     expect(manifest.operations["contents.push_files"]).toBeUndefined();

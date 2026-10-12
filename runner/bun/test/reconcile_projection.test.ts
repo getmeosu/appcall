@@ -283,12 +283,7 @@ type Op = Record<string, unknown> & { inputSchema?: { properties?: Record<string
 // schemas, so these load; some still fail after the write (tracked as
 // follow-up cards). This list may only shrink.
 const KNOWN_OPEN_OBSERVE_GAPS = [
-  "github commits.comments.create -> commits.get [ref]",
-  "github commits.statuses.create -> commits.status.get [ref]",
-  "github issues.comments.delete -> issues.get [issueNumber]",
-  "github issues.comments.update -> issues.get [issueNumber]",
   "github notifications.threads.subscription.set -> notifications.threads.subscription.get [thread_id]",
-  "github orgs.repos.create -> repos.get [owner,repo]",
 ];
 
 describe("effect pairing scan (all connector manifests)", () => {
@@ -337,7 +332,7 @@ describe("effect pairing scan (all connector manifests)", () => {
         else openGaps.push(line);
       }
     }
-    expect(pairings).toBeGreaterThan(100);
+    expect(pairings).toBeGreaterThan(80); // github FIX-EFFECTS (0.81.2) keeps 41 Reconcile pairings (was ~96)
     expect(problems).toEqual([]);
     expect(openGaps.sort()).toEqual([...KNOWN_OPEN_OBSERVE_GAPS].sort());
   });

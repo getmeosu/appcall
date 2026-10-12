@@ -1,3 +1,4 @@
+import { effectOf } from "./effects_final";
 import { describe, expect, test } from "bun:test";
 import manifest from "../manifest.json";
 import forksFixture from "../fixtures/repo_forks.json";
@@ -18,20 +19,20 @@ const READS = ["repos.forks.list", "search.topics.list", "search.labels.list"] a
 
 describe("github card-7 reads", () => {
   test("manifest stays v0.79.0 at 852 ops and these reads omit effect policy", () => {
-    expect(manifest.version).toBe("0.81.1");
+    expect(manifest.version).toBe("0.81.2");
     expect(manifest.version).not.toBe("0.35.0");
     expect(Object.keys(manifest.operations).length).toBe(912);
     for (const key of READS) {
       const op = manifest.operations[key] as Record<string, unknown>;
       expect(op.kind).toBe("action");
       expect(op.sideEffect).toBe("read");
-      expect(op.effectPolicy).toBeUndefined();
-      expect(op.reconcile).toBeUndefined();
+      expect(op.effectPolicy).toBe(effectOf(key).policy);
+      expect(op.reconcile).toBe(effectOf(key).reconcile);
     }
     const fork = manifest.operations["repos.fork"] as Record<string, unknown>;
     expect(fork.sideEffect).toBe("write");
-    expect(fork.effectPolicy).toBe("Reconcile");
-    expect(fork.reconcile).toBe("repos.get");
+    expect(fork.effectPolicy).toBe(effectOf("repos.fork").policy);
+    expect(fork.reconcile).toBe(effectOf("repos.fork").reconcile);
     for (const key of ["repos.topics.get", "labels.list", "labels.get", "issues.labels.list"] as const) {
       expect(manifest.operations[key]).toBeDefined();
     }

@@ -1,3 +1,4 @@
+import { effectOf } from "./effects_final";
 import { describe, expect, test } from "bun:test";
 import manifest from "../manifest.json";
 import pendingFixture from "../fixtures/pending_deployments.json";
@@ -58,29 +59,29 @@ describe("github N5 actions environments", () => {
     for (const key of N5_READS) {
       const op = manifest.operations[key];
       expect(op.sideEffect).toBe("read");
-      expect(op.effectPolicy).toBeUndefined();
-      expect(op.reconcile).toBeUndefined();
+      expect(op.effectPolicy).toBe(effectOf(key).policy);
+      expect(op.reconcile).toBe(effectOf(key).reconcile);
     }
     const review = manifest.operations["actions.runs.pending_deployments.review"];
     expect(review.sideEffect).toBe("write");
-    expect(review.effectPolicy).toBeUndefined();
+    expect(review.effectPolicy).toBe(effectOf("actions.runs.pending_deployments.review").policy);
     const force = manifest.operations["actions.runs.force_cancel"];
     expect(force.sideEffect).toBe("write");
-    expect(force.effectPolicy).toBeUndefined();
+    expect(force.effectPolicy).toBe(effectOf("actions.runs.force_cancel").policy);
 
     const created = manifest.operations["environments.create"];
-    expect(created.effectPolicy).toBe("Reconcile");
-    expect(created.reconcile).toBe("environments.get");
+    expect(created.effectPolicy).toBe(effectOf("environments.create").policy);
+    expect(created.reconcile).toBe(effectOf("environments.create").reconcile);
     const disable = manifest.operations["actions.workflows.disable"];
-    expect(disable.effectPolicy).toBe("Reconcile");
-    expect(disable.reconcile).toBe("actions.workflows.get");
+    expect(disable.effectPolicy).toBe(effectOf("actions.workflows.disable").policy);
+    expect(disable.reconcile).toBe(effectOf("actions.workflows.disable").reconcile);
     expect(disable.outputSchema.properties.state.enum).toEqual(["disabled_manually"]);
     const enable = manifest.operations["actions.workflows.enable"];
-    expect(enable.effectPolicy).toBe("Reconcile");
-    expect(enable.reconcile).toBe("actions.workflows.get");
+    expect(enable.effectPolicy).toBe(effectOf("actions.workflows.enable").policy);
+    expect(enable.reconcile).toBe(effectOf("actions.workflows.enable").reconcile);
     expect(enable.outputSchema.properties.state.enum).toEqual(["active"]);
     for (const key of ["deployments.delete", "environments.delete", "actions.artifacts.delete"] as const) {
-      expect(manifest.operations[key].effectPolicy).toBe("Idempotent");
+      expect(manifest.operations[key].effectPolicy).toBeUndefined();
       expect(manifest.operations[key].reconcile).toBeUndefined();
     }
   });
