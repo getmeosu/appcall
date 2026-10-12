@@ -16,7 +16,6 @@ type ActionResult = Record<string, unknown> | Promise<Record<string, unknown>>;
 type Pairs = Array<[string, string]>;
 type Response = { status: number; headers: Record<string, string>; body: unknown };
 
-const CONNECTOR = "linkedin-ads";
 const ACCOUNT_URN = "urn:li:sponsoredAccount:";
 const GROUP_URN = "urn:li:sponsoredCampaignGroup:";
 const CAMPAIGN_URN = "urn:li:sponsoredCampaign:";
@@ -48,8 +47,10 @@ const SORT_ORDERS = ["ASCENDING", "DESCENDING"] as const;
 // shared helpers
 // ---------------------------------------------------------------------------
 
-function result(action: string, extra: Record<string, unknown>): Record<string, unknown> {
-  return { connector: CONNECTOR, action, source: "connector", ...extra };
+// PLAT-OUT-1: connector/action/source ride on the runner result envelope, not the
+// handler output. The action name stays in the signature to keep call sites self-describing.
+function result(_action: string, extra: Record<string, unknown>): Record<string, unknown> {
+  return { ...extra };
 }
 
 function requireRecord(value: unknown, action: string): Input {
