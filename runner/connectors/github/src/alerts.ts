@@ -127,7 +127,7 @@ export function validateGetCodeScanningAnalysisInput(input: unknown): GetCodeSca
   };
 }
 
-export type CodeScanningTool = { name: string; version: string; guid: string };
+export type CodeScanningTool = { name: string | null; version: string | null; guid: string | null };
 
 export type NormalizedCodeScanningInstance = {
   ref: string;
@@ -167,7 +167,7 @@ export type NormalizedCodeScanningAnalysis = {
   commitSha: string;
   analysisKey: string;
   environment: string;
-  category: string;
+  category: string | null;
   createdAt: string;
   resultsCount: number;
   rulesCount: number;
@@ -186,7 +186,7 @@ export function normalizeCodeScanningAnalysis(item: Record<string, unknown>): No
     commitSha: typeof item.commit_sha === "string" ? item.commit_sha : "",
     analysisKey: typeof item.analysis_key === "string" ? item.analysis_key : "",
     environment: typeof item.environment === "string" ? item.environment : "",
-    category: typeof item.category === "string" ? item.category : "",
+    category: typeof item.category === "string" ? item.category : null,
     createdAt: typeof item.created_at === "string" ? item.created_at : "",
     resultsCount: typeof item.results_count === "number" ? item.results_count : 0,
     rulesCount: typeof item.rules_count === "number" ? item.rules_count : 0,
@@ -196,9 +196,9 @@ export function normalizeCodeScanningAnalysis(item: Record<string, unknown>): No
     warning: typeof item.warning === "string" ? item.warning : "",
     // tool_name on the list response is closing down. Identity is id, not tool_name.
     tool: {
-      name: typeof tool.name === "string" ? tool.name : "",
-      version: typeof tool.version === "string" ? tool.version : "",
-      guid: typeof tool.guid === "string" ? tool.guid : "",
+      name: typeof tool.name === "string" ? tool.name : null,
+      version: typeof tool.version === "string" ? tool.version : null,
+      guid: typeof tool.guid === "string" ? tool.guid : null,
     },
   };
 }
@@ -215,8 +215,8 @@ export type NormalizedDependabotAlert = {
   number: number;
   state: string;
   severity: string;
-  packageName: string;
-  manifestPath: string;
+  packageName: string | null;
+  manifestPath: string | null;
   htmlUrl: string;
   createdAt: string;
   updatedAt: string;
@@ -232,8 +232,8 @@ export function normalizeDependabotAlert(item: Record<string, unknown>): Normali
     number: typeof item.number === "number" ? item.number : 0,
     state: typeof item.state === "string" ? item.state : "",
     severity: typeof advisory.severity === "string" ? advisory.severity : "",
-    packageName: typeof pkg.name === "string" ? pkg.name : "",
-    manifestPath: typeof dependency.manifest_path === "string" ? dependency.manifest_path : "",
+    packageName: typeof pkg.name === "string" ? pkg.name : null,
+    manifestPath: typeof dependency.manifest_path === "string" ? dependency.manifest_path : null,
     htmlUrl: typeof item.html_url === "string" ? item.html_url : "",
     createdAt: typeof item.created_at === "string" ? item.created_at : "",
     updatedAt: typeof item.updated_at === "string" ? item.updated_at : "",
@@ -244,13 +244,13 @@ export function normalizeDependabotAlert(item: Record<string, unknown>): Normali
 
 export type NormalizedCodeScanningAlert = {
   number: number;
-  state: string;
-  ruleId: string;
-  severity: string;
-  toolName: string;
+  state: string | null;
+  ruleId: string | null;
+  severity: string | null;
+  toolName: string | null;
   htmlUrl: string;
   createdAt: string;
-  updatedAt: string;
+  updatedAt: string | null;
   modelVersion: "2026-05-16";
   raw: Record<string, unknown>;
 };
@@ -260,37 +260,37 @@ export function normalizeCodeScanningAlert(item: Record<string, unknown>): Norma
   const tool = isRecord(item.tool) ? item.tool : {};
   return {
     number: typeof item.number === "number" ? item.number : 0,
-    state: typeof item.state === "string" ? item.state : "",
-    ruleId: typeof rule.id === "string" ? rule.id : "",
-    severity: typeof rule.severity === "string" ? rule.severity : "",
-    toolName: typeof tool.name === "string" ? tool.name : "",
+    state: typeof item.state === "string" ? item.state : null,
+    ruleId: typeof rule.id === "string" ? rule.id : null,
+    severity: typeof rule.severity === "string" ? rule.severity : null,
+    toolName: typeof tool.name === "string" ? tool.name : null,
     htmlUrl: typeof item.html_url === "string" ? item.html_url : "",
     createdAt: typeof item.created_at === "string" ? item.created_at : "",
-    updatedAt: typeof item.updated_at === "string" ? item.updated_at : "",
+    updatedAt: typeof item.updated_at === "string" ? item.updated_at : null,
     modelVersion: "2026-05-16",
     raw: item,
   };
 }
 
 export type NormalizedSecretScanningAlert = {
-  number: number;
-  state: string;
-  secretType: string;
-  htmlUrl: string;
-  createdAt: string;
-  updatedAt: string;
+  number: number | null;
+  state: string | null;
+  secretType: string | null;
+  htmlUrl: string | null;
+  createdAt: string | null;
+  updatedAt: string | null;
   modelVersion: "2026-05-16";
 };
 
 /** Metadata only. Never returns the matched secret or a raw payload. */
 export function normalizeSecretScanningAlert(item: Record<string, unknown>): NormalizedSecretScanningAlert {
   return {
-    number: typeof item.number === "number" ? item.number : 0,
-    state: typeof item.state === "string" ? item.state : "",
-    secretType: typeof item.secret_type === "string" ? item.secret_type : "",
-    htmlUrl: typeof item.html_url === "string" ? item.html_url : "",
-    createdAt: typeof item.created_at === "string" ? item.created_at : "",
-    updatedAt: typeof item.updated_at === "string" ? item.updated_at : "",
+    number: typeof item.number === "number" ? item.number : null,
+    state: typeof item.state === "string" ? item.state : null,
+    secretType: typeof item.secret_type === "string" ? item.secret_type : null,
+    htmlUrl: typeof item.html_url === "string" ? item.html_url : null,
+    createdAt: typeof item.created_at === "string" ? item.created_at : null,
+    updatedAt: typeof item.updated_at === "string" ? item.updated_at : null,
     modelVersion: "2026-05-16",
   };
 }

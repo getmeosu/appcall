@@ -22,8 +22,8 @@ export type NormalizedReadme = {
   size: number;
   encoding: string;
   content: string;
-  htmlUrl: string;
-  downloadUrl: string;
+  htmlUrl: string | null;
+  downloadUrl: string | null;
   type: string;
 };
 
@@ -38,10 +38,10 @@ export type NormalizedSubscription = {
 
 export type NormalizedCommunityProfile = {
   healthPercentage: number;
-  description: string;
-  documentation: string;
+  description: string | null;
+  documentation: string | null;
   files: Record<string, unknown>;
-  updatedAt: string;
+  updatedAt: string | null;
 };
 
 export type NormalizedInteractionLimits = {
@@ -191,8 +191,8 @@ export function normalizeReadme(item: Record<string, unknown>): NormalizedReadme
     size: typeof item.size === "number" ? item.size : 0,
     encoding: typeof item.encoding === "string" ? item.encoding : "",
     content: typeof item.content === "string" ? item.content : "",
-    htmlUrl: typeof item.html_url === "string" ? item.html_url : "",
-    downloadUrl: typeof item.download_url === "string" ? item.download_url : "",
+    htmlUrl: typeof item.html_url === "string" ? item.html_url : null,
+    downloadUrl: typeof item.download_url === "string" ? item.download_url : null,
     type: typeof item.type === "string" ? item.type : "",
   };
 }
@@ -212,10 +212,10 @@ export function normalizeSubscription(item: Record<string, unknown>): Normalized
 export function normalizeCommunityProfile(item: Record<string, unknown>): NormalizedCommunityProfile {
   return {
     healthPercentage: typeof item.health_percentage === "number" ? item.health_percentage : 0,
-    description: typeof item.description === "string" ? item.description : "",
-    documentation: typeof item.documentation === "string" ? item.documentation : "",
+    description: typeof item.description === "string" ? item.description : null,
+    documentation: typeof item.documentation === "string" ? item.documentation : null,
     files: isRecord(item.files) ? item.files : {},
-    updatedAt: typeof item.updated_at === "string" ? item.updated_at : "",
+    updatedAt: typeof item.updated_at === "string" ? item.updated_at : null,
   };
 }
 

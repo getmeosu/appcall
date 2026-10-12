@@ -83,7 +83,7 @@ const withoutRaw = (items: Record<string, unknown>[]) => items.map(({ raw: _raw,
 
 describe("D1: manifest and op accounting", () => {
   test("v0.87.0: 800 actions + 47 webhook + 4 sync = 851 ops", () => {
-    expect(manifest.version).toBe("0.89.2");
+    expect(manifest.version).toBe("0.89.3");
     const kinds: Record<string, number> = {};
     for (const op of Object.values(ops)) kinds[op.kind] = (kinds[op.kind] ?? 0) + 1;
     expect(kinds).toEqual({ action: 801, webhook: 47, sync: 12 });

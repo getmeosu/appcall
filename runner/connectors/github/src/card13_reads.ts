@@ -40,8 +40,8 @@ export type NormalizedTeam = {
   id: number;
   name: string;
   slug: string;
-  description: string;
-  privacy: string;
+  description: string | null;
+  privacy: string | null;
   permission: string;
 };
 
@@ -49,8 +49,8 @@ export type NormalizedRoleTeam = NormalizedTeam & { assignment: string };
 
 export type NormalizedTeamInvitation = {
   id: number;
-  login: string;
-  email: string;
+  login: string | null;
+  email: string | null;
   role: string;
   createdAt: string;
 };
@@ -59,7 +59,7 @@ export type NormalizedTeamRepoPermission = {
   id: number;
   name: string;
   fullName: string;
-  roleName: string;
+  roleName: string | null;
   permissions: {
     admin: boolean;
     maintain: boolean;
@@ -202,8 +202,8 @@ export function normalizeTeam(item: Record<string, unknown>): NormalizedTeam {
     id: typeof item.id === "number" ? item.id : 0,
     name: typeof item.name === "string" ? item.name : "",
     slug: typeof item.slug === "string" ? item.slug : "",
-    description: typeof item.description === "string" ? item.description : "",
-    privacy: typeof item.privacy === "string" ? item.privacy : "",
+    description: typeof item.description === "string" ? item.description : null,
+    privacy: typeof item.privacy === "string" ? item.privacy : null,
     permission: typeof item.permission === "string" ? item.permission : "",
   };
 }
@@ -218,8 +218,8 @@ export function normalizeRoleTeam(item: Record<string, unknown>): NormalizedRole
 export function normalizeTeamInvitation(item: Record<string, unknown>): NormalizedTeamInvitation {
   return {
     id: typeof item.id === "number" ? item.id : 0,
-    login: typeof item.login === "string" ? item.login : "",
-    email: typeof item.email === "string" ? item.email : "",
+    login: typeof item.login === "string" ? item.login : null,
+    email: typeof item.email === "string" ? item.email : null,
     role: typeof item.role === "string" ? item.role : "",
     createdAt: typeof item.created_at === "string" ? item.created_at : "",
   };
@@ -231,7 +231,7 @@ export function normalizeTeamRepoPermission(item: Record<string, unknown>): Norm
     id: typeof item.id === "number" ? item.id : 0,
     name: typeof item.name === "string" ? item.name : "",
     fullName: typeof item.full_name === "string" ? item.full_name : "",
-    roleName: typeof item.role_name === "string" ? item.role_name : "",
+    roleName: typeof item.role_name === "string" ? item.role_name : null,
     permissions: {
       admin: permissions.admin === true,
       maintain: permissions.maintain === true,

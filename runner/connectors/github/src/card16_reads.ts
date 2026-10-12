@@ -46,7 +46,7 @@ export type ListGlobalAdvisoriesInput = {
 export type NormalizedPagesBuild = {
   url: string;
   status: string;
-  errorMessage: string;
+  errorMessage: string | null;
   commit: string;
   duration: number;
   createdAt: string;
@@ -56,8 +56,8 @@ export type NormalizedPagesBuild = {
 export type NormalizedPagesDeployment = { status: string };
 
 export type NormalizedSarifUpload = {
-  processingStatus: string;
-  analysesUrl: string;
+  processingStatus: string | null;
+  analysesUrl: string | null;
 };
 
 export type NormalizedCodeqlDatabase = {
@@ -68,27 +68,27 @@ export type NormalizedCodeqlDatabase = {
   createdAt: string;
   updatedAt: string;
   url: string;
-  commitOid: string;
+  commitOid: string | null;
 };
 
 export type NormalizedOrgCodeScanningAlert = {
   number: number;
-  state: string;
+  state: string | null;
   htmlUrl: string;
-  ruleId: string;
+  ruleId: string | null;
   repository: string;
 };
 
 export type NormalizedGlobalAdvisory = {
   ghsaId: string;
-  cveId: string;
+  cveId: string | null;
   summary: string;
-  description: string;
+  description: string | null;
   severity: string;
   htmlUrl: string;
   publishedAt: string;
   updatedAt: string;
-  withdrawnAt: string;
+  withdrawnAt: string | null;
 };
 
 const ORG_ALERT_STATE = new Set(["open", "closed", "dismissed", "fixed"]);
@@ -185,7 +185,7 @@ export function normalizePagesBuild(item: Record<string, unknown>): NormalizedPa
   return {
     url: typeof item.url === "string" ? item.url : "",
     status: typeof item.status === "string" ? item.status : "",
-    errorMessage: typeof error.message === "string" ? error.message : "",
+    errorMessage: typeof error.message === "string" ? error.message : null,
     commit: typeof item.commit === "string" ? item.commit : "",
     duration: typeof item.duration === "number" ? item.duration : 0,
     createdAt: typeof item.created_at === "string" ? item.created_at : "",
@@ -199,8 +199,8 @@ export function normalizePagesDeployment(item: Record<string, unknown>): Normali
 
 export function normalizeSarifUpload(item: Record<string, unknown>): NormalizedSarifUpload {
   return {
-    processingStatus: typeof item.processing_status === "string" ? item.processing_status : "",
-    analysesUrl: typeof item.analyses_url === "string" ? item.analyses_url : "",
+    processingStatus: typeof item.processing_status === "string" ? item.processing_status : null,
+    analysesUrl: typeof item.analyses_url === "string" ? item.analyses_url : null,
   };
 }
 
@@ -213,7 +213,7 @@ export function normalizeCodeqlDatabase(item: Record<string, unknown>): Normaliz
     createdAt: typeof item.created_at === "string" ? item.created_at : "",
     updatedAt: typeof item.updated_at === "string" ? item.updated_at : "",
     url: typeof item.url === "string" ? item.url : "",
-    commitOid: typeof item.commit_oid === "string" ? item.commit_oid : "",
+    commitOid: typeof item.commit_oid === "string" ? item.commit_oid : null,
   };
 }
 
@@ -222,9 +222,9 @@ export function normalizeOrgCodeScanningAlert(item: Record<string, unknown>): No
   const repository = isRecord(item.repository) ? item.repository : {};
   return {
     number: typeof item.number === "number" ? item.number : 0,
-    state: typeof item.state === "string" ? item.state : "",
+    state: typeof item.state === "string" ? item.state : null,
     htmlUrl: typeof item.html_url === "string" ? item.html_url : "",
-    ruleId: typeof rule.id === "string" ? rule.id : "",
+    ruleId: typeof rule.id === "string" ? rule.id : null,
     repository: typeof repository.full_name === "string" ? repository.full_name : "",
   };
 }
@@ -232,14 +232,14 @@ export function normalizeOrgCodeScanningAlert(item: Record<string, unknown>): No
 export function normalizeGlobalAdvisory(item: Record<string, unknown>): NormalizedGlobalAdvisory {
   return {
     ghsaId: typeof item.ghsa_id === "string" ? item.ghsa_id : "",
-    cveId: typeof item.cve_id === "string" ? item.cve_id : "",
+    cveId: typeof item.cve_id === "string" ? item.cve_id : null,
     summary: typeof item.summary === "string" ? item.summary : "",
-    description: typeof item.description === "string" ? item.description : "",
+    description: typeof item.description === "string" ? item.description : null,
     severity: typeof item.severity === "string" ? item.severity : "",
     htmlUrl: typeof item.html_url === "string" ? item.html_url : "",
     publishedAt: typeof item.published_at === "string" ? item.published_at : "",
     updatedAt: typeof item.updated_at === "string" ? item.updated_at : "",
-    withdrawnAt: typeof item.withdrawn_at === "string" ? item.withdrawn_at : "",
+    withdrawnAt: typeof item.withdrawn_at === "string" ? item.withdrawn_at : null,
   };
 }
 

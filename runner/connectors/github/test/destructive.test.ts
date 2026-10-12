@@ -110,7 +110,7 @@ const deleteActions = Object.entries(ops)
 
 describe("github FIX-DESTRUCTIVE", () => {
   test("version 0.87.0 at 851 ops; 77 destructive, 283 write", () => {
-    expect(manifest.version).toBe("0.89.2");
+    expect(manifest.version).toBe("0.89.3");
     expect(Object.keys(ops).length).toBe(860);
     const side: Record<string, number> = {};
     for (const op of Object.values(ops)) {
