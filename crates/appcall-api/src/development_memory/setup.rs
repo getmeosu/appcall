@@ -347,6 +347,23 @@ impl MemorySetup {
         self.oauth
             .start_checked(project, account, connector, existing, check)
     }
+    pub fn start_with_setup_checked(
+        &self,
+        project: &str,
+        account: Option<&str>,
+        connector: &str,
+        existing: Option<&str>,
+        setup: &BTreeMap<String, String>,
+        check: &dyn Fn() -> bool,
+    ) -> Result<StartResult> {
+        active(check)?;
+        scope(project, account)?;
+        if self.describe(connector)?.setup.mode != "oauth2" {
+            return Err(Error::Unsupported);
+        }
+        self.oauth
+            .start_with_setup_checked(project, account, connector, existing, setup, check)
+    }
     pub fn callback_checked(
         &self,
         connector: &str,

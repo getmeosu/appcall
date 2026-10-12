@@ -76,8 +76,41 @@ impl MemoryOAuth {
         existing: Option<&str>,
         check: &dyn Fn() -> bool,
     ) -> Result<StartResult> {
+        self.start_with_setup_checked(
+            project,
+            account,
+            connector,
+            existing,
+            &BTreeMap::new(),
+            check,
+        )
+    }
+    fn manifest(&self, connector: &str) -> Result<&appcall_connectors::Manifest> {
+        self.repository
+            .state
+            .registry
+            .public_connector(connector)
+            .map(|connector| connector.manifest())
+            .map_err(|_| Error::NotFound)
+    }
+    /// HEALTH-RT-1b: `setup` holds declared NON-secret setup fields; they are
+    /// validated before any state exists and bound into the signed state.
+    pub fn start_with_setup_checked(
+        &self,
+        project: &str,
+        account: Option<&str>,
+        connector: &str,
+        existing: Option<&str>,
+        setup: &BTreeMap<String, String>,
+        check: &dyn Fn() -> bool,
+    ) -> Result<StartResult> {
         active(check)?;
         scope(project, account)?;
+        let setup = if setup.is_empty() {
+            BTreeMap::new()
+        } else {
+            appcall_oauth::validate_setup_fields(self.manifest(connector)?, setup).map_err(oauth)?
+        };
         if !self.managed(connector) {
             return self.local_start(project, account, connector, existing, check);
         }
@@ -104,7 +137,7 @@ impl MemoryOAuth {
             redirect_uri: app.redirect_uri.clone(),
             expires_at: expires.to_rfc3339(),
             pkce_ref: secret_ref.clone(),
-            setup: Default::default(),
+            setup,
         };
         let state = self.signer.sign(&claims).map_err(oauth)?;
         let key = digest(&state);
@@ -326,6 +359,7 @@ impl MemoryOAuth {
         let result = if check() {
             self.provider
                 .exchange(&spec, app, code, &verifier, Utc::now().timestamp())
+                .map(|tokens| tokens.with_setup_fields(claims.setup.clone()))
         } else {
             Err(appcall_oauth::Error::OutcomeUnknown)
         };
@@ -598,7 +632,8 @@ impl MemoryOAuth {
         }
         let tokens = TokenSet::decode(raw.as_bytes()).map_err(oauth)?;
         if !tokens.needs_refresh(Utc::now().timestamp()) {
-            return Ok((c, revision, token_credentials(&tokens)?));
+            let credentials = self.token_credentials(&c.connector, &tokens, health)?;
+            return Ok((c, revision, credentials));
         }
         if c.status != Status::Active {
             return Err(Error::Conflict);
@@ -617,6 +652,7 @@ impl MemoryOAuth {
         let result = if check() {
             self.provider
                 .refresh(&spec, app, refresh, Utc::now().timestamp())
+                .map(|next| next.inherit_metadata(&tokens))
         } else {
             Err(appcall_oauth::Error::OutcomeUnknown)
         };
@@ -630,7 +666,8 @@ impl MemoryOAuth {
         }
         let (_, raw) = secret.ok_or(Error::Conflict)?;
         let tokens = TokenSet::decode(raw.as_bytes()).map_err(oauth)?;
-        Ok((next, revision, token_credentials(&tokens)?))
+        let credentials = self.token_credentials(&next.connector, &tokens, health)?;
+        Ok((next, revision, credentials))
     }
     fn claim_refresh(
         &self,
@@ -691,11 +728,23 @@ impl MemoryOAuth {
         Ok(next)
     }
 }
-fn token_credentials(tokens: &TokenSet) -> Result<Credentials> {
-    Credentials::from_fields(BTreeMap::from([(
-        "accessToken".into(),
-        tokens.access_token().into(),
-    )]))
+impl MemoryOAuth {
+    /// Actions get the access token only; health additionally gets allowlisted
+    /// non-secret metadata (HEALTH-RT-1b), mirroring appcall_oauth::Lifecycle.
+    fn token_credentials(
+        &self,
+        connector: &str,
+        tokens: &TokenSet,
+        health: bool,
+    ) -> Result<Credentials> {
+        let mut fields = BTreeMap::from([("accessToken".into(), tokens.access_token().into())]);
+        if health {
+            if let Ok(manifest) = self.manifest(connector) {
+                appcall_oauth::merge_health_fields(manifest, tokens, &mut fields);
+            }
+        }
+        Credentials::from_fields(fields)
+    }
 }
 fn authorization_url(
     spec: &appcall_connectors::OAuthConfig,

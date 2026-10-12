@@ -276,7 +276,13 @@ impl MemoryBackend {
             {
                 return Err(ApiError::new("INVALID_JSON"));
             }
-            return memory_work(move||setup.start_checked(&i.project_id,account(&i),&connector,None,&active).map(|s|Some(response(201,json!({"connection":crate::connection_json(&s.connection),"authorizationUrl":s.authorization_url})))).map_err(setup_error)).await;
+            // HEALTH-RT-1b: optional declared non-secret setup fields.
+            let fields: BTreeMap<String, String> = match body.get("fields") {
+                None | Some(Value::Null) => BTreeMap::new(),
+                Some(fields) => serde_json::from_value(fields.clone())
+                    .map_err(|_| ApiError::new("INVALID_JSON"))?,
+            };
+            return memory_work(move||setup.start_with_setup_checked(&i.project_id,account(&i),&connector,None,&fields,&active).map(|s|Some(response(201,json!({"connection":crate::connection_json(&s.connection),"authorizationUrl":s.authorization_url})))).map_err(setup_error)).await;
         }
         let route = match body.get("route") {
             None | Some(Value::Null) => String::new(),

@@ -23,7 +23,7 @@ fn fixture_url(
 ) -> (MemoryRepository, MemorySetup) {
     let manifests = [
         serde_json::json!({"key":"keyed","name":"Keyed","version":"1","runtime":"bun","models":["item"],"auth":{"type":"api_key","setup":{"mode":"api_key","fields":[{"key":"apiKey","label":"API Key","required":true,"secret":true}]}},"network":{"egress":"none"},"operations":{"read":{"kind":"action","timeoutMs":100,"maxInputBytes":128,"maxResponseBytes":128,"sideEffect":"read"}}}),
-        serde_json::json!({"key":"oauth","name":"OAuth","version":"1","runtime":"bun","models":["item"],"auth":{"type":"oauth2","setup":{"mode":"oauth2"},"oauth":{"authorizeUrl":"https://provider.example/authorize","tokenUrl":token_url,"pkce":true,"supportsRefresh":true}},"network":{"allowedHosts":["provider.example"]},"operations":{"read":{"kind":"action","timeoutMs":100,"maxInputBytes":128,"maxResponseBytes":128,"sideEffect":"read"}}}),
+        serde_json::json!({"key":"oauth","name":"OAuth","version":"1","runtime":"bun","models":["item"],"auth":{"type":"oauth2","setup":{"mode":"oauth2","fields":[{"key":"host","label":"Host","required":false,"secret":false},{"key":"apiKey","label":"Key","required":false,"secret":true}]},"oauth":{"authorizeUrl":"https://provider.example/authorize","tokenUrl":token_url,"pkce":true,"supportsRefresh":true}},"network":{"allowedHosts":["provider.example"]},"operations":{"read":{"kind":"action","timeoutMs":100,"maxInputBytes":128,"maxResponseBytes":128,"sideEffect":"read"}}}),
     ];
     let registry = Registry::from_connectors(
         manifests
@@ -922,3 +922,79 @@ fn restart_invalidates_pending_oauth_and_its_signing_key() {
 
 #[path = "lifecycle_tests/attempt.rs"]
 mod attempt;
+
+// HEALTH-RT-1b: the dev in-memory OAuth host carries declared non-secret setup
+// fields and allowlisted token metadata into health input only.
+struct WithMetadata;
+impl TokenProvider for WithMetadata {
+    fn exchange(
+        &self,
+        _: &appcall_connectors::OAuthConfig,
+        _: &AppCredentials,
+        _: &str,
+        _: &str,
+        _: i64,
+    ) -> appcall_oauth::Result<TokenSet> {
+        TokenSet::decode(br#"{"accessToken":"meta-access","refreshToken":"meta-refresh","expiresAt":"2999-01-01T00:00:00Z","providerFields":{"instance_url":"https://provider.example","api_domain":"https://evil.example"}}"#)
+    }
+    fn refresh(
+        &self,
+        _: &appcall_connectors::OAuthConfig,
+        _: &AppCredentials,
+        _: &str,
+        _: i64,
+    ) -> appcall_oauth::Result<TokenSet> {
+        Err(appcall_oauth::Error::OutcomeUnknown)
+    }
+}
+#[test]
+fn memory_oauth_setup_fields_reach_health_only_and_secrets_are_rejected() {
+    let (_repo, s) = fixture(apps(), Arc::new(WithMetadata));
+    for bad in [
+        ("apiKey", "secret-value"),
+        ("undeclared", "x"),
+        ("host", "a\u{0}b"),
+    ] {
+        let setup = BTreeMap::from([(bad.0.to_string(), bad.1.to_string())]);
+        assert!(s
+            .start_with_setup_checked("proj_dev", Some("a"), "oauth", None, &setup, &|| true)
+            .is_err());
+    }
+    let setup = BTreeMap::from([("host".to_string(), "tenant.example".to_string())]);
+    let start = s
+        .start_with_setup_checked("proj_dev", Some("a"), "oauth", None, &setup, &|| true)
+        .unwrap();
+    let c = s
+        .callback_checked(
+            "oauth",
+            Some("proj_dev"),
+            "code",
+            &state_from(&start),
+            &|| true,
+        )
+        .unwrap();
+    let snapshot = super::repository::action_connection(&c);
+    let (_, health) = s
+        .oauth()
+        .resolve_health_tracked(&snapshot, &|| true)
+        .unwrap();
+    assert_eq!(
+        health
+            .fields()
+            .keys()
+            .map(String::as_str)
+            .collect::<Vec<_>>(),
+        vec!["accessToken", "host", "instance_url"]
+    );
+    assert_eq!(health.fields()["host"], "tenant.example");
+    assert_eq!(health.fields()["instance_url"], "https://provider.example");
+    assert!(!health
+        .fields()
+        .values()
+        .any(|v| v == "meta-refresh" || v == "secret-value"));
+    let (_, action) = s.oauth().resolve_tracked(&snapshot, &|| true).unwrap();
+    assert_eq!(
+        action.fields().keys().collect::<Vec<_>>(),
+        vec!["accessToken"]
+    );
+}

@@ -974,4 +974,190 @@ mod database_tests {
             .batch_execute(&format!("DROP SCHEMA {schema} CASCADE"))
             .unwrap();
     }
+
+    // HEALTH-RT-1/1b: HTTP-level `fields` on POST /v1/connectors/{key}/setup/oauth.
+    #[test]
+    #[ignore = "requires isolated PostgreSQL and loopback OAuth simulator"]
+    fn oauth_start_fields_reach_health_input_only_and_reject_secrets() {
+        let url = std::env::var("APPCALL_ENGINE_POSTGRES_URL").unwrap();
+        let mut db = postgres::Client::connect(&url, postgres::NoTls).unwrap();
+        let schema = format!("provider_fields_{}", std::process::id());
+        db.batch_execute(&format!(
+            "CREATE SCHEMA {schema};SET search_path TO {schema}"
+        ))
+        .unwrap();
+        for sql in [
+            include_str!("../../../migrations/202605140001_init.sql"),
+            include_str!("../../../migrations/202605290001_connections_ownership.sql"),
+            include_str!("../../../migrations/202605290002_provider_subaccounts.sql"),
+            include_str!("../../../migrations/202605290004_connections_owner_check.sql"),
+            include_str!("../../../migrations/202609070004_oauth_refresh_intents.sql"),
+            include_str!("../../../migrations/202609120004_secret_retention.sql"),
+        ] {
+            db.batch_execute(sql).unwrap()
+        }
+        db.batch_execute("INSERT INTO projects(id,name)VALUES('p','test')")
+            .unwrap();
+        let store = Arc::new(Mutex::new(Store::new(
+            db,
+            LocalProvider::new(&[7; 32]).unwrap(),
+        )));
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let token_url = format!("http://{}/token", listener.local_addr().unwrap());
+        let exchange = std::thread::spawn(move || {
+            let (mut socket, _) = listener.accept().unwrap();
+            let mut bytes = [0; 8192];
+            let _ = socket.read(&mut bytes).unwrap();
+            // instance_url is on salesforce's allowedHosts; api_domain is not,
+            // and id_token is never captured.
+            let body = r#"{"access_token":"synthetic-access","refresh_token":"synthetic-refresh","expires_in":3600,"instance_url":"https://acme.my.salesforce.com","api_domain":"https://www.zohoapis.com","id_token":"synthetic-id-token"}"#;
+            write!(
+                socket,
+                "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\n\r\n{}",
+                body.len(),
+                body
+            )
+            .unwrap();
+        });
+        let mut salesforce: Value = serde_json::from_slice(include_bytes!(
+            "../../../runner/connectors/salesforce/manifest.json"
+        ))
+        .unwrap();
+        salesforce["auth"]["oauth"] = json!({
+            "authorizeUrl": "https://login.salesforce.com/services/oauth2/authorize",
+            "tokenUrl": "https://login.salesforce.com/services/oauth2/token",
+            "pkce": false,
+            "supportsRefresh": true
+        });
+        let registry = Arc::new(
+            Registry::from_connectors([Connector::from_bytes(
+                &serde_json::to_vec(&salesforce).unwrap(),
+            )
+            .unwrap()])
+            .unwrap(),
+        );
+        let oauth = Arc::new(Lifecycle::new(
+            store.clone(),
+            registry.clone(),
+            BTreeMap::from([(
+                "salesforce".into(),
+                AppCredentials {
+                    client_id: "client".into(),
+                    client_secret: "app-secret".into(),
+                    redirect_uri: "https://app.test/callback".into(),
+                },
+            )]),
+            StateSigner::new(&[1; 32]).unwrap(),
+            Arc::new(LocalTokens {
+                client: TokenClient::new(
+                    std::time::Duration::from_secs(2),
+                    EndpointPolicy::LoopbackDevelopment,
+                )
+                .unwrap(),
+                url: token_url,
+            }),
+        ));
+        let routes = ProviderRoutes::new(
+            Arc::new(appcall_setup::Service::new(
+                store.clone(),
+                registry,
+                oauth.clone(),
+                Arc::new(Accept),
+            )),
+            None,
+        );
+        let identity = Identity {
+            project_id: "p".into(),
+            account_id: String::new(),
+            admin_scope: false,
+        };
+        let scope = Scope::new("p", None).unwrap();
+        let start = "/v1/connectors/salesforce/setup/oauth";
+        let runtime = tokio::runtime::Runtime::new().unwrap();
+        runtime.block_on(async {
+            for (fields, code) in [
+                (json!({"client_secret":"x"}), "INVALID_INPUT"),
+                (json!({"accessToken":"x"}), "INVALID_INPUT"),
+                (json!({"instance_host":"a\nb"}), "INVALID_INPUT"),
+                (json!({"instance_host":5}), "INVALID_JSON"),
+                (json!("acme.my.salesforce.com"), "INVALID_JSON"),
+            ] {
+                let response = routes
+                    .handle(
+                        Some(&identity),
+                        &request("POST", start, json!({ "fields": fields })),
+                    )
+                    .await
+                    .unwrap()
+                    .unwrap();
+                assert_eq!(response.status, 400);
+                assert_eq!(response.body["error"]["code"], code);
+            }
+            tokio::task::block_in_place(|| {
+                assert!(store.lock().unwrap().list(&scope).unwrap().is_empty())
+            });
+            let started = routes
+                .handle(
+                    Some(&identity),
+                    &request(
+                        "POST",
+                        start,
+                        json!({"fields":{"instance_host":"acme.my.salesforce.com"}}),
+                    ),
+                )
+                .await
+                .unwrap()
+                .unwrap();
+            assert_eq!(started.status, 201);
+            let auth = url::Url::parse(started.body["authorizationUrl"].as_str().unwrap()).unwrap();
+            let state = auth
+                .query_pairs()
+                .find(|(k, _)| k == "state")
+                .unwrap()
+                .1
+                .into_owned();
+            let query = url::form_urlencoded::Serializer::new(String::new())
+                .append_pair("code", "code")
+                .append_pair("state", &state)
+                .finish();
+            let callback = routes
+                .handle(
+                    None,
+                    &request(
+                        "GET",
+                        &format!("/v1/connectors/salesforce/setup/oauth/callback?{query}"),
+                        Value::Null,
+                    ),
+                )
+                .await
+                .unwrap()
+                .unwrap();
+            assert_eq!(callback.status, 204);
+        });
+        exchange.join().unwrap();
+        let id = store.lock().unwrap().list(&scope).unwrap()[0].id.clone();
+        let (_, health) = oauth
+            .resolve_health_fenced(&scope, &id, "salesforce")
+            .unwrap();
+        let health = health.into_fields();
+        assert_eq!(
+            health.keys().map(String::as_str).collect::<Vec<_>>(),
+            vec!["accessToken", "instance_host", "instance_url"]
+        );
+        assert_eq!(health["instance_host"], "acme.my.salesforce.com");
+        assert_eq!(health["instance_url"], "https://acme.my.salesforce.com");
+        let rendered = Value::Object(health).to_string();
+        for secret in ["synthetic-refresh", "app-secret", "synthetic-id-token"] {
+            assert!(!rendered.contains(secret));
+        }
+        let action = oauth
+            .resolve(&scope, &id, "salesforce")
+            .unwrap()
+            .into_fields();
+        assert_eq!(action.keys().collect::<Vec<_>>(), vec!["accessToken"]);
+        let mut admin = postgres::Client::connect(&url, postgres::NoTls).unwrap();
+        admin
+            .batch_execute(&format!("DROP SCHEMA {schema} CASCADE"))
+            .unwrap();
+    }
 }
