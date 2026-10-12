@@ -4,6 +4,7 @@ use appcall_connectors::OAuthConfig;
 use appcall_store::{Scope, Status};
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD as BASE64, Engine as _};
 use sha2::{Digest, Sha256};
+use std::collections::BTreeMap;
 use zeroize::Zeroizing;
 pub struct StartResult {
     pub authorization_url: String,
@@ -69,7 +70,6 @@ impl Lifecycle {
     pub fn start(&self, scope: &Scope, id: &str, connector: &str) -> Result<StartResult> {
         self.start_checked(scope, id, connector, &|| true)
     }
-    /// Cancellation is checked after contention and before committing authorization state.
     pub fn start_checked(
         &self,
         scope: &Scope,
@@ -77,9 +77,23 @@ impl Lifecycle {
         connector: &str,
         active: &dyn Fn() -> bool,
     ) -> Result<StartResult> {
+        self.start_with_setup_checked(scope, id, connector, &BTreeMap::new(), active)
+    }
+    /// Cancellation is checked after contention and before committing authorization state.
+    /// `setup` carries declared NON-secret setup fields (HEALTH-RT-1); they are
+    /// validated against the manifest and bound into the signed state.
+    pub fn start_with_setup_checked(
+        &self,
+        scope: &Scope,
+        id: &str,
+        connector: &str,
+        setup: &BTreeMap<String, String>,
+        active: &dyn Fn() -> bool,
+    ) -> Result<StartResult> {
         if !active() {
             return Err(Error::ConnectionUnavailable);
         }
+        let setup = self.validate_setup(connector, setup)?;
         let (spec, app, scopes) = self.start_configuration(connector)?;
         let mut url = reqwest::Url::parse(&spec.authorize_url).map_err(|_| Error::InvalidInput)?;
         let verifier = Zeroizing::new(if spec.pkce {
@@ -100,7 +114,7 @@ impl Lifecycle {
    if !active() { return Ok(Err(Error::ConnectionUnavailable)); }
    let connection=tx.lock_connection(scope,id)?;if connection.connector!=connector{return Ok(Err(Error::ConnectionUnavailable))}
    if !active() { return Ok(Err(Error::ConnectionUnavailable)); }
-   let claims=StateClaims{project_id:connection.project_id.clone(),connector:connector.into(),connection_id:id.into(),redirect_uri:app.redirect_uri.clone(),expires_at:expires.clone(),pkce_ref:pkce_ref.clone()};
+   let claims=StateClaims{project_id:connection.project_id.clone(),connector:connector.into(),connection_id:id.into(),redirect_uri:app.redirect_uri.clone(),expires_at:expires.clone(),pkce_ref:pkce_ref.clone(),setup:setup.clone()};
    let state=match self.signer.sign(&claims){Ok(state)=>state,Err(error)=>return Ok(Err(error))};
    if spec.pkce{tx.store_secret(&connection.project_id,&pkce_ref,&format!("oauth_pkce_{id}"),verifier.as_bytes())?;}
    let pkce_secret_ref_id=spec.pkce.then_some(pkce_ref.as_str());
@@ -184,7 +198,7 @@ impl Lifecycle {
    if !active() { return Ok(Err(Error::ConnectionUnavailable)); }
    let attempt:String=row.get("attempt_id");tx.client().execute("UPDATE oauth_refresh_intents SET state='dispatched',updated_at=now() WHERE project_id=$1 AND connection_id=$2 AND attempt_id=$3",&[&connection.project_id,&connection.id,&attempt])?;tx.update_status(&scope,&connection.id,Status::Degraded)?;
    if !active() { return Err(appcall_store::Error::Conflict); }
-   Ok(Ok((Pending{connection,attempt,spec:spec.clone(),tokens:None},verifier)))
+   Ok(Ok((Pending{connection,attempt,spec:spec.clone(),tokens:None,setup:claims.setup.clone()},verifier)))
   }).map_err(persistence)??;
         let result = if active() {
             self.provider

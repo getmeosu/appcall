@@ -3876,6 +3876,7 @@ export function createConnectorRegistry(input: {
       if (inputSizeFailure) {
         return inputSizeFailure;
       }
+      inputValue = withDerivedInstanceUrl(connectorKey, input.manifests, inputValue);
       // Mirror the action path: invoke the handler with the credential input and
       // surface the (possibly Promise) output. A synchronous structured throw is
       // captured here; an async rejection is awaited+mapped by the server layer.
@@ -4186,6 +4187,49 @@ function buildConnectorDescriptions(manifests: Manifest[]): Record<string, Recor
 // so reject it at the shared dispatch boundary when credentials are present.
 // This keeps every action-kind healthcheck honest without requiring a bespoke
 // provider probe for connectors that are not ready to implement one yet.
+/**
+ * HEALTH-RT-1: OAuth healthcheck input carries declared NON-secret setup
+ * fields (e.g. salesforce instance_host). Handlers that expect a resolved
+ * base URL read `instanceUrl`, so derive it from the manifest's
+ * `http.baseUrl` template when every placeholder is a declared non-secret
+ * setup field holding a bare hostname that the manifest's network allowlist
+ * permits. Secret fields are never used, and an explicit instanceUrl wins.
+ */
+export function withDerivedInstanceUrl(connectorKey: string, manifests: Manifest[], inputValue: unknown): unknown {
+  if (!isRecord(inputValue) || inputValue.instanceUrl !== undefined) {
+    return inputValue;
+  }
+  const manifest = manifests.find((candidate) => candidate.key === connectorKey) as Record<string, unknown> | undefined;
+  const http = manifest && isRecord(manifest.http) ? manifest.http : undefined;
+  const template = typeof http?.baseUrl === "string" ? http.baseUrl : undefined;
+  const auth = manifest && isRecord(manifest.auth) ? manifest.auth : undefined;
+  const setup = auth && isRecord(auth.setup) ? auth.setup : undefined;
+  if (!template || !setup || !/^https:\/\/\{\{[A-Za-z0-9_]+\}\}(\/[^{}]*)?$/.test(template)) {
+    return inputValue;
+  }
+  const fields = [
+    ...(Array.isArray(setup.fields) ? setup.fields : []),
+    ...(Array.isArray(setup.routes) ? setup.routes.flatMap((route: unknown) => (isRecord(route) && Array.isArray(route.fields) ? route.fields : [])) : []),
+  ];
+  const nonSecret = new Set(fields.filter((field): field is Record<string, unknown> => isRecord(field) && field.secret !== true && typeof field.key === "string").map((field) => field.key as string));
+  const key = /\{\{([A-Za-z0-9_]+)\}\}/.exec(template)![1]!;
+  const host = inputValue[key];
+  if (!nonSecret.has(key) || typeof host !== "string" || !/^[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?)+$/.test(host)) {
+    return inputValue;
+  }
+  const network = manifest && isRecord(manifest.network) ? manifest.network : undefined;
+  const allowed = Array.isArray(network?.allowedHosts) ? network.allowedHosts.filter((h): h is string => typeof h === "string") : [];
+  const lower = host.toLowerCase();
+  const permitted = allowed.some((pattern) => {
+    const p = pattern.toLowerCase();
+    return p.startsWith("*.") ? lower.endsWith(p.slice(1)) && lower.length > p.length - 1 : lower === p;
+  });
+  if (!permitted) {
+    return inputValue;
+  }
+  return { ...inputValue, instanceUrl: template.replace(`{{${key}}}`, lower).replace(/\/$/, "") };
+}
+
 function enforceCredentialedHealthcheckEvidence(
   connectorKey: string,
   manifests: Manifest[],

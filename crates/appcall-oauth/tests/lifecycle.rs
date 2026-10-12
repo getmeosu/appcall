@@ -914,3 +914,200 @@ fn cancellation_after_refresh_or_exchange_reconciles_provider_outcome() {
         }
     }
 }
+
+// HEALTH-RT-1: declared NON-secret setup fields captured at authorization start
+// travel with the token set into health resolution only, never secrets.
+fn with_test_oauth(manifest: &[u8], authorize_host: &str, extra_secret_field: bool) -> Connector {
+    let mut value: serde_json::Value = serde_json::from_slice(manifest).unwrap();
+    value["auth"]["oauth"] = serde_json::json!({
+        "authorizeUrl": format!("https://{authorize_host}/oauth2/authorize"),
+        "tokenUrl": format!("https://{authorize_host}/oauth2/token"),
+        "pkce": false,
+        "supportsRefresh": true
+    });
+    if extra_secret_field {
+        value["auth"]["setup"]["fields"]
+            .as_array_mut()
+            .unwrap()
+            .push(serde_json::json!({"key":"apiKey","label":"Key","required":false,"secret":true}));
+    }
+    Connector::from_bytes(&serde_json::to_vec(&value).unwrap()).unwrap()
+}
+fn setup_service(db: &Database, provider: Arc<dyn TokenProvider>, now: i64) -> Lifecycle {
+    let registry = Registry::from_connectors([
+        with_test_oauth(
+            include_bytes!("../../../runner/connectors/salesforce/manifest.json"),
+            "login.salesforce.com",
+            false,
+        ),
+        with_test_oauth(
+            include_bytes!("../../../runner/connectors/zoho-recruit/manifest.json"),
+            "recruit.zoho.com",
+            true,
+        ),
+    ])
+    .unwrap();
+    let app = AppCredentials {
+        client_id: "client".into(),
+        client_secret: "app-client-secret".into(),
+        redirect_uri: "https://app.test/callback".into(),
+    };
+    Lifecycle::new(
+        db.store.clone(),
+        Arc::new(registry),
+        BTreeMap::from([
+            ("salesforce".into(), app.clone()),
+            ("zoho-recruit".into(), app),
+        ]),
+        StateSigner::new(&[1; 32]).unwrap(),
+        provider,
+    )
+    .with_clock(Arc::new(move || now))
+}
+fn add_connection(db: &Database, id: &str, connector: &str) {
+    db.store
+        .lock()
+        .unwrap()
+        .create(
+            &Scope::new("p", None).unwrap(),
+            &Connection {
+                id: id.into(),
+                project_id: "p".into(),
+                connector: connector.into(),
+                auth_type: AuthType::OAuth2,
+                status: Status::Disconnected,
+                secret_ref_id: "".into(),
+                last_test_status: TestStatus::Unknown,
+                external_account_id: "".into(),
+                credential_owner: CredentialOwner::Platform,
+            },
+        )
+        .unwrap();
+}
+fn authorize(service: &Lifecycle, id: &str, connector: &str, setup: &[(&str, &str)]) -> Result<()> {
+    let setup: BTreeMap<String, String> = setup
+        .iter()
+        .map(|(k, v)| (k.to_string(), v.to_string()))
+        .collect();
+    let scope = Scope::new("p", None).unwrap();
+    let url = service
+        .start_with_setup_checked(&scope, id, connector, &setup, &|| true)?
+        .authorization_url;
+    let state = reqwest::Url::parse(&url)
+        .unwrap()
+        .query_pairs()
+        .find(|(k, _)| k == "state")
+        .unwrap()
+        .1
+        .into_owned();
+    let fields = service
+        .callback(connector, Some("p"), "code", &state)?
+        .into_fields();
+    // The callback result feeds actions: credential only.
+    assert_eq!(fields.keys().collect::<Vec<_>>(), vec!["accessToken"]);
+    Ok(())
+}
+fn assert_no_secrets(fields: &serde_json::Map<String, serde_json::Value>) {
+    for value in fields.values() {
+        let value = value.as_str().unwrap();
+        assert!(!["rotated", "rotating-old", "app-client-secret", "client"].contains(&value));
+    }
+    for key in fields.keys() {
+        assert!(key == "accessToken" || !key.to_lowercase().contains("token"));
+        assert!(!key.to_lowercase().contains("secret") && key != "apiKey");
+    }
+}
+#[test]
+#[ignore = "uses explicit local PostgreSQL private schema"]
+fn health_rt1_salesforce_health_input_carries_instance_host_through_refresh() {
+    let db = Database::new();
+    add_connection(&db, "sf", "salesforce");
+    let provider = Arc::new(Provider {
+        calls: AtomicUsize::new(0),
+        fail: false,
+    });
+    let service = setup_service(&db, provider.clone(), 1_800_000_000);
+    authorize(
+        &service,
+        "sf",
+        "salesforce",
+        &[("instance_host", "acme.my.salesforce.com")],
+    )
+    .unwrap();
+    let scope = Scope::new("p", None).unwrap();
+    let (_, health) = service
+        .resolve_health_fenced(&scope, "sf", "salesforce")
+        .unwrap();
+    let health = health.into_fields();
+    assert_eq!(health["instance_host"], "acme.my.salesforce.com");
+    assert_eq!(health["accessToken"], "fresh");
+    assert_eq!(health.len(), 2);
+    assert_no_secrets(&health);
+    // Action resolution is unchanged.
+    let action = service
+        .resolve(&scope, "sf", "salesforce")
+        .unwrap()
+        .into_fields();
+    assert_eq!(action.keys().collect::<Vec<_>>(), vec!["accessToken"]);
+    // After expiry the refreshed token set keeps the setup fields.
+    let later = setup_service(&db, provider.clone(), 2_000_000_000);
+    let (_, refreshed) = later
+        .resolve_health_fenced(&scope, "sf", "salesforce")
+        .unwrap();
+    let refreshed = refreshed.into_fields();
+    assert_eq!(provider.calls.load(Ordering::SeqCst), 2);
+    assert_eq!(refreshed["instance_host"], "acme.my.salesforce.com");
+    assert_no_secrets(&refreshed);
+}
+#[test]
+#[ignore = "uses explicit local PostgreSQL private schema"]
+fn health_rt1_zoho_recruit_non_us_data_center_reaches_health_input() {
+    let db = Database::new();
+    add_connection(&db, "zr", "zoho-recruit");
+    let service = setup_service(
+        &db,
+        Arc::new(Provider {
+            calls: AtomicUsize::new(0),
+            fail: false,
+        }),
+        1_800_000_000,
+    );
+    authorize(&service, "zr", "zoho-recruit", &[("dataCenter", " eu ")]).unwrap();
+    let scope = Scope::new("p", None).unwrap();
+    let (_, health) = service
+        .resolve_health_fenced(&scope, "zr", "zoho-recruit")
+        .unwrap();
+    let health = health.into_fields();
+    assert_eq!(health["dataCenter"], "eu");
+    assert_eq!(health.len(), 2);
+    assert_no_secrets(&health);
+}
+#[test]
+#[ignore = "uses explicit local PostgreSQL private schema"]
+fn health_rt1_secret_or_undeclared_setup_fields_are_rejected_before_any_state() {
+    let db = Database::new();
+    add_connection(&db, "zr", "zoho-recruit");
+    let provider = Arc::new(Provider {
+        calls: AtomicUsize::new(0),
+        fail: false,
+    });
+    let service = setup_service(&db, provider.clone(), 1_800_000_000);
+    let scope = Scope::new("p", None).unwrap();
+    for bad in [
+        ("apiKey", "declared-but-secret"),
+        ("client_secret", "undeclared"),
+        ("refreshToken", "undeclared"),
+        ("dataCenter", "eu\nx"),
+    ] {
+        let setup = BTreeMap::from([(bad.0.to_string(), bad.1.to_string())]);
+        assert!(matches!(
+            service.start_with_setup_checked(&scope, "zr", "zoho-recruit", &setup, &|| true),
+            Err(Error::InvalidInput)
+        ));
+    }
+    assert_eq!(
+        db.store.lock().unwrap().get(&scope, "zr").unwrap().status,
+        Status::Disconnected
+    );
+    assert_eq!(provider.calls.load(Ordering::SeqCst), 0);
+}

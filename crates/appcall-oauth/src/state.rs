@@ -13,6 +13,9 @@ pub struct StateClaims {
     pub redirect_uri: String,
     pub expires_at: String,
     pub pkce_ref: String,
+    /// HEALTH-RT-1: declared non-secret setup fields, HMAC-bound to the state.
+    #[serde(default, skip_serializing_if = "std::collections::BTreeMap::is_empty")]
+    pub setup: std::collections::BTreeMap<String, String>,
 }
 pub struct ExpectedState<'a> {
     pub project_id: Option<&'a str>,

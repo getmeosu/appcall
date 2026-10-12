@@ -450,10 +450,26 @@ impl Service {
         existing: Option<&str>,
         active: &dyn Fn() -> bool,
     ) -> Result<StartResult> {
+        self.start_with_setup_checked(scope, connector, existing, &BTreeMap::new(), active)
+    }
+    /// HEALTH-RT-1: `setup` holds declared NON-secret setup fields (such as
+    /// instance_host or dataCenter). They are validated before any connection
+    /// row is created and travel with the OAuth tokens so healthchecks see them.
+    pub fn start_with_setup_checked(
+        &self,
+        scope: &SetupScope,
+        connector: &str,
+        existing: Option<&str>,
+        setup: &BTreeMap<String, String>,
+        active: &dyn Fn() -> bool,
+    ) -> Result<StartResult> {
         check_active(active)?;
         if self.describe(connector)?.setup.mode != "oauth2" {
             return Err(Error::Unsupported);
         }
+        self.oauth
+            .validate_setup(connector, setup)
+            .map_err(Error::OAuth)?;
         // Validate connector/app/redirect configuration before creating a
         // connection. A failed configuration check must not leave a row that
         // looks like an abandoned OAuth attempt.
@@ -510,10 +526,13 @@ impl Service {
             }
             return Err(error);
         }
-        let result = match self
-            .oauth
-            .start_checked(&scope.scope, &connection.id, connector, active)
-        {
+        let result = match self.oauth.start_with_setup_checked(
+            &scope.scope,
+            &connection.id,
+            connector,
+            setup,
+            active,
+        ) {
             Ok(result) => result,
             Err(error) => {
                 if created

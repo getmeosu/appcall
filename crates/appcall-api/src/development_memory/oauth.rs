@@ -104,6 +104,7 @@ impl MemoryOAuth {
             redirect_uri: app.redirect_uri.clone(),
             expires_at: expires.to_rfc3339(),
             pkce_ref: secret_ref.clone(),
+            setup: Default::default(),
         };
         let state = self.signer.sign(&claims).map_err(oauth)?;
         let key = digest(&state);

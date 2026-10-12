@@ -278,8 +278,21 @@ impl ProviderRoutes {
                 {
                     return failure(400, "INVALID_JSON", "Request body must be valid JSON.");
                 }
+                // HEALTH-RT-1: optional declared non-secret setup fields.
+                let setup: BTreeMap<String, String> = match body.get("fields") {
+                    None | Some(Value::Null) => BTreeMap::new(),
+                    Some(fields) => match serde_json::from_value(fields.clone()) {
+                        Ok(fields) => fields,
+                        Err(_) => {
+                            return failure(400, "INVALID_JSON", "Request body must be valid JSON.")
+                        }
+                    },
+                };
                 // As in Go, the managed app configuration determines the actual redirect.
-                match self.setup.start_checked(&scope, &connector, None, active) {
+                match self
+                    .setup
+                    .start_with_setup_checked(&scope, &connector, None, &setup, active)
+                {
                     Ok(start) => response(
                         201,
                         json!({"connection":crate::connection_json(&start.connection),"authorizationUrl":start.authorization_url}),

@@ -21,6 +21,8 @@ pub(crate) struct Pending {
     pub attempt: String,
     pub spec: OAuthConfig,
     pub tokens: Option<TokenSet>,
+    /// Non-secret setup fields to persist with the next token set.
+    pub setup: BTreeMap<String, String>,
 }
 enum Prepared {
     Fresh(Connection, ResolvedCredentials),
@@ -76,6 +78,66 @@ impl Lifecycle {
             .clone()
             .filter(|spec| spec.version.is_empty() || spec.version == "2.0")
             .ok_or(Error::Unsupported)
+    }
+    /// Declared, non-secret setup field keys of an OAuth connector.
+    fn non_secret_setup_keys(&self, connector: &str) -> Result<Vec<String>> {
+        let connector = self
+            .registry
+            .connector(connector)
+            .map_err(|_| Error::Unsupported)?;
+        let setup = &connector.manifest().auth.setup;
+        Ok(setup
+            .fields
+            .iter()
+            .chain(setup.routes.iter().flat_map(|route| route.fields.iter()))
+            .filter(|field| !field.secret)
+            .map(|field| field.key.clone())
+            .collect())
+    }
+    /// HEALTH-RT-1: validate setup values submitted at authorization start.
+    /// Every key must be a declared NON-secret setup field; anything else
+    /// (undeclared or secret) is rejected rather than silently dropped.
+    pub fn validate_setup(
+        &self,
+        connector: &str,
+        setup: &BTreeMap<String, String>,
+    ) -> Result<BTreeMap<String, String>> {
+        let allowed = self.non_secret_setup_keys(connector)?;
+        if setup.len() > 16 {
+            return Err(Error::InvalidInput);
+        }
+        let mut out = BTreeMap::new();
+        for (key, value) in setup {
+            if !allowed.iter().any(|allowed| allowed == key)
+                || value.len() > 512
+                || value.chars().any(char::is_control)
+            {
+                return Err(Error::InvalidInput);
+            }
+            let value = value.trim();
+            if !value.is_empty() {
+                out.insert(key.clone(), value.to_owned());
+            }
+        }
+        Ok(out)
+    }
+    /// Health input only: add stored setup values whose keys are still
+    /// declared non-secret by the current manifest. Never overwrites a
+    /// credential key (accessToken).
+    fn merge_health_setup(
+        &self,
+        connector: &str,
+        setup: &BTreeMap<String, String>,
+        fields: &mut BTreeMap<String, String>,
+    ) {
+        let Ok(allowed) = self.non_secret_setup_keys(connector) else {
+            return;
+        };
+        for (key, value) in setup {
+            if allowed.iter().any(|allowed| allowed == key) && !fields.contains_key(key) {
+                fields.insert(key.clone(), value.clone());
+            }
+        }
     }
     pub fn resolve(
         &self,
@@ -145,7 +207,12 @@ impl Lifecycle {
                 } else {
                     Err(Error::OutcomeUnknown)
                 };
-                self.finish_fenced(scope, *pending, result)
+                let setup = pending.setup.clone();
+                let (connection, mut fields) = self.finish_fenced(scope, *pending, result)?;
+                if health {
+                    self.merge_health_setup(expected_connector, &setup, &mut fields.0);
+                }
+                Ok((connection, fields))
             }
         }
     }
@@ -212,13 +279,11 @@ impl Lifecycle {
             Err(error) => return Ok(Err(error)),
         };
         if !tokens.needs_refresh((self.now)()) {
-            return Ok(Ok(Prepared::Fresh(
-                connection,
-                ResolvedCredentials(BTreeMap::from([(
-                    "accessToken".into(),
-                    tokens.access_token.clone(),
-                )])),
-            )));
+            let mut fields = BTreeMap::from([("accessToken".into(), tokens.access_token.clone())]);
+            if policy.health {
+                self.merge_health_setup(expected, &tokens.setup_fields, &mut fields);
+            }
+            return Ok(Ok(Prepared::Fresh(connection, ResolvedCredentials(fields))));
         }
         let spec = match self.spec(expected) {
             Ok(spec) if spec.supports_refresh => spec,
@@ -248,6 +313,7 @@ impl Lifecycle {
         Ok(Ok(Prepared::Refresh(Box::new(Pending {
             connection,
             attempt,
+            setup: tokens.setup_fields.clone(),
             spec,
             tokens: Some(tokens),
         }))))
@@ -277,6 +343,8 @@ impl Lifecycle {
                 return Err(Error::OutcomeUnknown);
             }
         };
+        let mut tokens = tokens;
+        tokens.setup_fields = pending.setup.clone();
         let encoded = Zeroizing::new(tokens.encode()?);
         let secret = random_id("sec_")?;
         let connection=self.store.lock().map_err(|_|Error::Persistence)?.transaction(|tx|{

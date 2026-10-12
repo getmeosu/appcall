@@ -129,6 +129,7 @@ impl TokenClient {
             token_type: parsed.token_type,
             scope: parsed.scope,
             expires_at,
+            setup_fields: BTreeMap::new(),
         })
     }
 }

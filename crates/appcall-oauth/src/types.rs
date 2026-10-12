@@ -36,6 +36,12 @@ pub struct TokenSet {
     pub(crate) scope: String,
     #[serde(default = "zero_time")]
     pub(crate) expires_at: String,
+    /// HEALTH-RT-1: declared NON-secret setup fields (e.g. instance_host,
+    /// dataCenter) captured at authorization start. Kept inside the encrypted
+    /// token envelope so no schema change is needed; never holds secrets
+    /// (validated against the manifest on write and filtered again on read).
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub(crate) setup_fields: BTreeMap<String, String>,
 }
 fn zero_time() -> String {
     "0001-01-01T00:00:00Z".into()
@@ -55,6 +61,9 @@ impl TokenSet {
     }
     pub fn encode(&self) -> Result<Vec<u8>> {
         serde_json::to_vec(self).map_err(|_| Error::InvalidToken)
+    }
+    pub fn setup_fields(&self) -> &BTreeMap<String, String> {
+        &self.setup_fields
     }
     pub fn access_token(&self) -> &str {
         &self.access_token
