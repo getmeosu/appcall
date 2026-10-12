@@ -1,5 +1,5 @@
 import { createGitHubClient, parseGitHubRateLimit, type GitHubClient } from "./http";
-import { normalizeGitHubPullRequest, type GitHubPullRequest } from "./pull_requests";
+import { normalizeGitHubPullRequestSimple, type GitHubPullRequest } from "./pull_requests";
 import { normalizeGitHubBranch, type GitHubBranch } from "./branches";
 
 export type GitHubCommit = {
@@ -536,7 +536,7 @@ export function createCommitsClient(options: { accessToken: string; fetch?: type
         `${repoPath(payload.owner, payload.repo)}/commits/${encodeURIComponent(payload.commitSha)}/pulls${qs}`,
       );
       if (response.status === 200 && Array.isArray(response.body)) {
-        return { ok: true as const, pullRequests: (response.body as GitHubPullRequest[]).map(normalizeGitHubPullRequest) };
+        return { ok: true as const, pullRequests: (response.body as GitHubPullRequest[]).map(normalizeGitHubPullRequestSimple) };
       }
       if (response.status === 404) {
         return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Commit not found." } };

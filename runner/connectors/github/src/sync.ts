@@ -1,5 +1,5 @@
 import { normalizeGitHubIssue, parseIssuesResponse, type NormalizedIssue } from "./issues";
-import { normalizeGitHubPullRequest, parsePullRequestsResponse, type NormalizedPullRequest } from "./pull_requests";
+import { normalizeGitHubPullRequestSimple, parsePullRequestsResponse, type NormalizedPullRequestSimple } from "./pull_requests";
 import { normalizeGitHubCommit, parseCommitsResponse, type NormalizedCommit } from "./commits";
 import { normalizeGitHubRepository, parseRepositoriesResponse, type NormalizedRepository } from "./repositories";
 
@@ -14,12 +14,12 @@ export function executeIssuesListSync(input: IssuesListSyncInput): IssuesListSyn
 }
 
 export type PullRequestsListSyncInput = { response: unknown };
-export type PullRequestsListSyncResult = { provider: "github"; operation: "pull_requests.list"; items: NormalizedPullRequest[]; nextLink: string | null };
+export type PullRequestsListSyncResult = { provider: "github"; operation: "pull_requests.list"; items: NormalizedPullRequestSimple[]; nextLink: string | null };
 
 export function executePullRequestsListSync(input: PullRequestsListSyncInput): PullRequestsListSyncResult {
   const response = requireRecord(input.response, "response");
   const parsed = parsePullRequestsResponse(response);
-  return { provider: "github", operation: "pull_requests.list", items: parsed.pullRequests.map((p) => normalizeGitHubPullRequest(p)), nextLink: parsed.nextLink };
+  return { provider: "github", operation: "pull_requests.list", items: parsed.pullRequests.map((p) => normalizeGitHubPullRequestSimple(p)), nextLink: parsed.nextLink };
 }
 
 export type CommitsListSyncInput = { response: unknown };

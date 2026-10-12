@@ -38,9 +38,9 @@ export type NormalizedPullRequest = {
   headBranch: string;
   baseBranch: string;
   headSha: string;
-  headRepo: string;
+  headRepo: string | null;
   baseRepo: string;
-  repositoryUrl: string;
+  repositoryUrl: string | null;
   author: string;
   createdAt: string;
   updatedAt: string;
@@ -70,9 +70,13 @@ export function normalizeGitHubPullRequest(pr: GitHubPullRequest): NormalizedPul
     headBranch: pr.head?.ref ?? "",
     baseBranch: pr.base?.ref ?? "",
     headSha: pr.head?.sha ?? "",
-    headRepo: pr.head?.repo?.full_name ?? "",
+    // GH-TYPED-READS TR-4: head.repo is null when the head fork was deleted (the pinned spec's
+    // webhook pull_request schemas mark head.repo nullable), so headRepo is null, not "".
+    // base.repo is required and non-null in every pinned PR schema, so baseRepo keeps its fallback.
+    headRepo: typeof pr.head?.repo?.full_name === "string" ? pr.head.repo.full_name : null,
     baseRepo: pr.base?.repo?.full_name ?? "",
-    repositoryUrl: pr.repository_url ?? "",
+    // repository_url is not a property of pull-request or pull-request-simple; null when absent.
+    repositoryUrl: typeof pr.repository_url === "string" ? pr.repository_url : null,
     author: pr.user?.login ?? "",
     createdAt: pr.created_at ?? "",
     updatedAt: pr.updated_at ?? "",
@@ -81,6 +85,16 @@ export function normalizeGitHubPullRequest(pr: GitHubPullRequest): NormalizedPul
     modelVersion: "2026-05-16",
     raw: pr,
   };
+}
+
+// GH-TYPED-READS TR-4: list reads and the requested_reviewers writes return pull-request-simple,
+// whose user is nullable-simple-user, so author is null when user is null (pull-request's user is
+// required and non-null, so the full normalizer keeps its fallback).
+export type NormalizedPullRequestSimple = Omit<NormalizedPullRequest, "author"> & { author: string | null };
+
+export function normalizeGitHubPullRequestSimple(pr: GitHubPullRequest): NormalizedPullRequestSimple {
+  const user = pr.user as { login?: unknown } | null | undefined;
+  return { ...normalizeGitHubPullRequest(pr), author: user && typeof user.login === "string" ? user.login : null };
 }
 
 export function parsePullRequestsResponse(response: unknown): { pullRequests: GitHubPullRequest[]; nextLink: string | null } {
@@ -1018,7 +1032,7 @@ export function createPullRequestsClient(options: { accessToken: string; fetch?:
         },
       );
       if (response.status === 201 || response.status === 200) {
-        return { ok: true as const, pullRequest: normalizeGitHubPullRequest(response.body as GitHubPullRequest) };
+        return { ok: true as const, pullRequest: normalizeGitHubPullRequestSimple(response.body as GitHubPullRequest) };
       }
       return mapGithubError(response, "add requested reviewers");
     },
@@ -1037,7 +1051,7 @@ export function createPullRequestsClient(options: { accessToken: string; fetch?:
         },
       );
       if (response.status === 200) {
-        return { ok: true as const, pullRequest: normalizeGitHubPullRequest(response.body as GitHubPullRequest) };
+        return { ok: true as const, pullRequest: normalizeGitHubPullRequestSimple(response.body as GitHubPullRequest) };
       }
       return mapGithubError(response, "remove requested reviewers");
     },

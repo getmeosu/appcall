@@ -61,8 +61,8 @@ const call = (op: string, input: Record<string, unknown>) =>
 const opsOf = manifest.operations as Record<string, Record<string, any>>;
 
 describe("github FIX-G13C: G13 GraphQL ops via gqlRequest", () => {
-  test("version 0.86.8 at 847 ops; auth.scopes unchanged", () => {
-    expect(manifest.version).toBe("0.86.8");
+  test("version 0.86.9 at 847 ops; auth.scopes unchanged", () => {
+    expect(manifest.version).toBe("0.86.9");
     expect(Object.keys(opsOf)).toHaveLength(847);
     expect(manifest.auth.scopes).toEqual(["repo", "read:org", "admin:repo_hook", "admin:org_hook", "gist", "notifications", "admin:org"]);
     for (const scope of ["user", "project", "workflow"]) expect(manifest.auth.scopes).not.toContain(scope);

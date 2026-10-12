@@ -1,5 +1,5 @@
 import { createGitHubClient, parseGitHubRateLimit, type GitHubClient } from "./http";
-import { normalizeGitHubRepoListItem, type GitHubRepo } from "./repos";
+import { normalizeGitHubRepoListItem, normalizeGitHubRepoStarredItem, type GitHubRepo } from "./repos";
 import { requirePathValue } from "./path_values";
 
 export type GitHubUser = {
@@ -652,14 +652,14 @@ export function createUsersClient(options: { accessToken: string; fetch?: typeof
       const payload = validateListUserStarredInput(input);
       const result = await fetchList(clientFor("users.starred.list"), "users.starred.list", `/users/${encodeURIComponent(payload.username)}/starred${pageQuery(payload)}`);
       if (!result.ok) return result;
-      return { ok: true as const, repositories: (result.body as GitHubRepo[]).map(normalizeGitHubRepoListItem) };
+      return { ok: true as const, repositories: (result.body as GitHubRepo[]).map(normalizeGitHubRepoStarredItem) };
     },
 
     async listAuthenticatedStarred(input: unknown) {
       const payload = validateListAuthenticatedStarredInput(input);
       const result = await fetchList(clientFor("user.starred.list"), "user.starred.list", `/user/starred${pageQuery(payload)}`);
       if (!result.ok) return result;
-      return { ok: true as const, repositories: (result.body as GitHubRepo[]).map(normalizeGitHubRepoListItem) };
+      return { ok: true as const, repositories: (result.body as GitHubRepo[]).map(normalizeGitHubRepoStarredItem) };
     },
 
     async listSocialAccounts(input: unknown) {
