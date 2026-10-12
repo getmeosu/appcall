@@ -19,11 +19,13 @@ const fixture = (name: string) => require(`../fixtures/typed_reads_3/${name}.jso
 
 // repo/user/org use normalizeGitHub{Repo,User,Org}ListItem; blocked (user.blocks.list) and collab
 // (repos.collaborators.list) have their own simple-user / collaborator normalizers.
-type Entity = "repo" | "user" | "org" | "pr" | "blocked" | "collab";
+// TR-4 (linus: do not widen spec-required fields): search.repositories (repo-search-result-item) and
+// users/user.starred.list (repository) left the minimal-repository set for their own normalizers.
+type Entity = "repo" | "repoSearch" | "repoStarred" | "user" | "org" | "pr" | "blocked" | "collab";
 // [op, input, request pathname, list key, item entity, fixture variants]
 export const TR3_LISTS: [string, Record<string, unknown>, string, string, Entity, string[]][] = [
   ["search.users", {"q": "octo"}, "/search/users", "items", "user", ["default", "sparse"]],
-  ["search.repositories", {"q": "octo"}, "/search/repositories", "items", "repo", ["default", "sparse"]],
+  ["search.repositories", {"q": "octo"}, "/search/repositories", "items", "repoSearch", ["default", "sparse"]],
   ["search.orgs", {"q": "octo"}, "/search/users", "items", "org", ["default", "sparse"]],
   ["user.blocks.list", {}, "/user/blocks", "users", "blocked", ["default", "sparse"]],
   ["users.repos.list", {"username": "octocat"}, "/users/octocat/repos", "repositories", "repo", ["default", "sparse"]],
@@ -35,8 +37,8 @@ export const TR3_LISTS: [string, Record<string, unknown>, string, string, Entity
   ["repos.forks.list", {"owner": "octocat", "repo": "Hello-World"}, "/repos/octocat/Hello-World/forks", "forks", "repo", ["default", "sparse"]],
   ["teams.repos.list", {"org": "github", "teamSlug": "justice-league"}, "/orgs/github/teams/justice-league/repos", "repositories", "repo", ["default", "sparse"]],
   ["users.list", {}, "/users", "users", "user", ["default", "sparse"]],
-  ["users.starred.list", {"username": "octocat"}, "/users/octocat/starred", "repositories", "repo", ["default-response", "sparse"]],
-  ["user.starred.list", {}, "/user/starred", "repositories", "repo", ["default-response", "sparse"]],
+  ["users.starred.list", {"username": "octocat"}, "/users/octocat/starred", "repositories", "repoStarred", ["default-response", "sparse"]],
+  ["user.starred.list", {}, "/user/starred", "repositories", "repoStarred", ["default-response", "sparse"]],
   ["orgs.public.list", {}, "/organizations", "organizations", "org", ["default", "sparse"]],
   ["users.orgs.list", {"username": "octocat"}, "/users/octocat/orgs", "organizations", "org", ["default", "sparse"]],
   ["orgs.outside_collaborators.list", {"org": "github"}, "/orgs/github/outside_collaborators", "collaborators", "user", ["default", "sparse"]],
@@ -122,10 +124,13 @@ const LIST_NULLS: Partial<Record<Entity, Record<string, string>>> = {
   repo: { cloneUrl: "clone_url", sshUrl: "ssh_url", defaultBranch: "default_branch", stars: "stargazers_count", forks: "forks_count", openIssues: "open_issues_count", createdAt: "created_at", updatedAt: "updated_at", pushedAt: "pushed_at" },
   user: { publicRepos: "public_repos", followers: "followers", following: "following", createdAt: "created_at", updatedAt: "updated_at" },
   org: { publicRepos: "public_repos", createdAt: "created_at", updatedAt: "updated_at" },
+  repoStarred: { createdAt: "created_at", updatedAt: "updated_at", pushedAt: "pushed_at" },
   collab: { permissions: "permissions" },
 };
 const ITEM_OF: Partial<Record<Entity, () => any>> = {
   repo: () => ops["repos.get"]!.outputSchema.properties.repo,
+  repoSearch: () => ops["repos.get"]!.outputSchema.properties.repo,
+  repoStarred: () => ops["repos.get"]!.outputSchema.properties.repo,
   user: () => ops["users.get"]!.outputSchema.properties.user,
   org: () => ops["orgs.get"]!.outputSchema.properties.organization,
   pr: () => ops["pull_requests.get"]!.outputSchema.properties.pullRequest,
@@ -135,7 +140,7 @@ describe("GH-TYPED-READS TR-3: list items declare their full output", () => {
   test("the TR-3 set is exactly 31 list reads (28 repo/user/org list-normalizer reads, 2 own-normalizer user lists, commits.pulls.list)", () => {
     expect(TR3_LISTS).toHaveLength(31);
     expect(new Set(TR3_LISTS.map(([k]) => k)).size).toBe(31);
-    expect(TR3_LISTS.filter(([, , , , e]) => e === "repo" || e === "user" || e === "org")).toHaveLength(28);
+    expect(TR3_LISTS.filter(([, , , , e]) => ["repo", "repoSearch", "repoStarred", "user", "org"].includes(e))).toHaveLength(28);
     for (const [key] of TR3_LISTS) {
       expect(ops[key]!.kind, key).toBe("action");
       expect(ops[key]!.sideEffect, key).toBe("read");
@@ -158,8 +163,10 @@ describe("GH-TYPED-READS TR-3: list items declare their full output", () => {
       if (!ITEM_OF[entity]) continue; // blocked / collab: own normalizer, own schema
       const item = ops[key]!.outputSchema.properties[list].items;
       const base = structuredClone(ITEM_OF[entity]!());
-      if (entity !== "pr") {
-        for (const f of Object.keys(LIST_NULLS[entity]!)) {
+      // TR-4: commits.pulls.list returns pull-request-simple, whose user is nullable.
+      const widen = entity === "pr" ? ["author"] : Object.keys(LIST_NULLS[entity] ?? {});
+      {
+        for (const f of widen) {
           const t = base.properties[f].type;
           base.properties[f].type = [Array.isArray(t) ? t[0] : t, "null"];
         }

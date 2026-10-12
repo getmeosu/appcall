@@ -110,6 +110,26 @@ export function normalizeGitHubRepoListItem(repo: GitHubRepo): NormalizedRepoLis
   };
 }
 
+// GH-TYPED-READS TR-4 (linus: do not widen spec-required fields). search.repositories returns
+// repo-search-result-item, where clone_url, ssh_url, default_branch, the counts and the three
+// timestamps are all required and non-null: its items keep the full-repository fallbacks and
+// declare those fields non-null, exactly as repos.get does.
+export function normalizeGitHubRepoSearchItem(repo: GitHubRepo): NormalizedRepo {
+  return normalizeGitHubRepo(repo);
+}
+
+// users.starred.list / user.starred.list return repository, where clone_url, ssh_url,
+// default_branch and the counts are required and non-null (fallbacks kept), and created_at,
+// updated_at and pushed_at are required but nullable (null when null or absent).
+export type NormalizedRepoStarredItem = Omit<NormalizedRepo, "createdAt" | "updatedAt" | "pushedAt"> & {
+  createdAt: string | null; updatedAt: string | null; pushedAt: string | null;
+};
+
+export function normalizeGitHubRepoStarredItem(repo: GitHubRepo): NormalizedRepoStarredItem {
+  const str = (v: unknown) => (typeof v === "string" ? v : null);
+  return { ...normalizeGitHubRepo(repo), createdAt: str(repo.created_at), updatedAt: str(repo.updated_at), pushedAt: str(repo.pushed_at) };
+}
+
 // ─── Input types & validators ─────────────────────────────────────────────────
 
 export type GetRepoInput = { owner: string; repo: string };

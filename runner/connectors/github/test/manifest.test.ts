@@ -306,7 +306,7 @@ describe("github connector manifest", () => {
   });
 
   test("manifest version is 0.79.0", () => {
-    expect(manifest.version).toBe("0.86.8");
+    expect(manifest.version).toBe("0.86.9");
     expect(manifest.version).not.toBe("0.19.0");
   });
 

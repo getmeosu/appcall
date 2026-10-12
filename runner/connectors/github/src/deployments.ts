@@ -14,7 +14,7 @@ export type GitHubDeployment = {
   updated_at?: string;
   transient_environment?: boolean;
   production_environment?: boolean;
-  creator?: { login?: string };
+  creator?: { login?: string } | null;
   [key: string]: unknown;
 };
 
@@ -26,10 +26,10 @@ export type NormalizedDeployment = {
   ref: string;
   task: string;
   environment: string;
-  description: string;
-  creator: string;
-  transientEnvironment: boolean;
-  productionEnvironment: boolean;
+  description: string | null;
+  creator: string | null;
+  transientEnvironment: boolean | null;
+  productionEnvironment: boolean | null;
   createdAt: string;
   updatedAt: string;
   modelVersion: "2026-05-16";
@@ -45,10 +45,12 @@ export function normalizeGitHubDeployment(item: GitHubDeployment): NormalizedDep
     ref: item.ref ?? "",
     task: item.task ?? "",
     environment: item.environment ?? "",
-    description: typeof item.description === "string" ? item.description : "",
-    creator: item.creator?.login ?? "",
-    transientEnvironment: item.transient_environment ?? false,
-    productionEnvironment: item.production_environment ?? false,
+    // GH-TYPED-READS TR-4 sweep: description is nullable, creator is nullable-simple-user and
+    // transient_environment / production_environment are optional in the pinned deployment schema.
+    description: typeof item.description === "string" ? item.description : null,
+    creator: typeof item.creator?.login === "string" ? item.creator.login : null,
+    transientEnvironment: typeof item.transient_environment === "boolean" ? item.transient_environment : null,
+    productionEnvironment: typeof item.production_environment === "boolean" ? item.production_environment : null,
     createdAt: item.created_at ?? "",
     updatedAt: item.updated_at ?? "",
     modelVersion: "2026-05-16",

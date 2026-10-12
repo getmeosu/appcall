@@ -1,7 +1,7 @@
 import { createGitHubClient, parseGitHubRateLimit, type GitHubClient } from "./http";
 import { normalizeGitHubIssue, type GitHubIssue, type NormalizedIssue } from "./issues";
 import { normalizeGitHubOrgListItem, type GitHubOrg } from "./orgs";
-import { normalizeGitHubRepoListItem, type GitHubRepo } from "./repos";
+import { normalizeGitHubRepoSearchItem, type GitHubRepo } from "./repos";
 import { normalizeGitHubUserListItem, type GitHubUser, type NormalizedUser } from "./users";
 
 export type SearchIssuesInput = {
@@ -400,7 +400,7 @@ export function createSearchClient(options: { accessToken: string; fetch?: typeo
     async searchRepositories(input: unknown) {
       const payload = validateSearchRepositoriesInput(input);
       const response = await client.fetchJSON(buildQueryPath("/search/repositories", payload, payload.q));
-      return readSearchItems(response, (item) => normalizeGitHubRepoListItem(item as GitHubRepo), "GitHub rejected the search repositories request.");
+      return readSearchItems(response, (item) => normalizeGitHubRepoSearchItem(item as GitHubRepo), "GitHub rejected the search repositories request.");
     },
 
     async searchOrgs(input: unknown) {
