@@ -4,16 +4,16 @@ export type GitHubIssue = {
   id: number;
   number: number;
   title: string;
-  body?: string;
+  body?: string | null;
   state?: string;
-  labels?: { id?: number; name?: string; color?: string }[];
-  user?: { login?: string; id?: number };
+  labels?: (string | { id?: number; name?: string; color?: string })[];
+  user?: { login?: string; id?: number } | null;
   assignee?: { login?: string; id?: number } | null;
   milestone?: { id?: number; number?: number; title?: string } | null;
   html_url?: string;
   created_at?: string;
   updated_at?: string;
-  closed_at?: string;
+  closed_at?: string | null;
   comments?: number;
   pull_request?: { url?: string; html_url?: string };
   repository_url?: string;
@@ -26,17 +26,17 @@ export type NormalizedIssue = {
   providerIssueId: number;
   number: number;
   title: string;
-  body: string;
+  body: string | null;
   state: string;
   isOpen: boolean;
   url: string;
   repositoryUrl: string;
   labels: string[];
-  author: string;
-  assignee: string;
+  author: string | null;
+  assignee: string | null;
   createdAt: string;
   updatedAt: string;
-  closedAt: string;
+  closedAt: string | null;
   modelVersion: "2026-05-16";
   raw: GitHubIssue;
 };
@@ -48,17 +48,20 @@ export function normalizeGitHubIssue(issue: GitHubIssue): NormalizedIssue {
     providerIssueId: issue.id,
     number: issue.number,
     title: issue.title ?? "",
-    body: issue.body ?? "",
+    // GH-TYPED-READS TR-2: body, user, assignee and closed_at are nullable in the pinned spec (issue);
+    // null when missing instead of "". Labels may be plain strings or objects with an optional name:
+    // strings were mapped to "" before; unnamed label objects are dropped rather than invented as "".
+    body: typeof issue.body === "string" ? issue.body : null,
     state: issue.state ?? "open",
     isOpen: issue.state === "open",
     url: issue.html_url ?? "",
     repositoryUrl: issue.repository_url ?? "",
-    labels: (issue.labels ?? []).map((l) => typeof l.name === "string" ? l.name : ""),
-    author: issue.user?.login ?? "",
-    assignee: issue.assignee?.login ?? "",
+    labels: (Array.isArray(issue.labels) ? issue.labels : []).flatMap((l) => typeof l === "string" ? [l] : (l && typeof l.name === "string" ? [l.name] : [])),
+    author: typeof issue.user?.login === "string" ? issue.user.login : null,
+    assignee: typeof issue.assignee?.login === "string" ? issue.assignee.login : null,
     createdAt: issue.created_at ?? "",
     updatedAt: issue.updated_at ?? "",
-    closedAt: issue.closed_at ?? "",
+    closedAt: typeof issue.closed_at === "string" ? issue.closed_at : null,
     modelVersion: "2026-05-16",
     raw: issue,
   };

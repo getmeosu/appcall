@@ -9,7 +9,7 @@ const PATH = "/repos/{owner}/{repo}/pulls/comments";
 
 describe("github card-18 reads", () => {
   test("manifest stays v0.79.0 at 852 ops and this read omits effect policy", () => {
-    expect(manifest.version).toBe("0.86.6");
+    expect(manifest.version).toBe("0.86.7");
     expect(Object.keys(manifest.operations).length).toBe(847);
     const op = manifest.operations[OP] as Record<string, unknown>;
     expect(op.kind).toBe("action");

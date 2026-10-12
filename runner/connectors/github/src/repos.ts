@@ -35,16 +35,16 @@ export type NormalizedRepo = {
   fullName: string;
   private: boolean;
   url: string;
-  description: string;
+  description: string | null;
   fork: boolean;
   cloneUrl: string;
   sshUrl: string;
   defaultBranch: string;
-  language: string;
+  language: string | null;
   stars: number;
   forks: number;
   openIssues: number;
-  visibility: string;
+  visibility: string | null;
   owner: string;
   createdAt: string;
   updatedAt: string;
@@ -62,16 +62,18 @@ export function normalizeGitHubRepo(repo: GitHubRepo): NormalizedRepo {
     fullName: repo.full_name ?? "",
     private: repo.private ?? false,
     url: repo.html_url ?? "",
-    description: repo.description ?? "",
+    // GH-TYPED-READS TR-2: description and language are nullable and visibility is optional in the
+    // pinned spec (full-repository); null when missing instead of "" / a guess from `private`.
+    description: typeof repo.description === "string" ? repo.description : null,
     fork: repo.fork ?? false,
     cloneUrl: repo.clone_url ?? "",
     sshUrl: repo.ssh_url ?? "",
     defaultBranch: repo.default_branch ?? "main",
-    language: repo.language ?? "",
+    language: typeof repo.language === "string" ? repo.language : null,
     stars: repo.stargazers_count ?? 0,
     forks: repo.forks_count ?? 0,
     openIssues: repo.open_issues_count ?? 0,
-    visibility: repo.visibility ?? (repo.private ? "private" : "public"),
+    visibility: typeof repo.visibility === "string" ? repo.visibility : null,
     owner: repo.owner?.login ?? "",
     createdAt: repo.created_at ?? "",
     updatedAt: repo.updated_at ?? "",

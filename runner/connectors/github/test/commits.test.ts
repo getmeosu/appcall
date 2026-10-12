@@ -35,8 +35,10 @@ describe("github commits", () => {
 
     expect(commit.id).toBe("gh-commit:abc123");
     expect(commit.sha).toBe("abc123");
-    expect(commit.message).toBe("");
-    expect(commit.author).toBe("");
+    expect(commit.message).toBe(""); // message is spec-required: fallback kept
+    // GH-TYPED-READS TR-2 (0.86.7): author name is optional upstream; null, not "".
+    expect(commit.author).toBeNull();
+    expect(commit.authoredAt).toBeNull();
   });
 
   test("parses commits list response", () => {

@@ -28,14 +28,14 @@ export type NormalizedOrg = {
   provider: "github";
   providerOrgId: number;
   login: string;
-  name: string;
-  description: string;
+  name: string | null;
+  description: string | null;
   url: string;
   avatarUrl: string;
-  company: string;
-  blog: string;
-  location: string;
-  email: string;
+  company: string | null;
+  blog: string | null;
+  location: string | null;
+  email: string | null;
   publicRepos: number;
   createdAt: string;
   updatedAt: string;
@@ -49,14 +49,16 @@ export function normalizeGitHubOrg(org: GitHubOrg): NormalizedOrg {
     provider: "github",
     providerOrgId: org.id,
     login: typeof org.login === "string" ? org.login : "",
-    name: typeof org.name === "string" ? org.name : "",
-    description: typeof org.description === "string" ? org.description : "",
+    // GH-TYPED-READS TR-2: name is optional and description, company, blog, location and email are
+    // nullable in the pinned spec (organization-full); null when missing instead of "".
+    name: typeof org.name === "string" ? org.name : null,
+    description: typeof org.description === "string" ? org.description : null,
     url: typeof org.html_url === "string" ? org.html_url : (typeof org.url === "string" ? org.url : ""),
     avatarUrl: typeof org.avatar_url === "string" ? org.avatar_url : "",
-    company: typeof org.company === "string" ? org.company : "",
-    blog: typeof org.blog === "string" ? org.blog : "",
-    location: typeof org.location === "string" ? org.location : "",
-    email: typeof org.email === "string" ? org.email : "",
+    company: typeof org.company === "string" ? org.company : null,
+    blog: typeof org.blog === "string" ? org.blog : null,
+    location: typeof org.location === "string" ? org.location : null,
+    email: typeof org.email === "string" ? org.email : null,
     publicRepos: typeof org.public_repos === "number" ? org.public_repos : 0,
     createdAt: typeof org.created_at === "string" ? org.created_at : "",
     updatedAt: typeof org.updated_at === "string" ? org.updated_at : "",
