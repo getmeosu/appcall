@@ -892818,7 +892818,7 @@
     "public": true
   },
   {
-    "digest": "789e905604f9eec733f4644a7a9136c28398740e0372834fdcca560785eb08b2",
+    "digest": "218a2bc9f7e0ba0f4eb74789b8bd11de17781730dbe180c953d898d91036b5ff",
     "egress": true,
     "key": "quickbooks",
     "operations": [
@@ -894664,22 +894664,161 @@
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
-            "query": {
-              "description": "Optional QBO SQL, for example SELECT * FROM Customer.",
+            "cursor": {
+              "description": "Opaque nextCursor from a previous page of this sync; carries the position and since filter. Takes precedence over since.",
+              "maxLength": 4096,
+              "minLength": 1,
               "type": "string"
             },
+            "maxPages": {
+              "description": "Most query pages fetched in this call before returning nextCursor. Default 10.",
+              "maximum": 50,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "pageSize": {
+              "description": "MAXRESULTS per query page (QBO max 1000). Default 100.",
+              "maximum": 1000,
+              "minimum": 1,
+              "type": "integer"
+            },
             "realmId": {
-              "description": "QuickBooks company ID (realmId) from the OAuth callback.",
+              "description": "QuickBooks company ID (realmId) from the OAuth callback; numeric.",
+              "maxLength": 32,
+              "minLength": 1,
+              "type": "string"
+            },
+            "since": {
+              "description": "Incremental lower bound on MetaData.LastUpdatedTime (ISO 8601 date or date-time, e.g. 2026-10-01T00:00:00Z). Use the previous run's highWatermark.",
+              "maxLength": 40,
+              "minLength": 10,
               "type": "string"
             }
           },
+          "required": [
+            "realmId"
+          ],
           "type": "object"
         },
         "key": "customers.list",
         "kind": "sync",
         "maxInputBytes": 65536,
         "maxResponseBytes": 5242880,
-        "outputSchema": null,
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "hasMore": {
+              "description": "True when more pages remain; call again with nextCursor.",
+              "type": "boolean"
+            },
+            "highWatermark": {
+              "description": "Greatest MetaData.LastUpdatedTime seen so far in this run; pass as since next run.",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "items": {
+              "items": {
+                "additionalProperties": false,
+                "properties": {
+                  "balance": {
+                    "description": "Balance.",
+                    "type": "number"
+                  },
+                  "createdAt": {
+                    "description": "MetaData.CreateTime.",
+                    "type": "string"
+                  },
+                  "displayName": {
+                    "description": "DisplayName.",
+                    "type": "string"
+                  },
+                  "email": {
+                    "description": "PrimaryEmailAddr.Address.",
+                    "type": "string"
+                  },
+                  "id": {
+                    "description": "qb-cust:<Id>.",
+                    "type": "string"
+                  },
+                  "modelVersion": {
+                    "const": "2026-05-16",
+                    "type": "string"
+                  },
+                  "provider": {
+                    "const": "quickbooks",
+                    "type": "string"
+                  },
+                  "raw": {
+                    "additionalProperties": true,
+                    "description": "Parsed QBO Customer fields.",
+                    "type": "object"
+                  },
+                  "totalSales": {
+                    "description": "TotalSales.",
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "id",
+                  "provider",
+                  "displayName",
+                  "email",
+                  "balance",
+                  "totalSales",
+                  "createdAt",
+                  "modelVersion",
+                  "raw"
+                ],
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "maxResults": {
+              "description": "Page size used (MAXRESULTS).",
+              "minimum": 1,
+              "type": "integer"
+            },
+            "nextCursor": {
+              "description": "Opaque cursor for the next page, or null when the sync is done.",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "operation": {
+              "const": "customers.list",
+              "type": "string"
+            },
+            "provider": {
+              "const": "quickbooks",
+              "type": "string"
+            },
+            "startIndex": {
+              "description": "STARTPOSITION of the first page fetched in this call.",
+              "minimum": 1,
+              "type": "integer"
+            },
+            "totalCount": {
+              "description": "Records returned in this call.",
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "provider",
+            "operation",
+            "items",
+            "hasMore",
+            "nextCursor",
+            "highWatermark",
+            "totalCount",
+            "maxResults",
+            "startIndex"
+          ],
+          "type": "object"
+        },
         "read": true,
         "timeoutMs": 30000,
         "tool": false
@@ -896001,22 +896140,171 @@
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
-            "query": {
-              "description": "Optional QBO SQL, for example SELECT * FROM Invoice.",
+            "cursor": {
+              "description": "Opaque nextCursor from a previous page of this sync; carries the position and since filter. Takes precedence over since.",
+              "maxLength": 4096,
+              "minLength": 1,
               "type": "string"
             },
+            "maxPages": {
+              "description": "Most query pages fetched in this call before returning nextCursor. Default 10.",
+              "maximum": 50,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "pageSize": {
+              "description": "MAXRESULTS per query page (QBO max 1000). Default 100.",
+              "maximum": 1000,
+              "minimum": 1,
+              "type": "integer"
+            },
             "realmId": {
-              "description": "QuickBooks company ID (realmId) from the OAuth callback.",
+              "description": "QuickBooks company ID (realmId) from the OAuth callback; numeric.",
+              "maxLength": 32,
+              "minLength": 1,
+              "type": "string"
+            },
+            "since": {
+              "description": "Incremental lower bound on MetaData.LastUpdatedTime (ISO 8601 date or date-time, e.g. 2026-10-01T00:00:00Z). Use the previous run's highWatermark.",
+              "maxLength": 40,
+              "minLength": 10,
               "type": "string"
             }
           },
+          "required": [
+            "realmId"
+          ],
           "type": "object"
         },
         "key": "invoices.list",
         "kind": "sync",
         "maxInputBytes": 65536,
         "maxResponseBytes": 5242880,
-        "outputSchema": null,
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "hasMore": {
+              "description": "True when more pages remain; call again with nextCursor.",
+              "type": "boolean"
+            },
+            "highWatermark": {
+              "description": "Greatest MetaData.LastUpdatedTime seen so far in this run; pass as since next run.",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "items": {
+              "items": {
+                "additionalProperties": false,
+                "properties": {
+                  "createdAt": {
+                    "description": "MetaData.CreateTime.",
+                    "type": "string"
+                  },
+                  "currency": {
+                    "description": "CurrencyRef.value.",
+                    "type": "string"
+                  },
+                  "customerName": {
+                    "description": "CustomerRef.name.",
+                    "type": "string"
+                  },
+                  "docNumber": {
+                    "description": "DocNumber.",
+                    "type": "string"
+                  },
+                  "dueDate": {
+                    "description": "DueDate.",
+                    "type": "string"
+                  },
+                  "id": {
+                    "description": "qb-inv:<Id>.",
+                    "type": "string"
+                  },
+                  "modelVersion": {
+                    "const": "2026-05-16",
+                    "type": "string"
+                  },
+                  "provider": {
+                    "const": "quickbooks",
+                    "type": "string"
+                  },
+                  "raw": {
+                    "additionalProperties": true,
+                    "description": "Parsed QBO Invoice fields.",
+                    "type": "object"
+                  },
+                  "status": {
+                    "description": "TxnStatus.",
+                    "type": "string"
+                  },
+                  "totalAmt": {
+                    "description": "TotalAmt.",
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "id",
+                  "provider",
+                  "docNumber",
+                  "totalAmt",
+                  "currency",
+                  "status",
+                  "customerName",
+                  "dueDate",
+                  "createdAt",
+                  "modelVersion",
+                  "raw"
+                ],
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "maxResults": {
+              "description": "Page size used (MAXRESULTS).",
+              "minimum": 1,
+              "type": "integer"
+            },
+            "nextCursor": {
+              "description": "Opaque cursor for the next page, or null when the sync is done.",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "operation": {
+              "const": "invoices.list",
+              "type": "string"
+            },
+            "provider": {
+              "const": "quickbooks",
+              "type": "string"
+            },
+            "startIndex": {
+              "description": "STARTPOSITION of the first page fetched in this call.",
+              "minimum": 1,
+              "type": "integer"
+            },
+            "totalCount": {
+              "description": "Records returned in this call.",
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "provider",
+            "operation",
+            "items",
+            "hasMore",
+            "nextCursor",
+            "highWatermark",
+            "totalCount",
+            "maxResults",
+            "startIndex"
+          ],
+          "type": "object"
+        },
         "read": true,
         "timeoutMs": 30000,
         "tool": false
@@ -896788,22 +897076,166 @@
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
-            "query": {
-              "description": "Optional QBO SQL, for example SELECT * FROM Payment.",
+            "cursor": {
+              "description": "Opaque nextCursor from a previous page of this sync; carries the position and since filter. Takes precedence over since.",
+              "maxLength": 4096,
+              "minLength": 1,
               "type": "string"
             },
+            "maxPages": {
+              "description": "Most query pages fetched in this call before returning nextCursor. Default 10.",
+              "maximum": 50,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "pageSize": {
+              "description": "MAXRESULTS per query page (QBO max 1000). Default 100.",
+              "maximum": 1000,
+              "minimum": 1,
+              "type": "integer"
+            },
             "realmId": {
-              "description": "QuickBooks company ID (realmId) from the OAuth callback.",
+              "description": "QuickBooks company ID (realmId) from the OAuth callback; numeric.",
+              "maxLength": 32,
+              "minLength": 1,
+              "type": "string"
+            },
+            "since": {
+              "description": "Incremental lower bound on MetaData.LastUpdatedTime (ISO 8601 date or date-time, e.g. 2026-10-01T00:00:00Z). Use the previous run's highWatermark.",
+              "maxLength": 40,
+              "minLength": 10,
               "type": "string"
             }
           },
+          "required": [
+            "realmId"
+          ],
           "type": "object"
         },
         "key": "payments.list",
         "kind": "sync",
         "maxInputBytes": 65536,
         "maxResponseBytes": 5242880,
-        "outputSchema": null,
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "hasMore": {
+              "description": "True when more pages remain; call again with nextCursor.",
+              "type": "boolean"
+            },
+            "highWatermark": {
+              "description": "Greatest MetaData.LastUpdatedTime seen so far in this run; pass as since next run.",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "items": {
+              "items": {
+                "additionalProperties": false,
+                "properties": {
+                  "createdAt": {
+                    "description": "MetaData.CreateTime.",
+                    "type": "string"
+                  },
+                  "currency": {
+                    "description": "CurrencyRef.value.",
+                    "type": "string"
+                  },
+                  "customerName": {
+                    "description": "CustomerRef.name.",
+                    "type": "string"
+                  },
+                  "id": {
+                    "description": "qb-pay:<Id>.",
+                    "type": "string"
+                  },
+                  "modelVersion": {
+                    "const": "2026-05-16",
+                    "type": "string"
+                  },
+                  "paymentMethod": {
+                    "description": "PaymentMethodRef.name.",
+                    "type": "string"
+                  },
+                  "provider": {
+                    "const": "quickbooks",
+                    "type": "string"
+                  },
+                  "raw": {
+                    "additionalProperties": true,
+                    "description": "Parsed QBO Payment fields.",
+                    "type": "object"
+                  },
+                  "totalAmt": {
+                    "description": "TotalAmt.",
+                    "type": "number"
+                  },
+                  "txnDate": {
+                    "description": "TxnDate.",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "id",
+                  "provider",
+                  "totalAmt",
+                  "currency",
+                  "txnDate",
+                  "paymentMethod",
+                  "customerName",
+                  "createdAt",
+                  "modelVersion",
+                  "raw"
+                ],
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "maxResults": {
+              "description": "Page size used (MAXRESULTS).",
+              "minimum": 1,
+              "type": "integer"
+            },
+            "nextCursor": {
+              "description": "Opaque cursor for the next page, or null when the sync is done.",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "operation": {
+              "const": "payments.list",
+              "type": "string"
+            },
+            "provider": {
+              "const": "quickbooks",
+              "type": "string"
+            },
+            "startIndex": {
+              "description": "STARTPOSITION of the first page fetched in this call.",
+              "minimum": 1,
+              "type": "integer"
+            },
+            "totalCount": {
+              "description": "Records returned in this call.",
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "provider",
+            "operation",
+            "items",
+            "hasMore",
+            "nextCursor",
+            "highWatermark",
+            "totalCount",
+            "maxResults",
+            "startIndex"
+          ],
+          "type": "object"
+        },
         "read": true,
         "timeoutMs": 30000,
         "tool": false

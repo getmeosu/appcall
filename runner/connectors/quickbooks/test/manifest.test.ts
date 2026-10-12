@@ -7,7 +7,7 @@ describe("quickbooks connector manifest", () => {
     expect(manifest.key).toBe("quickbooks");
     expect(manifest.name).toBe("QuickBooks Online");
     expect(manifest.runtime).toBe("bun");
-    expect(manifest.version).toBe("0.3.0");
+    expect(manifest.version).toBe("0.4.0");
     expect(manifest.auth.type).toBe("oauth2");
     expect(Object.keys(manifest.auth).sort()).toEqual(["scopes", "setup", "type"]);
     expect(manifest.auth.scopes).toContain("com.intuit.quickbooks.accounting");
