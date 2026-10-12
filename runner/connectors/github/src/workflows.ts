@@ -55,7 +55,7 @@ export type NormalizedWorkflowRun = {
   url: string;
   htmlUrl: string;
   displayTitle: string;
-  runAttempt: number;
+  runAttempt: number | null;
   createdAt: string;
   updatedAt: string;
   runStartedAt: string | null;
@@ -82,7 +82,7 @@ export function normalizeWorkflowRun(item: Record<string, unknown>): NormalizedW
     url: typeof item.url === "string" ? item.url : "",
     htmlUrl: typeof item.html_url === "string" ? item.html_url : "",
     displayTitle: typeof item.display_title === "string" ? item.display_title : "",
-    runAttempt: typeof item.run_attempt === "number" ? item.run_attempt : 1,
+    runAttempt: typeof item.run_attempt === "number" ? item.run_attempt : null,
     createdAt: typeof item.created_at === "string" ? item.created_at : "",
     updatedAt: typeof item.updated_at === "string" ? item.updated_at : "",
     runStartedAt: typeof item.run_started_at === "string" ? item.run_started_at : null,

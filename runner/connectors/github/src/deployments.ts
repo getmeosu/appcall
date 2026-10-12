@@ -78,10 +78,10 @@ export type NormalizedDeploymentStatus = {
   providerStatusId: number;
   state: string;
   description: string;
-  environment: string;
-  logUrl: string;
-  environmentUrl: string;
-  creator: string;
+  environment: string | null;
+  logUrl: string | null;
+  environmentUrl: string | null;
+  creator: string | null;
   createdAt: string;
   updatedAt: string;
   modelVersion: "2026-05-16";
@@ -95,10 +95,10 @@ export function normalizeGitHubDeploymentStatus(item: GitHubDeploymentStatus): N
     providerStatusId: item.id,
     state: item.state ?? "",
     description: typeof item.description === "string" ? item.description : "",
-    environment: item.environment ?? "",
-    logUrl: item.log_url ?? item.target_url ?? "",
-    environmentUrl: item.environment_url ?? "",
-    creator: item.creator?.login ?? "",
+    environment: item.environment ?? null,
+    logUrl: item.log_url ?? item.target_url ?? null,
+    environmentUrl: item.environment_url ?? null,
+    creator: item.creator?.login ?? null,
     createdAt: item.created_at ?? "",
     updatedAt: item.updated_at ?? "",
     modelVersion: "2026-05-16",
