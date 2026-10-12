@@ -1,6 +1,8 @@
 // FIX-EFFECTS (v0.81.2) final effect table. The only GitHub ops that carry effect keys:
 // effectPolicy Reconcile with an exact observe whose output schema covers the op's own
 // output schema (checked in effects.test.ts). Every other op carries no effect keys.
+// FIX-EFFECTS-b (v0.86.2): orgs.teams.update dropped (41 -> 40). orgs.teams.get does not return
+// notificationSetting or parentTeamId, so it cannot observe every field the op writes.
 export const RECONCILE_KEEP: Readonly<Record<string, string>> = {
   "actions.oidc.customization.sub.set": "actions.oidc.customization.sub.get",
   "actions.permissions.access.set": "actions.permissions.access.get",
@@ -24,7 +26,6 @@ export const RECONCILE_KEEP: Readonly<Record<string, string>> = {
   "orgs.actions.permissions.workflow.set": "orgs.actions.permissions.workflow.get",
   "orgs.hooks.config.update": "orgs.hooks.config.get",
   "orgs.hooks.update": "orgs.hooks.get",
-  "orgs.teams.update": "orgs.teams.get",
   "orgs.update": "orgs.get",
   "pull_requests.convert_to_draft": "pull_requests.get",
   "pull_requests.mark_ready": "pull_requests.get",

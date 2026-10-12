@@ -67,8 +67,8 @@ const CREATES = [
 ] as const;
 
 describe("github FIX-EFFECTS: manifest guards", () => {
-  test("version 0.86.1 at 847 ops", () => {
-    expect(manifest.version).toBe("0.86.1");
+  test("version 0.86.2 at 847 ops", () => {
+    expect(manifest.version).toBe("0.86.2");
     expect(Object.keys(ops)).toHaveLength(847);
   });
 
@@ -320,8 +320,8 @@ function schemaErrors(value: unknown, schema: any, path = "$"): string[] {
 }
 
 describe("github FIX-EFFECTS: each kept Reconcile projects onto the op's own output schema", () => {
-  test("the kept table is 41 ops", () => {
-    expect(Object.keys(RECONCILE_KEEP)).toHaveLength(41);
+  test("the kept table is 40 ops (FIX-EFFECTS-b dropped orgs.teams.update)", () => {
+    expect(Object.keys(RECONCILE_KEEP)).toHaveLength(40);
   });
   for (const [key, observe] of Object.entries(RECONCILE_KEEP)) {
     test(`${key} -> ${observe}`, async () => {
@@ -344,4 +344,43 @@ describe("github FIX-EFFECTS: each kept Reconcile projects onto the op's own out
       expect(schemaErrors(output, ops[key]!.outputSchema)).toEqual([]);
     });
   }
+});
+
+// FIX-EFFECTS-b (0.86.2): orgs.teams.update writes notificationSetting and parentTeamId, which
+// orgs.teams.get never returns (normalizeTeam keeps id, name, slug, description, privacy,
+// permission), so it is not an exact observe and carries no effect keys. This is the specific
+// guard. A general "every writable input field is exposed by the observe output" check is not
+// exact against this manifest: most observe output schemas are summaries or opaque objects
+// (e.g. repos.get, orgs.get, branches.protection.get) and input/output names differ
+// (url vs configUrl, event vs state), so it would need a hand-kept alias/exclusion table.
+describe("github FIX-EFFECTS-b: orgs.teams.update stays effect-free", () => {
+  test("no effect keys, not in the kept table, description says why", () => {
+    const op = ops["orgs.teams.update"]!;
+    expect(effectKeys(op)).toEqual([]);
+    expect(op.effectPolicy).toBeUndefined();
+    expect(op.reconcile).toBeUndefined();
+    expect(op.reconcileInput).toBeUndefined();
+    expect(op.effect).toBeUndefined();
+    expect("orgs.teams.update" in RECONCILE_KEEP).toBe(false);
+    expect(String(op.description)).toContain("No effectPolicy and no reconcile");
+    expect(String(op.description)).not.toContain("effectPolicy Reconcile");
+  });
+  test("the reason holds: the op writes notificationSetting / parentTeamId and orgs.teams.get does not expose them", () => {
+    const writes = Object.keys(ops["orgs.teams.update"]!.inputSchema.properties);
+    expect(writes).toEqual(expect.arrayContaining(["notificationSetting", "parentTeamId"]));
+    const team = ops["orgs.teams.get"]!.outputSchema.properties.team.properties;
+    expect(Object.keys(team).sort()).toEqual(["description", "id", "name", "permission", "privacy", "slug"]);
+  });
+  test("runtime: orgs.teams.update returns the PATCH result with no observe call", async () => {
+    const calls: string[] = [];
+    const fetch = (async (url: unknown, init?: RequestInit) => {
+      calls.push(`${init?.method ?? "GET"} ${String(url)}`);
+      return Response.json({ id: 1, name: "t", slug: "t", description: "", privacy: "closed", permission: "pull", notification_setting: "notifications_disabled", parent: null });
+    }) as unknown as typeof globalThis.fetch;
+    const result = defaultConnectorRegistry.executeAction("github", "orgs.teams.update", { org: "octo-org", teamSlug: "t", notificationSetting: "notifications_disabled", accessToken: "t", fetch });
+    if (!result.ok) throw new Error(JSON.stringify(result));
+    const output = (await Promise.resolve(result.output)) as Record<string, unknown>;
+    expect(calls).toEqual(["PATCH https://api.github.com/orgs/octo-org/teams/t"]);
+    expect(output.action).toBe("orgs.teams.update");
+  });
 });

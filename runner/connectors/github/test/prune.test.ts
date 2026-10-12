@@ -114,8 +114,8 @@ function expectGone(table: Record<string, string | null>) {
 }
 
 describe("github PRUNE chain", () => {
-  test("version 0.86.1 at 847 ops", () => {
-    expect(manifest.version).toBe("0.86.1");
+  test("version 0.86.2 at 847 ops", () => {
+    expect(manifest.version).toBe("0.86.2");
     expect(Object.keys(manifest.operations)).toHaveLength(847);
   });
 
