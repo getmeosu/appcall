@@ -42,7 +42,7 @@ describe("intercom conversation writes (FX-intercom-1: no effect keys, shape rul
       expect(calls.map((c) => `${c.method} ${new URL(c.url).pathname}${new URL(c.url).search}`)).toEqual([
         `POST ${writePath}`,
       ]);
-      expect(settled.output).toEqual({ conversation: null });
+      expect(settled.output).toEqual({ data: { type: "conversation", id: "147", state: "open" } });
     });
   }
 
@@ -64,7 +64,7 @@ describe("intercom conversation writes (FX-intercom-1: no effect keys, shape rul
     expect(calls.map((call) => `${call.method} ${new URL(call.url).pathname}`)).toEqual([
       "POST /conversations/147/reply",
     ]);
-    expect(settled.output).toMatchObject({ type: "conversation", id: "147" });
+    expect(settled.output).toEqual({ data: { type: "conversation", id: "147" } });
   });
 
   test("upstream write failure surfaces CONNECTOR_UPSTREAM_ERROR and never observes", async () => {

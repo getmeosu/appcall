@@ -6,8 +6,8 @@ describe("Intercom manifest", () => {
     expect(manifest.key).toBe("intercom");
   });
 
-  it("has version 0.6.1", () => {
-    expect(manifest.version).toBe("0.6.1");
+  it("has version 0.6.2", () => {
+    expect(manifest.version).toBe("0.6.2");
   });
 
   it("uses bun runtime", () => {

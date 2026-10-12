@@ -9,10 +9,14 @@
  * conversations.list     → GET /conversations
  * conversations.get      → GET /conversations/{id}
  * conversations.search   → POST /conversations/search
- * conversations.reply    → POST /conversations/{id}/reply (Idempotent → get)
- * conversations.close    → POST /conversations/{id}/parts (Reconcile → get)
- * conversations.assign   → POST /conversations/{id}/parts (Reconcile → get)
- * conversations.tag      → POST /conversations/{id}/tags (Reconcile → get)
+ * conversations.reply    → POST /conversations/{id}/reply  → {data: Conversation}
+ * conversations.close    → POST /conversations/{id}/parts  → {data: Conversation}
+ * conversations.assign   → POST /conversations/{id}/parts  → {data: Conversation}
+ * conversations.tag      → POST /conversations/{id}/tags   → {data: Tag}
+ *
+ * FX-intercom-2: the four write handlers return their declared closed
+ * outputSchema {data} (manifest), wrapping the object Intercom's response
+ * carries. Effect keys live in the manifest and are not changed here.
  */
 
 import { createAuthClient } from "./http";
@@ -241,9 +245,21 @@ export async function executeConversationsGetSync(
   return parseConversationGetResponse(raw);
 }
 
+/**
+ * Wrap Intercom's response object in the ops' declared closed outputSchema
+ * {data: object}. Fail closed when the upstream body is not a JSON object.
+ */
+function wrapData(raw: unknown, operation: string): { data: Record<string, unknown> } {
+  if (raw == null || typeof raw !== "object" || Array.isArray(raw)) {
+    throw new Error(`${operation}: Intercom response is not a JSON object`);
+  }
+  return { data: raw as Record<string, unknown> };
+}
+
 // ---------------------------------------------------------------------------
 // conversations.reply — POST /conversations/{id}/reply
-// Runtime owns EffectPolicy Idempotent → conversations.get (return raw Conversation with id).
+// Intercom returns the updated Conversation (Reply to a conversation, API 2.13).
+// Output {data: Conversation}; data.id is the conversation id.
 // ---------------------------------------------------------------------------
 
 export interface ExecuteConversationsReplySyncInput extends IntercomAuthInput {
@@ -260,9 +276,8 @@ export interface ExecuteConversationsReplySyncInput extends IntercomAuthInput {
 }
 
 export interface ExecuteConversationsReplySyncOutput {
-  /** Upstream Conversation JSON; must include top-level `id` for Idempotent. */
-  id?: string | number;
-  [key: string]: unknown;
+  /** Upstream Conversation JSON (includes `id`). */
+  data: Record<string, unknown>;
 }
 
 export async function executeConversationsReplySync(
@@ -286,8 +301,7 @@ export async function executeConversationsReplySync(
     fetch: input.fetch,
     operation: "conversations.reply",
   });
-  // POST only — runner EffectPolicy Idempotent observes via conversations.get.
-  return (await client.postJSON(
+  const raw = await client.postJSON(
     `/conversations/${id}/reply`,
     compactBody({
       message_type: input.messageType,
@@ -295,12 +309,13 @@ export async function executeConversationsReplySync(
       admin_id: input.adminId,
       body: input.body,
     }),
-  )) as ExecuteConversationsReplySyncOutput;
+  );
+  return wrapData(raw, "conversations.reply");
 }
 
 // ---------------------------------------------------------------------------
 // conversations.close — POST /conversations/{id}/parts (message_type close)
-// Runtime owns EffectPolicy Reconcile → conversations.get.
+// Intercom returns the Conversation (Manage a conversation, API 2.13).
 // ---------------------------------------------------------------------------
 
 export interface ExecuteConversationsCloseSyncInput extends IntercomAuthInput {
@@ -310,8 +325,8 @@ export interface ExecuteConversationsCloseSyncInput extends IntercomAuthInput {
 }
 
 export interface ExecuteConversationsMutateSyncOutput {
-  /** Placeholder; runner Reconcile replaces with conversations.get output. */
-  conversation: null;
+  /** Upstream object: the Conversation (close/assign) or the Tag (tag). */
+  data: Record<string, unknown>;
 }
 
 export async function executeConversationsCloseSync(
@@ -326,7 +341,7 @@ export async function executeConversationsCloseSync(
     fetch: input.fetch,
     operation: "conversations.close",
   });
-  await client.postJSON(
+  const raw = await client.postJSON(
     `/conversations/${id}/parts`,
     compactBody({
       message_type: "close",
@@ -335,12 +350,12 @@ export async function executeConversationsCloseSync(
       body: input.body,
     }),
   );
-  return { conversation: null };
+  return wrapData(raw, "conversations.close");
 }
 
 // ---------------------------------------------------------------------------
 // conversations.assign — POST /conversations/{id}/parts (message_type assignment)
-// Runtime owns EffectPolicy Reconcile → conversations.get.
+// Intercom returns the Conversation (Manage a conversation, API 2.13).
 // ---------------------------------------------------------------------------
 
 export interface ExecuteConversationsAssignSyncInput extends IntercomAuthInput {
@@ -366,7 +381,7 @@ export async function executeConversationsAssignSync(
     fetch: input.fetch,
     operation: "conversations.assign",
   });
-  await client.postJSON(
+  const raw = await client.postJSON(
     `/conversations/${id}/parts`,
     compactBody({
       message_type: "assignment",
@@ -376,12 +391,14 @@ export async function executeConversationsAssignSync(
       body: input.body,
     }),
   );
-  return { conversation: null };
+  return wrapData(raw, "conversations.assign");
 }
 
 // ---------------------------------------------------------------------------
 // conversations.tag — POST /conversations/{id}/tags
-// Runtime owns EffectPolicy Reconcile → conversations.get (discard Tag).
+// Intercom returns the Tag that was added, not the Conversation ("This will
+// return a tag object for the tag that was added to the conversation", Add tag
+// to a conversation, API 2.13). Output {data: Tag}; no in-handler GET.
 // ---------------------------------------------------------------------------
 
 export interface ExecuteConversationsTagSyncInput extends IntercomAuthInput {
@@ -405,14 +422,14 @@ export async function executeConversationsTagSync(
     fetch: input.fetch,
     operation: "conversations.tag",
   });
-  await client.postJSON(
+  const raw = await client.postJSON(
     `/conversations/${id}/tags`,
     compactBody({
       id: input.tagId,
       admin_id: input.adminId,
     }),
   );
-  return { conversation: null };
+  return wrapData(raw, "conversations.tag");
 }
 
 // ---------------------------------------------------------------------------
