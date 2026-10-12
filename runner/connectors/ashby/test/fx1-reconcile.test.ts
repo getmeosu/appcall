@@ -4,6 +4,7 @@ import { executeJobsGetSync } from "../src/sync";
 import { executeJobsSetStatus, executeJobsUpdate } from "../src/g2";
 import { executeCandidatesAddTag } from "../src/g1";
 import { assertOutputSchema } from "../../../bun/src/declarative/validate";
+import { splitOperationMetadata } from "../../../bun/src/operation-metadata";
 import contract from "../../../../crates/appcall-connectors/tests/connector_contract.json";
 import manifest from "../manifest.json";
 import jobUpdated from "../fixtures/job_updated.json";
@@ -101,9 +102,9 @@ describe("FX-ashby-1 manifest effect keys", () => {
 // Rule (linus, FX-ashby-1): the registry returns the observe's raw output with
 // no projection, so a kept Reconcile is valid only if that output conforms to
 // the mutating op's OWN declared output schema. All three ops declare
-// { job: Job } / { candidate: Candidate } with the inner object closed and the
-// top level OPEN (interim, PLAT-OUT-1): runner/bun/src/server.ts merges
-// { connector, action } into the output that Rust validate_output checks.
+// { job: Job } / { candidate: Candidate } with the inner object AND the top
+// level closed. FX-ashby-2: PLAT-OUT-1 moved { connector, action } to the RPC
+// result envelope, so the output Rust validate_output checks is bare.
 // The manifest and the contract oracle must agree, and every dispatched output
 // (including jobs.update's raw jobs.get observe output) must validate.
 describe("FX-ashby-1 registry output conforms to each op's declared output schema", () => {
@@ -114,7 +115,7 @@ describe("FX-ashby-1 registry output conforms to each op's declared output schem
       .outputSchema;
     const fromContract = ashbyContract.operations.find((o) => o.key === op)!.outputSchema;
     expect(fromManifest).toBeDefined();
-    expect(fromManifest!.additionalProperties).toBeUndefined();
+    expect(fromManifest!.additionalProperties).toBe(false);
     const inner = Object.values(fromManifest!.properties as Record<string, Record<string, unknown>>)[0]!;
     expect(inner.additionalProperties).toBe(false);
     expect(fromContract).toEqual(fromManifest);
@@ -176,24 +177,25 @@ describe("FX-ashby-1 registry output conforms to each op's declared output schem
   });
 });
 
-// server.ts handleConnectorActionExecute returns { ...output, connector, action }
-// as result.output, and crates/appcall-actions validate_output checks exactly
-// that object (adapters.rs map(|r| r.output) -> service.rs validate_output).
-describe("FX-ashby-1 runner envelope { ...output, connector, action } passes the output schema", () => {
+// FX-ashby-2: server.ts handleConnectorActionExecute sends the bare handler
+// output as result.output (connector/action ride on the envelope, PLAT-OUT-1),
+// and crates/appcall-actions validate_output checks exactly that object.
+describe("FX-ashby-2 closed top level accepts the bare server output", () => {
   const schemaOf = (op: string) =>
     (manifest.operations as unknown as Record<string, { outputSchema: Record<string, unknown> }>)[op]!.outputSchema;
-  const envelope = (op: string, out: unknown) => ({ ...(out as Record<string, unknown>), connector: "ashby", action: op });
   const cases: [string, () => Promise<unknown>][] = [
     ["jobs.update", () => run("jobs.update", { ...auth, jobId: JOB, title: "Principal Engineer", fetch: stub([jobUpdated, jobUpdated]).impl })],
     ["jobs.set_status", () => run("jobs.set_status", { ...auth, jobId: JOB, status: "Closed", fetch: stub([jobStatusSet]).impl })],
     ["candidates.add_tag", () => run("candidates.add_tag", { ...auth, candidateId: "cand-1", tagId: "tag-1", fetch: stub([candidateTagAdded]).impl })],
   ];
   for (const [op, dispatch] of cases) {
-    test(`${op}: open top level accepts the envelope; a closed top level would reject it`, async () => {
-      const env = envelope(op, await dispatch());
-      expect(() => assertOutputSchema(env, schemaOf(op) as never)).not.toThrow();
-      const closed = { ...schemaOf(op), additionalProperties: false };
-      expect(() => assertOutputSchema(env, closed as never)).toThrow("Unexpected property");
+    test(`${op}: server result.output passes the closed schema; merged metadata would not`, async () => {
+      const out = await dispatch();
+      const { output } = splitOperationMetadata(out);
+      expect(schemaOf(op).additionalProperties).toBe(false);
+      expect(() => assertOutputSchema(output, schemaOf(op) as never)).not.toThrow();
+      const merged = { ...(output as Record<string, unknown>), connector: "ashby", action: op };
+      expect(() => assertOutputSchema(merged, schemaOf(op) as never)).toThrow("Unexpected property");
     });
   }
 });
