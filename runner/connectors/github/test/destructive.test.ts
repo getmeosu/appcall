@@ -107,16 +107,16 @@ const deleteActions = Object.entries(ops)
   .sort();
 
 describe("github FIX-DESTRUCTIVE", () => {
-  test("version 0.86.11 at 848 ops; 77 destructive, 283 write", () => {
-    expect(manifest.version).toBe("0.86.11");
-    expect(Object.keys(ops).length).toBe(848);
+  test("version 0.87.0 at 851 ops; 77 destructive, 283 write", () => {
+    expect(manifest.version).toBe("0.87.0");
+    expect(Object.keys(ops).length).toBe(851);
     const side: Record<string, number> = {};
     for (const op of Object.values(ops)) {
       if (op.kind !== "action") continue;
       const key = String(op.sideEffect ?? "absent");
       side[key] = (side[key] ?? 0) + 1;
     }
-    expect(side).toEqual({ read: 422, write: 283, destructive: 77, absent: 15 });
+    expect(side).toEqual({ read: 425, write: 283, destructive: 77, absent: 15 });
   });
 
   test("the destructive set is exactly DESTRUCTIVE (77); no other op is destructive", () => {

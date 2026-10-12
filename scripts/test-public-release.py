@@ -12,6 +12,25 @@ SCRIPT = Path(__file__).with_name('public-release.py')
 
 
 class ReleaseGateTests(unittest.TestCase):
+    def test_github_parity_gate_is_internal_and_never_released(self):
+        import importlib.util
+        import sys
+        sys.dont_write_bytecode = True  # no scripts/__pycache__ in the tree
+        spec = importlib.util.spec_from_file_location('public_release', SCRIPT)
+        gate = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(gate)
+        repo = SCRIPT.parent.parent
+        manifest = json.loads((repo / 'PUBLIC-RELEASE-MANIFEST.json').read_text())['files']
+        paths = [f'private/github-parity/{name}' for name in
+                 ('gate.py', 'test_gate.py', 'gate-audit-a1549a6d.json', 'composio-github-tools.txt')]
+        for path in paths:
+            self.assertTrue((repo / path).is_file(), path)
+            self.assertFalse(gate.allowed(path), path)
+            self.assertTrue(gate.internal(path), path)
+            self.assertNotIn(path, gate.EXACT_FILES)
+            self.assertNotIn(path, manifest)
+        self.assertFalse(any('github-parity' in path for path in gate.EXACT_FILES | set(manifest)))
+
     def test_curated_openconnector_records_and_license_are_allowlisted(self):
         self.legal()
         self.put('scripts/connector-gen/openconnector/selection.json', '{"entries": []}\n')
@@ -264,6 +283,40 @@ class ReleaseGateTests(unittest.TestCase):
         result = self.run_gate('check', '--index')
         self.assertEqual(result.returncode, 1)
         self.assertIn('docs/private.txt', result.stdout)
+
+    def test_index_skips_tracked_internal_tree_but_still_fails_other_denied_paths(self):
+        self.legal()
+        subprocess.run(['git', 'init', '-q', str(self.root)], check=True)
+        internal = ('private/github-parity/gate.py', 'private/github-parity/composio-github-tools.txt')
+        for path in internal:
+            self.put(path)
+        self.put('crates/demo/src/lib.rs')
+        subprocess.run(['git', '-C', str(self.root), 'add', '-f', '.'], check=True)
+        result = self.run_gate('check', '--index')
+        self.assertEqual(result.returncode, 0, result.stdout)
+        inventory = json.loads(result.stdout)['files']
+        self.assertIn('crates/demo/src/lib.rs', inventory)
+        for path in internal:
+            self.assertNotIn(path, inventory)
+        # Only the top-level private/ tree is internal; nested or other denied paths still fail.
+        for path in ('docs/notes.txt', 'scripts/github-parity/gate.py', 'crates/private/x.rs'):
+            self.put(path)
+        subprocess.run(['git', '-C', str(self.root), 'add', '-f', '.'], check=True)
+        errors = {(e['path'], e['rule']) for e in json.loads(self.run_gate('check', '--index').stdout)['errors']}
+        for path in ('docs/notes.txt', 'scripts/github-parity/gate.py', 'crates/private/x.rs'):
+            self.assertIn((path, 'path-not-allowed'), errors)
+        self.assertFalse(any(path.startswith('private/') for path, _ in errors))
+
+    def test_export_omits_internal_tree(self):
+        self.legal()
+        self.put('private/github-parity/gate-audit-a1549a6d.json', '{}\n')
+        self.put('crates/demo/src/lib.rs')
+        destination = Path(self.temp.name).resolve() / 'export'
+        result = self.run_gate('export', '--destination', str(destination))
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertFalse((destination / 'private').exists())
+        manifest = json.loads((destination / 'PUBLIC-RELEASE-MANIFEST.json').read_text())
+        self.assertFalse(any(path.startswith('private/') for path in manifest['files']))
 
     def test_legal_placeholder_and_ai_credit_fail(self):
         self.legal()

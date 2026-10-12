@@ -57,6 +57,12 @@ DENIED_PARTS = {
     'target', '__pycache__', '.cache', 'coverage', 'reports', 'docs',
     'enterprise', 'private', 'internal-notes', '.idea', '.vscode',
 }
+# Tracked internal-only trees. They are denied by DENIED_PARTS ('private'), so
+# export omits them and they never enter the release inventory; `check --index`
+# skips them instead of failing, so the private repository can keep and test
+# them. Only the top-level `private/` tree qualifies; other denied paths that
+# are tracked still fail the index check.
+INTERNAL_PREFIXES = ('private/',)
 DENIED_NAMES = {'agents.md', 'claude.md', 'rules.md', 'factory.md', '.mcp.json',
                 'go.mod', 'go.sum', 'go.work', 'go.work.sum', 'atlas.sum'}
 SOURCE_SUFFIXES = {
@@ -75,6 +81,10 @@ LEGAL_PLACEHOLDER = re.compile(r'(?i)\[(?:year|owner|name|copyright holder|your[
 
 def issue(path, rule):
     return {'path': str(path), 'rule': rule}
+
+
+def internal(path):
+    return path.startswith(INTERNAL_PREFIXES) and not allowed(path)
 
 
 def allowed(path):
@@ -146,6 +156,8 @@ def filesystem_files(source, exporting):
                 errors.append(issue(path, 'non-regular-file'))
             elif allowed(path):
                 files[path] = full.read_bytes()
+            elif internal(path):
+                continue
             elif not exporting:
                 errors.append(issue(path, 'path-not-allowed'))
     return files, errors
@@ -175,6 +187,8 @@ def index_files(source):
             errors.append(issue(path, 'unmerged-index'))
         elif mode not in ('100644', '100755'):
             errors.append(issue(path, 'non-regular-index-entry'))
+        elif internal(path):
+            continue
         elif not allowed(path):
             errors.append(issue(path, 'path-not-allowed'))
         else:

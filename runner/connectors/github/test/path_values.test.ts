@@ -192,11 +192,11 @@ describe("FIX-SEGMENT-3: blank and whitespace-padded path values", () => {
 
   test("coverage: exact op and field counts", () => {
     const fields = Object.values(TABLE).flatMap((f) => Object.values(f));
-    expect(Object.keys(TABLE)).toHaveLength(680);
-    expect(fields).toHaveLength(1344);
+    expect(Object.keys(TABLE)).toHaveLength(683); // D1 (0.87.0): +3, was 680
+    expect(fields).toHaveLength(1350); // D1: +6 path fields (was 1344)
     const byClass: Record<string, number> = {};
     for (const c of fields) byClass[c] = (byClass[c] ?? 0) + 1;
-    expect(byClass).toEqual({ path: 1336, selector: 7, "text-selector": 1 });
+    expect(byClass).toEqual({ path: 1342, selector: 7, "text-selector": 1 });
     const optional = Object.entries(TABLE).flatMap(([op, f]) => Object.entries(f).filter(([k, c]) => c === "path" && !(ops[op].inputSchema?.required ?? []).includes(k)).map(([k]) => `${op}.${k}`));
     expect(optional.sort()).toEqual([
       "actions.org_variables.update.current_name", "environments.get.environment", "environments.get.name",
@@ -221,7 +221,7 @@ describe("FIX-SEGMENT-3: blank and whitespace-padded path values", () => {
       }
     }
     expect(leaks).toEqual([]);
-    expect(cases).toBe(6718); // 1343 path/selector fields x 5 + 1 text-selector x 3
+    expect(cases).toBe(6748); // 1349 path/selector fields x 5 + 1 text-selector x 3 (D1 +30; was 6718)
   }, 600000);
 
   test("omitting an optional trailing path field still works and drops the segment", async () => {

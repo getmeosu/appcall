@@ -43,9 +43,9 @@ const callFn = (fn: keyof typeof actions, input: Record<string, unknown>) =>
   Promise.resolve((actions[fn] as (i: unknown) => Record<string, unknown> | Promise<Record<string, unknown>>)(input));
 
 describe("github FIX-G14C: manifest", () => {
-  test("version 0.86.11 at 848 ops (+graphql.mutate, +issues.comments.edits.list); auth.scopes unchanged", () => {
-    expect(manifest.version).toBe("0.86.11");
-    expect(Object.keys(opsOf)).toHaveLength(848);
+  test("version 0.87.0 at 851 ops (+graphql.mutate, +issues.comments.edits.list); auth.scopes unchanged", () => {
+    expect(manifest.version).toBe("0.87.0");
+    expect(Object.keys(opsOf)).toHaveLength(851);
     expect(manifest.auth.scopes).toEqual(["repo", "read:org", "admin:repo_hook", "admin:org_hook", "gist", "notifications", "admin:org"]);
     expect(manifest.auth.scopes).not.toContain("read:audit_log");
   });
@@ -125,7 +125,7 @@ describe("github FIX-G14C: manifest", () => {
     expect(mapped.GITHUB_RUN_GRAPH_QL_RELAY_QUERY).toBe("graphql.query");
     expect((coverage.missing_still as Array<{ slug: string }>).map((m) => m.slug)).not.toContain("GITHUB_RUN_GRAPH_QL_RELAY_QUERY");
     expect(Object.keys(mapped).length + coverage.missing_still.length).toBe(897);
-    expect(Object.keys(mapped)).toHaveLength(829); // PRUNE-2: GITHUB_GET_TEAM_MEMBERS left mapped (860); PRUNE-3: 10 Classroom/Source Imports slugs to missing_still, GITHUB_GET_TEAM_MEMBERS -> teams.members.list (851); PRUNE-4: 16 second-auth app / GitHub Models slugs to missing_still (835); PRUNE-5: 6 GitHub-Apps-only PAT-admin slugs to missing_still (829)
+    expect(Object.keys(mapped)).toHaveLength(827); // PRUNE-2: GITHUB_GET_TEAM_MEMBERS left mapped (860); PRUNE-3: 10 Classroom/Source Imports slugs to missing_still, GITHUB_GET_TEAM_MEMBERS -> teams.members.list (851); PRUNE-4: 16 second-auth app / GitHub Models slugs to missing_still (835); PRUNE-5: 6 GitHub-Apps-only PAT-admin slugs to missing_still (829); D1 (0.87.0): DELETE_DISCUSSION + DELETE_DISCUSSION_COMMENT to missing_still (team discussions per Composio schema) (827)
   });
 });
 
