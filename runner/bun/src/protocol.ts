@@ -24,5 +24,9 @@ export type ResponseEnvelope = {
     retryAfterSeconds?: number;
     code: string;
     message: string;
+    reason?: string;
+    missingScopes?: string[];
+    requiredScopes?: string[];
+    reconsentRequired?: boolean;
   };
 };
