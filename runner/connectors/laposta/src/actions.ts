@@ -1,5 +1,6 @@
 import { createConnectorHttpClient } from "../../../bun/src/http";
 import manifest from "../manifest.json";
+import { encodePathSegment } from "../../_shared/jobboard";
 
 type FetchFn = typeof fetch;
 
@@ -117,7 +118,15 @@ function formPost(spec: FormPostConfig, inputValue: unknown): unknown {
   for (const param of spec.pathParams) {
     const value = record[param];
     if (typeof value !== "string" || value.length === 0) return invalidInput();
-    path = path.replaceAll(`{{${param}}}`, encodeURIComponent(value));
+    // SEC-PATH-2c: every templated id is a whole path segment; blank, dot-only
+    // and separator values are invalid input.
+    let segment: string;
+    try {
+      segment = encodePathSegment(value, param);
+    } catch {
+      return invalidInput();
+    }
+    path = path.replaceAll(`{{${param}}}`, segment);
   }
 
   const form = new URLSearchParams();

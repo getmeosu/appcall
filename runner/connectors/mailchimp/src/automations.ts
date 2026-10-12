@@ -1,6 +1,7 @@
 import { createMailchimpClient, parseMailchimpRateLimit, isRecord } from "./http";
 import { normalizeAutomation, parseAutomationsResponse } from "./objects";
 import type { NormalizedAutomation } from "./objects";
+import { encodePathSegment } from "../../_shared/jobboard";
 
 export type ListAutomationsInput = Record<string, never>;
 export type GetAutomationInput = { automationId: string };
@@ -29,7 +30,7 @@ export function createAutomationsClient(options: { apiKey: string; fetch?: typeo
 
     async getAutomation(input: unknown): Promise<{ ok: true; automation: NormalizedAutomation } | { ok: false; error: { code: string; message: string; retryAfterSeconds?: number } }> {
       const payload = validateGetAutomationInput(input);
-      const response = await client.fetchJSON(`/automations/${payload.automationId}`);
+      const response = await client.fetchJSON(`/automations/${encodePathSegment(payload.automationId, "automationId")}`);
       if (response.status === 200) return { ok: true, automation: normalizeAutomation(response.body as Record<string, unknown>) };
       if (response.status === 404) return { ok: false, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Automation not found." } };
       const rl = parseMailchimpRateLimit(response.status, response.headers);

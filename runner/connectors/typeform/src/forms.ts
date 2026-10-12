@@ -1,4 +1,5 @@
 import { createTypeFormClient, parseTypeFormRateLimit, type TypeFormClient } from "./http";
+import { encodePathSegment } from "../../_shared/jobboard";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -252,7 +253,7 @@ export function createFormsClient(options: { accessToken: string; fetch?: typeof
 
     async get(input: unknown) {
       const payload = validateFormsGetInput(input);
-      const response = await client.fetchJSON(`/forms/${payload.formId}`);
+      const response = await client.fetchJSON(`/forms/${encodePathSegment(payload.formId, "formId")}`);
       const rateLimit = parseTypeFormRateLimit(response.status, response.headers);
       if (rateLimit.limited) {
         return { ok: false as const, error: { code: "CONNECTOR_RATE_LIMITED", message: "Typeform rate limit exceeded.", retryAfterSeconds: rateLimit.retryAfterSeconds } };
@@ -304,7 +305,7 @@ export function createFormsClient(options: { accessToken: string; fetch?: typeof
       if (payload.type !== undefined) body.type = payload.type;
       if (payload.variables !== undefined) body.variables = payload.variables;
       if (payload.workspace !== undefined) body.workspace = payload.workspace;
-      const response = await client.fetchJSON(`/forms/${payload.formId}`, {
+      const response = await client.fetchJSON(`/forms/${encodePathSegment(payload.formId, "formId")}`, {
         method: "PUT",
         body: JSON.stringify(body),
       });
@@ -323,7 +324,7 @@ export function createFormsClient(options: { accessToken: string; fetch?: typeof
 
     async delete(input: unknown) {
       const payload = validateFormsDeleteInput(input);
-      const response = await client.fetchJSON(`/forms/${payload.formId}`, { method: "DELETE" });
+      const response = await client.fetchJSON(`/forms/${encodePathSegment(payload.formId, "formId")}`, { method: "DELETE" });
       const rateLimit = parseTypeFormRateLimit(response.status, response.headers);
       if (rateLimit.limited) {
         return { ok: false as const, error: { code: "CONNECTOR_RATE_LIMITED", message: "Typeform rate limit exceeded.", retryAfterSeconds: rateLimit.retryAfterSeconds } };
@@ -353,7 +354,7 @@ export function createFormsClient(options: { accessToken: string; fetch?: typeof
       for (const field of payload.answeredFields ?? []) params.append("answered_fields", field);
       for (const type of payload.responseType ?? []) params.append("response_type", type);
       const query = params.toString();
-      const path = `/forms/${payload.formId}/responses${query ? `?${query}` : ""}`;
+      const path = `/forms/${encodePathSegment(payload.formId, "formId")}/responses${query ? `?${query}` : ""}`;
       const response = await client.fetchJSON(path);
       const rateLimit = parseTypeFormRateLimit(response.status, response.headers);
       if (rateLimit.limited) {
@@ -377,7 +378,7 @@ export function createFormsClient(options: { accessToken: string; fetch?: typeof
         params.append("included_tokens", token);
       }
       if (payload.includedResponseIds) params.set("included_response_ids", payload.includedResponseIds);
-      const response = await client.fetchJSON(`/forms/${payload.formId}/responses?${params.toString()}`, { method: "DELETE" });
+      const response = await client.fetchJSON(`/forms/${encodePathSegment(payload.formId, "formId")}/responses?${params.toString()}`, { method: "DELETE" });
       const rateLimit = parseTypeFormRateLimit(response.status, response.headers);
       if (rateLimit.limited) {
         return { ok: false as const, error: { code: "CONNECTOR_RATE_LIMITED", message: "Typeform rate limit exceeded.", retryAfterSeconds: rateLimit.retryAfterSeconds } };

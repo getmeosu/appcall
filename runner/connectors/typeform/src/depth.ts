@@ -5,6 +5,7 @@ import {
   normalizeImage,
   normalizeUser,
 } from "./objects";
+import { encodePathSegment } from "../../_shared/jobboard";
 
 type TypeFormError = { code: string; message: string; retryAfterSeconds?: number };
 type ClientOptions = { accessToken: string; fetch?: typeof fetch; typeFormClient?: TypeFormClient; operation?: string };
@@ -41,10 +42,17 @@ export function pickNumber(input: Record<string, unknown>, ...keys: string[]): n
   return undefined;
 }
 
+// The first spelling the caller supplied wins. A supplied but empty or blank
+// value is rejected; it must never fall back to an alias (imageId: "" with
+// image_id: "x" used to act on x).
 export function requireField(input: Record<string, unknown>, field: string, ...aliases: string[]): string {
-  const value = pickString(input, field, ...aliases);
-  if (!value) throw new Error(`${field} is required`);
-  return value;
+  for (const key of [field, ...aliases]) {
+    const value = input[key];
+    if (value === undefined || value === null) continue;
+    if (typeof value !== "string" || value.trim().length === 0) throw new Error(`${field} is required`);
+    return value;
+  }
+  throw new Error(`${field} is required`);
 }
 
 function clientFor(options: ClientOptions): TypeFormClient {
@@ -197,7 +205,7 @@ export function createWorkspacesClient(options: ClientOptions) {
     },
     async get(input: unknown) {
       const payload = validateWorkspacesGetInput(input);
-      return mapResponse(client, `/workspaces/${payload.workspaceId}`, { headers: jsonHeaders() }, (body) => ({
+      return mapResponse(client, `/workspaces/${encodePathSegment(payload.workspaceId, "workspaceId")}`, { headers: jsonHeaders() }, (body) => ({
         workspace: normalizeWorkspace(isRecord(body) ? body : {}),
       }));
     },
@@ -213,7 +221,7 @@ export function createWorkspacesClient(options: ClientOptions) {
     },
     async createInAccount(input: unknown) {
       const payload = validateWorkspacesCreateInAccountInput(input);
-      return mapResponse(client, `/accounts/${payload.accountId}/workspaces`, {
+      return mapResponse(client, `/accounts/${encodePathSegment(payload.accountId, "accountId")}/workspaces`, {
         method: "POST",
         headers: jsonHeaders(),
         body: JSON.stringify({ name: payload.name }),
@@ -226,7 +234,7 @@ export function createWorkspacesClient(options: ClientOptions) {
       const operations = payload.operations && payload.operations.length > 0
         ? payload.operations
         : [{ op: "replace", path: "/name", value: payload.name }];
-      return mapResponse(client, `/workspaces/${payload.workspaceId}`, {
+      return mapResponse(client, `/workspaces/${encodePathSegment(payload.workspaceId, "workspaceId")}`, {
         method: "PATCH",
         headers: jsonHeaders(),
         body: JSON.stringify(operations),
@@ -238,7 +246,7 @@ export function createWorkspacesClient(options: ClientOptions) {
     },
     async delete(input: unknown) {
       const payload = validateWorkspacesDeleteInput(input);
-      return mapResponse(client, `/workspaces/${payload.workspaceId}`, {
+      return mapResponse(client, `/workspaces/${encodePathSegment(payload.workspaceId, "workspaceId")}`, {
         method: "DELETE",
         headers: jsonHeaders(),
       }, (_body, status) => ({
@@ -389,7 +397,7 @@ export function createThemesClient(options: ClientOptions) {
     },
     async get(input: unknown) {
       const payload = validateThemesGetInput(input);
-      return mapResponse(client, `/themes/${payload.themeId}`, { headers: jsonHeaders() }, (body) => ({
+      return mapResponse(client, `/themes/${encodePathSegment(payload.themeId, "themeId")}`, { headers: jsonHeaders() }, (body) => ({
         theme: normalizeTheme(isRecord(body) ? body : {}),
       }));
     },
@@ -405,7 +413,7 @@ export function createThemesClient(options: ClientOptions) {
     },
     async update(input: unknown) {
       const payload = validateThemesUpdateInput(input);
-      return mapResponse(client, `/themes/${payload.themeId}`, {
+      return mapResponse(client, `/themes/${encodePathSegment(payload.themeId, "themeId")}`, {
         method: "PUT",
         headers: jsonHeaders(),
         body: JSON.stringify(themeBody(payload)),
@@ -415,7 +423,7 @@ export function createThemesClient(options: ClientOptions) {
     },
     async patch(input: unknown) {
       const payload = validateThemesPatchInput(input);
-      return mapResponse(client, `/themes/${payload.themeId}`, {
+      return mapResponse(client, `/themes/${encodePathSegment(payload.themeId, "themeId")}`, {
         method: "PATCH",
         headers: jsonHeaders(),
         body: JSON.stringify(themeBody(payload)),
@@ -425,7 +433,7 @@ export function createThemesClient(options: ClientOptions) {
     },
     async delete(input: unknown) {
       const payload = validateThemesDeleteInput(input);
-      return mapResponse(client, `/themes/${payload.themeId}`, {
+      return mapResponse(client, `/themes/${encodePathSegment(payload.themeId, "themeId")}`, {
         method: "DELETE",
         headers: jsonHeaders(),
       }, (_body, status) => ({
@@ -499,7 +507,7 @@ export function createImagesClient(options: ClientOptions) {
     },
     async delete(input: unknown) {
       const payload = validateImagesDeleteInput(input);
-      return mapResponse(client, `/images/${payload.imageId}`, {
+      return mapResponse(client, `/images/${encodePathSegment(payload.imageId, "imageId")}`, {
         method: "DELETE",
         headers: jsonHeaders(),
       }, (_body, status) => ({
@@ -510,7 +518,7 @@ export function createImagesClient(options: ClientOptions) {
     async getBySize(input: unknown, kind: "image" | "background" | "choice") {
       const allowed = kind === "image" ? IMAGE_SIZES : kind === "background" ? BACKGROUND_SIZES : CHOICE_SIZES;
       const payload = validateImageBySizeInput(input, allowed);
-      return mapResponse(client, `/images/${payload.imageId}/${kind}/${payload.size}`, {
+      return mapResponse(client, `/images/${encodePathSegment(payload.imageId, "imageId")}/${kind}/${payload.size}`, {
         headers: jsonHeaders(),
       }, (body) => ({
         image: normalizeImage(isRecord(body) ? body : {}),
@@ -597,14 +605,14 @@ export function createFormExtrasClient(options: ClientOptions) {
   return {
     async getMessages(input: unknown) {
       const payload = validateFormMessagesGetInput(input);
-      return mapResponse(client, `/forms/${payload.formId}/messages`, { headers: jsonHeaders() }, (body) => ({
+      return mapResponse(client, `/forms/${encodePathSegment(payload.formId, "formId")}/messages`, { headers: jsonHeaders() }, (body) => ({
         messages: isRecord(body) ? body : {},
         formId: payload.formId,
       }));
     },
     async updateMessages(input: unknown) {
       const payload = validateFormMessagesUpdateInput(input);
-      return mapResponse(client, `/forms/${payload.formId}/messages`, {
+      return mapResponse(client, `/forms/${encodePathSegment(payload.formId, "formId")}/messages`, {
         method: "PUT",
         headers: jsonHeaders(),
         body: JSON.stringify(payload.messages),
@@ -615,7 +623,7 @@ export function createFormExtrasClient(options: ClientOptions) {
     },
     async patch(input: unknown) {
       const payload = validateFormsPatchInput(input);
-      return mapResponse(client, `/forms/${payload.formId}`, {
+      return mapResponse(client, `/forms/${encodePathSegment(payload.formId, "formId")}`, {
         method: "PATCH",
         headers: jsonHeaders(),
         body: JSON.stringify(payload.operations),
@@ -626,7 +634,7 @@ export function createFormExtrasClient(options: ClientOptions) {
     },
     async getResponseFiles(input: unknown) {
       const payload = validateResponseFilesGetInput(input);
-      return mapResponse(client, `/forms/${payload.formId}/responses/files`, {
+      return mapResponse(client, `/forms/${encodePathSegment(payload.formId, "formId")}/responses/files`, {
         headers: { Accept: "application/zip, application/json, */*" },
       }, (body, status, headers) => ({
         formId: payload.formId,

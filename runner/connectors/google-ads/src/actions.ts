@@ -31,6 +31,7 @@ import {
   aggregateSearchStreamBatches,
   extractIdFromResourceName,
 } from "./objects";
+import { assertSafePathSegment } from "../../_shared/jobboard";
 
 type ActionResult = Record<string, unknown> | Promise<Record<string, unknown>>;
 
@@ -67,7 +68,8 @@ function clientOpts(input: Record<string, unknown>, operation: string): GoogleAd
 }
 
 function customerPath(customerId: string, suffix: string): string {
-  return `/customers/${sanitizeCustomerId(customerId)}${suffix}`;
+  // SEC-PATH-2c: customer ids are digits (dashes stripped); reject blank and dot-only.
+  return `/customers/${assertSafePathSegment(sanitizeCustomerId(customerId), "customerId")}${suffix}`;
 }
 
 function handleError(result: { status: number; headers: Record<string, string>; body: unknown }) {

@@ -1,4 +1,5 @@
 import { createGraphClient, parseGraphRateLimit, type GraphClient } from "./http";
+import { encodePathSegment } from "../../_shared/jobboard";
 
 export type Contact = {
   id: string;
@@ -170,7 +171,7 @@ export function createContactsClient(options: { accessToken: string; fetch?: typ
 
     async get(input: unknown) {
       const payload = validateGetContactInput(input);
-      const response = await client.fetchJSON(`/v1.0/me/contacts/${encodeURIComponent(payload.contactId)}`);
+      const response = await client.fetchJSON(`/v1.0/me/contacts/${encodePathSegment(payload.contactId, "contactId")}`);
       if (response.status === 200) {
         return { ok: true as const, contact: normalizeContact(response.body as Contact) };
       }
@@ -190,7 +191,7 @@ export function createContactsClient(options: { accessToken: string; fetch?: typ
       if (payload.mobilePhone) body.mobilePhone = payload.mobilePhone;
       if (payload.jobTitle) body.jobTitle = payload.jobTitle;
       if (payload.companyName) body.companyName = payload.companyName;
-      const response = await client.fetchJSON(`/v1.0/me/contacts/${encodeURIComponent(payload.contactId)}`, {
+      const response = await client.fetchJSON(`/v1.0/me/contacts/${encodePathSegment(payload.contactId, "contactId")}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),

@@ -1,5 +1,6 @@
 import { createKlaviyoClient, firstString, parseKlaviyoRateLimit, prop, queryPath, isRecord } from "./http";
 import { normalizeContact, type NormalizedContact } from "./objects";
+import { encodePathSegment } from "../../_shared/jobboard";
 
 // ─── profiles.get ─────────────────────────────────────────────────────────────
 
@@ -16,7 +17,7 @@ export async function getProfileFromClient(
 ): Promise<{ ok: true; profile: NormalizedContact } | { ok: false; error: { code: string; message: string; retryAfterSeconds?: number } }> {
   const payload = validateGetProfileInput(input);
   const client = createKlaviyoClient({ apiKey: options.apiKey, fetch: options.fetch, operation: "profiles.get" });
-  const result = await client.fetchJSON(queryPath(`/profiles/${payload.profileId}`, input));
+  const result = await client.fetchJSON(queryPath(`/profiles/${encodePathSegment(payload.profileId, "profileId")}`, input));
   if (result.status === 200) {
     const body = result.body as Record<string, unknown>;
     const data = isRecord(body.data) ? body.data : { id: payload.profileId, attributes: {} };
@@ -63,7 +64,7 @@ export async function updateProfileFromClient(
   if (payload.lastName !== undefined) attrs.last_name = payload.lastName;
   if (payload.phone !== undefined) attrs.phone_number = payload.phone;
   if (payload.properties !== undefined) attrs.properties = payload.properties;
-  const result = await client.fetchJSON(`/profiles/${payload.profileId}`, {
+  const result = await client.fetchJSON(`/profiles/${encodePathSegment(payload.profileId, "profileId")}`, {
     method: "PATCH",
     body: JSON.stringify({ data: { type: "profile", id: payload.profileId, attributes: attrs } }),
   });
@@ -98,7 +99,7 @@ export async function addProfilesToListFromClient(
 ): Promise<{ ok: true; added: number } | { ok: false; error: { code: string; message: string; retryAfterSeconds?: number } }> {
   const payload = validateAddProfilesToListInput(input);
   const client = createKlaviyoClient({ apiKey: options.apiKey, fetch: options.fetch, operation: "profiles.addToList" });
-  const result = await client.fetchJSON(`/lists/${payload.listId}/relationships/profiles`, {
+  const result = await client.fetchJSON(`/lists/${encodePathSegment(payload.listId, "listId")}/relationships/profiles`, {
     method: "POST",
     body: JSON.stringify({ data: payload.profileIds.map((id) => ({ type: "profile", id })) }),
   });
@@ -132,7 +133,7 @@ export async function removeProfilesFromListFromClient(
 ): Promise<{ ok: true; removed: number } | { ok: false; error: { code: string; message: string; retryAfterSeconds?: number } }> {
   const payload = validateRemoveProfilesFromListInput(input);
   const client = createKlaviyoClient({ apiKey: options.apiKey, fetch: options.fetch, operation: "profiles.removeFromList" });
-  const result = await client.fetchJSON(`/lists/${payload.listId}/relationships/profiles`, {
+  const result = await client.fetchJSON(`/lists/${encodePathSegment(payload.listId, "listId")}/relationships/profiles`, {
     method: "DELETE",
     body: JSON.stringify({ data: payload.profileIds.map((id) => ({ type: "profile", id })) }),
   });
@@ -159,7 +160,7 @@ export async function deleteProfileFromClient(
 ): Promise<{ ok: true; deleted: true } | { ok: false; error: { code: string; message: string; retryAfterSeconds?: number } }> {
   const payload = validateDeleteProfileInput(input);
   const client = createKlaviyoClient({ apiKey: options.apiKey, fetch: options.fetch, operation: "profiles.delete" });
-  const result = await client.fetchJSON(`/profiles/${payload.profileId}`, { method: "DELETE" });
+  const result = await client.fetchJSON(`/profiles/${encodePathSegment(payload.profileId, "profileId")}`, { method: "DELETE" });
   if (result.status === 204 || result.status === 200) return { ok: true, deleted: true };
   const rl = parseKlaviyoRateLimit(result.status, result.headers);
   if (rl.limited) return { ok: false, error: { code: "CONNECTOR_RATE_LIMITED", message: "Klaviyo rate limit exceeded.", retryAfterSeconds: rl.retryAfterSeconds } };

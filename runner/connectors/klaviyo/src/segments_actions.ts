@@ -1,4 +1,5 @@
 import { createKlaviyoClient, firstString, parseKlaviyoRateLimit, prop, queryPath, isRecord } from "./http";
+import { encodePathSegment } from "../../_shared/jobboard";
 
 // ─── segments.get ─────────────────────────────────────────────────────────────
 
@@ -42,7 +43,7 @@ export async function getSegmentFromClient(
 ): Promise<{ ok: true; segment: NormalizedSegment } | { ok: false; error: { code: string; message: string; retryAfterSeconds?: number } }> {
   const payload = validateGetSegmentInput(input);
   const client = createKlaviyoClient({ apiKey: options.apiKey, fetch: options.fetch, operation: "segments.get" });
-  const result = await client.fetchJSON(queryPath(`/segments/${payload.segmentId}`, input));
+  const result = await client.fetchJSON(queryPath(`/segments/${encodePathSegment(payload.segmentId, "segmentId")}`, input));
   if (result.status === 200) {
     const body = result.body as Record<string, unknown>;
     const data = isRecord(body.data) ? body.data : { id: payload.segmentId, attributes: {} };

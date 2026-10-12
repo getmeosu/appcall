@@ -1,6 +1,7 @@
 import { createMailchimpClient, parseMailchimpRateLimit, isRecord } from "./http";
 import { normalizeReport, parseOpensResponse, parseClicksResponse, parseUnsubscribedResponse } from "./objects";
 import type { NormalizedReport, NormalizedOpen, NormalizedClick, NormalizedUnsubscribe } from "./objects";
+import { encodePathSegment } from "../../_shared/jobboard";
 
 export type CampaignReportInput = { campaignId: string };
 
@@ -14,7 +15,7 @@ export function createReportsClient(options: { apiKey: string; fetch?: typeof fe
   return {
     async getSummary(input: unknown): Promise<{ ok: true; report: NormalizedReport } | { ok: false; error: { code: string; message: string; retryAfterSeconds?: number } }> {
       const payload = validateCampaignReportInput(input);
-      const response = await client.fetchJSON(`/reports/${payload.campaignId}`);
+      const response = await client.fetchJSON(`/reports/${encodePathSegment(payload.campaignId, "campaignId")}`);
       if (response.status === 200) return { ok: true, report: normalizeReport(response.body as Record<string, unknown>) };
       if (response.status === 404) return { ok: false, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Report not found." } };
       const rl = parseMailchimpRateLimit(response.status, response.headers);
@@ -24,7 +25,7 @@ export function createReportsClient(options: { apiKey: string; fetch?: typeof fe
 
     async getOpens(input: unknown): Promise<{ ok: true; opens: NormalizedOpen[] } | { ok: false; error: { code: string; message: string; retryAfterSeconds?: number } }> {
       const payload = validateCampaignReportInput(input);
-      const response = await client.fetchJSON(`/reports/${payload.campaignId}/open-details`);
+      const response = await client.fetchJSON(`/reports/${encodePathSegment(payload.campaignId, "campaignId")}/open-details`);
       if (response.status === 200) return { ok: true, opens: parseOpensResponse(response.body).opens };
       if (response.status === 404) return { ok: false, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Report not found." } };
       const rl = parseMailchimpRateLimit(response.status, response.headers);
@@ -34,7 +35,7 @@ export function createReportsClient(options: { apiKey: string; fetch?: typeof fe
 
     async getClicks(input: unknown): Promise<{ ok: true; clicks: NormalizedClick[] } | { ok: false; error: { code: string; message: string; retryAfterSeconds?: number } }> {
       const payload = validateCampaignReportInput(input);
-      const response = await client.fetchJSON(`/reports/${payload.campaignId}/click-details`);
+      const response = await client.fetchJSON(`/reports/${encodePathSegment(payload.campaignId, "campaignId")}/click-details`);
       if (response.status === 200) return { ok: true, clicks: parseClicksResponse(response.body).clicks };
       if (response.status === 404) return { ok: false, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Report not found." } };
       const rl = parseMailchimpRateLimit(response.status, response.headers);
@@ -44,7 +45,7 @@ export function createReportsClient(options: { apiKey: string; fetch?: typeof fe
 
     async getUnsubscribed(input: unknown): Promise<{ ok: true; unsubscribed: NormalizedUnsubscribe[] } | { ok: false; error: { code: string; message: string; retryAfterSeconds?: number } }> {
       const payload = validateCampaignReportInput(input);
-      const response = await client.fetchJSON(`/reports/${payload.campaignId}/unsubscribed`);
+      const response = await client.fetchJSON(`/reports/${encodePathSegment(payload.campaignId, "campaignId")}/unsubscribed`);
       if (response.status === 200) return { ok: true, unsubscribed: parseUnsubscribedResponse(response.body).unsubscribed };
       if (response.status === 404) return { ok: false, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Report not found." } };
       const rl = parseMailchimpRateLimit(response.status, response.headers);

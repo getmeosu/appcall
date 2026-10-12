@@ -1,4 +1,5 @@
 import { createBrevoClient, brevoErrorDetail, parseBrevoRateLimit, isRecord, type BrevoClient, type BrevoFetchInit } from "./http";
+import { encodePathSegment } from "../../_shared/jobboard";
 
 type ExecSuccess = { ok: true; value: Record<string, unknown> };
 type ExecFailure = { ok: false; error: { code: string; message: string; retryAfterSeconds?: number } };
@@ -217,14 +218,14 @@ export const createCompany = wrap("companies.create", (input) => {
 export const getCompany = wrap("companies.get", (input) => {
   if (!isRecord(input)) throw new Error("input must be an object");
   return { id: requireString(input, "id") };
-}, (client, payload) => call(client, `/companies/${encodeURIComponent(String(payload.id))}`, { method: "GET" }, "Brevo rejected the get company request.", (_status, body) => ({ data: body })));
+}, (client, payload) => call(client, `/companies/${encodePathSegment(payload.id, "id")}`, { method: "GET" }, "Brevo rejected the get company request.", (_status, body) => ({ data: body })));
 
 export const deleteCompany = wrap("companies.delete", (input) => {
   if (!isRecord(input)) throw new Error("input must be an object");
   return { id: requireString(input, "id") };
 }, (client, payload) => call(
   client,
-  `/companies/${encodeURIComponent(String(payload.id))}`,
+  `/companies/${encodePathSegment(payload.id, "id")}`,
   { method: "DELETE" },
   "Brevo rejected the delete company request.",
   () => ({ deleted: true }),
@@ -272,7 +273,7 @@ export const createOrUpdateEmailTemplate = wrap("smtp.templates.createOrUpdate",
   if (templateId !== undefined) {
     return call(
       client,
-      `/smtp/templates/${encodeURIComponent(String(templateId))}`,
+      `/smtp/templates/${encodePathSegment(templateId, "template_id")}`,
       { method: "PUT", body: JSON.stringify(body) },
       "Brevo rejected the update template request.",
       () => ({ updated: true }),
@@ -286,7 +287,7 @@ export const deleteEmailTemplate = wrap("smtp.templates.delete", (input) => {
   return { templateId: requireNumber(input, "template_id", "templateId") };
 }, (client, payload) => call(
   client,
-  `/smtp/templates/${encodeURIComponent(String(payload.templateId))}`,
+  `/smtp/templates/${encodePathSegment(payload.templateId, "template_id")}`,
   { method: "DELETE" },
   "Brevo rejected the delete template request.",
   () => ({ deleted: true }),
@@ -309,7 +310,7 @@ export const getEmailTemplate = wrap("smtp.templates.get", (input) => {
   return { templateId };
 }, (client, payload) => call(
   client,
-  `/smtp/templates/${encodeURIComponent(String(payload.templateId))}`,
+  `/smtp/templates/${encodePathSegment(payload.templateId, "template_id")}`,
   { method: "GET" },
   "Brevo rejected the get template request.",
   (_status, body) => ({ data: body }),
@@ -378,7 +379,7 @@ export const getContactCampaignStats = wrap("contacts.campaignStats.get", (input
   });
 }, (client, payload) => call(
   client,
-  `/contacts/${encodeURIComponent(String(payload.identifier))}/campaignStats`,
+  `/contacts/${encodePathSegment(payload.identifier, "identifier")}/campaignStats`,
   { method: "GET", query: compact({ startDate: payload.startDate, endDate: payload.endDate }) },
   "Brevo rejected the contact campaign stats request.",
   (_status, body) => ({ data: body }),
@@ -445,7 +446,7 @@ export const listCustomObjectRecords = wrap("crm.objects.records.list", (input) 
   });
 }, (client, payload) => call(
   client,
-  `/objects/${encodeURIComponent(String(payload.objectType))}/records`,
+  `/objects/${encodePathSegment(payload.objectType, "object_type")}/records`,
   {
     method: "GET",
     query: compact({

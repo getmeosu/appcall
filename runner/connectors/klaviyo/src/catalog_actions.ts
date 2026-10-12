@@ -1,6 +1,7 @@
 import { createKlaviyoClient, firstString, parseKlaviyoRateLimit, queryPath, isRecord } from "./http";
 import { normalizeCatalogItem, parseCatalogItemsResponse } from "./objects";
 import type { NormalizedCatalogItem } from "./objects";
+import { encodePathSegment } from "../../_shared/jobboard";
 
 export type GetCatalogItemInput = { itemId: string };
 
@@ -33,7 +34,7 @@ export async function getCatalogItemFromClient(
 ): Promise<{ ok: true; item: NormalizedCatalogItem } | { ok: false; error: { code: string; message: string; retryAfterSeconds?: number } }> {
   const payload = validateGetCatalogItemInput(input);
   const client = createKlaviyoClient({ apiKey: options.apiKey, fetch: options.fetch, operation: "catalog.items.get" });
-  const result = await client.fetchJSON(queryPath(`/catalog-items/${encodeURIComponent(payload.itemId)}`, input));
+  const result = await client.fetchJSON(queryPath(`/catalog-items/${encodePathSegment(payload.itemId, "itemId")}`, input));
   if (result.status === 200) {
     const body = result.body as Record<string, unknown>;
     const data = isRecord(body.data) ? body.data : { id: payload.itemId, attributes: {} };

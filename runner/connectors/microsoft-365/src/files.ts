@@ -1,4 +1,5 @@
 import { createGraphClient, parseGraphRateLimit, type GraphClient } from "./http";
+import { encodePathSegment } from "../../_shared/jobboard";
 
 export type DriveFile = {
   id: string;
@@ -126,7 +127,7 @@ export function createDriveItemsClient(options: { accessToken: string; fetch?: t
   return {
     async get(input: unknown) {
       const payload = validateGetDriveItemInput(input);
-      const response = await client.fetchJSON(`/v1.0/me/drive/items/${encodeURIComponent(payload.itemId)}`);
+      const response = await client.fetchJSON(`/v1.0/me/drive/items/${encodePathSegment(payload.itemId, "itemId")}`);
       if (response.status === 200) {
         return { ok: true as const, item: normalizeDriveFile(response.body as DriveFile) };
       }
@@ -139,7 +140,7 @@ export function createDriveItemsClient(options: { accessToken: string; fetch?: t
 
     async delete(input: unknown) {
       const payload = validateDeleteDriveItemInput(input);
-      const response = await client.fetchJSON(`/v1.0/me/drive/items/${encodeURIComponent(payload.itemId)}`, {
+      const response = await client.fetchJSON(`/v1.0/me/drive/items/${encodePathSegment(payload.itemId, "itemId")}`, {
         method: "DELETE",
       });
       if (response.status === 204) return { ok: true as const };
@@ -157,7 +158,7 @@ export function createDriveItemsClient(options: { accessToken: string; fetch?: t
       };
       if (payload.name) body.name = payload.name;
 
-      const response = await client.fetchJSON(`/v1.0/me/drive/items/${encodeURIComponent(payload.itemId)}/copy`, {
+      const response = await client.fetchJSON(`/v1.0/me/drive/items/${encodePathSegment(payload.itemId, "itemId")}/copy`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
@@ -177,7 +178,7 @@ export function createDriveItemsClient(options: { accessToken: string; fetch?: t
       const body: Record<string, unknown> = {};
       if (payload.name) body.name = payload.name;
       if (payload.description) body.description = payload.description;
-      const response = await client.fetchJSON(`/v1.0/me/drive/items/${encodeURIComponent(payload.itemId)}`, {
+      const response = await client.fetchJSON(`/v1.0/me/drive/items/${encodePathSegment(payload.itemId, "itemId")}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),

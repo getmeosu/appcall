@@ -1,4 +1,5 @@
 import { createApifyClient, isRecord, parseApifyRateLimit, prop } from "./http";
+import { encodePathSegment } from "../../_shared/jobboard";
 
 export type ActorOption = { id: string; label: string; source: "actor" | "task" | "store" };
 export type ActorsOptionsResult = { connector: "apify"; action: "actors.options"; options: ActorOption[] };
@@ -83,7 +84,7 @@ export type ActorInputSchemaResult = { connector: "apify"; action: "actors.input
 
 export async function actorInputSchema(input: { apiKey: string; actorId: string; fetch?: typeof fetch }): Promise<ActorInputSchemaResult> {
   const client = createApifyClient({ apiKey: input.apiKey, fetch: input.fetch, operation: "actors.get" });
-  const resp = await client.fetchJSON(`/actors/${encodeURIComponent(input.actorId)}/builds/default`);
+  const resp = await client.fetchJSON(`/actors/${encodePathSegment(input.actorId, "actorId")}/builds/default`);
   throwIfNotOk(resp.status, resp.headers, "Apify could not load the actor input schema.");
   const body = isRecord(resp.body) ? resp.body : {};
   const data = isRecord(body.data) ? body.data : {};

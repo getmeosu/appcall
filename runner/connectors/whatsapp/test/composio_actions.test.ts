@@ -141,7 +141,7 @@ describe("whatsapp composio mapping", () => {
   });
 
   test("keeps origin/main baseline operations and bumps the minor version", () => {
-    expect(manifest.version).toBe("0.3.0");
+    expect(manifest.version).toBe("0.3.1");
     for (const key of BASELINE_OPS) {
       expect(operations[key], key).toBeDefined();
     }

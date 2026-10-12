@@ -1,4 +1,5 @@
 import { createGraphClient, parseGraphRateLimit, type GraphClient } from "./http";
+import { encodePathSegment } from "../../_shared/jobboard";
 
 export type CalendarEvent = {
   id: string;
@@ -190,7 +191,7 @@ export function createEventsClient(options: { accessToken: string; fetch?: typeo
       if (payload.body) body.body = { contentType: "text", content: payload.body };
       if (payload.location) body.location = { displayName: payload.location };
 
-      const response = await client.fetchJSON(`/v1.0/me/events/${encodeURIComponent(payload.eventId)}`, {
+      const response = await client.fetchJSON(`/v1.0/me/events/${encodePathSegment(payload.eventId, "eventId")}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
@@ -207,7 +208,7 @@ export function createEventsClient(options: { accessToken: string; fetch?: typeo
 
     async delete(input: unknown) {
       const payload = validateDeleteEventInput(input);
-      const response = await client.fetchJSON(`/v1.0/me/events/${encodeURIComponent(payload.eventId)}`, {
+      const response = await client.fetchJSON(`/v1.0/me/events/${encodePathSegment(payload.eventId, "eventId")}`, {
         method: "DELETE",
       });
       if (response.status === 204) return { ok: true as const };
@@ -220,7 +221,7 @@ export function createEventsClient(options: { accessToken: string; fetch?: typeo
 
     async get(input: unknown) {
       const payload = validateGetEventInput(input);
-      const response = await client.fetchJSON(`/v1.0/me/events/${encodeURIComponent(payload.eventId)}`);
+      const response = await client.fetchJSON(`/v1.0/me/events/${encodePathSegment(payload.eventId, "eventId")}`);
       if (response.status === 200) {
         return { ok: true as const, event: normalizeCalendarEvent(response.body as CalendarEvent) };
       }
@@ -289,7 +290,7 @@ export function createCalendarsClient(options: { accessToken: string; fetch?: ty
   return {
     async get(input: unknown) {
       const payload = validateGetCalendarInput(input);
-      const response = await client.fetchJSON(`/v1.0/me/calendars/${encodeURIComponent(payload.calendarId)}`);
+      const response = await client.fetchJSON(`/v1.0/me/calendars/${encodePathSegment(payload.calendarId, "calendarId")}`);
       if (response.status === 200) {
         return { ok: true as const, calendar: parseCalendar(response.body) };
       }

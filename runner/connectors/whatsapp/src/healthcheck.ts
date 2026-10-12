@@ -1,5 +1,6 @@
 import { ConnectorHttpError, createConnectorHttpClient } from "../../../bun/src/http";
 import manifest from "../manifest.json";
+import { phoneNumberIdSegment } from "./phone_number_id";
 
 // Static result returned by the no-credential setup-validation path (the
 // connector is registered and reachable as code, but no provider call is made).
@@ -52,10 +53,17 @@ async function verifyCredentials(
     timeoutMs: manifest.operations.healthcheck.timeoutMs,
     fetch: fetchFn,
   });
+  // The phoneNumberId setup field goes through the same guard as caller input.
+  let phoneNumberIdPath: string;
+  try {
+    phoneNumberIdPath = phoneNumberIdSegment(phoneNumberId);
+  } catch (error) {
+    throw { ok: false, code: "INVALID_ACTION_INPUT", message: error instanceof Error ? error.message : "phoneNumberId is invalid" };
+  }
   let response: { status: number; body: string };
   try {
     response = await httpClient.fetchText(
-      `https://graph.facebook.com/${GRAPH_VERSION}/${phoneNumberId}?fields=verified_name,quality_rating`,
+      `https://graph.facebook.com/${GRAPH_VERSION}/${phoneNumberIdPath}?fields=verified_name,quality_rating`,
       {
         method: "GET",
         headers: { Authorization: `Bearer ${accessToken}` },

@@ -1,5 +1,6 @@
 import { createBrevoClient, brevoErrorDetail, parseBrevoRateLimit, prop, propNum, isRecord } from "./http";
 import { normalizeContact } from "./objects";
+import { encodePathSegment } from "../../_shared/jobboard";
 
 // ─── contacts.get ─────────────────────────────────────────────────────────────
 
@@ -24,7 +25,7 @@ export function createContactOpsClient(options: { apiKey: string; fetch?: typeof
   return {
     async get(input: unknown) {
       const payload = validateGetContactInput(input);
-      const encoded = encodeURIComponent(payload.identifier);
+      const encoded = encodePathSegment(payload.identifier, "identifier");
       const result = await client.fetchJSON(`/contacts/${encoded}`, {
         query: payload.identifierType ? { identifierType: payload.identifierType } : undefined,
       });
@@ -39,7 +40,7 @@ export function createContactOpsClient(options: { apiKey: string; fetch?: typeof
 
     async update(input: unknown) {
       const payload = validateUpdateContactInput(input);
-      const encoded = encodeURIComponent(payload.identifier);
+      const encoded = encodePathSegment(payload.identifier, "identifier");
       const body: Record<string, unknown> = {};
       if (payload.firstName !== undefined) body.firstName = payload.firstName;
       if (payload.lastName !== undefined) body.lastName = payload.lastName;
@@ -70,7 +71,7 @@ export function createContactOpsClient(options: { apiKey: string; fetch?: typeof
 
     async delete(input: unknown) {
       const payload = validateDeleteContactInput(input);
-      const encoded = encodeURIComponent(payload.identifier);
+      const encoded = encodePathSegment(payload.identifier, "identifier");
       const clientForOp = createBrevoClient({ apiKey: options.apiKey, fetch: options.fetch, operation: "contacts.delete" });
       const result = await clientForOp.fetchJSON(`/contacts/${encoded}`, {
         method: "DELETE",

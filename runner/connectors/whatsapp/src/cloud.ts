@@ -1,6 +1,8 @@
 import { createConnectorHttpClient, type ConnectorHttpClient } from "../../../bun/src/http";
 import manifest from "../manifest.json";
 import { mapWhatsAppError, type ConnectorError } from "./messages";
+import { encodePathSegment } from "../../_shared/jobboard";
+import { phoneNumberIdSegment } from "./phone_number_id";
 
 const defaultGraphVersion = "v25.0";
 
@@ -31,9 +33,7 @@ function resolveVersion(input: Record<string, unknown>): string {
 }
 
 function requirePhoneNumberId(input: Record<string, unknown>): string {
-  const phoneNumberId = requireString(input.phoneNumberId, "phoneNumberId").trim();
-  if (!phoneNumberId) throw new Error("phoneNumberId is required");
-  return phoneNumberId;
+  return phoneNumberIdSegment(input.phoneNumberId);
 }
 
 type ClientOptions = {
@@ -126,7 +126,7 @@ export function createGetMessageClient(options: ClientOptions) {
       const result = await graphRequest(
         httpClient,
         accessToken,
-        `https://graph.facebook.com/${payload.graphVersion}/${payload.messageId}`,
+        `https://graph.facebook.com/${payload.graphVersion}/${encodePathSegment(payload.messageId, "messageId")}`,
         { method: "GET" },
       );
       if (!result.ok) return result;
@@ -162,7 +162,7 @@ export function createListTemplatesClient(options: ClientOptions) {
       { ok: true; templates: unknown[]; paging: unknown; raw: Record<string, unknown> } | { ok: false; error: ConnectorError }
     > {
       const payload = validateListTemplatesInput(input);
-      const url = new URL(`https://graph.facebook.com/${payload.graphVersion}/${payload.wabaId}/message_templates`);
+      const url = new URL(`https://graph.facebook.com/${payload.graphVersion}/${encodePathSegment(payload.wabaId, "wabaId")}/message_templates`);
       if (payload.limit !== undefined) url.searchParams.set("limit", String(payload.limit));
       if (payload.after) url.searchParams.set("after", payload.after);
       const result = await graphRequest(httpClient, accessToken, url.toString(), { method: "GET" });
@@ -197,7 +197,7 @@ export function createGetMediaClient(options: ClientOptions) {
       const result = await graphRequest(
         httpClient,
         accessToken,
-        `https://graph.facebook.com/${payload.graphVersion}/${payload.mediaId}`,
+        `https://graph.facebook.com/${payload.graphVersion}/${encodePathSegment(payload.mediaId, "mediaId")}`,
         { method: "GET" },
       );
       if (!result.ok) return result;
@@ -252,7 +252,7 @@ export function createUploadMediaClient(options: ClientOptions) {
       const result = await graphRequest(
         httpClient,
         accessToken,
-        `https://graph.facebook.com/${payload.graphVersion}/${payload.phoneNumberId}/media`,
+        `https://graph.facebook.com/${payload.graphVersion}/${phoneNumberIdSegment(payload.phoneNumberId)}/media`,
         { method: "POST", body: form },
       );
       if (!result.ok) return result;
@@ -289,7 +289,7 @@ export function createDeleteMediaClient(options: ClientOptions) {
       const result = await graphRequest(
         httpClient,
         accessToken,
-        `https://graph.facebook.com/${payload.graphVersion}/${payload.mediaId}`,
+        `https://graph.facebook.com/${payload.graphVersion}/${encodePathSegment(payload.mediaId, "mediaId")}`,
         { method: "DELETE" },
       );
       if (!result.ok) return result;
@@ -325,7 +325,7 @@ export function createSendAudioClient(options: ClientOptions) {
       const result = await postMessage(
         httpClient,
         accessToken,
-        `https://graph.facebook.com/${payload.graphVersion}/${payload.phoneNumberId}/messages`,
+        `https://graph.facebook.com/${payload.graphVersion}/${phoneNumberIdSegment(payload.phoneNumberId)}/messages`,
         {
           messaging_product: "whatsapp",
           recipient_type: "individual",
@@ -372,7 +372,7 @@ export function createSendVideoClient(options: ClientOptions) {
       const result = await postMessage(
         httpClient,
         accessToken,
-        `https://graph.facebook.com/${payload.graphVersion}/${payload.phoneNumberId}/messages`,
+        `https://graph.facebook.com/${payload.graphVersion}/${phoneNumberIdSegment(payload.phoneNumberId)}/messages`,
         {
           messaging_product: "whatsapp",
           recipient_type: "individual",
@@ -408,7 +408,7 @@ export function createGetBusinessProfileClient(options: ClientOptions) {
       { ok: true; profile: Record<string, unknown>; raw: Record<string, unknown> } | { ok: false; error: ConnectorError }
     > {
       const payload = validateGetBusinessProfileInput(input);
-      const url = new URL(`https://graph.facebook.com/${payload.graphVersion}/${payload.phoneNumberId}/whatsapp_business_profile`);
+      const url = new URL(`https://graph.facebook.com/${payload.graphVersion}/${phoneNumberIdSegment(payload.phoneNumberId)}/whatsapp_business_profile`);
       url.searchParams.set("fields", "about,address,description,email,profile_picture_url,websites,vertical");
       const result = await graphRequest(httpClient, accessToken, url.toString(), { method: "GET" });
       if (!result.ok) return result;
@@ -460,7 +460,7 @@ export function createUpdateBusinessProfileClient(options: ClientOptions) {
       const result = await graphRequest(
         httpClient,
         accessToken,
-        `https://graph.facebook.com/${payload.graphVersion}/${payload.phoneNumberId}/whatsapp_business_profile`,
+        `https://graph.facebook.com/${payload.graphVersion}/${phoneNumberIdSegment(payload.phoneNumberId)}/whatsapp_business_profile`,
         { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) },
       );
       if (!result.ok) return result;
@@ -487,7 +487,7 @@ export function createGetPhoneNumberClient(options: ClientOptions) {
   return {
     async getPhoneNumber(input: unknown): Promise<{ ok: true; phoneNumber: Record<string, unknown> } | { ok: false; error: ConnectorError }> {
       const payload = validateGetPhoneNumberInput(input);
-      const url = new URL(`https://graph.facebook.com/${payload.graphVersion}/${payload.phoneNumberId}`);
+      const url = new URL(`https://graph.facebook.com/${payload.graphVersion}/${phoneNumberIdSegment(payload.phoneNumberId)}`);
       url.searchParams.set("fields", "verified_name,display_phone_number,quality_rating,code_verification_status");
       const result = await graphRequest(httpClient, accessToken, url.toString(), { method: "GET" });
       if (!result.ok) return result;
@@ -575,7 +575,7 @@ export function createSendMediaClient(options: ClientOptions) {
       const result = await postMessage(
         httpClient,
         accessToken,
-        `https://graph.facebook.com/${payload.graphVersion}/${payload.phoneNumberId}/messages`,
+        `https://graph.facebook.com/${payload.graphVersion}/${phoneNumberIdSegment(payload.phoneNumberId)}/messages`,
         body,
         "WhatsApp returned an invalid media send response.",
       );
@@ -637,7 +637,7 @@ export function createSendMediaByIdClient(options: ClientOptions) {
       const result = await postMessage(
         httpClient,
         accessToken,
-        `https://graph.facebook.com/${payload.graphVersion}/${payload.phoneNumberId}/messages`,
+        `https://graph.facebook.com/${payload.graphVersion}/${phoneNumberIdSegment(payload.phoneNumberId)}/messages`,
         body,
         "WhatsApp returned an invalid media send response.",
       );
@@ -679,7 +679,7 @@ export function createUpdateFlowJsonClient(options: ClientOptions) {
       const result = await graphRequest(
         httpClient,
         accessToken,
-        `https://graph.facebook.com/${payload.graphVersion}/${payload.flowId}/assets`,
+        `https://graph.facebook.com/${payload.graphVersion}/${encodePathSegment(payload.flowId, "flowId")}/assets`,
         { method: "POST", body: form },
       );
       if (!result.ok) return result;

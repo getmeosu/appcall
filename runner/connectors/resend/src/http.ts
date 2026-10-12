@@ -12,7 +12,10 @@ export function parseResendRateLimit(status: number, headers: Record<string, str
 export type ResendClientOptions = { apiKey: string; fetch?: typeof fetch; operation?: string };
 
 export function encodeResendPathIdentifier(value: string, field: string): string {
-  if (!value || value === "." || value === ".." || /[\/\\\u0000-\u001f\u007f-\u009f]/u.test(value)) {
+  // Blank, whitespace-only and dot-only (also when padded: ' .. ') ids would
+  // reach Resend as an empty, whitespace or dot segment (/segments/%20/contacts).
+  const trimmed = value.trim();
+  if (!trimmed || /^\.+$/.test(trimmed) || /[\/\\\u0000-\u001f\u007f-\u009f]/u.test(value)) {
     throw new Error(`${field} must be a safe path identifier`);
   }
   return encodeURIComponent(value);

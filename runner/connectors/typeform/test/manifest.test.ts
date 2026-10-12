@@ -4,7 +4,7 @@ import manifest from "../manifest.json";
 describe("typeform manifest", () => {
   it("has correct key and version", () => {
     expect(manifest.key).toBe("typeform");
-    expect(manifest.version).toBe("0.2.0");
+    expect(manifest.version).toBe("0.2.1");
     expect(manifest.runtime).toBe("bun");
   });
 

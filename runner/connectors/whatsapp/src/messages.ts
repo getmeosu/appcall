@@ -1,5 +1,6 @@
 import { createConnectorHttpClient, type ConnectorHttpClient } from "../../../bun/src/http";
 import manifest from "../manifest.json";
+import { phoneNumberIdSegment } from "./phone_number_id";
 
 const defaultGraphVersion = "v25.0";
 
@@ -60,7 +61,7 @@ export function createWhatsAppMessagesClient(options: WhatsAppMessagesClientOpti
   return {
     async send(input: unknown): Promise<WhatsAppSendMessageResult> {
       const payload = validateSendMessageInput(input);
-      const response = await httpClient.fetchText(`https://graph.facebook.com/${payload.graphVersion}/${payload.phoneNumberId}/messages`, {
+      const response = await httpClient.fetchText(`https://graph.facebook.com/${payload.graphVersion}/${phoneNumberIdSegment(payload.phoneNumberId)}/messages`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${accessToken}`,
@@ -113,7 +114,7 @@ export function validateSendMessageInput(input: unknown): WhatsAppSendMessageInp
   const graphVersion = typeof input.graphVersion === "string" && input.graphVersion.length > 0
     ? input.graphVersion.trim()
     : defaultGraphVersion;
-  const phoneNumberId = requireString(input.phoneNumberId, "phoneNumberId").trim();
+  const phoneNumberId = phoneNumberIdSegment(input.phoneNumberId);
   const to = requireString(input.to, "to").trim();
   const text = requireString(input.text, "text").trim();
   if (!/^v\d+\.\d+$/.test(graphVersion)) {

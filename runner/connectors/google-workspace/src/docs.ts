@@ -1,5 +1,6 @@
 import { createGoogleClient, parseGoogleError, parseGoogleRateLimitMetadata, type ConnectorError } from "./http";
 import type { ConnectorHttpClient } from "../../../bun/src/http";
+import { encodePathSegment } from "../../_shared/jobboard";
 
 export type GetDocumentInput = {
   documentId: string;
@@ -66,7 +67,7 @@ export function createDocsClient(options: { accessToken: string; fetch?: typeof 
       params.set("includeTabsContent", "true");
 
       const response = await createHttpClient("docs.get").fetchText(
-        `https://docs.googleapis.com/v1/documents/${encodeURIComponent(payload.documentId)}?${params}`,
+        `https://docs.googleapis.com/v1/documents/${encodePathSegment(payload.documentId, "documentId")}?${params}`,
         {
           headers: authHeaders,
         },
@@ -105,7 +106,7 @@ export function createDocsClient(options: { accessToken: string; fetch?: typeof 
       const payload = validateUpdateDocumentInput(input);
       const googleRequests = payload.requests.map(toGoogleDocsRequest);
       const response = await createHttpClient("docs.update").fetchText(
-        `https://docs.googleapis.com/v1/documents/${encodeURIComponent(payload.documentId)}:batchUpdate`,
+        `https://docs.googleapis.com/v1/documents/${encodePathSegment(payload.documentId, "documentId")}:batchUpdate`,
         {
           method: "POST",
           headers: jsonHeaders,

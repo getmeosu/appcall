@@ -1,5 +1,6 @@
 import { createGoogleClient, parseGoogleError, parseGoogleRateLimitMetadata, type ConnectorError } from "./http";
 import type { ConnectorHttpClient } from "../../../bun/src/http";
+import { encodePathSegment } from "../../_shared/jobboard";
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -271,7 +272,7 @@ export function createMeetClient(options: {
       if (p.location) body.location = p.location;
       if (p.attendees) body.attendees = p.attendees.map((email) => ({ email }));
 
-      const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(p.calendarId)}/events?conferenceDataVersion=1`;
+      const url = `https://www.googleapis.com/calendar/v3/calendars/${encodePathSegment(p.calendarId, "calendarId")}/events?conferenceDataVersion=1`;
       const response = await createClient.fetchText(url, {
         method: "POST",
         headers: jsonHeaders,
@@ -294,7 +295,7 @@ export function createMeetClient(options: {
           },
         },
       };
-      const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(p.calendarId)}/events/${encodeURIComponent(p.eventId)}?conferenceDataVersion=1`;
+      const url = `https://www.googleapis.com/calendar/v3/calendars/${encodePathSegment(p.calendarId, "calendarId")}/events/${encodePathSegment(p.eventId, "eventId")}?conferenceDataVersion=1`;
       const response = await createClient.fetchText(url, {
         method: "PATCH",
         headers: jsonHeaders,

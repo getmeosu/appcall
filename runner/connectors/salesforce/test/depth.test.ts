@@ -46,7 +46,7 @@ const CASES = cases as DepthCase[];
 
 describe("salesforce composio depth", () => {
   test("reaches the Composio Salesforce tool count", () => {
-    expect(manifest.version).toBe("0.5.0");
+    expect(manifest.version).toBe("0.5.1");
     expect(Object.keys(manifest.operations)).toHaveLength(264);
   });
 

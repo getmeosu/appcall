@@ -1,6 +1,7 @@
 import { createConnectorHttpClient, type ConnectorHttpClient } from "../../../bun/src/http";
 import manifest from "../manifest.json";
 import { mapWhatsAppError, type ConnectorError } from "./messages";
+import { phoneNumberIdSegment } from "./phone_number_id";
 
 const defaultGraphVersion = "v25.0";
 
@@ -120,8 +121,7 @@ export type WhatsAppSendTemplateInput = {
 export function validateSendTemplateInput(input: unknown): WhatsAppSendTemplateInput {
   if (!isRecord(input)) throw new Error("sendTemplate input must be an object");
   const graphVersion = resolveVersion(input);
-  const phoneNumberId = requireString(input.phoneNumberId, "phoneNumberId").trim();
-  if (!phoneNumberId) throw new Error("phoneNumberId is required");
+  const phoneNumberId = phoneNumberIdSegment(input.phoneNumberId);
   const to = requireString(input.to, "to").trim();
   if (!to) throw new Error("to is required");
   const templateName = requireString(input.templateName, "templateName").trim();
@@ -140,7 +140,7 @@ export function createSendTemplateClient(options: ClientOptions) {
   return {
     async sendTemplate(input: unknown): Promise<SendResult> {
       const payload = validateSendTemplateInput(input);
-      const url = `https://graph.facebook.com/${payload.graphVersion}/${payload.phoneNumberId}/messages`;
+      const url = `https://graph.facebook.com/${payload.graphVersion}/${phoneNumberIdSegment(payload.phoneNumberId)}/messages`;
       const result = await postMessage(httpClient, accessToken, url, {
         messaging_product: "whatsapp",
         to: payload.to,
@@ -170,8 +170,7 @@ export type WhatsAppSendImageInput = {
 export function validateSendImageInput(input: unknown): WhatsAppSendImageInput {
   if (!isRecord(input)) throw new Error("sendImage input must be an object");
   const graphVersion = resolveVersion(input);
-  const phoneNumberId = requireString(input.phoneNumberId, "phoneNumberId").trim();
-  if (!phoneNumberId) throw new Error("phoneNumberId is required");
+  const phoneNumberId = phoneNumberIdSegment(input.phoneNumberId);
   const to = requireString(input.to, "to").trim();
   if (!to) throw new Error("to is required");
   const imageUrl = requireString(input.imageUrl, "imageUrl").trim();
@@ -187,7 +186,7 @@ export function createSendImageClient(options: ClientOptions) {
   return {
     async sendImage(input: unknown): Promise<SendResult> {
       const payload = validateSendImageInput(input);
-      const url = `https://graph.facebook.com/${payload.graphVersion}/${payload.phoneNumberId}/messages`;
+      const url = `https://graph.facebook.com/${payload.graphVersion}/${phoneNumberIdSegment(payload.phoneNumberId)}/messages`;
       const imageObj: Record<string, string> = { link: payload.imageUrl };
       if (payload.caption) imageObj.caption = payload.caption;
       const result = await postMessage(httpClient, accessToken, url, {
@@ -217,8 +216,7 @@ export type WhatsAppSendDocumentInput = {
 export function validateSendDocumentInput(input: unknown): WhatsAppSendDocumentInput {
   if (!isRecord(input)) throw new Error("sendDocument input must be an object");
   const graphVersion = resolveVersion(input);
-  const phoneNumberId = requireString(input.phoneNumberId, "phoneNumberId").trim();
-  if (!phoneNumberId) throw new Error("phoneNumberId is required");
+  const phoneNumberId = phoneNumberIdSegment(input.phoneNumberId);
   const to = requireString(input.to, "to").trim();
   if (!to) throw new Error("to is required");
   const documentUrl = requireString(input.documentUrl, "documentUrl").trim();
@@ -235,7 +233,7 @@ export function createSendDocumentClient(options: ClientOptions) {
   return {
     async sendDocument(input: unknown): Promise<SendResult> {
       const payload = validateSendDocumentInput(input);
-      const url = `https://graph.facebook.com/${payload.graphVersion}/${payload.phoneNumberId}/messages`;
+      const url = `https://graph.facebook.com/${payload.graphVersion}/${phoneNumberIdSegment(payload.phoneNumberId)}/messages`;
       const docObj: Record<string, string> = { link: payload.documentUrl };
       if (payload.filename) docObj.filename = payload.filename;
       if (payload.caption) docObj.caption = payload.caption;
@@ -267,8 +265,7 @@ export type WhatsAppSendLocationInput = {
 export function validateSendLocationInput(input: unknown): WhatsAppSendLocationInput {
   if (!isRecord(input)) throw new Error("sendLocation input must be an object");
   const graphVersion = resolveVersion(input);
-  const phoneNumberId = requireString(input.phoneNumberId, "phoneNumberId").trim();
-  if (!phoneNumberId) throw new Error("phoneNumberId is required");
+  const phoneNumberId = phoneNumberIdSegment(input.phoneNumberId);
   const to = requireString(input.to, "to").trim();
   if (!to) throw new Error("to is required");
   if (typeof input.latitude !== "number") throw new Error("latitude must be a number");
@@ -287,7 +284,7 @@ export function createSendLocationClient(options: ClientOptions) {
   return {
     async sendLocation(input: unknown): Promise<SendResult> {
       const payload = validateSendLocationInput(input);
-      const url = `https://graph.facebook.com/${payload.graphVersion}/${payload.phoneNumberId}/messages`;
+      const url = `https://graph.facebook.com/${payload.graphVersion}/${phoneNumberIdSegment(payload.phoneNumberId)}/messages`;
       const locObj: Record<string, unknown> = {
         latitude: payload.latitude,
         longitude: payload.longitude,
@@ -319,8 +316,7 @@ export type WhatsAppSendContactsInput = {
 export function validateSendContactsInput(input: unknown): WhatsAppSendContactsInput {
   if (!isRecord(input)) throw new Error("sendContacts input must be an object");
   const graphVersion = resolveVersion(input);
-  const phoneNumberId = requireString(input.phoneNumberId, "phoneNumberId").trim();
-  if (!phoneNumberId) throw new Error("phoneNumberId is required");
+  const phoneNumberId = phoneNumberIdSegment(input.phoneNumberId);
   const to = requireString(input.to, "to").trim();
   if (!to) throw new Error("to is required");
   if (!Array.isArray(input.contacts) || input.contacts.length === 0) throw new Error("contacts must be a non-empty array");
@@ -334,7 +330,7 @@ export function createSendContactsClient(options: ClientOptions) {
   return {
     async sendContacts(input: unknown): Promise<SendResult> {
       const payload = validateSendContactsInput(input);
-      const url = `https://graph.facebook.com/${payload.graphVersion}/${payload.phoneNumberId}/messages`;
+      const url = `https://graph.facebook.com/${payload.graphVersion}/${phoneNumberIdSegment(payload.phoneNumberId)}/messages`;
       const result = await postMessage(httpClient, accessToken, url, {
         messaging_product: "whatsapp",
         to: payload.to,
@@ -360,8 +356,7 @@ export type WhatsAppSendReactionInput = {
 export function validateSendReactionInput(input: unknown): WhatsAppSendReactionInput {
   if (!isRecord(input)) throw new Error("sendReaction input must be an object");
   const graphVersion = resolveVersion(input);
-  const phoneNumberId = requireString(input.phoneNumberId, "phoneNumberId").trim();
-  if (!phoneNumberId) throw new Error("phoneNumberId is required");
+  const phoneNumberId = phoneNumberIdSegment(input.phoneNumberId);
   const to = requireString(input.to, "to").trim();
   if (!to) throw new Error("to is required");
   const messageId = requireString(input.messageId, "messageId").trim();
@@ -378,7 +373,7 @@ export function createSendReactionClient(options: ClientOptions) {
   return {
     async sendReaction(input: unknown): Promise<SendResult> {
       const payload = validateSendReactionInput(input);
-      const url = `https://graph.facebook.com/${payload.graphVersion}/${payload.phoneNumberId}/messages`;
+      const url = `https://graph.facebook.com/${payload.graphVersion}/${phoneNumberIdSegment(payload.phoneNumberId)}/messages`;
       const result = await postMessage(httpClient, accessToken, url, {
         messaging_product: "whatsapp",
         recipient_type: "individual",
@@ -410,8 +405,7 @@ export type MarkReadResult =
 export function validateMarkReadInput(input: unknown): WhatsAppMarkReadInput {
   if (!isRecord(input)) throw new Error("markRead input must be an object");
   const graphVersion = resolveVersion(input);
-  const phoneNumberId = requireString(input.phoneNumberId, "phoneNumberId").trim();
-  if (!phoneNumberId) throw new Error("phoneNumberId is required");
+  const phoneNumberId = phoneNumberIdSegment(input.phoneNumberId);
   const messageId = requireString(input.messageId, "messageId").trim();
   if (!messageId) throw new Error("messageId is required");
   return { graphVersion, phoneNumberId, messageId };
@@ -424,7 +418,7 @@ export function createMarkReadClient(options: ClientOptions) {
   return {
     async markRead(input: unknown): Promise<MarkReadResult> {
       const payload = validateMarkReadInput(input);
-      const url = `https://graph.facebook.com/${payload.graphVersion}/${payload.phoneNumberId}/messages`;
+      const url = `https://graph.facebook.com/${payload.graphVersion}/${phoneNumberIdSegment(payload.phoneNumberId)}/messages`;
       const result = await putMessage(httpClient, accessToken, url, {
         messaging_product: "whatsapp",
         status: "read",
@@ -450,8 +444,7 @@ export type WhatsAppSendInteractiveInput = {
 export function validateSendInteractiveInput(input: unknown): WhatsAppSendInteractiveInput {
   if (!isRecord(input)) throw new Error("sendInteractive input must be an object");
   const graphVersion = resolveVersion(input);
-  const phoneNumberId = requireString(input.phoneNumberId, "phoneNumberId").trim();
-  if (!phoneNumberId) throw new Error("phoneNumberId is required");
+  const phoneNumberId = phoneNumberIdSegment(input.phoneNumberId);
   const to = requireString(input.to, "to").trim();
   if (!to) throw new Error("to is required");
   if (!isRecord(input.interactive)) throw new Error("interactive must be an object");
@@ -469,7 +462,7 @@ export function createSendInteractiveClient(options: ClientOptions) {
   return {
     async sendInteractive(input: unknown): Promise<SendResult> {
       const payload = validateSendInteractiveInput(input);
-      const url = `https://graph.facebook.com/${payload.graphVersion}/${payload.phoneNumberId}/messages`;
+      const url = `https://graph.facebook.com/${payload.graphVersion}/${phoneNumberIdSegment(payload.phoneNumberId)}/messages`;
       const interactiveObj = isRecord(payload.interactive)
         ? { ...payload.interactive, type: payload.interactiveType }
         : { type: payload.interactiveType };

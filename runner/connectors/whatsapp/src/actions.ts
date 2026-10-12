@@ -1,4 +1,5 @@
 import { createWhatsAppMessagesClient, validateSendMessageInput } from "./messages";
+import { phoneNumberIdSegment } from "./phone_number_id";
 import {
   createSendTemplateClient, validateSendTemplateInput,
   createSendImageClient, validateSendImageInput,
@@ -89,9 +90,8 @@ export function validateCredentials(input: unknown): Record<string, unknown> {
 function validateCredentialInput(input: unknown): { accessToken: string; phoneNumberId: string } {
   if (!isRecord(input)) throw new Error("credentials input must be an object");
   const accessToken = requireString(input.accessToken, "accessToken").trim();
-  const phoneNumberId = requireString(input.phoneNumberId, "phoneNumberId").trim();
   if (accessToken.length === 0) throw new Error("accessToken is required");
-  if (phoneNumberId.length === 0) throw new Error("phoneNumberId is required");
+  const phoneNumberId = phoneNumberIdSegment(input.phoneNumberId);
   return { accessToken, phoneNumberId };
 }
 

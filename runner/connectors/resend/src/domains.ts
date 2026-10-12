@@ -1,5 +1,6 @@
 import { createResendClient, parseResendRateLimit, isRecord } from "./http";
 import { normalizeDomain, parseDomainsListResponse } from "./objects";
+import { encodePathSegment } from "../../_shared/jobboard";
 
 export type DomainsListInput = {
   limit?: number;
@@ -92,7 +93,7 @@ export function getDomain(input: unknown): Record<string, unknown> | Promise<Rec
     const payload = validateDomainsGetInput(input);
     const fetchFn = typeof input.fetch === "function" ? (input.fetch as typeof fetch) : undefined;
     return createResendClient({ apiKey: input.apiKey, fetch: fetchFn, operation: "domains.get" })
-      .fetchJSON(`/domains/${encodeURIComponent(payload.id)}`, { method: "GET" })
+      .fetchJSON(`/domains/${encodePathSegment(payload.id, "id")}`, { method: "GET" })
       .then((result) => {
         if (result.status >= 200 && result.status < 300 && isRecord(result.body)) {
           return {

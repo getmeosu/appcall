@@ -1,5 +1,6 @@
 import { createGoogleClient, parseGoogleError, parseGoogleRateLimitMetadata, parseNextPageToken, type ConnectorError } from "./http";
 import type { ConnectorHttpClient } from "../../../bun/src/http";
+import { encodePathSegment } from "../../_shared/jobboard";
 
 export type DriveFile = {
   id: string;
@@ -244,7 +245,7 @@ export function createDriveActionsClient(options: { accessToken: string; fetch?:
       const params = new URLSearchParams();
       params.set("fields", p.fields ?? DEFAULT_FILE_FIELDS);
       const response = await getClient.fetchText(
-        `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(p.fileId)}?${params}`,
+        `https://www.googleapis.com/drive/v3/files/${encodePathSegment(p.fileId, "fileId")}?${params}`,
         { headers: authHeaders },
       );
       const res = await handleDriveResponse(response);
@@ -270,7 +271,7 @@ export function createDriveActionsClient(options: { accessToken: string; fetch?:
     async deleteFile(input: unknown): Promise<DeleteFileResult> {
       const p = validateDeleteFileInput(input);
       const response = await deleteClient.fetchText(
-        `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(p.fileId)}`,
+        `https://www.googleapis.com/drive/v3/files/${encodePathSegment(p.fileId, "fileId")}`,
         { method: "DELETE", headers: authHeaders },
       );
       const rateLimit = parseGoogleRateLimitMetadata(response.status, response.headers);
@@ -294,7 +295,7 @@ export function createDriveActionsClient(options: { accessToken: string; fetch?:
       const params = new URLSearchParams({ fields: "id,role,type,emailAddress" });
       if (p.sendNotificationEmail !== undefined) params.set("sendNotificationEmail", String(p.sendNotificationEmail));
       const response = await permissionClient.fetchText(
-        `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(p.fileId)}/permissions?${params}`,
+        `https://www.googleapis.com/drive/v3/files/${encodePathSegment(p.fileId, "fileId")}/permissions?${params}`,
         { method: "POST", headers: jsonHeaders, body: JSON.stringify(body) },
       );
       const res = await handleDriveResponse(response);
@@ -318,7 +319,7 @@ export function createDriveActionsClient(options: { accessToken: string; fetch?:
       if (p.parents) body.parents = p.parents;
       const params = new URLSearchParams({ fields: DEFAULT_FILE_FIELDS });
       const response = await copyClient.fetchText(
-        `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(p.fileId)}/copy?${params}`,
+        `https://www.googleapis.com/drive/v3/files/${encodePathSegment(p.fileId, "fileId")}/copy?${params}`,
         { method: "POST", headers: jsonHeaders, body: JSON.stringify(body) },
       );
       const res = await handleDriveResponse(response);
@@ -334,7 +335,7 @@ export function createDriveActionsClient(options: { accessToken: string; fetch?:
       if (p.mimeType !== undefined) body.mimeType = p.mimeType;
       const params = new URLSearchParams({ fields: DEFAULT_FILE_FIELDS });
       const response = await updateClient.fetchText(
-        `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(p.fileId)}?${params}`,
+        `https://www.googleapis.com/drive/v3/files/${encodePathSegment(p.fileId, "fileId")}?${params}`,
         { method: "PATCH", headers: jsonHeaders, body: JSON.stringify(body) },
       );
       const res = await handleDriveResponse(response);
@@ -346,7 +347,7 @@ export function createDriveActionsClient(options: { accessToken: string; fetch?:
       const p = validateListPermissionsInput(input);
       const params = new URLSearchParams({ fields: "permissions(id,role,type,emailAddress)" });
       const response = await listPermissionsClient.fetchText(
-        `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(p.fileId)}/permissions?${params}`,
+        `https://www.googleapis.com/drive/v3/files/${encodePathSegment(p.fileId, "fileId")}/permissions?${params}`,
         { headers: authHeaders },
       );
       const res = await handleDriveResponse(response);
@@ -366,7 +367,7 @@ export function createDriveActionsClient(options: { accessToken: string; fetch?:
     async deletePermission(input: unknown): Promise<DeletePermissionResult> {
       const p = validateDeletePermissionInput(input);
       const response = await deletePermissionClient.fetchText(
-        `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(p.fileId)}/permissions/${encodeURIComponent(p.permissionId)}`,
+        `https://www.googleapis.com/drive/v3/files/${encodePathSegment(p.fileId, "fileId")}/permissions/${encodePathSegment(p.permissionId, "permissionId")}`,
         { method: "DELETE", headers: authHeaders },
       );
       const rateLimit = parseGoogleRateLimitMetadata(response.status, response.headers);

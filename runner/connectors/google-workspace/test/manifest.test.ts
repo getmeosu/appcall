@@ -5,7 +5,7 @@ describe("google-workspace connector manifest", () => {
   test("manifest declares key, runtime, version, and auth", () => {
     expect(manifest.key).toBe("google-workspace");
     expect(manifest.runtime).toBe("bun");
-    expect(manifest.version).toBe("0.2.0");
+    expect(manifest.version).toBe("0.2.1");
     expect(manifest.auth.type).toBe("oauth2");
     expect(manifest.auth.scopes).toContain("https://www.googleapis.com/auth/gmail.readonly");
     expect(manifest.auth.scopes).toContain("https://www.googleapis.com/auth/gmail.send");
