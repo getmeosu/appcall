@@ -1,5 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import { readFileSync } from "node:fs";
+import { TT1_DESTRUCTIVE } from "./destructive-set.ts";
 
 const manifest = JSON.parse(readFileSync(new URL("../manifest.json", import.meta.url), "utf8")) as any;
 const bunSrc = process.env.APPCALL_BUN_SRC_ROOT ?? "../../../bun/src";
@@ -458,7 +459,9 @@ describe("TikTok Ads v1.3 coverage", () => {
   it("declares reads as read-only and mutations as writes", () => {
     for (const key of addedOperations) {
       const operation = manifest.operations[key];
-      expect(operation.sideEffect, key).toBe(operation.request.method === "GET" ? "read" : "write");
+      // TT-1: irreversible deletes are destructive (pinned in tt1.test.ts).
+      const expected = operation.request.method === "GET" ? "read" : TT1_DESTRUCTIVE.has(key) ? "destructive" : "write";
+      expect(operation.sideEffect, key).toBe(expected);
     }
   });
 
