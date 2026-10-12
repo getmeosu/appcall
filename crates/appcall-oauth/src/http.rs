@@ -106,6 +106,9 @@ impl TokenClient {
             ok: Option<bool>,
         }
         let parsed: Response = serde_json::from_slice(&raw).map_err(|_| Error::OutcomeUnknown)?;
+        let provider_fields = serde_json::from_slice::<serde_json::Value>(&raw)
+            .map(|value| crate::setup_fields::capture_provider_metadata(&value))
+            .unwrap_or_default();
         if parsed.access_token.trim().is_empty()
             || parsed.ok == Some(false)
             || parsed.expires_in < 0
@@ -130,6 +133,7 @@ impl TokenClient {
             scope: parsed.scope,
             expires_at,
             setup_fields: BTreeMap::new(),
+            provider_fields,
         })
     }
 }

@@ -4200,34 +4200,47 @@ export function withDerivedInstanceUrl(connectorKey: string, manifests: Manifest
     return inputValue;
   }
   const manifest = manifests.find((candidate) => candidate.key === connectorKey) as Record<string, unknown> | undefined;
-  const http = manifest && isRecord(manifest.http) ? manifest.http : undefined;
-  const template = typeof http?.baseUrl === "string" ? http.baseUrl : undefined;
-  const auth = manifest && isRecord(manifest.auth) ? manifest.auth : undefined;
-  const setup = auth && isRecord(auth.setup) ? auth.setup : undefined;
-  if (!template || !setup || !/^https:\/\/\{\{[A-Za-z0-9_]+\}\}(\/[^{}]*)?$/.test(template)) {
+  if (!manifest) {
     return inputValue;
   }
-  const fields = [
+  const network = isRecord(manifest.network) ? manifest.network : undefined;
+  const allowed = Array.isArray(network?.allowedHosts) ? network.allowedHosts.filter((h): h is string => typeof h === "string") : [];
+  const permitted = (host: string) => allowed.some((pattern) => {
+    const p = pattern.toLowerCase();
+    return p.startsWith("*.") ? host.endsWith(p.slice(1)) && host.length > p.length - 1 : host === p;
+  });
+  const auth = isRecord(manifest.auth) ? manifest.auth : undefined;
+  const setup = auth && isRecord(auth.setup) ? auth.setup : undefined;
+  const fields = setup ? [
     ...(Array.isArray(setup.fields) ? setup.fields : []),
     ...(Array.isArray(setup.routes) ? setup.routes.flatMap((route: unknown) => (isRecord(route) && Array.isArray(route.fields) ? route.fields : [])) : []),
-  ];
-  const nonSecret = new Set(fields.filter((field): field is Record<string, unknown> => isRecord(field) && field.secret !== true && typeof field.key === "string").map((field) => field.key as string));
-  const key = /\{\{([A-Za-z0-9_]+)\}\}/.exec(template)![1]!;
-  const host = inputValue[key];
-  if (!nonSecret.has(key) || typeof host !== "string" || !/^[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?)+$/.test(host)) {
-    return inputValue;
+  ] : [];
+  const declared = fields.filter((field): field is Record<string, unknown> => isRecord(field) && typeof field.key === "string");
+  const nonSecret = new Set(declared.filter((field) => field.secret !== true).map((field) => field.key as string));
+  const secret = new Set(declared.filter((field) => field.secret === true).map((field) => field.key as string));
+  // 1) Declared non-secret setup host rendered into an https://{{field}} baseUrl.
+  const http = isRecord(manifest.http) ? manifest.http : undefined;
+  const template = typeof http?.baseUrl === "string" ? http.baseUrl : undefined;
+  if (template && /^https:\/\/\{\{[A-Za-z0-9_]+\}\}(\/[^{}]*)?$/.test(template)) {
+    const key = /\{\{([A-Za-z0-9_]+)\}\}/.exec(template)![1]!;
+    const host = inputValue[key];
+    if (nonSecret.has(key) && typeof host === "string" && /^[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?)+$/.test(host) && permitted(host.toLowerCase())) {
+      return { ...inputValue, instanceUrl: template.replace(`{{${key}}}`, host.toLowerCase()).replace(/\/$/, "") };
+    }
   }
-  const network = manifest && isRecord(manifest.network) ? manifest.network : undefined;
-  const allowed = Array.isArray(network?.allowedHosts) ? network.allowedHosts.filter((h): h is string => typeof h === "string") : [];
-  const lower = host.toLowerCase();
-  const permitted = allowed.some((pattern) => {
-    const p = pattern.toLowerCase();
-    return p.startsWith("*.") ? lower.endsWith(p.slice(1)) && lower.length > p.length - 1 : lower === p;
-  });
-  if (!permitted) {
-    return inputValue;
+  // 2) HEALTH-RT-1b: provider-returned instance_url (bare https origin on the allowlist).
+  const providerUrl = inputValue.instance_url;
+  if (typeof providerUrl === "string" && !secret.has("instance_url")) {
+    try {
+      const url = new URL(providerUrl);
+      if (url.protocol === "https:" && !url.username && !url.password && !url.port && !url.search && !url.hash && (url.pathname === "/" || url.pathname === "") && permitted(url.hostname.toLowerCase())) {
+        return { ...inputValue, instanceUrl: url.origin };
+      }
+    } catch {
+      // not a URL: ignore
+    }
   }
-  return { ...inputValue, instanceUrl: template.replace(`{{${key}}}`, lower).replace(/\/$/, "") };
+  return inputValue;
 }
 
 function enforceCredentialedHealthcheckEvidence(

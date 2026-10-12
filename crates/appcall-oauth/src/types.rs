@@ -42,6 +42,10 @@ pub struct TokenSet {
     /// (validated against the manifest on write and filtered again on read).
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub(crate) setup_fields: BTreeMap<String, String>,
+    /// HEALTH-RT-1b: provider metadata returned with the token (api_domain,
+    /// instance_url only; shape-checked on capture, host-allowlisted on read).
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub(crate) provider_fields: BTreeMap<String, String>,
 }
 fn zero_time() -> String {
     "0001-01-01T00:00:00Z".into()
@@ -64,6 +68,26 @@ impl TokenSet {
     }
     pub fn setup_fields(&self) -> &BTreeMap<String, String> {
         &self.setup_fields
+    }
+    pub fn provider_fields(&self) -> &BTreeMap<String, String> {
+        &self.provider_fields
+    }
+    /// Attach validated setup fields (see `validate_setup_fields`).
+    pub fn with_setup_fields(mut self, setup: BTreeMap<String, String>) -> Self {
+        self.setup_fields = setup;
+        self
+    }
+    /// Keep metadata from a previous token set when a refresh response omits it.
+    pub fn inherit_metadata(mut self, previous: &TokenSet) -> Self {
+        if self.setup_fields.is_empty() {
+            self.setup_fields = previous.setup_fields.clone();
+        }
+        for (key, value) in &previous.provider_fields {
+            self.provider_fields
+                .entry(key.clone())
+                .or_insert_with(|| value.clone());
+        }
+        self
     }
     pub fn access_token(&self) -> &str {
         &self.access_token

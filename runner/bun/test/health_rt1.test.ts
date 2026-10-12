@@ -2,6 +2,11 @@
 // fields; the runner derives instanceUrl from them and never from secrets.
 import { describe, expect, test } from "bun:test";
 import { defaultConnectorRegistry, withDerivedInstanceUrl } from "../src/registry";
+import salesforceManifest from "../../connectors/salesforce/manifest.json";
+
+function defaultManifest(_key: "salesforce") {
+  return salesforceManifest as never;
+}
 
 function recordingFetch(body: unknown) {
   const urls: string[] = [];
@@ -59,5 +64,16 @@ describe("HEALTH-RT-1 setup fields reach OAuth healthchecks", () => {
     expect(withDerivedInstanceUrl("x", [manifest], input)).toEqual(input);
     const explicit = { accessToken: "t", instance_host: "acme.my.salesforce.com", instanceUrl: "https://given.my.salesforce.com" };
     expect((withDerivedInstanceUrl("salesforce", [], explicit) as Record<string, unknown>).instanceUrl).toBe("https://given.my.salesforce.com");
+  });
+
+  test("HEALTH-RT-1b: provider instance_url drives the salesforce probe when on the allowlist", async () => {
+    const { urls, fetchFn } = recordingFetch({ id: "005" });
+    const out = await run("salesforce", { accessToken: "tok", instance_url: "https://acme.my.salesforce.com", fetch: fetchFn });
+    expect(out).toMatchObject({ source: "provider" });
+    expect(new URL(urls[0]!).host).toBe("acme.my.salesforce.com");
+    for (const bad of ["https://evil.example.com", "http://acme.my.salesforce.com", "https://u:p@acme.my.salesforce.com", "https://acme.my.salesforce.com/x"]) {
+      const derived = withDerivedInstanceUrl("salesforce", [defaultManifest("salesforce")], { accessToken: "t", instance_url: bad }) as Record<string, unknown>;
+      expect(derived.instanceUrl, bad).toBeUndefined();
+    }
   });
 });
