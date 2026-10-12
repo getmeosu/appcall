@@ -39,7 +39,7 @@ const READS = [
 
 describe("github traffic and repository statistics reads", () => {
   test("manifest is v0.79.0 with 715 ops and these reads omit effect policy", () => {
-    expect(manifest.version).toBe("0.89.7");
+    expect(manifest.version).toBe("0.89.8");
     expect(Object.keys(manifest.operations).length).toBe(860);
     expect(READS).toHaveLength(9);
     for (const key of READS) {

@@ -30,7 +30,7 @@ const POLLING = {
 
 describe("TRIG-3b manifest", () => {
   test("the four TRIG-3b syncs declare poll with the audit's triggers", () => {
-    expect(manifest.version).toBe("0.89.7");
+    expect(manifest.version).toBe("0.89.8");
     for (const [key, want] of Object.entries(POLLING)) {
       const op = ops[key];
       const poll = op.poll as Record<string, unknown>;
