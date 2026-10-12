@@ -44,7 +44,7 @@ const callFn = (fn: keyof typeof actions, input: Record<string, unknown>) =>
 
 describe("github FIX-G14C: manifest", () => {
   test("version 0.87.0 at 851 ops (+graphql.mutate, +issues.comments.edits.list); auth.scopes unchanged", () => {
-    expect(manifest.version).toBe("0.89.8");
+    expect(manifest.version).toBe("0.89.9");
     expect(Object.keys(opsOf)).toHaveLength(860);
     expect(manifest.auth.scopes).toEqual(["repo", "read:org", "admin:repo_hook", "admin:org_hook", "gist", "notifications", "admin:org"]);
     expect(manifest.auth.scopes).not.toContain("read:audit_log");

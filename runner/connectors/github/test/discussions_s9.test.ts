@@ -61,7 +61,7 @@ describe("github S9 discussions", () => {
     const comment = normalizeDiscussionComment(commentNode);
     expect(comment.id).toBe("gh-discussion-comment:DC_kwDOA1");
     expect(comment.author).toBe("hubot");
-    expect(comment.replyToId).toBe("");
+    expect(comment.replyToId).toBeNull(); // TR-6c: top-level comment has no replyTo (nullable)
   });
 
   test("validates S9 inputs", () => {
