@@ -4,19 +4,16 @@ import manifest from "../manifest.json";
 describe("linkedin-ads manifest", () => {
   it("has correct key and version", () => {
     expect(manifest.key).toBe("linkedin-ads");
-    expect(manifest.version).toBe("0.6.0");
+    expect(manifest.version).toBe("0.7.0");
     expect(manifest.runtime).toBe("bun");
   });
 
-  it("uses oauth2 auth with ads write and organization scopes", () => {
+  it("uses oauth2 auth with a read-only default connect set (LI-SCOPES)", () => {
     expect(manifest.auth.type).toBe("oauth2");
     expect(manifest.auth.setup.mode).toBe("oauth2");
-    expect(manifest.auth.scopes).toContain("r_ads");
-    expect(manifest.auth.scopes).toContain("rw_ads");
-    expect(manifest.auth.scopes).toContain("r_ads_reporting");
-    expect(manifest.auth.scopes).toContain("r_organization_social");
-    expect(manifest.auth.scopes).toContain("r_organization_admin");
-    expect(manifest.auth.scopes).toContain("rw_organization_admin");
+    expect(manifest.auth.scopes).toEqual(["r_ads", "r_ads_reporting", "r_organization_admin", "r_organization_social"]);
+    expect(manifest.auth.scopes).not.toContain("rw_ads");
+    expect(manifest.auth.scopes).not.toContain("rw_organization_admin");
   });
 
   it("allows linkedin api host", () => {

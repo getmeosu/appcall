@@ -1,5 +1,6 @@
 import { createLinkedInAdsClient } from "./http";
 import { enc, qs } from "./restli";
+import { scopedPermissionFailure } from "./g1-runtime";
 
 type Pairs = Array<[string, string]>;
 
@@ -53,7 +54,12 @@ function liveClient(input: Input, operation: string) {
     operation,
   });
 }
-function upstreamError(status: number, headers: Record<string, string>): Error {
+type Sent = { status: number; headers: Record<string, string>; body: unknown; operation: string };
+function upstreamError(response: Sent): Error {
+  const { status, headers } = response;
+  // LI-SCOPES: a permission failure on an op with requiredScopes maps like G1.
+  const permission = scopedPermissionFailure(response.operation, status, response.body);
+  if (permission) return permission;
   if (status === 429) {
     const raw = headers["retry-after"] ?? headers["Retry-After"] ?? headers["x-ratelimit-reset"];
     const seconds = Number(raw);
@@ -161,8 +167,8 @@ function requiredStringArray(value: unknown, field: string, min = 1, max = 50): 
   }
   return value as string[];
 }
-async function send(input: Input, operation: string, path: string, init: RequestInit = {}): Promise<{ status: number; headers: Record<string, string>; body: unknown }> {
-  return liveClient(input, operation).fetchJSON(path, init);
+async function send(input: Input, operation: string, path: string, init: RequestInit = {}): Promise<Sent> {
+  return { ...(await liveClient(input, operation).fetchJSON(path, init)), operation };
 }
 function result(operation: string, extra: Record<string, unknown>): Record<string, unknown> {
   return { connector: CONNECTOR, action: operation, source: "connector", ...extra };
@@ -194,7 +200,7 @@ export function createAdAccount(value: unknown): ActionResult {
   }
   if (!hasLiveAuth(value)) return result("ad_accounts.create", { adAccount: null, validated: body });
   return send(value, "ad_accounts.create", "/rest/adAccounts", { method: "POST", body: JSON.stringify(body) }).then((response) => {
-    if (!ok(response.status)) throw upstreamError(response.status, response.headers);
+    if (!ok(response.status)) throw upstreamError(response);
     const created = isRecord(response.body) ? response.body : {};
     const id = created.id ?? header(response.headers, "x-restli-id") ?? null;
     return result("ad_accounts.create", { adAccount: { ...created, id } });
@@ -257,7 +263,7 @@ export function createLeadForm(value: unknown): ActionResult {
   if (hidden) body.hiddenFields = hidden;
   if (!hasLiveAuth(value)) return result("lead_forms.create", { leadForm: null, validated: body });
   return send(value, "lead_forms.create", "/rest/leadForms", { method: "POST", body: JSON.stringify(body) }).then((response) => {
-    if (!ok(response.status)) throw upstreamError(response.status, response.headers);
+    if (!ok(response.status)) throw upstreamError(response);
     const created = isRecord(response.body) ? response.body : {};
     const id = created.id ?? header(response.headers, "x-restli-id") ?? null;
     return result("lead_forms.create", { leadForm: { ...created, id } });
@@ -273,7 +279,7 @@ export function getNetworkSize(value: unknown): ActionResult {
   if (!hasLiveAuth(value)) return result("organizations.network_size.get", { firstDegreeSize: null, networkSize: null, validated });
   const params: Pairs = [["edgeType", edgeType]];
   return send(value, "organizations.network_size.get", `/rest/networkSizes/${enc(organizationUrnValue)}?${qs(params)}`, { method: "GET" }).then((response) => {
-    if (!ok(response.status) || !isRecord(response.body)) throw upstreamError(response.status, response.headers);
+    if (!ok(response.status) || !isRecord(response.body)) throw upstreamError(response);
     return result("organizations.network_size.get", { firstDegreeSize: response.body.firstDegreeSize ?? null, networkSize: response.body });
   });
 }
@@ -301,7 +307,7 @@ export function listOrganizationAcls(value: unknown): ActionResult {
   optionalPaging(value, params);
   if (!hasLiveAuth(value)) return result("organizations.acls.list", { acls: [], validated: { q } });
   return send(value, "organizations.acls.list", `/rest/organizationAcls?${qs(params)}`, { method: "GET", headers: { "X-RestLi-Method": "FINDER" } }).then((response) => {
-    if (!ok(response.status) || !isRecord(response.body)) throw upstreamError(response.status, response.headers);
+    if (!ok(response.status) || !isRecord(response.body)) throw upstreamError(response);
     return result("organizations.acls.list", { acls: elements(response.body), nextStart: nextStart(response.body), count: pagingCount(response.body) });
   });
 }
@@ -313,7 +319,7 @@ export function getOrganizationPageStatistics(value: unknown): ActionResult {
   applyTimeIntervals(value, params);
   if (!hasLiveAuth(value)) return result("organizations.page_statistics.get", { pageStatistics: [], validated: { organization } });
   return send(value, "organizations.page_statistics.get", `/rest/organizationPageStatistics?${qs(params)}`, { method: "GET", headers: { "X-RestLi-Method": "FINDER" } }).then((response) => {
-    if (!ok(response.status) || !isRecord(response.body)) throw upstreamError(response.status, response.headers);
+    if (!ok(response.status) || !isRecord(response.body)) throw upstreamError(response);
     return result("organizations.page_statistics.get", { pageStatistics: elements(response.body) });
   });
 }
@@ -325,7 +331,7 @@ export function getOrgFollowerStatistics(value: unknown): ActionResult {
   applyTimeIntervals(value, params);
   if (!hasLiveAuth(value)) return result("organizations.follower_statistics.get", { followerStatistics: [], validated: { organizationalEntity } });
   return send(value, "organizations.follower_statistics.get", `/rest/organizationalEntityFollowerStatistics?${qs(params)}`, { method: "GET", headers: { "X-RestLi-Method": "FINDER" } }).then((response) => {
-    if (!ok(response.status) || !isRecord(response.body)) throw upstreamError(response.status, response.headers);
+    if (!ok(response.status) || !isRecord(response.body)) throw upstreamError(response);
     return result("organizations.follower_statistics.get", { followerStatistics: elements(response.body) });
   });
 }
@@ -341,7 +347,7 @@ export function getOrgShareStatistics(value: unknown): ActionResult {
   if (!shares && !ugcPosts) applyTimeIntervals(value, params);
   if (!hasLiveAuth(value)) return result("organizations.share_statistics.get", { shareStatistics: [], validated: { organizationalEntity } });
   return send(value, "organizations.share_statistics.get", `/rest/organizationalEntityShareStatistics?${qs(params)}`, { method: "GET", headers: { "X-RestLi-Method": "FINDER" } }).then((response) => {
-    if (!ok(response.status) || !isRecord(response.body)) throw upstreamError(response.status, response.headers);
+    if (!ok(response.status) || !isRecord(response.body)) throw upstreamError(response);
     return result("organizations.share_statistics.get", { shareStatistics: elements(response.body) });
   });
 }
@@ -353,7 +359,7 @@ export function listConversionRules(value: unknown): ActionResult {
   optionalPaging(value, params);
   if (!hasLiveAuth(value)) return result("conversion_rules.list", { conversionRules: [], validated: { account } });
   return send(value, "conversion_rules.list", `/rest/conversions?${qs(params)}`, { method: "GET", headers: { "X-RestLi-Method": "FINDER" } }).then((response) => {
-    if (!ok(response.status) || !isRecord(response.body)) throw upstreamError(response.status, response.headers);
+    if (!ok(response.status) || !isRecord(response.body)) throw upstreamError(response);
     return result("conversion_rules.list", { conversionRules: elements(response.body), nextStart: nextStart(response.body), count: pagingCount(response.body) });
   });
 }
@@ -373,7 +379,7 @@ export function listDmpSegments(value: unknown): ActionResult {
   }
   if (!hasLiveAuth(value)) return result("dmp_segments.list", { dmpSegments: [], validated: { account, ids } });
   return send(value, "dmp_segments.list", `/rest/dmpSegments?${qs(params)}`, { method: "GET", headers: { "X-RestLi-Method": ids ? "BATCH_GET" : "FINDER" } }).then((response) => {
-    if (!ok(response.status) || !isRecord(response.body)) throw upstreamError(response.status, response.headers);
+    if (!ok(response.status) || !isRecord(response.body)) throw upstreamError(response);
     return result("dmp_segments.list", { dmpSegments: elements(response.body), nextStart: nextStart(response.body), count: pagingCount(response.body) });
   });
 }
@@ -408,7 +414,7 @@ export function listOrganizations(value: unknown): ActionResult {
   }
   if (!hasLiveAuth(value)) return result("organizations.list", { organizations: [], validated: {} });
   return send(value, "organizations.list", `/rest/organizations?${qs(params)}`, { method: "GET", headers: { "X-RestLi-Method": batch ? "BATCH_GET" : "FINDER" } }).then((response) => {
-    if (!ok(response.status) || !isRecord(response.body)) throw upstreamError(response.status, response.headers);
+    if (!ok(response.status) || !isRecord(response.body)) throw upstreamError(response);
     return result("organizations.list", { organizations: elements(response.body), nextStart: nextStart(response.body), count: pagingCount(response.body) });
   });
 }
@@ -420,7 +426,7 @@ export function lookupOrganizations(value: unknown): ActionResult {
   if (!hasLiveAuth(value)) return result("organizations.lookup", { organizations: [], validated: { ids } });
   // One pinned LinkedIn-Version for every call; the former linkedin_version override is gone.
   return send(value, "organizations.lookup", `/rest/organizationsLookup?${qs(params)}`, { method: "GET", headers: { "X-RestLi-Method": "BATCH_GET" } }).then((response) => {
-    if (!ok(response.status) || !isRecord(response.body)) throw upstreamError(response.status, response.headers);
+    if (!ok(response.status) || !isRecord(response.body)) throw upstreamError(response);
     const results = isRecord(response.body.results) ? Object.values(response.body.results).filter(isRecord) : elements(response.body);
     return result("organizations.lookup", { organizations: results, results: response.body.results ?? null });
   });
@@ -458,7 +464,7 @@ export function listPosts(value: unknown): ActionResult {
   if (!hasLiveAuth(value)) return result("posts.list", { posts: [], validated: {} });
   // One pinned LinkedIn-Version for every call; the former linkedin_version override is gone.
   return send(value, "posts.list", `/rest/posts?${qs(params)}`, { method: "GET", headers: { "X-RestLi-Method": batch ? "BATCH_GET" : "FINDER" } }).then((response) => {
-    if (!ok(response.status) || !isRecord(response.body)) throw upstreamError(response.status, response.headers);
+    if (!ok(response.status) || !isRecord(response.body)) throw upstreamError(response);
     return result("posts.list", { posts: elements(response.body), nextStart: nextStart(response.body), count: pagingCount(response.body) });
   });
 }
@@ -494,7 +500,7 @@ export function registerUpload(value: unknown): ActionResult {
     method: "POST",
     body: JSON.stringify({ registerUploadRequest }),
   }).then((response) => {
-    if (!ok(response.status) || !isRecord(response.body)) throw upstreamError(response.status, response.headers);
+    if (!ok(response.status) || !isRecord(response.body)) throw upstreamError(response);
     const upload = isRecord(response.body.value) ? response.body.value : response.body;
     return result("uploads.register", { upload });
   });
@@ -528,7 +534,7 @@ export function searchEvents(value: unknown): ActionResult {
   optionalPaging(value, params);
   if (!hasLiveAuth(value)) return result("events.search", { events: [], validated: { organizer, q } });
   return send(value, "events.search", `/rest/events?${qs(params)}`, { method: "GET", headers: { "X-RestLi-Method": "FINDER" } }).then((response) => {
-    if (!ok(response.status) || !isRecord(response.body)) throw upstreamError(response.status, response.headers);
+    if (!ok(response.status) || !isRecord(response.body)) throw upstreamError(response);
     return result("events.search", { events: elements(response.body), nextStart: nextStart(response.body), count: pagingCount(response.body) });
   });
 }
@@ -548,7 +554,7 @@ export function updateLeadForm(value: unknown): ActionResult {
     headers: { "X-RestLi-Method": "PARTIAL_UPDATE" },
     body: JSON.stringify({ patch }),
   }).then((response) => {
-    if (!ok(response.status)) throw upstreamError(response.status, response.headers);
+    if (!ok(response.status)) throw upstreamError(response);
     const leadForm = isRecord(response.body) ? response.body : { id: formId };
     return result("lead_forms.update", { leadForm, leadFormId: formId });
   });
@@ -567,7 +573,7 @@ export function updateOrganizationAcl(value: unknown): ActionResult {
   // Compound key as documented: raw (key:value) structure, URN leaves encoded once.
   const path = `/rest/organizationAcls/(organization:${enc(organization)},role:${role},roleAssignee:${enc(roleAssignee)})`;
   return send(value, "organizations.acls.update", path, { method: "PUT", body: JSON.stringify(body) }).then((response) => {
-    if (!ok(response.status)) throw upstreamError(response.status, response.headers);
+    if (!ok(response.status)) throw upstreamError(response);
     const acl = isRecord(response.body) ? response.body : body;
     return result("organizations.acls.update", { acl });
   });

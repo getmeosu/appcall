@@ -1,15 +1,18 @@
-// linkedin-ads G1 runtime helpers: per-op scope errors and id coercion.
+// linkedin-ads per-op scope errors and id coercion (G1, extended to every op in LI-SCOPES).
 //
 // Local equivalent of the meta-ads / tiktok-ads (TT-0 runtime.ts) pattern.
-// An operation that declares `requiredScopes` in the manifest maps a LinkedIn
-// permission failure to CONNECTOR_CAPABILITY_MISSING:
+// An operation that declares a non-empty `requiredScopes` in the manifest maps a
+// LinkedIn permission failure to CONNECTOR_CAPABILITY_MISSING:
 //   - HTTP 403, or a body with code ACCESS_DENIED / serviceErrorCode 100
 //     (LinkedIn's "Not enough permissions" envelope)
 //     -> reason permission_missing, missingScopes, requiredScopes,
-//        reconsentRequired: true;
+//        reconsentRequired: true (plus `program` when a scope is program-gated);
 //   - HTTP 429 -> CONNECTOR_RATE_LIMITED;
 //   - everything else (a plain 400 / 422 validation error included)
 //     -> CONNECTOR_UPSTREAM_ERROR.
+// LI-SCOPES: every handler module (actions, extended-actions, parity-actions,
+// sync, healthcheck, g1-actions) routes non-2xx responses through
+// scopedPermissionFailure first, so the mapping is uniform across all 47 ops.
 // The runner wire format carries only code and message today (server.ts is
 // oxide's SRV-ERR-1), so the message also names the scopes.
 
@@ -21,6 +24,20 @@ const operations = manifest.operations as unknown as Record<string, Operation>;
 const PROVIDER = "LinkedIn Ads";
 
 export const PERMISSION_SERVICE_ERROR_CODE = 100;
+
+/**
+ * Scopes LinkedIn grants only through a separate API product approval, not the
+ * Advertising API product (Increasing Access, view=li-lms-2026-09). They are never
+ * in auth.scopes: requesting an ungranted product scope fails the whole OAuth
+ * authorize request (unauthorized_scope_error) for apps without that product.
+ */
+export const PROGRAM_GATED_SCOPES: Readonly<Record<string, string>> = {
+  rw_dmp_segments: "Matched Audiences API",
+  r_events: "Events Management API or Lead Sync API",
+  rw_events: "Events Management API",
+  r_marketing_leadgen_automation: "Lead Sync API",
+  rw_conversions: "Conversions API",
+};
 
 export function requiredScopesFor(operation: string): string[] {
   const scopes = operations[operation]?.requiredScopes;
@@ -48,25 +65,45 @@ function retryAfter(headers: Record<string, string>): number {
   return 30;
 }
 
+function permissionMissing(operation: string, status: number, requiredScopes: string[]): Error {
+  const programs = [...new Set(requiredScopes.map((scope) => PROGRAM_GATED_SCOPES[scope]).filter((name): name is string => !!name))];
+  const program = programs.length > 0 ? programs.join("; ") : undefined;
+  return Object.assign(
+    new Error(
+      `${PROVIDER} permission missing for ${operation} (requires: ${requiredScopes.join(", ")}). ` +
+        (program ? `The scope is granted only to apps approved for the LinkedIn ${program} program. ` : "") +
+        "Grant the scope to the app, make sure the member holds a matching ad-account or company page role, and reconnect.",
+    ),
+    {
+      code: "CONNECTOR_CAPABILITY_MISSING",
+      reason: "permission_missing",
+      status,
+      missingScopes: requiredScopes,
+      requiredScopes,
+      reconsentRequired: true,
+      ...(program ? { program } : {}),
+    },
+  );
+}
+
+/**
+ * The permission branch of liAdsFailure on its own, for the pre-G1 handler
+ * modules that keep their own rate-limit and upstream errors: returns the
+ * CONNECTOR_CAPABILITY_MISSING error when the op declares requiredScopes and the
+ * response is a permission failure, otherwise undefined.
+ */
+export function scopedPermissionFailure(operation: string, status: number, body: unknown): Error | undefined {
+  if (status >= 200 && status < 300) return undefined;
+  const requiredScopes = requiredScopesFor(operation);
+  if (requiredScopes.length === 0) return undefined;
+  if (classifyLinkedInFailure(status, body) !== "permission_missing") return undefined;
+  return permissionMissing(operation, status, requiredScopes);
+}
+
 export function liAdsFailure(operation: string, status: number, body: unknown, headers: Record<string, string> = {}): Error {
   const kind = classifyLinkedInFailure(status, body);
   const requiredScopes = requiredScopesFor(operation);
-  if (kind === "permission_missing" && requiredScopes.length > 0) {
-    return Object.assign(
-      new Error(
-        `${PROVIDER} permission missing for ${operation} (requires: ${requiredScopes.join(", ")}). ` +
-          "Grant the scope to the app, make sure the member holds a matching ad-account role, and reconnect.",
-      ),
-      {
-        code: "CONNECTOR_CAPABILITY_MISSING",
-        reason: "permission_missing",
-        status,
-        missingScopes: requiredScopes,
-        requiredScopes,
-        reconsentRequired: true,
-      },
-    );
-  }
+  if (kind === "permission_missing" && requiredScopes.length > 0) return permissionMissing(operation, status, requiredScopes);
   if (kind === "rate_limited") {
     return Object.assign(new Error(`${PROVIDER} rate limit exceeded.`), {
       code: "CONNECTOR_RATE_LIMITED",

@@ -63,8 +63,8 @@ async function failure(promise: unknown): Promise<any> {
 }
 
 describe("G1 manifest contract", () => {
-  it("is v0.6.0 with 47 ops and 15 new G1 ops", () => {
-    expect(manifest.version).toBe("0.6.0");
+  it("has 47 ops including the 15 G1 ops (v0.7.0 after LI-SCOPES)", () => {
+    expect(manifest.version).toBe("0.7.0");
     expect(Object.keys(operations)).toHaveLength(47);
     expect(ALL_G1).toHaveLength(15);
     for (const key of ALL_G1) expect(operations[key], key).toBeDefined();
@@ -98,10 +98,10 @@ describe("G1 manifest contract", () => {
     expect(destructive).toEqual([...G1.deletes].sort());
   });
 
-  it("declares op-level requiredScopes and adds nothing to auth.scopes", () => {
+  it("declares op-level requiredScopes; writes stay out of the read-only auth.scopes (LI-SCOPES)", () => {
     for (const key of G1.reads) expect(operations[key]!.requiredScopes, key).toEqual(["r_ads"]);
     for (const key of [...G1.creates, ...Object.keys(G1.updates), ...G1.deletes]) expect(operations[key]!.requiredScopes, key).toEqual(["rw_ads"]);
-    expect(manifest.auth.scopes).toEqual(["r_ads", "rw_ads", "r_ads_reporting", "r_organization_social", "r_organization_admin", "rw_organization_admin"]);
+    expect(manifest.auth.scopes).toEqual(["r_ads", "r_ads_reporting", "r_organization_admin", "r_organization_social"]);
   });
 
   it("campaign_groups.list status enum matches the code list, creatives.list pageSize max is 100", () => {

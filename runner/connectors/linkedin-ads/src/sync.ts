@@ -5,7 +5,7 @@ import { parseCampaignsResponse } from "./objects";
 import type { NormalizedCampaign } from "./objects";
 import { parseCreativeAssetsResponse } from "./objects";
 import type { NormalizedCreativeAsset } from "./objects";
-import { adAccountId } from "./g1-runtime";
+import { adAccountId, scopedPermissionFailure } from "./g1-runtime";
 import { asId, assertToken, enc, restliExpression, pageSize, pageTokenValue, qs, restliList, stringList } from "./restli";
 
 type Live = { accessToken?: unknown; fetch?: unknown; response?: unknown };
@@ -90,7 +90,11 @@ function clause(field: string, values: string[] | undefined): string | undefined
 
 async function fetchJSON(input: Live & { accessToken: string }, operation: string, path: string, method: "FINDER" | "BATCH_GET" = "FINDER"): Promise<unknown> {
   const response = await client(input, operation).fetchJSON(path, { method: "GET", headers: { "X-RestLi-Method": method } });
-  if (response.status < 200 || response.status >= 300) upstream(response.status);
+  if (response.status < 200 || response.status >= 300) {
+    const permission = scopedPermissionFailure(operation, response.status, response.body);
+    if (permission) throw permission;
+    upstream(response.status);
+  }
   return response.body;
 }
 
