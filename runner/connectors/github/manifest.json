@@ -1,7 +1,7 @@
 {
   "key": "github",
   "name": "GitHub",
-  "version": "0.86.2",
+  "version": "0.86.3",
   "runtime": "bun",
   "categories": [
     "dev-tools"
@@ -1574,10 +1574,8 @@
       "maxInputBytes": 65536,
       "maxResponseBytes": 1048576,
       "sideEffect": "write",
-      "effectPolicy": "Reconcile",
-      "reconcile": "issues.get",
       "title": "Add Issue Assignees",
-      "description": "Add assignees to an issue via POST /repos/{owner}/{repo}/issues/{issue_number}/assignees. EffectPolicy Reconcile observes via issues.get. Primary action result is returned; EffectPolicy Reconcile observes via issues.get for durability.",
+      "description": "Add assignees to an issue via POST /repos/{owner}/{repo}/issues/{issue_number}/assignees. No effectPolicy and no reconcile (issues.get reads back a single assignee, not the assignee set, so it is not an exact observe). The primary action result is returned.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -1623,10 +1621,8 @@
       "maxInputBytes": 65536,
       "maxResponseBytes": 1048576,
       "sideEffect": "write",
-      "effectPolicy": "Reconcile",
-      "reconcile": "issues.get",
       "title": "Remove Issue Assignees",
-      "description": "Remove assignees from an issue via DELETE /repos/{owner}/{repo}/issues/{issue_number}/assignees. EffectPolicy Reconcile observes via issues.get. Primary action result is returned; EffectPolicy Reconcile observes via issues.get for durability.",
+      "description": "Remove assignees from an issue via DELETE /repos/{owner}/{repo}/issues/{issue_number}/assignees. No effectPolicy and no reconcile (issues.get reads back a single assignee, not the assignee set, so it is not an exact observe). The primary action result is returned.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -2238,7 +2234,7 @@
       "maxInputBytes": 65536,
       "maxResponseBytes": 1048576,
       "title": "Add Requested Reviewers",
-      "description": "Request reviewers on a pull request via POST /repos/{owner}/{repo}/pulls/{pull_number}/requested_reviewers. EffectPolicy Reconcile observes via pull_requests.get.",
+      "description": "Request reviewers on a pull request via POST /repos/{owner}/{repo}/pulls/{pull_number}/requested_reviewers. No effectPolicy and no reconcile (pull_requests.get does not read back requested reviewers or teams, so it is not an exact observe).",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -2300,9 +2296,7 @@
           }
         }
       },
-      "sideEffect": "write",
-      "effectPolicy": "Reconcile",
-      "reconcile": "pull_requests.get"
+      "sideEffect": "write"
     },
     "pull_requests.requested_reviewers.remove": {
       "kind": "action",
@@ -2310,7 +2304,7 @@
       "maxInputBytes": 65536,
       "maxResponseBytes": 1048576,
       "title": "Remove Requested Reviewers",
-      "description": "Remove requested reviewers from a pull request via DELETE /repos/{owner}/{repo}/pulls/{pull_number}/requested_reviewers. EffectPolicy Reconcile observes via pull_requests.get.",
+      "description": "Remove requested reviewers from a pull request via DELETE /repos/{owner}/{repo}/pulls/{pull_number}/requested_reviewers. No effectPolicy and no reconcile (pull_requests.get does not read back requested reviewers or teams, so it is not an exact observe).",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -2372,9 +2366,7 @@
           }
         }
       },
-      "sideEffect": "write",
-      "effectPolicy": "Reconcile",
-      "reconcile": "pull_requests.get"
+      "sideEffect": "write"
     },
     "pull_requests.review_comments.create": {
       "kind": "action",
@@ -6285,6 +6277,21 @@
               },
               "url": {
                 "type": "string"
+              },
+              "providerReleaseId": {
+                "type": "number"
+              },
+              "body": {
+                "type": "string"
+              },
+              "draft": {
+                "type": "boolean"
+              },
+              "prerelease": {
+                "type": "boolean"
+              },
+              "targetBranch": {
+                "type": "string"
               }
             }
           }
@@ -6464,6 +6471,21 @@
                 "type": "string"
               },
               "url": {
+                "type": "string"
+              },
+              "providerReleaseId": {
+                "type": "number"
+              },
+              "body": {
+                "type": "string"
+              },
+              "draft": {
+                "type": "boolean"
+              },
+              "prerelease": {
+                "type": "boolean"
+              },
+              "targetBranch": {
                 "type": "string"
               }
             }
@@ -6688,10 +6710,8 @@
       "maxInputBytes": 5242880,
       "maxResponseBytes": 5242880,
       "sideEffect": "write",
-      "effectPolicy": "Reconcile",
-      "reconcile": "gists.get",
       "title": "Update Gist",
-      "description": "Update a gist description or files via PATCH /gists/{gist_id}.",
+      "description": "Update a gist description or files via PATCH /gists/{gist_id}. No effectPolicy and no reconcile (gists.get reads back file names only, not file contents, so it is not an exact observe).",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -8175,10 +8195,8 @@
       "maxInputBytes": 65536,
       "maxResponseBytes": 1048576,
       "sideEffect": "write",
-      "effectPolicy": "Reconcile",
-      "reconcile": "repos.get",
       "title": "Update Repository",
-      "description": "Update a repository via PATCH /repos/{owner}/{repo}. EffectPolicy Reconcile observes via repos.get (name is preferred when renaming). Primary action result is returned; EffectPolicy Reconcile observes via repos.get for durability.",
+      "description": "Update a repository via PATCH /repos/{owner}/{repo}. No effectPolicy and no reconcile (repos.get reads back only part of the writable fields, e.g. not homepage, hasIssues, hasWiki, hasProjects, archived or deleteBranchOnMerge, and a rename changes the observed id, so it is not an exact observe). The primary action result is returned.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -11267,7 +11285,7 @@
       "maxResponseBytes": 1048576,
       "sideEffect": "write",
       "title": "Update Code Scanning Alert",
-      "description": "Update a code scanning alert via PATCH /repos/{owner}/{repo}/code-scanning/alerts/{alert_number}. EffectPolicy Reconcile observes via code_scanning.alerts.get.",
+      "description": "Update a code scanning alert via PATCH /repos/{owner}/{repo}/code-scanning/alerts/{alert_number}. No effectPolicy and no reconcile (code_scanning.alerts.get does not read back dismissedReason or dismissedComment, so it is not an exact observe).",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -11330,9 +11348,7 @@
             }
           }
         }
-      },
-      "effectPolicy": "Reconcile",
-      "reconcile": "code_scanning.alerts.get"
+      }
     },
     "secret_scanning.alerts.list": {
       "kind": "action",
@@ -25515,10 +25531,8 @@
       "maxInputBytes": 65536,
       "maxResponseBytes": 1048576,
       "sideEffect": "write",
-      "effectPolicy": "Reconcile",
-      "reconcile": "orgs.get",
       "title": "Update an organization",
-      "description": "PATCH /orgs/{org}. kind=action, sideEffect=write. Success is 200. effectPolicy Reconcile, reconcile orgs.get. orgs.get is GET /orgs/{org} for the same org. The PATCH body has no login field and cannot rename the organization.",
+      "description": "PATCH /orgs/{org}. kind=action, sideEffect=write. Success is 200. No effectPolicy and no reconcile (orgs.get reads back only part of the writable fields, e.g. not billingEmail, twitterUsername or the members* settings, so it is not an exact observe). The PATCH body has no login field and cannot rename the organization.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -26944,10 +26958,8 @@
       "maxInputBytes": 65536,
       "maxResponseBytes": 65536,
       "sideEffect": "write",
-      "effectPolicy": "Reconcile",
-      "reconcile": "users.get_authenticated",
       "title": "Update the authenticated user",
-      "description": "PATCH /user. kind=action, sideEffect=write. Success is 200. effectPolicy Reconcile, reconcile users.get_authenticated. users.get_authenticated is GET /user. The PATCH body has no login field and cannot change the user login. Bearer auth only.",
+      "description": "PATCH /user. kind=action, sideEffect=write. Success is 200. No effectPolicy and no reconcile (users.get_authenticated does not read back twitterUsername or hireable, so it is not an exact observe). The PATCH body has no login field and cannot change the user login. Bearer auth only.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -30450,7 +30462,7 @@
       "maxResponseBytes": 1048576,
       "sideEffect": "write",
       "title": "Update an organization webhook",
-      "description": "PATCH /orgs/{org}/hooks/{hook_id}. kind=action, sideEffect=write. Success is 200. effectPolicy Reconcile, reconcile orgs.hooks.get. A 404 is CONNECTOR_UPSTREAM_ERROR. OAuth and personal access tokens (classic) need the admin:org_hook scope (admin:org does not cover organization webhooks). Bearer auth only.",
+      "description": "PATCH /orgs/{org}/hooks/{hook_id}. kind=action, sideEffect=write. Success is 200. No effectPolicy and no reconcile (the op accepts secret, which is write-only and never read back, so orgs.hooks.get is not an exact observe). A 404 is CONNECTOR_UPSTREAM_ERROR. OAuth and personal access tokens (classic) need the admin:org_hook scope (admin:org does not cover organization webhooks). Bearer auth only.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -30512,9 +30524,7 @@
             "description": "The webhook returned by GitHub."
           }
         }
-      },
-      "effectPolicy": "Reconcile",
-      "reconcile": "orgs.hooks.get"
+      }
     },
     "repos.hooks.update": {
       "kind": "action",
@@ -30523,7 +30533,7 @@
       "maxResponseBytes": 1048576,
       "sideEffect": "write",
       "title": "Update a repository webhook",
-      "description": "PATCH /repos/{owner}/{repo}/hooks/{hook_id}. kind=action, sideEffect=write. Success is 200. effectPolicy Reconcile, reconcile repos.hooks.get. A 404 is CONNECTOR_UPSTREAM_ERROR. Bearer auth only.",
+      "description": "PATCH /repos/{owner}/{repo}/hooks/{hook_id}. kind=action, sideEffect=write. Success is 200. No effectPolicy and no reconcile (the op accepts secret, which is write-only and never read back, so repos.hooks.get is not an exact observe). A 404 is CONNECTOR_UPSTREAM_ERROR. Bearer auth only.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -30590,9 +30600,7 @@
             "description": "The webhook returned by GitHub."
           }
         }
-      },
-      "effectPolicy": "Reconcile",
-      "reconcile": "repos.hooks.get"
+      }
     },
     "issues.reactions.create": {
       "kind": "action",
@@ -33857,7 +33865,7 @@
       "maxResponseBytes": 65536,
       "sideEffect": "write",
       "title": "Update an organization webhook configuration",
-      "description": "PATCH /orgs/{org}/hooks/{hook_id}/config. kind=action, sideEffect=write. Success is 200. effectPolicy Reconcile, reconcile orgs.hooks.config.get. Secret is kept out of the Reconcile compare (orgs.hooks.config.get returns masked/normalized config without secret). insecureSsl boolean maps to insecure_ssl \"1\"/\"0\". A 404 is CONNECTOR_UPSTREAM_ERROR. Bearer auth only.",
+      "description": "PATCH /orgs/{org}/hooks/{hook_id}/config. kind=action, sideEffect=write. Success is 200. No effectPolicy and no reconcile (the op accepts secret, which is write-only and never read back, so orgs.hooks.config.get is not an exact observe). insecureSsl boolean maps to insecure_ssl \"1\"/\"0\". A 404 is CONNECTOR_UPSTREAM_ERROR. Bearer auth only.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -33903,9 +33911,7 @@
             "type": "object"
           }
         }
-      },
-      "effectPolicy": "Reconcile",
-      "reconcile": "orgs.hooks.config.get"
+      }
     },
     "repos.hooks.config.update": {
       "kind": "action",
@@ -33914,7 +33920,7 @@
       "maxResponseBytes": 65536,
       "sideEffect": "write",
       "title": "Update a repository webhook configuration",
-      "description": "PATCH /repos/{owner}/{repo}/hooks/{hook_id}/config. kind=action, sideEffect=write. Success is 200. effectPolicy Reconcile, reconcile repos.hooks.config.get. Secret is kept out of the Reconcile compare (repos.hooks.config.get returns masked/normalized config without secret). insecureSsl boolean maps to insecure_ssl \"1\"/\"0\". A 404 is CONNECTOR_UPSTREAM_ERROR. Bearer auth only.",
+      "description": "PATCH /repos/{owner}/{repo}/hooks/{hook_id}/config. kind=action, sideEffect=write. Success is 200. No effectPolicy and no reconcile (the op accepts secret, which is write-only and never read back, so repos.hooks.config.get is not an exact observe). insecureSsl boolean maps to insecure_ssl \"1\"/\"0\". A 404 is CONNECTOR_UPSTREAM_ERROR. Bearer auth only.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -33965,9 +33971,7 @@
             "type": "object"
           }
         }
-      },
-      "effectPolicy": "Reconcile",
-      "reconcile": "repos.hooks.config.get"
+      }
     },
     "users.projects_v2.items.update": {
       "kind": "action",

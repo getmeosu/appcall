@@ -35,7 +35,7 @@ function empty(status: number) {
 
 describe("github write card 3 user writes", () => {
   test("version is 0.79.0 at 852 ops with the write breakdown", () => {
-    expect(manifest.version).toBe("0.86.2");
+    expect(manifest.version).toBe("0.86.3");
     const ops = manifest.operations as Record<string, Record<string, unknown>>;
     expect(Object.keys(ops)).toHaveLength(847);
     const kinds = { action: 0, sync: 0, webhook: 0 };
@@ -63,8 +63,9 @@ describe("github write card 3 user writes", () => {
     const update = ops["user.update"];
     expect(update.kind).toBe("action");
     expect(update.sideEffect).toBe("write");
-    expect(update.effectPolicy).toBe("Reconcile");
-    expect(update.reconcile).toBe("users.get_authenticated");
+    // FIX-EFFECTS-c (0.86.3): users.get_authenticated does not read back twitterUsername / hireable.
+    expect(update.effectPolicy).toBeUndefined();
+    expect(update.reconcile).toBeUndefined();
     expect(update.effect).toBeUndefined();
     expect(update.inputSchema).not.toHaveProperty("properties.login");
     expect(JSON.stringify(update.inputSchema)).not.toContain('"login"');

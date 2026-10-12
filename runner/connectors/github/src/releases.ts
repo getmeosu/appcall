@@ -42,21 +42,23 @@ export type NormalizedRelease = {
   raw: GitHubRelease;
 };
 
+// FIX-EFFECTS-c amend: the fields releases.get / releases.update declare (providerReleaseId, body,
+// draft, prerelease, targetBranch) always carry their declared types, even for a malformed body.
 export function normalizeGitHubRelease(release: GitHubRelease): NormalizedRelease {
   return {
     id: `gh-release:${release.id}`,
     provider: "github",
-    providerReleaseId: release.id,
+    providerReleaseId: typeof release.id === "number" ? release.id : 0,
     tagName: release.tag_name ?? "",
     name: release.name ?? "",
-    body: release.body ?? "",
-    draft: release.draft ?? false,
-    prerelease: release.prerelease ?? false,
+    body: typeof release.body === "string" ? release.body : "",
+    draft: typeof release.draft === "boolean" ? release.draft : false,
+    prerelease: typeof release.prerelease === "boolean" ? release.prerelease : false,
     url: release.html_url ?? "",
     tarballUrl: release.tarball_url ?? "",
     zipballUrl: release.zipball_url ?? "",
     author: release.author?.login ?? "",
-    targetBranch: release.target_commitish ?? "main",
+    targetBranch: typeof release.target_commitish === "string" ? release.target_commitish : "main",
     createdAt: release.created_at ?? "",
     publishedAt: release.published_at ?? "",
     modelVersion: "2026-05-16",

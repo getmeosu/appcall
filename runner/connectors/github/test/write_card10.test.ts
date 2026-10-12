@@ -67,7 +67,7 @@ function empty(status: number) {
 
 describe("github write card 10 hooks and reactions writes", () => {
   test("version is 0.79.0 at 852 ops with the write breakdown", () => {
-    expect(manifest.version).toBe("0.86.2");
+    expect(manifest.version).toBe("0.86.3");
     const ops = manifest.operations as Record<string, Record<string, unknown>>;
     expect(Object.keys(ops)).toHaveLength(847);
     const kinds = { action: 0, sync: 0, webhook: 0 };
@@ -88,11 +88,12 @@ describe("github write card 10 hooks and reactions writes", () => {
       expect(op.kind).toBe("action");
       expect(op.sideEffect).toBe("write");
     }
-    expect(ops["orgs.hooks.update"].effectPolicy).toBe("Reconcile");
-    expect(ops["orgs.hooks.update"].reconcile).toBe("orgs.hooks.get");
+    // FIX-EFFECTS-c (0.86.3): both hooks.update ops accept the write-only secret, so they omit effect keys.
+    expect(ops["orgs.hooks.update"].effectPolicy).toBeUndefined();
+    expect(ops["orgs.hooks.update"].reconcile).toBeUndefined();
     expect(ops["orgs.hooks.update"].effect).toBeUndefined();
-    expect(ops["repos.hooks.update"].effectPolicy).toBe("Reconcile");
-    expect(ops["repos.hooks.update"].reconcile).toBe("repos.hooks.get");
+    expect(ops["repos.hooks.update"].effectPolicy).toBeUndefined();
+    expect(ops["repos.hooks.update"].reconcile).toBeUndefined();
     expect(ops["repos.hooks.update"].effect).toBeUndefined();
     expect(String(ops["orgs.hooks.get"].description)).toContain("GET /orgs/{org}/hooks/{hook_id}");
     expect(String(ops["repos.hooks.get"].description)).toContain("GET /repos/{owner}/{repo}/hooks/{hook_id}");
