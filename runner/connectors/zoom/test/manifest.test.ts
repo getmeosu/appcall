@@ -5,7 +5,7 @@ describe("zoom connector manifest", () => {
   test("declares key, runtime, auth, network, operations, and models", () => {
     expect(manifest.key).toBe("zoom");
     expect(manifest.name).toBe("Zoom");
-    expect(manifest.version).toBe("0.3.1");
+    expect(manifest.version).toBe("0.3.2");
     expect(manifest.runtime).toBe("bun");
   });
 
