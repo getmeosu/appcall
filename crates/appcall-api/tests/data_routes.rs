@@ -1029,6 +1029,7 @@ fn webhook_replay_preserves_scope_and_rolls_back_failed_scheduling() {
                 connection_id: "a".into(),
                 connector: "slack".into(),
                 operation: "messages.list".into(),
+                trigger: String::new(),
             },
         )
         .unwrap();
@@ -1101,6 +1102,7 @@ fn webhook_public_ids_and_routes_are_connection_scoped_and_project_owned() {
                     idempotency_key: "same-provider-key".into(),
                     operation: "messages.list".into(),
                     sanitized: json!({"channel":"C123"}),
+                    triggers: Vec::new(),
                 },
             )
             .unwrap();
@@ -1115,6 +1117,7 @@ fn webhook_public_ids_and_routes_are_connection_scoped_and_project_owned() {
                     idempotency_key: "same-provider-key".into(),
                     operation: "messages.list".into(),
                     sanitized: json!({"channel":"C123"}),
+                    triggers: Vec::new(),
                 },
             )
             .unwrap();
@@ -1191,6 +1194,7 @@ fn webhook_public_ids_and_routes_are_connection_scoped_and_project_owned() {
                 idempotency_key: "same-provider-key".into(),
                 operation: String::new(),
                 sanitized: json!({}),
+                triggers: Vec::new(),
             },
         )
         .unwrap();
@@ -1217,6 +1221,96 @@ fn webhook_public_ids_and_routes_are_connection_scoped_and_project_owned() {
             .unwrap()
             .get::<_, i64>(0),
         2
+    );
+    client
+        .batch_execute(&format!("DROP SCHEMA {schema} CASCADE"))
+        .unwrap();
+}
+
+#[test]
+#[ignore = "requires isolated APPCALL_ENGINE_POSTGRES_URL"]
+fn webhook_event_list_filters_and_returns_triggers() {
+    use appcall_api::data_routes::webhook_read;
+    let url = std::env::var("APPCALL_ENGINE_POSTGRES_URL").unwrap();
+    let mut client = postgres::Client::connect(&url, postgres::NoTls).unwrap();
+    let schema = format!("webhook_trigger_test_{}", uuid::Uuid::new_v4().simple());
+    client
+        .batch_execute(&format!(
+            "CREATE SCHEMA {schema}; SET search_path TO {schema}"
+        ))
+        .unwrap();
+    for sql in [
+        include_str!("../../../migrations/202605140001_init.sql"),
+        include_str!("../../../migrations/202605290001_connections_ownership.sql"),
+        include_str!("../../../migrations/202605290003_usage_brand_dim.sql"),
+        include_str!("../../../migrations/202605290004_connections_owner_check.sql"),
+        include_str!("../../../migrations/202609070001_event_outbox.sql"),
+        include_str!("../../../migrations/202609110001_event_connection_dedup.sql"),
+        include_str!("../../../migrations/202609120001_connection_revision.sql"),
+        include_str!("../../../migrations/202610120002_poll_state.sql"),
+    ] {
+        client.batch_execute(sql).unwrap();
+    }
+    client
+        .batch_execute(
+            "INSERT INTO projects(id,name) VALUES('p','p'); INSERT INTO connections(id,project_id,connector,auth_type,status,external_account_id,credential_owner) VALUES('gh','p','github','oauth2','active','brand-a','brand')",
+        )
+        .unwrap();
+    let claims = appcall_auth::WebhookClaims {
+        project_id: "p".into(),
+        connection_id: "gh".into(),
+        connector: "github".into(),
+    };
+    let accept = |client: &mut postgres::Client, key: &str, triggers: &[&str]| {
+        appcall_events::PgEvents::new(client)
+            .accept(
+                &claims,
+                &appcall_events::ParsedWebhook {
+                    idempotency_key: key.into(),
+                    operation: "webhook.issues".into(),
+                    sanitized: json!({"safe":true}),
+                    triggers: triggers.iter().map(|t| (*t).to_owned()).collect(),
+                },
+            )
+            .unwrap()
+            .event_id
+    };
+    let opened = accept(&mut client, "d-1", &["issues.opened"]);
+    let _closed = accept(&mut client, "d-2", &["issues.closed"]);
+    let principal = appcall_auth::Principal::project("p").unwrap();
+    let read = |client: &mut postgres::Client, query: &str| {
+        webhook_read(
+            client,
+            &principal,
+            &url::Url::parse(&format!("http://x/v1/webhook-events{query}")).unwrap(),
+        )
+    };
+    let page = read(&mut client, "?trigger=issues.opened")
+        .unwrap()
+        .unwrap();
+    let events = page.body["events"].as_array().unwrap();
+    assert_eq!(events.len(), 1);
+    assert_eq!(events[0]["id"], opened.as_str());
+    assert_eq!(events[0]["triggers"], json!(["issues.opened"]));
+    assert_eq!(
+        read(&mut client, "").unwrap().unwrap().body["events"]
+            .as_array()
+            .unwrap()
+            .len(),
+        2
+    );
+    assert!(read(&mut client, "?trigger=issues.reopened")
+        .unwrap()
+        .unwrap()
+        .body["events"]
+        .as_array()
+        .unwrap()
+        .is_empty());
+    assert_eq!(
+        read(&mut client, "?trigger=bad%0Atrigger")
+            .unwrap_err()
+            .code,
+        "INVALID_REQUEST"
     );
     client
         .batch_execute(&format!("DROP SCHEMA {schema} CASCADE"))

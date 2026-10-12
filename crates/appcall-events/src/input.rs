@@ -66,6 +66,7 @@ pub fn validate_parsed(connector: &str, p: &ParsedWebhook) -> Result<()> {
     if (!p.idempotency_key.is_empty() && !valid_id(&p.idempotency_key))
         || p.operation.len() > 256
         || !p.sanitized.is_object()
+        || !valid_triggers(&p.triggers)
     {
         return Err(Error::Invalid);
     }
@@ -80,6 +81,19 @@ pub fn validate_parsed(connector: &str, p: &ParsedWebhook) -> Result<()> {
         sync_input(connector, &p.operation, &p.sanitized)?;
     }
     Ok(())
+}
+pub const MAX_TRIGGERS: usize = 16;
+pub const MAX_TRIGGER_LEN: usize = 128;
+/// Trigger names are bounded, non-empty, unique and free of control
+/// characters so they are safe to store, filter and echo in streams.
+pub fn valid_triggers(triggers: &[String]) -> bool {
+    triggers.len() <= MAX_TRIGGERS
+        && triggers.iter().enumerate().all(|(index, trigger)| {
+            !trigger.is_empty()
+                && trigger.len() <= MAX_TRIGGER_LEN
+                && !trigger.chars().any(char::is_control)
+                && !triggers[..index].contains(trigger)
+        })
 }
 pub(super) fn event_job(e: &Event, dedup_key: String) -> Result<Option<crate::SyncJob>> {
     if classify_dispatch(&e.connector, &e.operation) == DispatchKind::EventOnly {
@@ -101,6 +115,38 @@ pub(super) fn valid_id(id: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn triggers_are_bounded_unique_and_printable() {
+        let many: Vec<String> = (0..=MAX_TRIGGERS).map(|i| format!("t{i}")).collect();
+        assert!(valid_triggers(&[]));
+        assert!(valid_triggers(&["issues.opened".into(), "issues".into()]));
+        assert!(valid_triggers(&many[..MAX_TRIGGERS]));
+        assert!(!valid_triggers(&many));
+        assert!(!valid_triggers(&["".into()]));
+        assert!(!valid_triggers(&["a".repeat(MAX_TRIGGER_LEN + 1)]));
+        assert!(!valid_triggers(&["issues\nopened".into()]));
+        assert!(!valid_triggers(&["issues".into(), "issues".into()]));
+    }
+    #[test]
+    fn serialized_events_without_triggers_still_load() {
+        let legacy = json!({
+            "id":"wh_1","projectId":"p","connectionId":"c","externalAccountId":"b",
+            "connector":"github","operation":"webhook.issues","payload":{},
+            "createdAt":"2026-10-12T00:00:00Z","streamPosition":1
+        });
+        let event: Event = serde_json::from_value(legacy.clone()).unwrap();
+        assert!(event.triggers.is_empty());
+        // Untriggered events keep their exact pre-existing wire shape.
+        assert_eq!(serde_json::to_value(&event).unwrap(), legacy);
+        let tagged = Event {
+            triggers: vec!["issues.opened".into()],
+            ..event
+        };
+        let wire = serde_json::to_value(&tagged).unwrap();
+        assert_eq!(wire["triggers"], json!(["issues.opened"]));
+        assert_eq!(serde_json::from_value::<Event>(wire).unwrap(), tagged);
+    }
     #[test]
     fn channel_configuration_is_narrow_and_consistent() {
         for payload in [
@@ -136,6 +182,7 @@ mod tests {
             idempotency_key: "id".into(),
             operation: "".into(),
             sanitized: payload,
+            triggers: Vec::new(),
         };
         assert_eq!(validate_parsed("other", &p(json!([]))), Err(Error::Invalid));
         assert_eq!(
@@ -178,6 +225,7 @@ mod tests {
             payload,
             created_at: chrono::Utc::now(),
             stream_position: 1,
+            triggers: Vec::new(),
         };
 
         assert!(event_job(

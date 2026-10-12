@@ -5,7 +5,7 @@ import {
   supportedProtocolVersion,
 } from "./protocol";
 import { logLine, redactText } from "./redact";
-import { defaultConnectorRegistry } from "./registry";
+import { defaultConnectorRegistry, type WebhookVerifyMaterial } from "./registry";
 import { jsonByteLength, maxOperationTimeoutMs, operationWireResponseLimit, rpcRequestLimitBytes } from "./budget";
 
 export async function handleRPC(request: Request, admittedAt = Date.now()): Promise<Response> {
@@ -255,8 +255,15 @@ function handleConnectorWebhookVerify(envelope: RequestEnvelope): Response {
     });
   }
   const payload = envelope.params?.payload ?? {};
-  const headers = isRecord(envelope.params?.headers) ? (envelope.params!.headers as Record<string, string>) : {};
-  const result = defaultConnectorRegistry.verifyWebhook(connectorKey, payload, headers);
+  const headers = webhookHeaders(envelope);
+  const material = webhookVerifyMaterial(envelope);
+  if (!material) {
+    return jsonResponse(400, envelope.id, {
+      ok: false,
+      error: { code: "INVALID_WEBHOOK_PAYLOAD", message: "Webhook raw body is not valid base64." },
+    });
+  }
+  const result = defaultConnectorRegistry.verifyWebhook(connectorKey, payload, headers, material);
   if (!result.ok) {
     return jsonResponse(statusForWebhookFailure(result.code), envelope.id, {
       ok: false,
@@ -284,7 +291,7 @@ function handleConnectorWebhookParse(envelope: RequestEnvelope): Response {
     });
   }
   const payload = envelope.params?.payload ?? {};
-  const result = defaultConnectorRegistry.parseWebhook(connectorKey, payload);
+  const result = defaultConnectorRegistry.parseWebhook(connectorKey, payload, webhookHeaders(envelope));
   if (!result.ok) {
     return jsonResponse(statusForWebhookFailure(result.code), envelope.id, {
       ok: false,
@@ -298,8 +305,37 @@ function handleConnectorWebhookParse(envelope: RequestEnvelope): Response {
       idempotencyKey: typeof parsed.idempotencyKey === "string" ? parsed.idempotencyKey : "",
       operation: typeof parsed.operation === "string" ? parsed.operation : "",
       sanitized: parsed.sanitized ?? {},
+      triggers: Array.isArray(parsed.triggers)
+        ? parsed.triggers.filter((trigger): trigger is string => typeof trigger === "string" && trigger.length > 0)
+        : [],
     },
   });
+}
+
+function webhookHeaders(envelope: RequestEnvelope): Record<string, string> {
+  const raw = envelope.params?.headers;
+  if (!isRecord(raw)) return {};
+  const headers: Record<string, string> = {};
+  for (const [key, value] of Object.entries(raw)) {
+    if (typeof value === "string") headers[key.toLowerCase()] = value;
+  }
+  return headers;
+}
+
+const BASE64_PATTERN = /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/;
+
+// webhookVerifyMaterial decodes the exact request bytes (standard base64) and
+// the connection's webhook secret. Returns undefined for a malformed body.
+// Neither value is ever logged.
+function webhookVerifyMaterial(envelope: RequestEnvelope): WebhookVerifyMaterial | undefined {
+  const rawBody = envelope.params?.rawBody;
+  const secret = envelope.params?.secret;
+  const material: WebhookVerifyMaterial = {};
+  if (typeof secret === "string" && secret.length > 0) material.secret = secret;
+  if (rawBody === undefined || rawBody === null) return material;
+  if (typeof rawBody !== "string" || !BASE64_PATTERN.test(rawBody)) return undefined;
+  material.rawBody = new Uint8Array(Buffer.from(rawBody, "base64"));
+  return material;
 }
 
 function statusForWebhookFailure(code: string): number {

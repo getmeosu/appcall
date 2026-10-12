@@ -10,6 +10,7 @@ use appcall_runner_client::{
     RequestContext, RunnerClient, WebhookParseRequest, WebhookVerifyRequest,
 };
 use appcall_store::{Connection, Status};
+use base64::{engine::general_purpose::STANDARD, Engine};
 use serde_json::json;
 use std::{collections::BTreeMap, sync::Arc};
 #[derive(Clone)]
@@ -128,6 +129,7 @@ impl MemoryEvents {
             payload,
             created_at: chrono::Utc::now(),
             stream_position: position,
+            triggers: parsed.triggers.clone(),
         };
         let bytes = serde_json::to_vec(&event)
             .map_err(|_| ApiError::new("WEBHOOK_INGEST_FAILED"))?
@@ -275,12 +277,15 @@ impl MemoryEvents {
                         ]
                         .into_iter()
                         .all(|(key, value)| q.get(key).is_empty() || q.get(key) == value)
+                            && (q.get("trigger").is_empty()
+                                || e.triggers.iter().any(|t| t == q.get("trigger")))
                     })
                     && filters.is_none_or(|filters| {
                         (filters.connection_id.is_empty()
                             || filters.connection_id == e.connection_id)
                             && (filters.connector.is_empty() || filters.connector == e.connector)
                             && (filters.operation.is_empty() || filters.operation == e.operation)
+                            && (filters.trigger.is_empty() || e.triggers.contains(&filters.trigger))
                     })
                     && match &boundary {
                         None => true,
@@ -543,9 +548,19 @@ impl MemoryEvents {
                     .unwrap_or("")
                     .into(),
                 sanitized: sanitize(&payload, &[]),
+                triggers: Vec::new(),
             };
             return accepted_response(self.accept(&expected, expected_revision, &parsed)?);
         };
+        let webhook_secret = self
+            .repo
+            .secret(
+                &claims.project_id,
+                &claims.connection_id,
+                &expected.secret_ref_id,
+            )
+            .ok()
+            .and_then(|(_, raw)| crate::event_routes::webhook_secret_from_bundle(raw.as_bytes()));
         let context = RequestContext {
             request_id: format!("webhook_{}", uuid::Uuid::new_v4().simple()),
             deadline_unix_ms: Some(chrono::Utc::now().timestamp_millis() as u64 + 10000),
@@ -555,12 +570,14 @@ impl MemoryEvents {
                 &context,
                 WebhookVerifyRequest {
                     connector_key: claims.connector.clone(),
-                    headers,
+                    headers: headers.clone(),
                     payload: payload.clone(),
+                    raw_body_base64: Some(STANDARD.encode(&request.body)),
+                    secret: webhook_secret.as_ref().map(|secret| secret.to_string()),
                 },
             )
             .await
-            .map_err(|_| ApiError::new("WEBHOOK_INGEST_FAILED"))?;
+            .map_err(crate::event_routes::verify_error)?;
         if !verified.verified {
             return Err(ApiError::new("WEBHOOK_SIGNATURE_INVALID"));
         }
@@ -569,6 +586,7 @@ impl MemoryEvents {
                 &context,
                 WebhookParseRequest {
                     connector_key: claims.connector,
+                    headers,
                     payload,
                 },
             )
@@ -581,6 +599,7 @@ impl MemoryEvents {
                 idempotency_key: parsed.idempotency_key,
                 operation: parsed.operation,
                 sanitized: parsed.sanitized,
+                triggers: parsed.triggers,
             },
         )?;
         accepted_response(result)

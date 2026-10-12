@@ -82,6 +82,7 @@ fn event(position: i64) -> Event {
         payload: serde_json::json!({"text":"hello"}),
         created_at: chrono::Utc::now(),
         stream_position: position,
+        triggers: Vec::new(),
     }
 }
 

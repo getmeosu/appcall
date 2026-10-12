@@ -190,6 +190,7 @@ fn daemon_health_and_sigterm_drain_and_oneshot_exit() {
                 idempotency_key: "daemon-event".into(),
                 operation: "messages.list".into(),
                 sanitized: serde_json::json!({"channel":"C123"}),
+                triggers: Vec::new(),
             },
         )
         .unwrap();
@@ -225,6 +226,7 @@ fn daemon_health_and_sigterm_drain_and_oneshot_exit() {
                 idempotency_key: "exec-event".into(),
                 operation: "messages.list".into(),
                 sanitized: serde_json::json!({"channel":"C123"}),
+                triggers: Vec::new(),
             },
         )
         .unwrap();

@@ -11,7 +11,8 @@ import { GITHUB_TRIGGERS, matchesTrigger, triggerOperations, type TriggerEntry }
 // Composio trigger map (src/trigger_map.ts) and the coverage map's triggers section agree, every
 // mapped action is a real webhook action in the pinned spec, and matchesTrigger() fires exactly on
 // the mapped event / actions / field filter. runtimeServed is exactly the set proven end to end by
-// crates/appcall-api/tests/github_poll_e2e.rs (fixtures/runtime-served.json): the 9 polled slugs.
+// the GitHub e2e tests (fixtures/runtime-served.json): the polled slugs (github_poll_e2e.rs) plus
+// the slugs of the WH-1 signed-webhook delivery (event_routes.rs).
 
 type Op = Record<string, any>;
 const ops = manifest.operations as Record<string, Op>;
@@ -54,15 +55,23 @@ describe("TRIG-2: the trigger map and the coverage map", () => {
       expect(c.duplicateOf, slug).toBe(e.duplicateOf);
       expect(c.polling, slug).toEqual(e.polling);
     }
-    expect(cov.counts).toEqual({ total: 46, covered: 46, partial: 0, missing: 0, runtimeServed: 9, distinctAfterDedupe: 44 });
+    expect(cov.counts).toEqual({ total: 46, covered: 46, partial: 0, missing: 0, runtimeServed: served.size, distinctAfterDedupe: 44 });
   });
 
-  test("runtime-served is exactly the e2e-proven set: the 9 polled slugs, no webhook slug (WH-1 has no e2e yet)", () => {
+  test("runtime-served is exactly the e2e-proven set: polled slugs (poll e2e) plus webhook slugs (WH-1 e2e)", () => {
     for (const [slug, e] of entries) expect(e.runtimeServed, slug).toBe(served.has(slug));
-    expect(served.size).toBe(9);
+    const sources = (servedDoc as any).sources as Record<string, string[]>;
+    expect(Object.keys(sources).sort()).toEqual(["poll", "webhook"]);
+    expect([...served].sort()).toEqual([...new Set(Object.values(sources).flat())].sort());
     const polled = new Set(Object.values(ops).flatMap((op) => (op.poll ? [...(op.poll.onNew ?? []), ...(op.poll.onChanged ?? [])] : [])));
-    expect([...served].sort()).toEqual([...polled].sort());
-    for (const slug of served) expect(cov.slugs[slug].ops, slug).toEqual([]);
+    expect([...sources.poll!].sort()).toEqual([...polled].sort());
+    for (const slug of sources.poll!) expect(cov.slugs[slug].ops, slug).toEqual([]);
+    // Webhook-proven slugs are real webhook-mapped slugs with a webhook op.
+    expect(sources.webhook!.length).toBeGreaterThan(0);
+    for (const slug of sources.webhook!) {
+      expect(GITHUB_TRIGGERS[slug]!.match.length, slug).toBeGreaterThan(0);
+      expect(cov.slugs[slug].ops.length, slug).toBeGreaterThan(0);
+    }
   });
 
   test("duplicate pairs: ISSUE_ADDED = ISSUE_CREATED, STAR_ADDED = NEW_STARGAZER; same match, recorded once", () => {
@@ -120,7 +129,7 @@ describe("TRIG-2: the trigger map and the coverage map", () => {
 
 describe("TRIG-2: op accounting (actions and triggers counted separately)", () => {
   test("v0.87.0: 797 actions + 47 webhook ops + 4 sync = 848 ops (46 Composio triggers)", () => {
-    expect(manifest.version).toBe("0.89.3");
+    expect(manifest.version).toBe("0.89.4");
     const kinds: Record<string, number> = {};
     for (const op of Object.values(ops)) kinds[op.kind] = (kinds[op.kind] ?? 0) + 1;
     expect(kinds).toEqual({ action: 801, webhook: 47, sync: 12 });

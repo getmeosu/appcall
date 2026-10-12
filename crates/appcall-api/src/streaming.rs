@@ -25,6 +25,8 @@ pub struct EventFilters {
     pub connector: String,
     pub connection_id: String,
     pub operation: String,
+    /// When non-empty, only events whose `triggers` contain this name.
+    pub trigger: String,
 }
 impl EventFilters {
     pub fn validate(&self) -> Result<()> {
@@ -32,9 +34,11 @@ impl EventFilters {
             self.connector.as_str(),
             self.connection_id.as_str(),
             self.operation.as_str(),
+            self.trigger.as_str(),
         ]
         .iter()
         .any(|value| value.len() > 4096 || value.chars().any(char::is_control))
+            || self.trigger.len() > appcall_events::MAX_TRIGGER_LEN
         {
             return Err(ApiError::new("INVALID_REQUEST"));
         }
@@ -552,6 +556,9 @@ fn encode_page(events: Vec<Event>, cursor: &str, format: Format) -> Result<Page>
             if !value.is_empty() {
                 data[key] = serde_json::Value::String(value)
             }
+        }
+        if !event.triggers.is_empty() {
+            data["triggers"] = serde_json::json!(event.triggers)
         }
         if !event.payload.is_null() {
             data["payload"] = event.payload
