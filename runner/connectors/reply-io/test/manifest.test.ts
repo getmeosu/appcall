@@ -57,7 +57,7 @@ function requestOf(key: string): Record<string, unknown> {
 describe("reply-io manifest", () => {
   test("has bounded hosts, origin auth, and compiles", () => {
     expect(manifest.key).toBe("reply-io");
-    expect(manifest.version).toBe("0.2.0");
+    expect(manifest.version).toBe("0.2.1");
     expect(manifest.network.allowedHosts).toEqual(["api.reply.io"]);
     expect(manifest.http.baseUrl).toBe("https://api.reply.io");
     expect(manifest.http.auth.name).toBe("Authorization");

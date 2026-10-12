@@ -176,11 +176,7 @@ export function searchPeople(input: unknown): Record<string, unknown> | Promise<
     }).search(input).then((result) => {
       if (!result.ok) throwIfError(result);
       return {
-        connector: "apollo",
-        action: "people.search",
-        source: "connector",
-        people: result.people,
-        pagination: result.pagination,
+        data: { people: result.people, pagination: result.pagination },
         ...("total_entries" in result ? { total_entries: result.total_entries } : {}),
       };
     });
@@ -258,7 +254,7 @@ export function matchPerson(input: unknown): Record<string, unknown> | Promise<R
       fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
     }).match(input).then((result) => {
       if (!result.ok) throwIfError(result);
-      return { connector: "apollo", action: "people.match", source: "connector", person: result.person };
+      return { data: { person: result.person } };
     });
   }
   return { connector: "apollo", action: "people.match", source: "connector", validated: validatePeopleMatchInput(input) };
@@ -297,7 +293,7 @@ export function bulkMatchPeople(input: unknown): Record<string, unknown> | Promi
       fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
     }).bulkMatch(input).then((result) => {
       if (!result.ok) throwIfError(result);
-      return { connector: "apollo", action: "people.bulk_match", source: "connector", matches: result.matches };
+      return { data: { matches: result.matches } };
     });
   }
   return { connector: "apollo", action: "people.bulk_match", source: "connector", validated: validatePeopleBulkMatchInput(input) };
@@ -353,7 +349,7 @@ export function searchOrganizations(input: unknown): Record<string, unknown> | P
       fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
     }).search(input).then((result) => {
       if (!result.ok) throwIfError(result);
-      return { connector: "apollo", action: "organizations.search", source: "connector", organizations: result.organizations, pagination: result.pagination };
+      return { data: { organizations: result.organizations, pagination: result.pagination } };
     });
   }
   return { connector: "apollo", action: "organizations.search", source: "connector", validated: validateOrganizationsSearchInput(input) };
@@ -392,7 +388,7 @@ export function enrichOrganization(input: unknown): Record<string, unknown> | Pr
       fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
     }).enrich(input).then((result) => {
       if (!result.ok) throwIfError(result);
-      return { connector: "apollo", action: "organizations.enrich", source: "connector", organization: result.organization };
+      return { data: { organization: result.organization } };
     });
   }
   return { connector: "apollo", action: "organizations.enrich", source: "connector", validated: validateOrganizationsEnrichInput(input) };
@@ -431,7 +427,7 @@ export function bulkEnrichOrganizations(input: unknown): Record<string, unknown>
       fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
     }).bulkEnrich(input).then((result) => {
       if (!result.ok) throwIfError(result);
-      return { connector: "apollo", action: "organizations.bulk_enrich", source: "connector", organizations: result.organizations };
+      return { data: { organizations: result.organizations } };
     });
   }
   return { connector: "apollo", action: "organizations.bulk_enrich", source: "connector", validated: validateOrganizationsBulkEnrichInput(input) };
@@ -472,7 +468,7 @@ export function getOrganizationJobPostings(input: unknown): Record<string, unkno
       fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
     }).getJobPostings(input).then((result) => {
       if (!result.ok) throwIfError(result);
-      return { connector: "apollo", action: "organizations.job_postings", source: "connector", job_postings: result.job_postings };
+      return { data: { job_postings: result.job_postings } };
     });
   }
   return { connector: "apollo", action: "organizations.job_postings", source: "connector", validated: validateOrganizationsJobPostingsInput(input) };
@@ -594,7 +590,7 @@ export function createContact(input: unknown): Record<string, unknown> | Promise
       fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
     }).create(input).then((result) => {
       if (!result.ok) throwIfError(result);
-      return { connector: "apollo", action: "contacts.create", source: "connector", contact: result.contact };
+      return { data: { contact: result.contact } };
     });
   }
   return { connector: "apollo", action: "contacts.create", source: "connector", validated: validateContactsCreateInput(input) };
@@ -607,7 +603,7 @@ export function updateContact(input: unknown): Record<string, unknown> | Promise
       fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
     }).update(input).then((result) => {
       if (!result.ok) throwIfError(result);
-      return { connector: "apollo", action: "contacts.update", source: "connector", contact: result.contact };
+      return { data: { contact: result.contact } };
     });
   }
   return { connector: "apollo", action: "contacts.update", source: "connector", validated: validateContactsUpdateInput(input) };
@@ -620,7 +616,7 @@ export function searchContacts(input: unknown): Record<string, unknown> | Promis
       fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
     }).search(input).then((result) => {
       if (!result.ok) throwIfError(result);
-      return { connector: "apollo", action: "contacts.search", source: "connector", contacts: result.contacts, pagination: result.pagination };
+      return { data: { contacts: result.contacts, pagination: result.pagination } };
     });
   }
   return { connector: "apollo", action: "contacts.search", source: "connector", validated: validateContactsSearchInput(input) };
@@ -717,7 +713,7 @@ export function createAccount(input: unknown): Record<string, unknown> | Promise
       fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
     }).create(input).then((result) => {
       if (!result.ok) throwIfError(result);
-      return { connector: "apollo", action: "accounts.create", source: "connector", account: result.account };
+      return { data: { account: result.account } };
     });
   }
   return { connector: "apollo", action: "accounts.create", source: "connector", validated: validateAccountsCreateInput(input) };
@@ -730,7 +726,7 @@ export function updateAccount(input: unknown): Record<string, unknown> | Promise
       fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
     }).update(input).then((result) => {
       if (!result.ok) throwIfError(result);
-      return { connector: "apollo", action: "accounts.update", source: "connector", account: result.account };
+      return { data: { account: result.account } };
     });
   }
   return { connector: "apollo", action: "accounts.update", source: "connector", validated: validateAccountsUpdateInput(input) };
@@ -802,7 +798,7 @@ export function searchSequences(input: unknown): Record<string, unknown> | Promi
       fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
     }).search(input).then((result) => {
       if (!result.ok) throwIfError(result);
-      return { connector: "apollo", action: "sequences.search", source: "connector", sequences: result.sequences, pagination: result.pagination };
+      return { data: { sequences: result.sequences, pagination: result.pagination } };
     });
   }
   return { connector: "apollo", action: "sequences.search", source: "connector", validated: validateSequencesSearchInput(input) };
@@ -815,7 +811,7 @@ export function addContactsToSequence(input: unknown): Record<string, unknown> |
       fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
     }).addContacts(input).then((result) => {
       if (!result.ok) throwIfError(result);
-      return { connector: "apollo", action: "sequences.add_contacts", source: "connector", contacts: result.contacts };
+      return { data: { contacts: result.contacts } };
     });
   }
   return { connector: "apollo", action: "sequences.add_contacts", source: "connector", validated: validateSequencesAddContactsInput(input) };
@@ -850,7 +846,7 @@ export function listEmailAccounts(input: unknown): Record<string, unknown> | Pro
       fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
     }).list().then((result) => {
       if (!result.ok) throwIfError(result);
-      return { connector: "apollo", action: "email_accounts.list", source: "connector", email_accounts: result.email_accounts };
+      return { data: { email_accounts: result.email_accounts } };
     });
   }
   return { connector: "apollo", action: "email_accounts.list", source: "connector", validated: validateEmailAccountsListInput(input) };
@@ -897,7 +893,7 @@ export function searchUsers(input: unknown): Record<string, unknown> | Promise<R
       fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
     }).search(input).then((result) => {
       if (!result.ok) throwIfError(result);
-      return { connector: "apollo", action: "users.search", source: "connector", users: result.users, pagination: result.pagination };
+      return { data: { users: result.users, pagination: result.pagination } };
     });
   }
   return { connector: "apollo", action: "users.search", source: "connector", validated: validateUsersSearchInput(input) };

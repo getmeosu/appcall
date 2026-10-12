@@ -61,12 +61,7 @@ function finish(response: { status: number; headers: Record<string, string>; bod
       message: `BugHerd rejected the attachment upload (HTTP ${response.status}).`,
     };
   }
-  return {
-    connector: "bug-herd",
-    action: "attachments.upload",
-    source: "provider",
-    data,
-  };
+  return { data };
 }
 
 function validateUploadInput(value: unknown): UploadInput {

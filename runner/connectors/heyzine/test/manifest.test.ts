@@ -84,7 +84,7 @@ function fixtureRequestBodyExpectation(operation: string, input: Record<string, 
 describe("heyzine manifest", () => {
   test("has bounded hosts, origin auth, version, and compiles", () => {
     expect(manifest.key).toBe("heyzine");
-    expect(manifest.version).toBe("0.2.0");
+    expect(manifest.version).toBe("0.2.1");
     expect(manifest.runtime).toBe("bun");
     expect(manifest.categories).toEqual(["productivity"]);
     expect(manifest.network.allowedHosts).toEqual(["cdn.heyzine.com", "heyzine.com"]);
@@ -214,7 +214,12 @@ describe("heyzine compiled handlers", () => {
       expect(new URL(requests[0]!.url).hostname, key).toBe(host);
       expect(requests[0]!.headers.get("authorization"), key).toBe("Bearer dummy");
       expect(requests[0]!.headers.get("accept"), key).toBe("application/json");
-      expect(result).toMatchObject({ connector: "heyzine", action: key, source: "provider" });
+      if (HANDWRITTEN.has(key)) {
+        // Handwritten handlers return only the declared output; the runner owns the envelope.
+        expect(Object.keys(result as Record<string, unknown>), key).toEqual(["data"]);
+      } else {
+        expect(result).toMatchObject({ connector: "heyzine", action: key, source: "provider" });
+      }
     }
   });
 
@@ -239,7 +244,7 @@ describe("heyzine compiled handlers", () => {
     const deleted = await invoke("flipbooks.delete", { id: "abc.pdf" }, () => jsonResponse({ success: true, code: 200, msg: "Flipbook deleted" }));
     expect(new URL(deleted.requests[0]!.url).pathname).toBe("/api1/flipbook-delete");
     expect(await deleted.requests[0]!.json()).toEqual({ id: "abc.pdf" });
-    expect(deleted.result).toEqual({ connector: "heyzine", action: "flipbooks.delete", source: "provider", data: { success: true, code: 200, msg: "Flipbook deleted" } });
+    expect(deleted.result).toEqual({ data: { success: true, code: 200, msg: "Flipbook deleted" } });
 
     const access = await invoke(
       "flipbooks.access_list.update",
@@ -326,7 +331,13 @@ describe("heyzine compiled handlers", () => {
       }
       const result = await action!(input);
       expect(index, raw.id).toBe(raw.exchanges.length);
-      const expected = JSON.parse(readFileSync(join(dirname(join(caseDir, file)), raw.expected.resultFile), "utf8"));
+      const pinned = JSON.parse(readFileSync(join(dirname(join(caseDir, file)), raw.expected.resultFile), "utf8"));
+      // The pinned result is the compiled recipe's, envelope included; a
+      // handwritten handler returns only the declared output, so compare
+      // without the compile-time connector/action/source stamp.
+      const expected = HANDWRITTEN.has(raw.operation)
+        ? Object.fromEntries(Object.entries(pinned).filter(([key]) => !["connector", "action", "source"].includes(key)))
+        : pinned;
       expect(deepEqual(result, expected), `${raw.id} ${JSON.stringify(result)}`).toBe(true);
     }
   });

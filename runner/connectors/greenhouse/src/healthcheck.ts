@@ -12,7 +12,6 @@ export type GreenhouseHealthcheckInput = {
  * Proves both token exchange and Harvest Bearer access (and Site Admin `sub` when set).
  */
 export async function healthcheck(input: GreenhouseHealthcheckInput = {}): Promise<{
-  connector: "greenhouse";
   status: "ok";
   data: unknown;
 }> {
@@ -24,5 +23,7 @@ export async function healthcheck(input: GreenhouseHealthcheckInput = {}): Promi
     operation: "healthcheck",
   });
   const data = await client.getJSON("/users?per_page=1");
-  return { connector: "greenhouse", status: "ok", data };
+  // `status` stays: the control plane's HealthcheckResponse requires it
+  // (crates/appcall-runner-client). `connector` is the runner's to add.
+  return { status: "ok", data };
 }

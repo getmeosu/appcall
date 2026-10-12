@@ -103,7 +103,13 @@ describe("laposta fixture cases", () => {
         continue;
       }
       const result = await action(payload);
-      const expected = JSON.parse(readFileSync(join(dirname(join(casesDir, "x")), item.expected.resultFile), "utf8"));
+      const pinned = JSON.parse(readFileSync(join(dirname(join(casesDir, "x")), item.expected.resultFile), "utf8"));
+      // The pinned result is the compiled recipe's, envelope included; a
+      // handwritten handler returns only the declared output, so compare
+      // without the compile-time connector/action/source stamp.
+      const expected = Object.hasOwn(handwritten, item.operation)
+        ? Object.fromEntries(Object.entries(pinned).filter(([key]) => !["connector", "action", "source"].includes(key)))
+        : pinned;
       expect(result).toEqual(expected);
       expect(index).toBe(item.exchanges.length);
     }

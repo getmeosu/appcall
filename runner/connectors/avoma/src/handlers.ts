@@ -113,11 +113,6 @@ export function getMeetingAnalysis(inputValue: unknown): unknown {
     const insights = await getJson(fetchImpl, apiKey, new URL(`https://api.avoma.com/v1/meetings/${encoded}/insights/`));
     const segments = await getJson(fetchImpl, apiKey, new URL(`https://api.avoma.com/v1/meeting_segments/?uuid=${encoded}`));
     const sentiments = await getJson(fetchImpl, apiKey, new URL(`https://api.avoma.com/v1/meeting_sentiments/?meeting_uuid=${encoded}`));
-    return {
-      connector: "avoma",
-      action: "meetings.analysis.get",
-      source: "provider",
-      data: { insights, segments, sentiments },
-    };
+    return { data: { insights, segments, sentiments } };
   })();
 }

@@ -58,12 +58,7 @@ export function createSuppressionList(inputValue: unknown): Record<string, unkno
         message: `BigMailer rejected the suppression list upload (HTTP ${response.status}).`,
       };
     }
-    return {
-      connector: "bigmailer",
-      action: "suppressionLists.create",
-      source: "connector",
-      data,
-    };
+    return { data };
   });
 }
 

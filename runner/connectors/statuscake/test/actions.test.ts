@@ -36,10 +36,6 @@ describe("statuscake form handlers", () => {
       apiKey: "fixture-secret",
       fetch: fetchStub,
     });
-    expect(result).toMatchObject({
-      connector: "statuscake",
-      action: "contactGroups.create",
-      data: { data: { new_id: "99" } },
-    });
+    expect(result).toEqual({ data: { data: { new_id: "99" } } });
   });
 });

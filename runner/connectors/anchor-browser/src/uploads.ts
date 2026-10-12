@@ -89,12 +89,7 @@ function upload(
         message: `Anchor Browser rejected the upload (HTTP ${response.status}).`,
       };
     }
-    return {
-      connector: "anchor-browser",
-      action,
-      source: "connector",
-      data,
-    };
+    return { data };
   });
 }
 

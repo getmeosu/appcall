@@ -170,12 +170,8 @@ describe("bigmailer suppression list upload", () => {
     expect(form?.get("file")).toBeInstanceOf(Blob);
     expect((form?.get("file") as File).name).toBe("suppress.csv");
     expect(await (form?.get("file") as Blob).text()).toBe("email\nada@example.com\n");
-    expect(result).toEqual({
-      connector: "bigmailer",
-      action: "suppressionLists.create",
-      source: "connector",
-      data: { id: "sup-1" },
-    });
+    // Hand-written handler returns only the declared output; the runner owns the envelope.
+    expect(result).toEqual({ data: { id: "sup-1" } });
   });
 
   test("rejects malformed base64 before making a request", async () => {

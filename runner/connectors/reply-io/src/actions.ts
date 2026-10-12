@@ -18,8 +18,9 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function envelope(action: string, data: unknown): Record<string, unknown> {
-  return { connector: "reply-io", action, source: "provider", data };
+// Handlers return only their declared output; the runner owns the envelope.
+function output(data: unknown): Record<string, unknown> {
+  return { data };
 }
 
 function fail(code: string, message: string): never {
@@ -66,7 +67,7 @@ async function generateUlid(input: unknown): Promise<Record<string, unknown>> {
     }
     crypto.getRandomValues(bytes.subarray(6));
   }
-  return envelope("ulid.generate", { ulid: encodeCrockford16(bytes) });
+  return output({ ulid: encodeCrockford16(bytes) });
 }
 
 async function captureOAuthRedirect(
@@ -112,7 +113,7 @@ async function captureOAuthRedirect(
   }
   const location = response.headers.get("location");
   if (!location) fail("CONNECTOR_RESPONSE_INVALID", "OAuth redirect is missing Location.");
-  return envelope(operationKey, { location });
+  return output({ location });
 }
 
 export const actions = {
