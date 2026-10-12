@@ -195,9 +195,9 @@ export type GitHubBranchRule = {
 
 export type NormalizedBranchRule = {
   type: string;
-  rulesetId: number;
-  rulesetSourceType: string;
-  rulesetSource: string;
+  rulesetId: number | null;
+  rulesetSourceType: string | null;
+  rulesetSource: string | null;
   parameters: Record<string, unknown>;
   modelVersion: "2026-05-16";
   raw: GitHubBranchRule;
@@ -206,9 +206,9 @@ export type NormalizedBranchRule = {
 export function normalizeGitHubBranchRule(rule: GitHubBranchRule): NormalizedBranchRule {
   return {
     type: rule.type ?? "",
-    rulesetId: typeof rule.ruleset_id === "number" ? rule.ruleset_id : 0,
-    rulesetSourceType: rule.ruleset_source_type ?? "",
-    rulesetSource: rule.ruleset_source ?? "",
+    rulesetId: typeof rule.ruleset_id === "number" ? rule.ruleset_id : null,
+    rulesetSourceType: rule.ruleset_source_type ?? null,
+    rulesetSource: rule.ruleset_source ?? null,
     parameters: isRecord(rule.parameters) ? rule.parameters : {},
     modelVersion: "2026-05-16",
     raw: rule,

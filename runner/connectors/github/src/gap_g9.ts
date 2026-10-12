@@ -22,7 +22,7 @@ export type NormalizedPagesUpdate = {
   source?: { branch: string; path: "/" | "/docs" };
 };
 export type NormalizedSarifUpload = { id: string; url: string };
-export type NormalizedAttestation = { repositoryId: number; bundleUrl: string; bundle: Record<string, unknown> };
+export type NormalizedAttestation = { repositoryId: number | null; bundleUrl: string | null; bundle: Record<string, unknown> };
 export type NormalizedPackageVersion = { id: number; name: string; createdAt: string };
 export type NormalizedIssueSummary = {
   id: number;
@@ -449,11 +449,11 @@ export function createGapG9Client(options: { accessToken: string; fetch?: typeof
 
 // ─── normalizers ─────────────────────────────────────────────────────────────
 
-function normalizeAttestation(item: Record<string, unknown>): NormalizedAttestation {
+export function normalizeAttestation(item: Record<string, unknown>): NormalizedAttestation {
   const bundle = isRecord(item.bundle) ? item.bundle : {};
   return {
-    repositoryId: typeof item.repository_id === "number" ? item.repository_id : 0,
-    bundleUrl: typeof item.bundle_url === "string" ? item.bundle_url : "",
+    repositoryId: typeof item.repository_id === "number" ? item.repository_id : null,
+    bundleUrl: typeof item.bundle_url === "string" ? item.bundle_url : null,
     bundle,
   };
 }

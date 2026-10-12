@@ -53,12 +53,12 @@ export type NormalizedInteractionLimits = {
 export type NormalizedSecurityAdvisory = {
   ghsaId: string;
   summary: string;
-  description: string;
-  severity: string;
+  description: string | null;
+  severity: string | null;
   state: string;
   htmlUrl: string;
-  publishedAt: string;
-  updatedAt: string;
+  publishedAt: string | null;
+  updatedAt: string | null;
 };
 
 export type NormalizedRepoLicense = {
@@ -66,7 +66,7 @@ export type NormalizedRepoLicense = {
   path: string;
   sha: string;
   size: number;
-  htmlUrl: string;
+  htmlUrl: string | null;
   downloadUrl: string | null;
   license: {
     key: string;
@@ -231,12 +231,12 @@ export function normalizeSecurityAdvisory(item: Record<string, unknown>): Normal
   return {
     ghsaId: typeof item.ghsa_id === "string" ? item.ghsa_id : "",
     summary: typeof item.summary === "string" ? item.summary : "",
-    description: typeof item.description === "string" ? item.description : "",
-    severity: typeof item.severity === "string" ? item.severity : "",
+    description: typeof item.description === "string" ? item.description : null,
+    severity: typeof item.severity === "string" ? item.severity : null,
     state: typeof item.state === "string" ? item.state : "",
     htmlUrl: typeof item.html_url === "string" ? item.html_url : "",
-    publishedAt: typeof item.published_at === "string" ? item.published_at : "",
-    updatedAt: typeof item.updated_at === "string" ? item.updated_at : "",
+    publishedAt: typeof item.published_at === "string" ? item.published_at : null,
+    updatedAt: typeof item.updated_at === "string" ? item.updated_at : null,
   };
 }
 
@@ -247,7 +247,7 @@ export function normalizeRepoLicense(item: Record<string, unknown>): NormalizedR
     path: typeof item.path === "string" ? item.path : "",
     sha: typeof item.sha === "string" ? item.sha : "",
     size: typeof item.size === "number" ? item.size : 0,
-    htmlUrl: typeof item.html_url === "string" ? item.html_url : "",
+    htmlUrl: typeof item.html_url === "string" ? item.html_url : null,
     downloadUrl: typeof item.download_url === "string" ? item.download_url : null,
     license: {
       key: typeof license.key === "string" ? license.key : "",
@@ -465,11 +465,11 @@ export function createReposReadsClient(options: { accessToken: string; fetch?: t
 
 export type NormalizedRepoEvent = {
   id: string;
-  type: string;
+  type: string | null;
   actor: string;
   repo: string;
   public: boolean;
-  createdAt: string;
+  createdAt: string | null;
 };
 
 export type NormalizedPublicRepository = {
@@ -486,12 +486,12 @@ export type NormalizedRepoActivity = {
   activityType: string;
   timestamp: string;
   ref: string;
-  actor: string;
+  actor: string | null;
 };
 
 export type NormalizedContributor = {
-  login: string;
-  id: number;
+  login: string | null;
+  id: number | null;
   contributions: number;
   type: string;
 };
@@ -501,11 +501,11 @@ export function normalizeRepoEvent(item: Record<string, unknown>): NormalizedRep
   const repoName = isRecord(item.repo) ? item.repo : {};
   return {
     id: item.id === undefined || item.id === null ? "" : String(item.id),
-    type: typeof item.type === "string" ? item.type : "",
+    type: typeof item.type === "string" ? item.type : null,
     actor: typeof actor.login === "string" ? actor.login : "",
     repo: typeof repoName.name === "string" ? repoName.name : "",
     public: item.public === true,
-    createdAt: typeof item.created_at === "string" ? item.created_at : "",
+    createdAt: typeof item.created_at === "string" ? item.created_at : null,
   };
 }
 
@@ -527,14 +527,14 @@ export function normalizeRepoActivity(item: Record<string, unknown>): Normalized
     activityType: typeof item.activity_type === "string" ? item.activity_type : "",
     timestamp: typeof item.timestamp === "string" ? item.timestamp : "",
     ref: typeof item.ref === "string" ? item.ref : "",
-    actor: typeof actor.login === "string" ? actor.login : "",
+    actor: typeof actor.login === "string" ? actor.login : null,
   };
 }
 
 export function normalizeContributor(item: Record<string, unknown>): NormalizedContributor {
   return {
-    login: typeof item.login === "string" ? item.login : "",
-    id: typeof item.id === "number" ? item.id : 0,
+    login: typeof item.login === "string" ? item.login : null,
+    id: typeof item.id === "number" ? item.id : null,
     contributions: typeof item.contributions === "number" ? item.contributions : 0,
     type: typeof item.type === "string" ? item.type : "",
   };

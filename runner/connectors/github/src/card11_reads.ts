@@ -10,7 +10,7 @@ export type RunnerDownload = {
   architecture: string;
   download_url: string;
   filename: string;
-  sha256_checksum: string;
+  sha256_checksum: string | null;
 };
 
 export type RunnerLabel = { id: number; name: string; type: string };
@@ -203,13 +203,13 @@ async function read(client: GitHubClient, path: string, operation: string, missi
   return upstream(`GitHub rejected the ${operation} request.`);
 }
 
-function normalizeDownload(item: Record<string, unknown>): RunnerDownload {
+export function normalizeDownload(item: Record<string, unknown>): RunnerDownload {
   return {
     os: typeof item.os === "string" ? item.os : "",
     architecture: typeof item.architecture === "string" ? item.architecture : "",
     download_url: typeof item.download_url === "string" ? item.download_url : "",
     filename: typeof item.filename === "string" ? item.filename : "",
-    sha256_checksum: typeof item.sha256_checksum === "string" ? item.sha256_checksum : "",
+    sha256_checksum: typeof item.sha256_checksum === "string" ? item.sha256_checksum : null,
   };
 }
 

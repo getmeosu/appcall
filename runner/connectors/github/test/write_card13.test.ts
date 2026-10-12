@@ -46,7 +46,7 @@ function json(status: number, body: unknown) {
 
 describe("github write card 13 sub-issues labels teams writes", () => {
   test("version is 0.79.0 at 852 ops with the write breakdown", () => {
-    expect(manifest.version).toBe("0.89.4");
+    expect(manifest.version).toBe("0.89.5");
     const ops = manifest.operations as Record<string, Record<string, unknown>>;
     expect(Object.keys(ops)).toHaveLength(860);
     const kinds = { action: 0, sync: 0, webhook: 0 };
