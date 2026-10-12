@@ -1,5 +1,5 @@
 import { createLinkedInAdsClient } from "./http";
-import { adAccountId } from "./g1-runtime";
+import { adAccountId, scopedPermissionFailure } from "./g1-runtime";
 import {
   asId,
   assertToken,
@@ -45,7 +45,10 @@ async function get(input: Input, operation: string, path: string, headers?: Reco
     fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
     operation,
   }).fetchJSON(path, { method: "GET", headers });
-  if (response.status < 200 || response.status >= 300 || !isRecord(response.body)) throw upstream(response.status);
+  if (response.status < 200 || response.status >= 300) {
+    throw scopedPermissionFailure(operation, response.status, response.body) ?? upstream(response.status);
+  }
+  if (!isRecord(response.body)) throw upstream(response.status);
   return response.body;
 }
 

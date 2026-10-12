@@ -12,7 +12,7 @@ import {
   parseCreativesResponse,
   parseAnalyticsResponse,
 } from "./objects";
-import { adAccountId } from "./g1-runtime";
+import { adAccountId, scopedPermissionFailure } from "./g1-runtime";
 import { enc, pageSize as pageSizeParam, pageTokenValue, qs, rejectIndexStart } from "./restli";
 
 type ActionResult = Record<string, unknown> | Promise<Record<string, unknown>>;
@@ -33,7 +33,10 @@ function clientOpts(input: Record<string, unknown>, operation: string): LinkedIn
   };
 }
 
-function handleError(result: { status: number; headers: Record<string, string>; body: unknown }) {
+function handleError(operation: string, result: { status: number; headers: Record<string, string>; body: unknown }) {
+  // LI-SCOPES: a permission failure on an op with requiredScopes maps like G1.
+  const permission = scopedPermissionFailure(operation, result.status, result.body);
+  if (permission) return permission;
   const rateLimit = parseLinkedInAdsRateLimit(result.status, result.headers);
   if (rateLimit.limited) {
     return {
@@ -132,7 +135,7 @@ export function getCampaign(input: unknown): ActionResult {
             campaign: normalizeCampaign(result.body),
           };
         }
-        throw handleError(result);
+        throw handleError("campaigns.get", result);
       });
   }
   return { connector: "linkedin-ads", action: "campaigns.get", source: "connector", validated };
@@ -167,7 +170,7 @@ export function getAdAccount(input: unknown): ActionResult {
             adAccount: normalizeAdAccount(result.body),
           };
         }
-        throw handleError(result);
+        throw handleError("ad_accounts.get", result);
       });
   }
   return { connector: "linkedin-ads", action: "ad_accounts.get", source: "connector", validated };
@@ -233,7 +236,7 @@ export function listCampaignGroups(input: unknown): ActionResult {
             count: parsed.count,
           };
         }
-        throw handleError(result);
+        throw handleError("campaign_groups.list", result);
       });
   }
   return { connector: "linkedin-ads", action: "campaign_groups.list", source: "connector", validated };
@@ -317,7 +320,7 @@ export function listCreatives(input: unknown): ActionResult {
             count: parsed.count,
           };
         }
-        throw handleError(result);
+        throw handleError("creatives.list", result);
       });
   }
   return { connector: "linkedin-ads", action: "creatives.list", source: "connector", validated };
@@ -432,7 +435,7 @@ export function getAnalyticsReport(input: unknown): ActionResult {
             rowCount: parsed.rows.length,
           };
         }
-        throw handleError(result);
+        throw handleError("analytics.report.get", result);
       });
   }
   return { connector: "linkedin-ads", action: "analytics.report.get", source: "connector", validated };
