@@ -7,7 +7,7 @@ describe("Ashby manifest", () => {
   });
 
   it("has version 0.11.1", () => {
-    expect(manifest.version).toBe("0.11.1");
+    expect(manifest.version).toBe("0.11.2");
   });
 
   it("uses bun runtime", () => {
