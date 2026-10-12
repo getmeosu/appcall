@@ -45,9 +45,9 @@ function empty(status: number) {
 
 describe("github write card 9 package version restores and codespace writes", () => {
   test("version is 0.79.0 at 852 ops with the write breakdown", () => {
-    expect(manifest.version).toBe("0.87.0");
+    expect(manifest.version).toBe("0.88.0");
     const ops = manifest.operations as Record<string, Record<string, unknown>>;
-    expect(Object.keys(ops)).toHaveLength(851);
+    expect(Object.keys(ops)).toHaveLength(855);
     const kinds = { action: 0, sync: 0, webhook: 0 };
     const side = { read: 0, write: 0, destructive: 0, absent: 0 };
     for (const op of Object.values(ops)) {
@@ -59,7 +59,7 @@ describe("github write card 9 package version restores and codespace writes", ()
         else side.absent += 1;
       }
     }
-    expect(kinds).toEqual({ action: 800, sync: 4, webhook: 47 });
+    expect(kinds).toEqual({ action: 800, sync: 8, webhook: 47 });
     expect(side).toEqual({ read: 425, write: 283, destructive: 77, absent: 15 });
     for (const [key, path] of Object.entries(PATHS)) {
       const op = ops[key];

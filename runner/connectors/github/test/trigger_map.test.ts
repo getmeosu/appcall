@@ -68,15 +68,28 @@ describe("TRIG-2: the trigger map and the coverage map", () => {
     }
   });
 
-  test("the 9 missing slugs carry a polling plan: an existing read action and a free sync key", () => {
+  test("the 9 missing slugs carry a polling plan: an existing read action and a sync key that is free or polls the slug", () => {
     const missing = entries.filter(([, e]) => e.status === "missing");
     expect(missing).toHaveLength(9);
+    const polled: string[] = [];
     for (const [slug, e] of missing) {
       expect(e.class, slug).toBe("not-named");
       expect(e.match, slug).toEqual([]);
       expect(ops[e.polling!.readOp]?.kind, slug).toBe("action");
-      expect(ops[e.polling!.proposedSync], slug).toBeUndefined();
+      const sync = ops[e.polling!.proposedSync];
+      if (sync === undefined) continue;
+      // TRIG-3a (v0.88.0) declares the planned sync with a poll block tagging the slug.
+      expect(sync.kind, slug).toBe("sync");
+      expect([...(sync.poll?.onNew ?? []), ...(sync.poll?.onChanged ?? [])], slug).toContain(slug);
+      polled.push(slug);
     }
+    expect(polled.sort()).toEqual([
+      "GITHUB_ARTIFACT_CREATED_TRIGGER",
+      "GITHUB_DEPLOYMENT_STATE_CHANGED_TRIGGER",
+      "GITHUB_FOLLOWER_EVENT",
+      "GITHUB_WORKFLOW_ADDED_TRIGGER",
+      "GITHUB_WORKFLOW_RUN_ARTIFACT_ADDED",
+    ]);
     for (const [slug, e] of entries) if (e.status !== "missing") expect(e.polling, slug).toBeUndefined();
   });
 
@@ -94,11 +107,11 @@ describe("TRIG-2: the trigger map and the coverage map", () => {
 
 describe("TRIG-2: op accounting (actions and triggers counted separately)", () => {
   test("v0.87.0: 797 actions + 47 webhook ops + 4 sync = 848 ops (46 Composio triggers)", () => {
-    expect(manifest.version).toBe("0.87.0");
+    expect(manifest.version).toBe("0.88.0");
     const kinds: Record<string, number> = {};
     for (const op of Object.values(ops)) kinds[op.kind] = (kinds[op.kind] ?? 0) + 1;
-    expect(kinds).toEqual({ action: 800, webhook: 47, sync: 4 });
-    expect(Object.keys(ops)).toHaveLength(851);
+    expect(kinds).toEqual({ action: 800, webhook: 47, sync: 8 });
+    expect(Object.keys(ops)).toHaveLength(855);
   });
 });
 

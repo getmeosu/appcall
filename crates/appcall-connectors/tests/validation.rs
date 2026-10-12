@@ -478,3 +478,63 @@ fn poll_block_rejects_out_of_contract_shapes() {
     // messages.list on another connector may opt in.
     assert!(parse(&poll_manifest("other", "messages.list", good_poll())).is_ok());
 }
+
+#[test]
+fn github_trig3a_poll_specs_load_through_the_manifest_loader() {
+    use appcall_connectors::{OperationKind, PollChange};
+    /// (operation, intervalSeconds, maxPages, versionKey, onNew, onChanged)
+    type PollRow<'a> = (
+        &'a str,
+        u32,
+        u8,
+        Option<&'a str>,
+        &'a [String],
+        &'a [String],
+    );
+    let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../runner/connectors/github/manifest.json");
+    let github = Connector::from_bytes(&std::fs::read(path).unwrap()).unwrap();
+    let mut polled: Vec<PollRow> = github
+        .manifest()
+        .operations
+        .iter()
+        .filter_map(|(key, op)| {
+            let poll = op.poll.as_ref()?;
+            assert_eq!(op.kind, OperationKind::Sync, "{key}");
+            assert_eq!(poll.item_key, "id", "{key}");
+            Some((
+                key.as_str(),
+                poll.interval_seconds,
+                poll.max_pages,
+                poll.version_key.as_deref(),
+                poll.triggers(PollChange::New),
+                poll.triggers(PollChange::Changed),
+            ))
+        })
+        .collect();
+    polled.sort_by_key(|row| row.0);
+    let s = |v: &[&str]| v.iter().map(|t| (*t).to_owned()).collect::<Vec<_>>();
+    let (artifact, workflow, deployment, follower) = (
+        s(&[
+            "GITHUB_ARTIFACT_CREATED_TRIGGER",
+            "GITHUB_WORKFLOW_RUN_ARTIFACT_ADDED",
+        ]),
+        s(&["GITHUB_WORKFLOW_ADDED_TRIGGER"]),
+        s(&["GITHUB_DEPLOYMENT_STATE_CHANGED_TRIGGER"]),
+        s(&["GITHUB_FOLLOWER_EVENT"]),
+    );
+    let expected: Vec<PollRow> = vec![
+        ("actions.artifacts.sync", 300, 1, None, &artifact, &[]),
+        ("actions.workflows.sync", 900, 3, None, &workflow, &[]),
+        (
+            "deployments.sync",
+            300,
+            1,
+            Some("latestStatusState"),
+            &[],
+            &deployment,
+        ),
+        ("user.followers.sync", 900, 10, None, &follower, &[]),
+    ];
+    assert_eq!(polled, expected);
+}

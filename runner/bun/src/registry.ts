@@ -831,7 +831,7 @@ import {
 } from "../../connectors/github/src/actions";
 import { healthcheck as githubHealthcheck } from "../../connectors/github/src/healthcheck";
 import { withGitHubPathIdentityGuard } from "../../connectors/github/src/path_identity";
-import { executeIssuesListSync as listGitHubIssues, executePullRequestsListSync as listGitHubPRs, executeCommitsListSync as listGitHubCommits, executeRepositoriesListSync as listGitHubRepos } from "../../connectors/github/src/sync";
+import { executeIssuesListSync as listGitHubIssues, executePullRequestsListSync as listGitHubPRs, executeCommitsListSync as listGitHubCommits, executeRepositoriesListSync as listGitHubRepos, executeArtifactsSync as syncGitHubArtifacts, executeWorkflowsSync as syncGitHubWorkflows, executeDeploymentsSync as syncGitHubDeployments, executeFollowersSync as syncGitHubFollowers } from "../../connectors/github/src/sync";
 import salesforceManifest from "../../connectors/salesforce/manifest.json";
 import {
   createContact, createLead, createOpportunity, createCase,
@@ -3482,6 +3482,10 @@ export const defaultConnectorRegistry = createConnectorRegistry(withGitHubPathId
       "pull_requests.list": listGitHubPRs,
       "commits.list": listGitHubCommits,
       "repositories.list": listGitHubRepos,
+      "actions.artifacts.sync": syncGitHubArtifacts,
+      "actions.workflows.sync": syncGitHubWorkflows,
+      "deployments.sync": syncGitHubDeployments,
+      "user.followers.sync": syncGitHubFollowers,
     },
     salesforce: {
       "contacts.list": listSFContacts,
