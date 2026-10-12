@@ -49,6 +49,8 @@ export type CreativeAssetsListSyncInput = Live & {
   intendedStatuses?: unknown;
   pageSize?: unknown;
   page_size?: unknown;
+  pageToken?: unknown;
+  page_token?: unknown;
 };
 export type CreativeAssetsListSyncResult = { provider: "linkedin-ads"; operation: "creative_assets.list"; items: NormalizedCreativeAsset[]; nextStart: number | null; nextPageToken: string | null };
 
@@ -163,6 +165,8 @@ export function executeCreativeAssetsListSync(input: CreativeAssetsListSyncInput
     // creatives search caps pageSize at 100 (CRE cursor pagination).
     const size = pageSize(input.pageSize ?? input.page_size, "pageSize", 100);
     if (size) pairs.push(["pageSize", size]);
+    const token = pageTokenValue(input.pageToken ?? input.page_token);
+    if (token) pairs.push(["pageToken", token]);
     return fetchJSON(input, "creative_assets.list", `/rest/adAccounts/${accountId}/creatives?${qs(pairs)}`).then((body) => {
       const parsed = parseCreativeAssetsResponse(body);
       return { provider: "linkedin-ads", operation: "creative_assets.list", items: parsed.creativeAssets, nextStart: parsed.nextStart, nextPageToken: parsed.nextPageToken };

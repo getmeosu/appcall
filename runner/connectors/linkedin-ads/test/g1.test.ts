@@ -64,7 +64,7 @@ async function failure(promise: unknown): Promise<any> {
 
 describe("G1 manifest contract", () => {
   it("is v0.6.0 with 47 ops and 15 new G1 ops", () => {
-    expect(manifest.version).toBe("0.6.0");
+    expect(manifest.version).toBe("0.6.1");
     expect(Object.keys(operations)).toHaveLength(47);
     expect(ALL_G1).toHaveLength(15);
     for (const key of ALL_G1) expect(operations[key], key).toBeDefined();
@@ -187,7 +187,7 @@ describe("wire shapes", () => {
     const base = {
       accountId: "1", campaignGroup: "2", name: "C", type: "SPONSORED_UPDATES", costType: "CPM", unitCost: { amount: "5", currencyCode: "USD" },
       locale: { country: "US", language: "en" }, status: "DRAFT", offsiteDeliveryEnabled: false, politicalIntent: "NOT_POLITICAL",
-      dailyBudget: { amount: "50", currencyCode: "USD" },
+      dailyBudget: { amount: "50", currencyCode: "USD" }, associatedEntity: "urn:li:organization:7",
       targetingCriteria: { include: { and: [{ or: { "urn:li:adTargetingFacet:interfaceLocales": ["urn:li:locale:en_US"] } }] } },
     };
     expect((createCampaign(base) as any).validated.campaignGroup).toBe("urn:li:sponsoredCampaignGroup:2");
