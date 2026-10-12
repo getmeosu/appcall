@@ -99,10 +99,10 @@ export function normalizeCampaign(data: Record<string, unknown>): NormalizedCamp
   };
 }
 
-export function parseCampaignsResponse(response: unknown): { campaigns: NormalizedCampaign[]; nextStart: number | null; count: number } {
-  if (!isRecord(response)) return { campaigns: [], nextStart: null, count: 0 };
+export function parseCampaignsResponse(response: unknown): { campaigns: NormalizedCampaign[]; nextStart: number | null; nextPageToken: string | null; count: number } {
+  if (!isRecord(response)) return { campaigns: [], nextStart: null, nextPageToken: null, count: 0 };
   const elements = response.elements;
-  if (!Array.isArray(elements)) return { campaigns: [], nextStart: null, count: 0 };
+  if (!Array.isArray(elements)) return { campaigns: [], nextStart: null, nextPageToken: null, count: 0 };
   const campaigns = elements.filter(isRecord).map(normalizeCampaign);
   const paging = extractPaging(response);
   return { campaigns, ...paging };
@@ -125,10 +125,10 @@ export function normalizeAdAccount(data: Record<string, unknown>): NormalizedAdA
   };
 }
 
-export function parseAdAccountsResponse(response: unknown): { adAccounts: NormalizedAdAccount[]; nextStart: number | null; count: number } {
-  if (!isRecord(response)) return { adAccounts: [], nextStart: null, count: 0 };
+export function parseAdAccountsResponse(response: unknown): { adAccounts: NormalizedAdAccount[]; nextStart: number | null; nextPageToken: string | null; count: number } {
+  if (!isRecord(response)) return { adAccounts: [], nextStart: null, nextPageToken: null, count: 0 };
   const elements = response.elements;
-  if (!Array.isArray(elements)) return { adAccounts: [], nextStart: null, count: 0 };
+  if (!Array.isArray(elements)) return { adAccounts: [], nextStart: null, nextPageToken: null, count: 0 };
   const accounts = elements.filter(isRecord).map(normalizeAdAccount);
   const paging = extractPaging(response);
   return { adAccounts: accounts, ...paging };
@@ -164,10 +164,10 @@ export function normalizeCreativeAsset(data: Record<string, unknown>): Normalize
   };
 }
 
-export function parseCreativeAssetsResponse(response: unknown): { creativeAssets: NormalizedCreativeAsset[]; nextStart: number | null; count: number } {
-  if (!isRecord(response)) return { creativeAssets: [], nextStart: null, count: 0 };
+export function parseCreativeAssetsResponse(response: unknown): { creativeAssets: NormalizedCreativeAsset[]; nextStart: number | null; nextPageToken: string | null; count: number } {
+  if (!isRecord(response)) return { creativeAssets: [], nextStart: null, nextPageToken: null, count: 0 };
   const elements = response.elements;
-  if (!Array.isArray(elements)) return { creativeAssets: [], nextStart: null, count: 0 };
+  if (!Array.isArray(elements)) return { creativeAssets: [], nextStart: null, nextPageToken: null, count: 0 };
   const assets = elements.filter(isRecord).map(normalizeCreativeAsset);
   const paging = extractPaging(response);
   return { creativeAssets: assets, ...paging };
@@ -252,10 +252,10 @@ export function normalizeCampaignGroup(data: Record<string, unknown>): Normalize
   };
 }
 
-export function parseCampaignGroupsResponse(response: unknown): { campaignGroups: NormalizedCampaignGroup[]; nextStart: number | null; count: number } {
-  if (!isRecord(response)) return { campaignGroups: [], nextStart: null, count: 0 };
+export function parseCampaignGroupsResponse(response: unknown): { campaignGroups: NormalizedCampaignGroup[]; nextStart: number | null; nextPageToken: string | null; count: number } {
+  if (!isRecord(response)) return { campaignGroups: [], nextStart: null, nextPageToken: null, count: 0 };
   const elements = response.elements;
-  if (!Array.isArray(elements)) return { campaignGroups: [], nextStart: null, count: 0 };
+  if (!Array.isArray(elements)) return { campaignGroups: [], nextStart: null, nextPageToken: null, count: 0 };
   const campaignGroups = elements.filter(isRecord).map(normalizeCampaignGroup);
   const paging = extractPaging(response);
   return { campaignGroups, ...paging };
@@ -295,10 +295,10 @@ export function normalizeCreative(data: Record<string, unknown>): NormalizedCrea
   };
 }
 
-export function parseCreativesResponse(response: unknown): { creatives: NormalizedCreative[]; nextStart: number | null; count: number } {
-  if (!isRecord(response)) return { creatives: [], nextStart: null, count: 0 };
+export function parseCreativesResponse(response: unknown): { creatives: NormalizedCreative[]; nextStart: number | null; nextPageToken: string | null; count: number } {
+  if (!isRecord(response)) return { creatives: [], nextStart: null, nextPageToken: null, count: 0 };
   const elements = response.elements;
-  if (!Array.isArray(elements)) return { creatives: [], nextStart: null, count: 0 };
+  if (!Array.isArray(elements)) return { creatives: [], nextStart: null, nextPageToken: null, count: 0 };
   const creatives = elements.filter(isRecord).map(normalizeCreative);
   const paging = extractPaging(response);
   return { creatives, ...paging };
@@ -358,19 +358,23 @@ export function parseAnalyticsResponse(response: unknown): { rows: NormalizedAna
   return { rows: elements.filter(isRecord).map(normalizeAnalyticsRow) };
 }
 
-function extractPaging(response: Record<string, unknown>): { nextStart: number | null; count: number } {
+function extractPaging(response: Record<string, unknown>): { nextStart: number | null; nextPageToken: string | null; count: number } {
+  // Cursor finders (adAccounts, adCampaignGroups, adCampaigns, creatives) return
+  // metadata.nextPageToken since 202401; index paging links remain for the rest.
+  const metadata = response.metadata;
+  const nextPageToken = isRecord(metadata) && typeof metadata.nextPageToken === "string" && metadata.nextPageToken !== "" ? metadata.nextPageToken : null;
   const paging = response.paging;
-  if (!isRecord(paging)) return { nextStart: null, count: 0 };
+  if (!isRecord(paging)) return { nextStart: null, nextPageToken, count: 0 };
   const count = typeof paging.count === "number" ? paging.count : 0;
   const links = paging.links;
-  if (!Array.isArray(links) || links.length === 0) return { nextStart: null, count };
+  if (!Array.isArray(links) || links.length === 0) return { nextStart: null, nextPageToken, count };
   const nextLink = links.find((l: any) => isRecord(l) && l.rel === "next");
-  if (!nextLink || !isRecord(nextLink)) return { nextStart: null, count };
+  if (!nextLink || !isRecord(nextLink)) return { nextStart: null, nextPageToken, count };
   const uri = nextLink.uri;
-  if (typeof uri !== "string") return { nextStart: null, count };
+  if (typeof uri !== "string") return { nextStart: null, nextPageToken, count };
   const match = uri.match(/start=(\d+)/);
-  if (!match) return { nextStart: null, count };
-  return { nextStart: Number(match[1]), count };
+  if (!match) return { nextStart: null, nextPageToken, count };
+  return { nextStart: Number(match[1]), nextPageToken, count };
 }
 
 

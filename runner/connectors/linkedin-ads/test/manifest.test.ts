@@ -4,7 +4,7 @@ import manifest from "../manifest.json";
 describe("linkedin-ads manifest", () => {
   it("has correct key and version", () => {
     expect(manifest.key).toBe("linkedin-ads");
-    expect(manifest.version).toBe("0.5.1");
+    expect(manifest.version).toBe("0.6.0");
     expect(manifest.runtime).toBe("bun");
   });
 
@@ -58,7 +58,12 @@ describe("linkedin-ads manifest", () => {
     expect(ops).toContain("events.search");
     expect(ops).toContain("lead_forms.update");
     expect(ops).toContain("organizations.acls.update");
-    expect(ops).toHaveLength(32);
+    for (const key of [
+      "ad_accounts.search", "campaigns.search", "ad_account_users.list_mine", "ad_account_users.list", "creatives.get",
+      "budget_pricing.get", "campaign_groups.create", "campaigns.create", "creatives.create", "campaign_groups.update",
+      "campaigns.update", "creatives.update", "campaign_groups.delete", "campaigns.delete", "creatives.delete",
+    ]) expect(ops, key).toContain(key);
+    expect(ops).toHaveLength(47);
   });
 
   it("sync operations have correct shape and a real request", () => {
@@ -82,10 +87,15 @@ describe("linkedin-ads manifest", () => {
       expect(op.title?.length ?? 0, key).toBeGreaterThan(0);
       expect(op.inputSchema?.type, key).toBe("object");
       const method = op.request.method;
-      if (method === "GET" || method === "DELETE") {
+      if (method === "GET") {
         expect(op.request.body, key).toBeUndefined();
         expect(op.request.headers?.["Content-Type"], key).toBeUndefined();
         expect(op.sideEffect, key).toBe("read");
+      } else if (method === "DELETE") {
+        // G1 deletes remove or retire a resource: destructive, never a read or a plain write.
+        expect(op.request.body, key).toBeUndefined();
+        expect(op.request.headers?.["Content-Type"], key).toBeUndefined();
+        expect(op.sideEffect, key).toBe("destructive");
       } else {
         expect(op.request.headers?.["Content-Type"], key).toBe("application/json");
         expect(op.sideEffect, key).toBe("write");

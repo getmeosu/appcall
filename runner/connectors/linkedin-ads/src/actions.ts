@@ -12,6 +12,7 @@ import {
   parseCreativesResponse,
   parseAnalyticsResponse,
 } from "./objects";
+import { adAccountId } from "./g1-runtime";
 import { enc, pageSize as pageSizeParam, pageTokenValue, qs, rejectIndexStart } from "./restli";
 
 type ActionResult = Record<string, unknown> | Promise<Record<string, unknown>>;
@@ -118,7 +119,7 @@ export type CampaignsGetInput = { accountId: string; campaignId: string };
 export function getCampaign(input: unknown): ActionResult {
   const validated = validateCampaignsGetInput(input);
   if (hasLiveAuth(input)) {
-    const accountId = sanitizeResourceId(validated.accountId, ["urn:li:sponsoredAccount:"]);
+    const accountId = adAccountId(validated.accountId);
     const campaignId = sanitizeResourceId(validated.campaignId, ["urn:li:sponsoredCampaign:"]);
     return createLinkedInAdsClient(clientOpts(input, "campaigns.get"))
       .fetchJSON(`/rest/adAccounts/${accountId}/adCampaigns/${campaignId}`, { method: "GET" })
@@ -154,7 +155,7 @@ export type AdAccountsGetInput = { accountId: string };
 export function getAdAccount(input: unknown): ActionResult {
   const validated = validateAdAccountsGetInput(input);
   if (hasLiveAuth(input)) {
-    const accountId = sanitizeResourceId(validated.accountId, ["urn:li:sponsoredAccount:"]);
+    const accountId = adAccountId(validated.accountId);
     return createLinkedInAdsClient(clientOpts(input, "ad_accounts.get"))
       .fetchJSON(`/rest/adAccounts/${accountId}`, { method: "GET" })
       .then((result) => {
@@ -192,7 +193,15 @@ export type CampaignGroupsListInput = {
   status?: string;
 };
 
-const CAMPAIGN_GROUP_STATUSES = new Set(["ACTIVE", "ARCHIVED", "CANCELED", "DRAFT", "PAUSED", "PENDING_DELETION", "REMOVED"]);
+export const CAMPAIGN_GROUP_STATUS_VALUES = ["ACTIVE", "ARCHIVED", "CANCELED", "DRAFT", "PAUSED", "PENDING_DELETION", "REMOVED"] as const;
+const CAMPAIGN_GROUP_STATUSES = new Set<string>(CAMPAIGN_GROUP_STATUS_VALUES);
+/**
+ * GRP Search for Campaign Groups: "Search criteria is mandatory". With no caller
+ * status filter, every documented search.status.values value is sent, so the
+ * finder still returns all campaign groups instead of a bare q=search.
+ * https://learn.microsoft.com/en-us/linkedin/marketing/integrations/ads/account-structure/create-and-manage-campaign-groups?view=li-lms-2026-09
+ */
+export const CAMPAIGN_GROUP_DEFAULT_SEARCH = `(status:(values:List(${CAMPAIGN_GROUP_STATUS_VALUES.join(",")})))`;
 
 /**
  * GET /rest/adAccounts/{id}/adCampaignGroups?q=search (GRP Search for Campaign Groups).
@@ -202,9 +211,9 @@ const CAMPAIGN_GROUP_STATUSES = new Set(["ACTIVE", "ARCHIVED", "CANCELED", "DRAF
 export function listCampaignGroups(input: unknown): ActionResult {
   const validated = validateCampaignGroupsListInput(input);
   if (hasLiveAuth(input)) {
-    const accountId = sanitizeResourceId(validated.accountId, ["urn:li:sponsoredAccount:"]);
+    const accountId = adAccountId(validated.accountId);
     const pairs: Array<[string, string]> = [["q", "search"]];
-    if (validated.status) pairs.push(["search", `(status:(values:List(${enc(validated.status)})))`]);
+    pairs.push(["search", validated.status ? `(status:(values:List(${enc(validated.status)})))` : CAMPAIGN_GROUP_DEFAULT_SEARCH]);
     const size = pageSizeParam(validated.pageSize ?? validated.count, validated.pageSize !== undefined ? "pageSize" : "count");
     if (size) pairs.push(["pageSize", size]);
     const token = pageTokenValue(validated.pageToken);
@@ -220,6 +229,7 @@ export function listCampaignGroups(input: unknown): ActionResult {
             source: "connector",
             campaignGroups: parsed.campaignGroups,
             nextStart: parsed.nextStart,
+            nextPageToken: parsed.nextPageToken,
             count: parsed.count,
           };
         }
@@ -274,7 +284,7 @@ function criteriaList(values: string[] | undefined, prefix?: string): string | u
 export function listCreatives(input: unknown): ActionResult {
   const validated = validateCreativesListInput(input);
   if (hasLiveAuth(input)) {
-    const accountId = sanitizeResourceId(validated.accountId, ["urn:li:sponsoredAccount:"]);
+    const accountId = adAccountId(validated.accountId);
     const pairs = ["q=criteria"];
     const add = (key: string, value: string | undefined) => { if (value) pairs.push(`${encodeURIComponent(key)}=${value}`); };
     add("campaigns", criteriaList(validated.campaigns ?? (validated.campaignId ? [validated.campaignId] : undefined), "urn:li:sponsoredCampaign:"));
@@ -303,6 +313,7 @@ export function listCreatives(input: unknown): ActionResult {
             source: "connector",
             creatives: parsed.creatives,
             nextStart: parsed.nextStart,
+            nextPageToken: parsed.nextPageToken,
             count: parsed.count,
           };
         }

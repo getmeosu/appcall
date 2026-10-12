@@ -1395,6 +1395,7 @@ import {
 import { executeCampaignsListSync as listLinkedInAdsCampaigns, executeAdAccountsListSync as listLinkedInAdsAccounts, executeCreativeAssetsListSync as listLinkedInAdsCreatives } from "../../connectors/linkedin-ads/src/sync";
 import * as liAdsExt from "../../connectors/linkedin-ads/src/extended-actions";
 import * as liAdsParity from "../../connectors/linkedin-ads/src/parity-actions";
+import * as liAdsG1 from "../../connectors/linkedin-ads/src/g1-actions";
 import tiktokAdsManifest from "../../connectors/tiktok-ads/manifest.json";
 import { healthcheck as tiktokAdsHealthcheck } from "../../connectors/tiktok-ads/src/healthcheck";
 import {
@@ -3111,6 +3112,22 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
       "events.search": liAdsParity.searchEvents,
       "lead_forms.update": liAdsParity.updateLeadForm,
       "organizations.acls.update": liAdsParity.updateOrganizationAcl,
+      // G1 (v0.6.0): management core. Per-op requiredScopes + permission mapping live in g1-runtime.ts.
+      "ad_accounts.search": liAdsG1.searchAdAccounts,
+      "campaigns.search": liAdsG1.searchCampaigns,
+      "ad_account_users.list_mine": liAdsG1.listMyAdAccountUsers,
+      "ad_account_users.list": liAdsG1.listAdAccountUsers,
+      "creatives.get": liAdsG1.getCreative,
+      "budget_pricing.get": liAdsG1.getBudgetPricing,
+      "campaign_groups.create": liAdsG1.createCampaignGroup,
+      "campaigns.create": liAdsG1.createCampaign,
+      "creatives.create": liAdsG1.createCreative,
+      "campaign_groups.update": liAdsG1.updateCampaignGroup,
+      "campaigns.update": liAdsG1.updateCampaign,
+      "creatives.update": liAdsG1.updateCreative,
+      "campaign_groups.delete": liAdsG1.deleteCampaignGroup,
+      "campaigns.delete": liAdsG1.deleteCampaign,
+      "creatives.delete": liAdsG1.deleteCreative,
     },
     "tiktok-ads": {
       "analytics.report.get": tiktokAdsGetAnalyticsReport,

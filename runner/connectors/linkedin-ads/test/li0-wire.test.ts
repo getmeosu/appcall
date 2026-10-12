@@ -55,6 +55,14 @@ function recorder(response: { status: number; headers?: Record<string, string>; 
   };
 }
 
+/** Replays a case's exchanges in order (G1 updates observe a get; deletes read before they write). */
+function sequence(exchanges: Exchange[], calls: Seen[]) {
+  return (input: RequestInfo | URL, init: RequestInit = {}) => {
+    const exchange = exchanges[calls.length] ?? exchanges[exchanges.length - 1]!;
+    return recorder(exchange.response, calls)(input, init);
+  };
+}
+
 async function dispatch(operation: string, input: Record<string, unknown>): Promise<{ ok: boolean; output?: unknown; code?: string }> {
   const kind = operations[operation]?.kind;
   const result: any = operation === "healthcheck"
@@ -79,12 +87,13 @@ describe("fixture coverage", () => {
   it("has exactly one live-shaped 202609 case per manifest op", () => {
     const ops = cases.map((item) => item.operation).sort();
     expect(ops).toEqual(Object.keys(operations).sort());
-    expect(ops).toHaveLength(32);
+    expect(ops).toHaveLength(47);
     for (const item of cases) {
-      const request = item.exchanges[0]!.request;
-      expect(request.headers["LinkedIn-Version"], item.id).toBe("202609");
-      expect(request.headers["X-Restli-Protocol-Version"], item.id).toBe("2.0.0");
-      expect(request.url.includes("%25"), item.id).toBe(false);
+      for (const { request } of item.exchanges) {
+        expect(request.headers["LinkedIn-Version"], item.id).toBe("202609");
+        expect(request.headers["X-Restli-Protocol-Version"], item.id).toBe("2.0.0");
+        expect(request.url.includes("%25"), item.id).toBe(false);
+      }
       expect(JSON.stringify(item).toLowerCase().includes("bearer"), item.id).toBe(false);
     }
   });
@@ -93,17 +102,22 @@ describe("fixture coverage", () => {
 describe("replay every op through registry dispatch", () => {
   for (const item of cases) {
     it(`${item.operation} sends the documented 202609 request`, async () => {
-      const exchange = item.exchanges[0]!;
       const calls: Seen[] = [];
-      const result = await dispatch(item.operation, { ...credential, ...item.input, fetch: recorder(exchange.response, calls) });
+      const result = await dispatch(item.operation, { ...credential, ...item.input, fetch: sequence(item.exchanges, calls) });
       expect(result.ok, JSON.stringify(result)).toBe(true);
-      expect(calls).toHaveLength(1);
-      const call = calls[0]!;
-      expect(call.url).toBe(exchange.request.url);
-      expect(call.method).toBe(exchange.request.method);
-      assertPinned(call);
-      if (exchange.request.body === null) expect(call.body).toBeNull();
-      else expect(JSON.parse(call.body ?? "null")).toEqual(JSON.parse(exchange.request.body));
+      expect(calls).toHaveLength(item.exchanges.length);
+      item.exchanges.forEach((exchange, index) => {
+        const call = calls[index]!;
+        expect(call.url).toBe(exchange.request.url);
+        expect(call.method).toBe(exchange.request.method);
+        assertPinned(call);
+        for (const name of ["X-RestLi-Method", "Content-Type"]) {
+          const wanted = exchange.request.headers[name];
+          if (wanted) expect(call.headers[name.toLowerCase()], `${item.id} ${name}`).toBe(wanted);
+        }
+        if (exchange.request.body === null) expect(call.body).toBeNull();
+        else expect(JSON.parse(call.body ?? "null")).toEqual(JSON.parse(exchange.request.body));
+      });
     });
   }
 
@@ -242,11 +256,12 @@ describe("cursor paging", () => {
     const first = await call((fetch) => listCampaignGroups({ ...credential, accountId: "506223315", status: "ACTIVE", pageSize: 2, fetch }));
     expect(first.url).toBe("https://api.linkedin.com/rest/adAccounts/506223315/adCampaignGroups?q=search&search=(status:(values:List(ACTIVE)))&pageSize=2");
     expect(first.method).toBe("FINDER");
-    expect(first.out).toEqual({ connector: "linkedin-ads", action: "campaign_groups.list", source: "connector", campaignGroups: [], nextStart: null, count: 0 });
+    expect(first.out).toEqual({ connector: "linkedin-ads", action: "campaign_groups.list", source: "connector", campaignGroups: [], nextStart: null, nextPageToken: "abc", count: 0 });
     const next = await call((fetch) => listCampaignGroups({ ...credential, accountId: "506223315", pageToken: "cursor-page-2", fetch }));
-    expect(next.url).toBe("https://api.linkedin.com/rest/adAccounts/506223315/adCampaignGroups?q=search&pageToken=cursor-page-2");
+    // GRP "Search criteria is mandatory": no status sends the documented all-status default, never a bare q=search.
+    expect(next.url).toBe("https://api.linkedin.com/rest/adAccounts/506223315/adCampaignGroups?q=search&search=(status:(values:List(ACTIVE,ARCHIVED,CANCELED,DRAFT,PAUSED,PENDING_DELETION,REMOVED)))&pageToken=cursor-page-2");
     const alias = await call((fetch) => listCampaignGroups({ ...credential, accountId: "1", count: 25, start: 0, fetch }));
-    expect(alias.url).toBe("https://api.linkedin.com/rest/adAccounts/1/adCampaignGroups?q=search&pageSize=25");
+    expect(alias.url).toBe("https://api.linkedin.com/rest/adAccounts/1/adCampaignGroups?q=search&search=(status:(values:List(ACTIVE,ARCHIVED,CANCELED,DRAFT,PAUSED,PENDING_DELETION,REMOVED)))&pageSize=25");
     expect(alias.url).not.toMatch(/[?&](start|count)=/);
     expect(() => listCampaignGroups({ ...credential, accountId: "1", start: 10 })).toThrow("pageToken");
     expect(() => listCampaignGroups({ ...credential, accountId: "1", pageSize: 1001, fetch: () => undefined })).toThrow("1 to 1000");
