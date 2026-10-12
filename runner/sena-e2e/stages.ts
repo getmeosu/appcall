@@ -34,9 +34,18 @@ export async function preflight(cfg: HarnessConfig, store: Store): Promise<ConnM
   return map;
 }
 
-export async function source(cfg: HarnessConfig, store: Store, actorId: string, actorInput: unknown): Promise<Lead[]> {
+export interface StageReport { ok: number; failed: Array<{ lead_id: string; error_code: string }> }
+export interface SourceReport extends StageReport { leads: Lead[] }
+
+export async function source(cfg: HarnessConfig, store: Store, actorId: string, actorInput: unknown): Promise<SourceReport> {
   const r = await mcpCall(cfg, "apify__actor__run_sync_get_dataset_items", { actorId, input: actorInput });
   store.appendEvidence({ ts: now(), stage: "source", tool: "apify__actor__run_sync_get_dataset_items", request_id: r.requestId, status: r.ok ? "ok" : "error", mode: cfg.sendMode });
+  if (!r.ok) {
+    // SENA-ERR-2: a failed apify run leaves leads.csv as it was (no lead to mark).
+    const code = r.errorCode || "UNKNOWN_ERROR";
+    console.error(`[source] apify run failed: ${code} — leads.csv left unchanged`);
+    return { ok: 0, failed: [{ lead_id: "", error_code: code }], leads: store.readLeads() };
+  }
   const items: any[] = Array.isArray(r.output) ? r.output : ((r.output as any)?.items ?? []);
   const leads: Lead[] = items.slice(0, cfg.maxLeads).map((it, i) => ({
     lead_id: String(it.id ?? i + 1),
@@ -53,10 +62,10 @@ export async function source(cfg: HarnessConfig, store: Store, actorId: string, 
   }));
   // NOTE: source is destructive on re-run — it overwrites leads.csv, resetting stage/booking_url. Run source only at the start of a fresh batch.
   store.writeLeads(leads);
-  return leads;
+  return { ok: leads.length, failed: [], leads };
 }
 
-export interface EnrichReport { enriched: number; failed: Array<{ lead_id: string; error_code: string }> }
+export interface EnrichReport { enriched: number; failed: StageReport["failed"] }
 
 export async function enrich(cfg: HarnessConfig, store: Store): Promise<EnrichReport> {
   const report: EnrichReport = { enriched: 0, failed: [] };
@@ -98,25 +107,40 @@ export function composeFor(lead: Lead, bookingUrl: string): ComposedMessage {
   };
 }
 
-export async function booking(cfg: HarnessConfig, store: Store, conn: ConnMap): Promise<void> {
+function markFailed(lead: Lead, stage: "booking_failed" | "send_failed", code: string, report: StageReport): void {
+  lead.stage = stage;
+  lead.error_code = code;
+  report.failed.push({ lead_id: lead.lead_id, error_code: code });
+  console.error(`[${stage}] lead_id=${lead.lead_id}: ${code}`);
+}
+
+export async function booking(cfg: HarnessConfig, store: Store, conn: ConnMap): Promise<StageReport> {
+  const report: StageReport = { ok: 0, failed: [] };
   const calId = conn["calendly"];
-  if (!calId) { console.warn("[booking] no active calendly connection — NOT_RUN"); return; }
-  if (!cfg.calendlyToken || !cfg.calendlyEventType) { console.warn("[booking] CALENDLY_TOKEN/EVENT_TYPE missing — NOT_RUN"); return; }
+  if (!calId) { console.warn("[booking] no active calendly connection — NOT_RUN"); return report; }
+  if (!cfg.calendlyToken || !cfg.calendlyEventType) { console.warn("[booking] CALENDLY_TOKEN/EVENT_TYPE missing — NOT_RUN"); return report; }
   const leads = store.readLeads();
   for (const lead of leads) {
     if (lead.stage !== "enriched") continue;
     const r = await actionCall(cfg, calId, "scheduling_links.create",
       { owner: cfg.calendlyEventType, max_event_count: 1 }, cfg.calendlyToken);
     const url = (r.output as any)?.booking_url ?? (r.output as any)?.resource?.booking_url ?? "";
+    lead.last_request_id = r.requestId;
+    // SENA-ERR-2: a failed call (or a success with no link) must not reach booking_ready.
+    const failure = !r.ok ? (r.errorCode || "UNKNOWN_ERROR") : !url ? "BOOKING_URL_MISSING" : "";
+    store.appendEvidence({ ts: now(), stage: "booking", tool: "calendly:scheduling_links.create", request_id: r.requestId, status: failure ? "error" : "ok", mode: cfg.sendMode });
+    if (failure) { markFailed(lead, "booking_failed", failure, report); continue; }
     lead.booking_url = url;
     lead.stage = "booking_ready";
-    lead.last_request_id = r.requestId;
-    store.appendEvidence({ ts: now(), stage: "booking", tool: "calendly:scheduling_links.create", request_id: r.requestId, status: r.ok ? "ok" : "error", mode: cfg.sendMode });
+    lead.error_code = "";
+    report.ok++;
   }
   store.writeLeads(leads);
+  return report;
 }
 
-export async function send(cfg: HarnessConfig, store: Store, conn: ConnMap): Promise<void> {
+export async function send(cfg: HarnessConfig, store: Store, conn: ConnMap): Promise<StageReport> {
+  const report: StageReport = { ok: 0, failed: [] };
   const leads = store.readLeads();
   const priorEvidenceGreen = store.priorEvidenceGreen();
   let processedSends = 0;
@@ -124,6 +148,7 @@ export async function send(cfg: HarnessConfig, store: Store, conn: ConnMap): Pro
     if (lead.stage !== "booking_ready") continue;
     const msg = composeFor(lead, lead.booking_url);
     let attempted = false;
+    let failure = "";
 
     if (lead.email) {
       attempted = true;
@@ -134,6 +159,8 @@ export async function send(cfg: HarnessConfig, store: Store, conn: ConnMap): Pro
           to: [{ email: decision.recipient }], subject: msg.subject, htmlContent: msg.html,
         });
         processedSends++;
+        lead.last_request_id = r.requestId;
+        if (!r.ok) failure = r.errorCode || "UNKNOWN_ERROR";
         store.appendEvidence({ ts: now(), stage: "send", tool: "brevo__smtp__email__send", request_id: r.requestId, status: r.ok ? "ok" : "error", mode: cfg.sendMode });
       } else {
         store.appendEvidence({ ts: now(), stage: "send", tool: "brevo__smtp__email__send", request_id: "", status: "skipped", mode: cfg.sendMode });
@@ -145,6 +172,8 @@ export async function send(cfg: HarnessConfig, store: Store, conn: ConnMap): Pro
       if (decision.shouldSend) {
         const r = await mcpCall(cfg, "unipile__messages__send", { profile_url: decision.recipient, text: msg.dm });
         processedSends++;
+        lead.last_request_id = r.requestId;
+        if (!r.ok) failure = r.errorCode || "UNKNOWN_ERROR";
         store.appendEvidence({ ts: now(), stage: "send", tool: "unipile__messages__send", request_id: r.requestId, status: r.ok ? "ok" : "error", mode: cfg.sendMode });
       } else {
         store.appendEvidence({ ts: now(), stage: "send", tool: "unipile__messages__send", request_id: "", status: "skipped", mode: cfg.sendMode });
@@ -156,7 +185,18 @@ export async function send(cfg: HarnessConfig, store: Store, conn: ConnMap): Pro
       store.appendEvidence({ ts: now(), stage: "send", tool: "send", request_id: "", status: "skipped", mode: cfg.sendMode });
     }
 
-    if (attempted) lead.stage = "sent";
+    // SENA-ERR-2: a failed send must not be recorded as sent.
+    if (failure) markFailed(lead, "send_failed", failure, report);
+    else if (attempted) { lead.stage = "sent"; report.ok++; }
   }
   store.writeLeads(leads);
+  return report;
+}
+
+/** SENA-ERR-2: one message naming every failed stage, or "" when the run is clean. */
+export function runFailures(byStage: Record<string, StageReport["failed"]>): string {
+  return Object.entries(byStage)
+    .filter(([, failed]) => failed.length > 0)
+    .map(([stage, failed]) => `${stage} failed for ${failed.length}: ${failed.map((f) => `${f.lead_id || "-"}=${f.error_code}`).join(", ")}`)
+    .join("; ");
 }

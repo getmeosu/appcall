@@ -5,9 +5,9 @@ import { appendFileSync, mkdirSync, readFileSync, writeFileSync, existsSync } fr
 import { join } from "node:path";
 
 // compose runs inline in the send stage (composeFor); there is no separate composed stage.
-// enrich_failed: apollo people.match returned an error; error_code records why
-// and later stages skip the lead (SENA-ERR).
-export type Stage = "sourced" | "enriched" | "enrich_failed" | "booking_ready" | "sent";
+// *_failed: the stage's provider call returned an error; error_code records why
+// and later stages skip the lead (SENA-ERR, SENA-ERR-2).
+export type Stage = "sourced" | "enriched" | "enrich_failed" | "booking_ready" | "booking_failed" | "sent" | "send_failed";
 
 export interface Lead {
   lead_id: string;
