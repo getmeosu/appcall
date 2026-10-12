@@ -131,7 +131,7 @@ describe("Workable action operations", () => {
 
   test("healthcheck stays local when no token is present", async () => {
     const result = await healthcheck({});
-    expect(result).toEqual({ connector: "workable", status: "ok", source: "connector" });
+    expect(result).toEqual({ status: "ok", source: "connector" });
   });
 
   test("lists accounts on the documented apex SPI host", async () => {

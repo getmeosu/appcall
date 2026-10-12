@@ -57,7 +57,7 @@ async function invoke(
 describe("mailchimp declarative compile", () => {
   test("requires stored host, compiles, and pins open-connector", () => {
     expect(manifest.key).toBe("mailchimp");
-    expect(manifest.version).toBe("0.5.0");
+    expect(manifest.version).toBe("0.5.1");
     expect(manifest.runtime).toBe("bun");
     expect(manifest.auth.type).toBe("oauth2");
     expect(manifest.auth.scopes).toEqual([]);
@@ -195,7 +195,7 @@ describe("mailchimp declarative compile", () => {
     expect(Object.keys(recipe.manifest.auth).sort()).toEqual(["scopes", "setup", "type"]);
     expect(recipe.manifest.auth.type).toBe("oauth2");
     expect(recipe.manifest.auth.scopes).toEqual([]);
-    expect(recipe.manifest.version).toBe("0.5.0");
+    expect(recipe.manifest.version).toBe("0.5.1");
     expect(recipe.manifest.http.baseUrl).toBe("https://{{host}}/3.0");
     expect(recipe.manifest.network.allowedHosts).toEqual(["*.api.mailchimp.com", "{{host}}"]);
     expect(recipe.operationSources["lists.get"].upstreamActionId).toBe("get_list");
