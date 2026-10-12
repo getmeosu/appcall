@@ -425,6 +425,10 @@ export function createCampaign(value: unknown): ActionResult {
   }
   const creativeSelection = oneOf(input.creativeSelection, "creativeSelection", CREATIVE_SELECTIONS);
   if (creativeSelection) body.creativeSelection = creativeSelection;
+  // CAM schema: associatedEntity is required for Sponsored Content, Dynamic Ads and Lead Gen campaigns.
+  if (input.associatedEntity === undefined && (body.type === "SPONSORED_UPDATES" || body.type === "DYNAMIC" || objectiveType === "LEAD_GENERATION")) {
+    throw new Error("associatedEntity is required for SPONSORED_UPDATES, DYNAMIC and LEAD_GENERATION campaigns");
+  }
   if (input.associatedEntity !== undefined) {
     if (typeof input.associatedEntity !== "string" || !/^urn:li:(organization|person):[A-Za-z0-9_-]{1,64}$/.test(input.associatedEntity)) {
       throw new Error("associatedEntity must be an organization or person URN");
