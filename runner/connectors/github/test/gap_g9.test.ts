@@ -71,9 +71,9 @@ function empty(status: number) {
 
 describe("github gap G9 pages vuln SARIF leftovers", () => {
   test("version is 0.79.0 at 852 ops with the read/write breakdown", () => {
-    expect(manifest.version).toBe("0.84.0");
+    expect(manifest.version).toBe("0.85.0");
     const ops = manifest.operations as Record<string, Record<string, unknown>>;
-    expect(Object.keys(ops)).toHaveLength(867);
+    expect(Object.keys(ops)).toHaveLength(853);
     const kinds = { action: 0, sync: 0, webhook: 0 };
     const side = { read: 0, write: 0, absent: 0 };
     for (const op of Object.values(ops)) {
@@ -84,8 +84,8 @@ describe("github gap G9 pages vuln SARIF leftovers", () => {
         else side.absent += 1;
       }
     }
-    expect(kinds).toEqual({ action: 817, sync: 4, webhook: 46 });
-    expect(side).toEqual({ read: 429, write: 373, absent: 15 });
+    expect(kinds).toEqual({ action: 803, sync: 4, webhook: 46 });
+    expect(side).toEqual({ read: 424, write: 364, absent: 15 });
   });
 
   test("the twelve G9 ops wire effects and document their paths", () => {
