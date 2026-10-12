@@ -402,3 +402,79 @@ fn effect_policy_idempotent_allows_optional_reconcile() {
     bare["operations"]["create"]["reconcile"] = json!("");
     assert!(parse(&bare).is_ok());
 }
+
+fn poll_manifest(connector: &str, op: &str, poll: Value) -> Value {
+    let mut v = manifest();
+    v["key"] = json!(connector);
+    v["operations"][op] = json!({"kind":"sync","timeoutMs":10,"maxInputBytes":1000,"maxResponseBytes":1000,"poll":poll});
+    v
+}
+fn good_poll() -> Value {
+    json!({"intervalSeconds":300,"itemKey":"id","versionKey":"updatedAt","onNew":["issue.opened"],"onChanged":["issue.updated"]})
+}
+#[test]
+fn poll_block_is_opt_in_and_round_trips_without_touching_other_operations() {
+    let c = parse(&poll_manifest("validate", "issues.list", good_poll())).unwrap();
+    let registry = Registry::from_connectors([c]).unwrap();
+    let op = registry.operation("validate", "issues.list").unwrap();
+    let poll = op.poll.as_ref().unwrap();
+    assert_eq!(poll.interval_seconds, 300);
+    assert_eq!(poll.max_pages, 1);
+    assert_eq!(poll.version_key.as_deref(), Some("updatedAt"));
+    assert_eq!(
+        poll.triggers(appcall_connectors::PollChange::New),
+        ["issue.opened".to_string()]
+    );
+    // Operations without a block stay None and serialize without a poll key.
+    let read = registry.operation("validate", "read").unwrap();
+    assert!(read.poll.is_none());
+    assert!(serde_json::to_value(read).unwrap().get("poll").is_none());
+}
+#[test]
+fn poll_block_rejects_out_of_contract_shapes() {
+    let mut bad: Vec<(String, String, Value)> = Vec::new();
+    for (k, v) in [
+        ("intervalSeconds", json!(59)),
+        ("intervalSeconds", json!(86_401)),
+        ("maxPages", json!(0)),
+        ("maxPages", json!(11)),
+        ("itemKey", json!("")),
+        ("itemKey", json!("a/b")),
+        ("versionKey", json!("id")),
+        ("onNew", json!(["dup", "dup"])),
+        ("onNew", json!(["bad name"])),
+        ("unknownField", json!(true)),
+    ] {
+        let mut p = good_poll();
+        p[k] = v;
+        bad.push(("validate".into(), "issues.list".into(), p));
+    }
+    let mut none = good_poll();
+    none["onNew"] = json!([]);
+    none["onChanged"] = json!([]);
+    bad.push(("validate".into(), "issues.list".into(), none));
+    let mut many = good_poll();
+    many["onNew"] = json!((0..17).map(|i| format!("t{i}")).collect::<Vec<_>>());
+    bad.push(("validate".into(), "issues.list".into(), many));
+    // The four worker-owned messages.list syncs stay on their existing path.
+    for connector in ["slack", "telegram", "google-workspace", "microsoft-365"] {
+        bad.push((connector.into(), "messages.list".into(), good_poll()));
+    }
+    for (connector, op, poll) in bad {
+        let v = poll_manifest(&connector, &op, poll.clone());
+        assert_eq!(
+            parse(&v).unwrap_err().code(),
+            ErrorCode::InvalidManifest,
+            "{connector}.{op} {poll}"
+        );
+    }
+    // A poll block on an action is rejected.
+    let mut action = manifest();
+    action["operations"]["read"]["poll"] = good_poll();
+    assert_eq!(
+        parse(&action).unwrap_err().code(),
+        ErrorCode::InvalidManifest
+    );
+    // messages.list on another connector may opt in.
+    assert!(parse(&poll_manifest("other", "messages.list", good_poll())).is_ok());
+}

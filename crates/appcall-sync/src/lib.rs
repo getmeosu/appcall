@@ -1,6 +1,8 @@
 //! Durable message synchronization with PostgreSQL lease fencing.
+mod poll;
 mod repository;
 mod service;
+pub use poll::*;
 pub use repository::*;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;

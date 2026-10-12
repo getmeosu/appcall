@@ -9,7 +9,7 @@ use serde_json::Value;
 use sha2::{Digest, Sha256};
 use std::{collections::BTreeMap, fmt, fs, io::Read, path::Path, sync::Arc};
 pub use types::*;
-pub use validation::CATEGORIES;
+pub use validation::{is_message_sync, CATEGORIES, MESSAGE_SYNC_CONNECTORS};
 
 pub type Result<T> = std::result::Result<T, Error>;
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

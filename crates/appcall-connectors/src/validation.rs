@@ -152,6 +152,9 @@ impl Manifest {
                     }
                 }
             }
+            if let Some(poll) = &op.poll {
+                validate_poll(&self.key, name, op.kind, poll)?;
+            }
         }
         require(!self.models.is_empty(), "models")?;
         require(
@@ -161,6 +164,52 @@ impl Manifest {
             "categories",
         )
     }
+}
+/// The four worker-owned `messages.list` syncs keep their existing durable
+/// message path; polling them would also re-dispatch their own events.
+/// The single source for both the manifest rule and the sync worker.
+pub const MESSAGE_SYNC_CONNECTORS: [&str; 4] =
+    ["slack", "telegram", "google-workspace", "microsoft-365"];
+
+/// Whether `connector`/`operation` is one of the worker-owned message syncs.
+pub fn is_message_sync(connector: &str, operation: &str) -> bool {
+    operation == "messages.list" && MESSAGE_SYNC_CONNECTORS.contains(&connector)
+}
+
+fn validate_poll(
+    connector: &str,
+    operation: &str,
+    kind: OperationKind,
+    poll: &crate::PollSpec,
+) -> Result<()> {
+    const FIELD: &str = "operations.poll";
+    require(kind == OperationKind::Sync, FIELD)?;
+    require(!is_message_sync(connector, operation), FIELD)?;
+    require(
+        (crate::POLL_MIN_INTERVAL_SECONDS..=crate::POLL_MAX_INTERVAL_SECONDS)
+            .contains(&poll.interval_seconds),
+        FIELD,
+    )?;
+    require((1..=crate::POLL_MAX_PAGES).contains(&poll.max_pages), FIELD)?;
+    require(key(&poll.item_key) && poll.item_key.len() <= 64, FIELD)?;
+    if let Some(version) = &poll.version_key {
+        require(
+            key(version) && version.len() <= 64 && *version != poll.item_key,
+            FIELD,
+        )?;
+    }
+    let total = poll.on_new.len() + poll.on_changed.len();
+    require((1..=crate::POLL_MAX_TRIGGERS).contains(&total), FIELD)?;
+    for list in [&poll.on_new, &poll.on_changed] {
+        let unique: BTreeSet<&str> = list.iter().map(String::as_str).collect();
+        require(unique.len() == list.len(), FIELD)?;
+        require(
+            list.iter()
+                .all(|t| key(t) && t.len() <= crate::POLL_MAX_TRIGGER_LEN),
+            FIELD,
+        )?;
+    }
+    Ok(())
 }
 impl SetupConfig {
     pub fn validate(&self, auth_type: &str) -> Result<()> {

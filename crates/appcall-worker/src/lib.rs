@@ -201,6 +201,13 @@ pub struct TickReport {
     pub outbox_dead_lettered: usize,
     pub pages_completed: usize,
     pub job_failures: Vec<(String, appcall_sync::Error)>,
+    /// Poll runs committed this cycle (OXIDE-POLL-1).
+    pub polls_completed: usize,
+    /// Trigger events appended by those polls.
+    pub poll_events_emitted: usize,
+    /// Failed polls as `connection_id/operation` (or `claim`) and cause.
+    /// Polls back off on their own schedule, so these do not fail a tick.
+    pub poll_failures: Vec<(String, appcall_sync::Error)>,
     pub secret_envelopes_deleted: usize,
     pub secret_cleanup_failed: bool,
 }
@@ -372,6 +379,27 @@ impl<C: CredentialResolver + 'static> Worker<C> {
                 match sync.process(job).await {
                     Ok(()) => report.pages_completed += 1,
                     Err(e) => report.job_failures.push((id, e)),
+                }
+            }
+            for _ in 0..limits.jobs {
+                if stopping.load(std::sync::atomic::Ordering::SeqCst) {
+                    break;
+                }
+                match sync.poll_once(&worker_id).await {
+                    Ok(None) => break,
+                    Ok(Some(poll)) => {
+                        report.polls_completed += 1;
+                        report.poll_events_emitted += poll.emitted;
+                    }
+                    Err(e) => {
+                        // A claim-level failure has no subscription to name and
+                        // would repeat; stop polling for this cycle.
+                        let fatal = matches!(e, appcall_sync::Error::Storage);
+                        report.poll_failures.push(("poll".into(), e));
+                        if fatal {
+                            break;
+                        }
+                    }
                 }
             }
             Ok(report)
