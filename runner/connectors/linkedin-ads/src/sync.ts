@@ -5,7 +5,8 @@ import { parseCampaignsResponse } from "./objects";
 import type { NormalizedCampaign } from "./objects";
 import { parseCreativeAssetsResponse } from "./objects";
 import type { NormalizedCreativeAsset } from "./objects";
-import { asId, assertToken, enc, restliExpression, pageSize, pageTokenValue, qs, resourceId, restliList, stringList } from "./restli";
+import { adAccountId } from "./g1-runtime";
+import { asId, assertToken, enc, restliExpression, pageSize, pageTokenValue, qs, restliList, stringList } from "./restli";
 
 type Live = { accessToken?: unknown; fetch?: unknown; response?: unknown };
 
@@ -21,7 +22,7 @@ export type CampaignsListSyncInput = Live & {
   pageToken?: unknown;
   sortOrder?: unknown;
 };
-export type CampaignsListSyncResult = { provider: "linkedin-ads"; operation: "campaigns.list"; items: NormalizedCampaign[]; nextStart: number | null };
+export type CampaignsListSyncResult = { provider: "linkedin-ads"; operation: "campaigns.list"; items: NormalizedCampaign[]; nextStart: number | null; nextPageToken: string | null };
 
 export type AdAccountsListSyncInput = Live & {
   response?: unknown;
@@ -39,7 +40,7 @@ export type AdAccountsListSyncInput = Live & {
   sort_order?: unknown;
   sortOrder?: unknown;
 };
-export type AdAccountsListSyncResult = { provider: "linkedin-ads"; operation: "ad_accounts.list"; items: NormalizedAdAccount[]; nextStart: number | null };
+export type AdAccountsListSyncResult = { provider: "linkedin-ads"; operation: "ad_accounts.list"; items: NormalizedAdAccount[]; nextStart: number | null; nextPageToken: string | null };
 
 export type CreativeAssetsListSyncInput = Live & {
   response?: unknown;
@@ -49,7 +50,7 @@ export type CreativeAssetsListSyncInput = Live & {
   pageSize?: unknown;
   page_size?: unknown;
 };
-export type CreativeAssetsListSyncResult = { provider: "linkedin-ads"; operation: "creative_assets.list"; items: NormalizedCreativeAsset[]; nextStart: number | null };
+export type CreativeAssetsListSyncResult = { provider: "linkedin-ads"; operation: "creative_assets.list"; items: NormalizedCreativeAsset[]; nextStart: number | null; nextPageToken: string | null };
 
 function hasLiveAuth(input: Live): input is Live & { accessToken: string } {
   return typeof input.accessToken === "string" && input.accessToken.length > 0;
@@ -97,7 +98,7 @@ export function executeCampaignsListSync(input: CampaignsListSyncInput): Campaig
   if (hasLiveAuth(input)) {
     const account = asId(input.adAccountId) ?? asId(input.accountId);
     if (!account) throw new Error("adAccountId is required");
-    const accountId = resourceId(account, ["urn:li:sponsoredAccount:"]);
+    const accountId = adAccountId(account, "adAccountId");
     const ids = stringList(input.ids, "ids", /^[0-9]{1,20}$/, 100);
     const pairs: Array<[string, string]> = [];
     if (ids) {
@@ -115,11 +116,11 @@ export function executeCampaignsListSync(input: CampaignsListSyncInput): Campaig
     }
     return fetchJSON(input, "campaigns.list", `/rest/adAccounts/${accountId}/adCampaigns?${qs(pairs)}`, ids ? "BATCH_GET" : "FINDER").then((body) => {
       const parsed = parseCampaignsResponse(body);
-      return { provider: "linkedin-ads", operation: "campaigns.list", items: parsed.campaigns, nextStart: parsed.nextStart };
+      return { provider: "linkedin-ads", operation: "campaigns.list", items: parsed.campaigns, nextStart: parsed.nextStart, nextPageToken: parsed.nextPageToken };
     });
   }
   const parsed = parseCampaignsResponse(input.response);
-  return { provider: "linkedin-ads", operation: "campaigns.list", items: parsed.campaigns, nextStart: parsed.nextStart };
+  return { provider: "linkedin-ads", operation: "campaigns.list", items: parsed.campaigns, nextStart: parsed.nextStart, nextPageToken: parsed.nextPageToken };
 }
 
 export function executeAdAccountsListSync(input: AdAccountsListSyncInput): AdAccountsListSyncResult | Promise<AdAccountsListSyncResult> {
@@ -144,18 +145,18 @@ export function executeAdAccountsListSync(input: AdAccountsListSyncInput): AdAcc
     if (typeof sort === "string" && sort !== "") pairs.push(["sortOrder", assertToken(sort, "sortOrder")]);
     return fetchJSON(input, "ad_accounts.list", `/rest/adAccounts?${qs(pairs)}`).then((body) => {
       const parsed = parseAdAccountsResponse(body);
-      return { provider: "linkedin-ads", operation: "ad_accounts.list", items: parsed.adAccounts, nextStart: parsed.nextStart };
+      return { provider: "linkedin-ads", operation: "ad_accounts.list", items: parsed.adAccounts, nextStart: parsed.nextStart, nextPageToken: parsed.nextPageToken };
     });
   }
   const parsed = parseAdAccountsResponse(input.response);
-  return { provider: "linkedin-ads", operation: "ad_accounts.list", items: parsed.adAccounts, nextStart: parsed.nextStart };
+  return { provider: "linkedin-ads", operation: "ad_accounts.list", items: parsed.adAccounts, nextStart: parsed.nextStart, nextPageToken: parsed.nextPageToken };
 }
 
 export function executeCreativeAssetsListSync(input: CreativeAssetsListSyncInput): CreativeAssetsListSyncResult | Promise<CreativeAssetsListSyncResult> {
   if (hasLiveAuth(input)) {
     const account = asId(input.accountId) ?? asId(input.adAccountId);
     if (!account) throw new Error("accountId is required");
-    const accountId = resourceId(account, ["urn:li:sponsoredAccount:"]);
+    const accountId = adAccountId(account);
     const statuses = searchValues(input.intendedStatuses, "intendedStatuses");
     const pairs: Array<[string, string]> = [["q", "criteria"]];
     if (statuses) pairs.push(["intendedStatuses", restliList(statuses)]);
@@ -164,10 +165,10 @@ export function executeCreativeAssetsListSync(input: CreativeAssetsListSyncInput
     if (size) pairs.push(["pageSize", size]);
     return fetchJSON(input, "creative_assets.list", `/rest/adAccounts/${accountId}/creatives?${qs(pairs)}`).then((body) => {
       const parsed = parseCreativeAssetsResponse(body);
-      return { provider: "linkedin-ads", operation: "creative_assets.list", items: parsed.creativeAssets, nextStart: parsed.nextStart };
+      return { provider: "linkedin-ads", operation: "creative_assets.list", items: parsed.creativeAssets, nextStart: parsed.nextStart, nextPageToken: parsed.nextPageToken };
     });
   }
   const parsed = parseCreativeAssetsResponse(input.response);
-  return { provider: "linkedin-ads", operation: "creative_assets.list", items: parsed.creativeAssets, nextStart: parsed.nextStart };
+  return { provider: "linkedin-ads", operation: "creative_assets.list", items: parsed.creativeAssets, nextStart: parsed.nextStart, nextPageToken: parsed.nextPageToken };
 }
 

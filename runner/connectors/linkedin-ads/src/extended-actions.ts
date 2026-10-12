@@ -1,4 +1,5 @@
 import { createLinkedInAdsClient } from "./http";
+import { adAccountId } from "./g1-runtime";
 import {
   asId,
   assertToken,
@@ -78,7 +79,7 @@ function urnList(value: unknown, field: string, prefix?: string): string[] | und
 
 export function getCampaignGroup(value: unknown): ActionResult {
   const input = requireRecord(value, "campaign_groups.get");
-  const accountId = resourceId(firstId(input, ["accountId", "ad_account_id", "adAccountId"], "accountId"), ["urn:li:sponsoredAccount:"]);
+  const accountId = adAccountId(firstId(input, ["accountId", "ad_account_id", "adAccountId"], "accountId"));
   const campaignGroupId = resourceId(firstId(input, ["campaignGroupId", "ad_campaign_group_id", "adCampaignGroupId"], "campaignGroupId"), ["urn:li:sponsoredCampaignGroup:"]);
   const validated = { accountId, campaignGroupId };
   if (!hasLiveAuth(input)) return result("campaign_groups.get", { campaignGroup: null, validated });

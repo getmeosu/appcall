@@ -35,12 +35,12 @@ describe("declarative requests", () => {
 
   it("compiles every action and leaves sync requests declared", () => {
     for (const [key, operation] of Object.entries(manifest.operations)) {
-      expect(operation.request.method, key).toMatch(/^(GET|POST|PUT)$/);
+      expect(operation.request.method, key).toMatch(/^(GET|POST|PUT|DELETE)$/);
       expect(operation.request.path.startsWith("/rest/"), key).toBe(true);
       if (operation.kind === "action") expect(typeof compiled.actions[key], key).toBe("function");
       else expect(compiled.actions[key], key).toBeUndefined();
     }
-    expect(Object.keys(manifest.operations)).toHaveLength(32);
+    expect(Object.keys(manifest.operations)).toHaveLength(47);
   });
 });
 
