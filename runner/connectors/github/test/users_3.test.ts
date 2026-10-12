@@ -35,7 +35,7 @@ const READS = [
 
 describe("github users-3 public user reads", () => {
   test("manifest stays v0.79.0 at 852 ops and these reads omit effect policy", () => {
-    expect(manifest.version).toBe("0.86.3");
+    expect(manifest.version).toBe("0.86.4");
     expect(Object.keys(manifest.operations).length).toBe(847);
     for (const key of READS) {
       const op = manifest.operations[key] as Record<string, unknown>;
@@ -49,7 +49,9 @@ describe("github users-3 public user reads", () => {
   });
 
   test("validates username, pagination, and starred sort", () => {
-    expect(validateListPublicEventsInput({ username: " octocat ", perPage: 30, page: 2 }).username).toBe("octocat");
+    // FIX-SEGMENT-3: path values are no longer trimmed; surrounding whitespace is rejected.
+    expect(() => validateListPublicEventsInput({ username: " octocat ", perPage: 30, page: 2 })).toThrow("username must not have leading or trailing whitespace");
+    expect(validateListPublicEventsInput({ username: "octocat", perPage: 30, page: 2 }).username).toBe("octocat");
     expect(() => validateListPublicEventsInput({})).toThrow(/username is required/);
     expect(() => validateListPublicEventsInput({ username: "octocat", perPage: 101 })).toThrow(/perPage/);
     expect(validateListUserStarredInput({ username: "octocat", sort: "updated", direction: "asc" }).sort).toBe("updated");

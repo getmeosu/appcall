@@ -1,6 +1,7 @@
 import { createGitHubClient, parseGitHubRateLimit, type GitHubClient } from "./http";
 import { connection, gqlRequest, isRecord, recordAt, restCapabilityMissing, type GraphqlError, type PageInfo } from "./graphql";
 import { graphqlOperationKinds } from "./gap_g13c";
+import { requirePathValue } from "./path_values";
 
 // FIX-G14C:
 // - graphql.mutate: raw GraphQL mutation passthrough on gqlRequest. The document is lexed
@@ -126,7 +127,7 @@ export type GhecAuditInput = {
 
 export function validateGhecAuditInput(input: unknown): GhecAuditInput {
   const raw = objectInput(input, "rest.x.AUDIT");
-  const out: GhecAuditInput = { org: requireString(raw.org, "org") };
+  const out: GhecAuditInput = { org: requirePathValue(raw.org, "org") };
   for (const key of ["phrase", "include", "after", "before", "order"] as const) {
     if (raw[key] !== undefined) out[key] = requireString(raw[key], key);
   }
@@ -136,24 +137,24 @@ export function validateGhecAuditInput(input: unknown): GhecAuditInput {
 
 export function validateGhecOrgInput(input: unknown, op: string): { org: string } {
   const raw = objectInput(input, op);
-  return { org: requireString(raw.org, "org") };
+  return { org: requirePathValue(raw.org, "org") };
 }
 
 export function validateGhecRoleCreateInput(input: unknown): { org: string; body: Record<string, unknown> } {
   const raw = objectInput(input, "rest.x.ORG_ROLE_CREATE");
   if (!isRecord(raw.body)) throw new Error("body must be an object");
-  return { org: requireString(raw.org, "org"), body: raw.body };
+  return { org: requirePathValue(raw.org, "org"), body: raw.body };
 }
 
 export function validateGhecRoleUpdateInput(input: unknown): { org: string; role_id: number; body: Record<string, unknown> } {
   const raw = objectInput(input, "rest.x.ORG_ROLE_UPDATE");
   if (!isRecord(raw.body)) throw new Error("body must be an object");
-  return { org: requireString(raw.org, "org"), role_id: requireInt(raw.role_id, "role_id", 1, Number.MAX_SAFE_INTEGER), body: raw.body };
+  return { org: requirePathValue(raw.org, "org"), role_id: requireInt(raw.role_id, "role_id", 1, Number.MAX_SAFE_INTEGER), body: raw.body };
 }
 
 export function validateGhecRoleDeleteInput(input: unknown): { org: string; role_id: number } {
   const raw = objectInput(input, "rest.x.ORG_ROLE_DELETE");
-  return { org: requireString(raw.org, "org"), role_id: requireInt(raw.role_id, "role_id", 1, Number.MAX_SAFE_INTEGER) };
+  return { org: requirePathValue(raw.org, "org"), role_id: requireInt(raw.role_id, "role_id", 1, Number.MAX_SAFE_INTEGER) };
 }
 
 export function createGapG14cClient(options: { accessToken: string; fetch?: typeof fetch; githubClient?: GitHubClient }) {

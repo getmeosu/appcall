@@ -1,4 +1,5 @@
 import table from "./path_identity_fields.json";
+import { pathValueFields, pathValueViolation } from "./path_values";
 
 // FIX-SEGMENT-2: GitHub login and repository-name validation for every op whose REST path
 // carries an owner / org / username (or equivalent login: assignee, targetUser,
@@ -70,7 +71,7 @@ export function pathIdentityFields(op: string): Readonly<Record<string, Identity
   return FIELDS[op];
 }
 
-/** Returns the first violation for an op's input, or null. Absent / null fields and blank strings are left to the handler (its existing "is required" checks); surrounding whitespace is ignored. */
+/** Returns the first violation for an op's input, or null. Absent / null fields and blank strings are left to the handler and to the FIX-SEGMENT-3 blank guard; the value is checked as given (no trimming). */
 export function pathIdentityViolation(op: string, input: unknown): Error | null {
   const fields = FIELDS[op];
   if (!fields || typeof input !== "object" || input === null || Array.isArray(input)) return null;
@@ -79,12 +80,10 @@ export function pathIdentityViolation(op: string, input: unknown): Error | null 
     const value = record[field];
     if (value === undefined || value === null) continue;
     if (typeof value !== "string") return new Error(`${field} must be a string`);
-    // Surrounding whitespace is tolerated: several handlers trim (" octocat " -> "octocat")
-    // and that accepted input keeps working; the trimmed value must be a valid login / name.
-    const trimmed = value.trim();
-    if (trimmed.length === 0) continue;
+    // FIX-SEGMENT-3: no trimming. " octocat " is rejected (path_values.ts rejects it first).
+    if (value.trim().length === 0) continue;
     try {
-      requireGitHubIdentity(trimmed, field, cls);
+      requireGitHubIdentity(value, field, cls);
     } catch (error) {
       return error as Error;
     }
@@ -95,8 +94,9 @@ export function pathIdentityViolation(op: string, input: unknown): Error | null 
 type Handler = (input: any) => unknown;
 
 /**
- * Wraps every registered github action (hand-written and compiled declarative) so login /
- * repo fields are validated before the handler runs. A violation is returned as a rejected
+ * Wraps every registered github action (hand-written and compiled declarative) so path values
+ * (FIX-SEGMENT-3: non-blank, no surrounding whitespace) and login / repo fields are validated
+ * before the handler runs. A violation is returned as a rejected
  * promise, the same shape as the handlers' own input errors (the runner maps it to
  * INVALID_ACTION_INPUT). Valid input reaches the original handler unchanged.
  */
@@ -105,12 +105,13 @@ export function withGitHubPathIdentityGuard<T extends { actions?: Record<string,
   if (!github) return input;
   const guarded: Record<string, Handler> = {};
   for (const [op, handler] of Object.entries(github)) {
-    if (!FIELDS[op]) {
+    if (!FIELDS[op] && !pathValueFields(op)) {
       guarded[op] = handler;
       continue;
     }
     guarded[op] = (value: unknown) => {
-      const violation = pathIdentityViolation(op, value);
+      // FIX-SEGMENT-3 blank / whitespace guard first, then the FIX-SEGMENT-2 login / repo rule.
+      const violation = pathValueViolation(op, value) ?? pathIdentityViolation(op, value);
       if (violation) return Promise.reject(violation);
       return handler(value);
     };
