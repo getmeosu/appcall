@@ -43,9 +43,9 @@ const callFn = (fn: keyof typeof actions, input: Record<string, unknown>) =>
   Promise.resolve((actions[fn] as (i: unknown) => Record<string, unknown> | Promise<Record<string, unknown>>)(input));
 
 describe("github FIX-G14C: manifest", () => {
-  test("version 0.81.2 at 912 ops (+graphql.mutate, +issues.comments.edits.list); auth.scopes unchanged", () => {
-    expect(manifest.version).toBe("0.81.2");
-    expect(Object.keys(opsOf)).toHaveLength(912);
+  test("version 0.82.0 at 897 ops (+graphql.mutate, +issues.comments.edits.list); auth.scopes unchanged", () => {
+    expect(manifest.version).toBe("0.82.0");
+    expect(Object.keys(opsOf)).toHaveLength(897);
     expect(manifest.auth.scopes).toEqual(["repo", "read:org", "admin:repo_hook", "admin:org_hook", "gist", "notifications", "admin:org"]);
     expect(manifest.auth.scopes).not.toContain("read:audit_log");
   });

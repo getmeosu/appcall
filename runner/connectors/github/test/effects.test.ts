@@ -67,9 +67,9 @@ const CREATES = [
 ] as const;
 
 describe("github FIX-EFFECTS: manifest guards", () => {
-  test("version 0.81.2 at 912 ops", () => {
-    expect(manifest.version).toBe("0.81.2");
-    expect(Object.keys(ops)).toHaveLength(912);
+  test("version 0.82.0 at 897 ops", () => {
+    expect(manifest.version).toBe("0.82.0");
+    expect(Object.keys(ops)).toHaveLength(897);
   });
 
   test("no op declares effectPolicy Idempotent, and no description still claims it", () => {
@@ -84,7 +84,7 @@ describe("github FIX-EFFECTS: manifest guards", () => {
 
   test("every DELETE except the exact-observe detach set carries no effect keys", () => {
     const deletes = Object.keys(ops).filter((key) => ops[key]!.kind === "action" && methodOf(ops[key]!) === "DELETE");
-    expect(deletes.length).toBeGreaterThanOrEqual(123);
+    expect(deletes.length).toBeGreaterThanOrEqual(121); // PRUNE-1 (0.82.0) removed projects.delete + projects.columns.delete (123 -> 121)
     const offenders = deletes.filter((key) => !(key in RECONCILE_KEEP) && effectKeys(ops[key]!).length > 0);
     expect(offenders).toEqual([]);
     for (const key of STRIPPED_DELETES) {

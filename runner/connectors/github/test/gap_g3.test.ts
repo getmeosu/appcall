@@ -67,9 +67,9 @@ function empty(status: number) {
 
 describe("github gap G3 organization actions reads and writes", () => {
   test("version is 0.79.0 at 852 ops with the read/write breakdown", () => {
-    expect(manifest.version).toBe("0.81.2");
+    expect(manifest.version).toBe("0.82.0");
     const ops = manifest.operations as Record<string, Record<string, unknown>>;
-    expect(Object.keys(ops)).toHaveLength(912);
+    expect(Object.keys(ops)).toHaveLength(897);
     const kinds = { action: 0, sync: 0, webhook: 0 };
     const side = { read: 0, write: 0, absent: 0 };
     for (const op of Object.values(ops)) {
@@ -80,8 +80,8 @@ describe("github gap G3 organization actions reads and writes", () => {
         else side.absent += 1;
       }
     }
-    expect(kinds).toEqual({ action: 862, sync: 4, webhook: 46 });
-    expect(side).toEqual({ read: 452, write: 395, absent: 15 });
+    expect(kinds).toEqual({ action: 847, sync: 4, webhook: 46 });
+    expect(side).toEqual({ read: 446, write: 386, absent: 15 });
   });
 
   test("the fifteen G3 ops are present, omit all three effect keys, and document their paths", () => {

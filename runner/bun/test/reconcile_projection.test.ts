@@ -332,7 +332,9 @@ describe("effect pairing scan (all connector manifests)", () => {
         else openGaps.push(line);
       }
     }
-    expect(pairings).toBeGreaterThan(80); // github FIX-EFFECTS (0.81.2) keeps 41 Reconcile pairings (was ~96)
+    // Exact count (linus): 83 pairings across all manifests, 41 of them github (FIX-EFFECTS 0.81.2;
+    // PRUNE-1 0.82.0 removes no paired op). Update this number deliberately when pairings change.
+    expect(pairings).toBe(83);
     expect(problems).toEqual([]);
     expect(openGaps.sort()).toEqual([...KNOWN_OPEN_OBSERVE_GAPS].sort());
   });

@@ -31,7 +31,7 @@ const SINGLE: Case[] = [
   { family: "card9_reads", fn: "getUserPackageVersion", op: "users.packages.versions.get", field: "username", input: {"username": "..", "packageType": "x", "packageName": "x", "packageVersionId": 1} },
   { family: "gap_g1", fn: "checkAuthenticatedUserFollowing", op: "user.following.check", field: "username", input: {"username": ".."} },
   { family: "gap_g10", fn: "getRepoDependabotSecretsPublicKey", op: "dependabot.secrets.public_key.get", field: "owner", input: {"owner": "..", "repo": "x"} },
-  { family: "gap_g12", fn: "listOrgClassicProjects", op: "orgs.projects.list", field: "org", input: {"org": ".."} },
+  { family: "gap_g12", fn: "listTeamDiscussions", op: "teams.discussions.list", field: "org", input: {"org": "..", "teamSlug": "x"} },
   { family: "gap_g2", fn: "listOrgPropertySchemas", op: "orgs.properties.schema.list", field: "org", input: {"org": ".."} },
   { family: "gap_g3", fn: "listOrgActionsCacheUsageByRepository", op: "orgs.actions.cache.usage_by_repository.list", field: "org", input: {"org": ".."} },
   { family: "gap_g4", fn: "getRepoActionsSecretsPublicKey", op: "actions.secrets.public_key.get", field: "owner", input: {"owner": "..", "repo": "x"} },
@@ -92,9 +92,9 @@ async function run(fn: string, input: Record<string, unknown>) {
 }
 
 describe("github FIX-SEGMENT: manifest", () => {
-  test("patch bump to 0.81.2, still 912 ops", () => {
-    expect(manifest.version).toBe("0.81.2");
-    expect(Object.keys(manifest.operations)).toHaveLength(912);
+  test("PRUNE-1 bump to 0.82.0 at 897 ops", () => {
+    expect(manifest.version).toBe("0.82.0");
+    expect(Object.keys(manifest.operations)).toHaveLength(897);
   });
 });
 
