@@ -1,3 +1,4 @@
+import { effectOf } from "./effects_final";
 import { describe, expect, test } from "bun:test";
 import manifest from "../manifest.json";
 import {
@@ -47,7 +48,7 @@ function empty(status: number) {
 
 describe("github write card 2 repo writes", () => {
   test("version is 0.79.0 at 852 ops with the write breakdown", () => {
-    expect(manifest.version).toBe("0.81.1");
+    expect(manifest.version).toBe("0.81.2");
     const ops = manifest.operations as Record<string, Record<string, unknown>>;
     expect(Object.keys(ops)).toHaveLength(912);
     const kinds = { action: 0, sync: 0, webhook: 0 };
@@ -72,16 +73,16 @@ describe("github write card 2 repo writes", () => {
       const op = ops[key];
       expect(op.kind).toBe("action");
       expect(op.sideEffect).toBe("write");
-      expect(op.effectPolicy).toBeUndefined();
-      expect(op.reconcile).toBeUndefined();
+      expect(op.effectPolicy).toBe(effectOf(key).policy);
+      expect(op.reconcile).toBe(effectOf(key).reconcile);
       expect(op.effect).toBeUndefined();
     }
     for (const [key, observe] of Object.entries(RECONCILE)) {
       const op = ops[key];
       expect(op.kind).toBe("action");
       expect(op.sideEffect).toBe("write");
-      expect(op.effectPolicy).toBe("Reconcile");
-      expect(op.reconcile).toBe(observe);
+      expect(op.effectPolicy).toBe(effectOf(key).policy);
+      expect(op.reconcile).toBe(effectOf(key).reconcile);
     }
     expect(ops["repos.fork"]).toBeDefined();
     expect(ops["classroom"]).toBeUndefined();

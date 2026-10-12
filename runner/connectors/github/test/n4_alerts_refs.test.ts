@@ -1,3 +1,4 @@
+import { effectOf } from "./effects_final";
 import { describe, expect, test } from "bun:test";
 import manifest from "../manifest.json";
 import dependabotFixture from "../fixtures/dependabot_alerts.json";
@@ -49,28 +50,28 @@ function schemaKeys(schema: unknown, acc: string[] = []): string[] {
 
 describe("github N4 alerts refs tags gist delete", () => {
   test("manifest is 0.79.0 with exactly 852 ops and the N4 policies", () => {
-    expect(manifest.version).toBe("0.81.1");
+    expect(manifest.version).toBe("0.81.2");
     expect(Object.keys(manifest.operations).length).toBe(912);
     for (const key of N4_READS) {
       const op = manifest.operations[key] as Record<string, unknown>;
       expect(op.kind).toBe("action");
       expect(op.sideEffect).toBe("read");
-      expect(op.effectPolicy).toBeUndefined();
-      expect(op.reconcile).toBeUndefined();
+      expect(op.effectPolicy).toBe(effectOf(key).policy);
+      expect(op.reconcile).toBe(effectOf(key).reconcile);
     }
     const update = manifest.operations["code_scanning.alerts.update"] as Record<string, unknown>;
     expect(update.sideEffect).toBe("write");
-    expect(update.effectPolicy).toBe("Reconcile");
-    expect(update.reconcile).toBe("code_scanning.alerts.get");
+    expect(update.effectPolicy).toBe(effectOf("code_scanning.alerts.update").policy);
+    expect(update.reconcile).toBe(effectOf("code_scanning.alerts.update").reconcile);
     const createTag = manifest.operations["git.tags.create"] as Record<string, unknown>;
     expect(createTag.sideEffect).toBe("write");
-    expect(createTag.effectPolicy).toBe("Reconcile");
-    expect(createTag.reconcile).toBe("git.tags.get");
+    expect(createTag.effectPolicy).toBe(effectOf("git.tags.create").policy);
+    expect(createTag.reconcile).toBe(effectOf("git.tags.create").reconcile);
     for (const key of ["gists.delete", "git.refs.delete"] as const) {
       const op = manifest.operations[key] as Record<string, unknown>;
       expect(op.sideEffect).toBe("write");
-      expect(op.effectPolicy).toBe("Idempotent");
-      expect(op.reconcile).toBeUndefined();
+      expect(op.effectPolicy).toBe(effectOf(key).policy);
+      expect(op.reconcile).toBe(effectOf(key).reconcile);
     }
     const secrets = manifest.operations["actions.secrets.list"] as { outputSchema: unknown };
     const keys = schemaKeys(secrets.outputSchema);
@@ -86,8 +87,8 @@ describe("github N4 alerts refs tags gist delete", () => {
     // G4 lands sealed-box create_or_update + delete (ciphertext only; still no plaintext create/update).
     expect(manifest.operations["actions.secrets.create_or_update"]).toBeDefined();
     expect(manifest.operations["actions.secrets.delete"]).toBeDefined();
-    expect(manifest.operations["actions.secrets.delete"].effectPolicy).toBeUndefined();
-    expect(manifest.operations["repos.contents.delete"].effectPolicy).toBe("Idempotent");
+    expect(manifest.operations["actions.secrets.delete"].effectPolicy).toBe(effectOf("actions.secrets.delete").policy);
+    expect(manifest.operations["repos.contents.delete"].effectPolicy).toBe(effectOf("repos.contents.delete").policy);
   });
 
   test("dependabot and code scanning lists encode owner and repo", async () => {

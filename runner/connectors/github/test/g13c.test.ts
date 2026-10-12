@@ -61,27 +61,24 @@ const call = (op: string, input: Record<string, unknown>) =>
 const opsOf = manifest.operations as Record<string, Record<string, any>>;
 
 describe("github FIX-G13C: G13 GraphQL ops via gqlRequest", () => {
-  test("version 0.81.1 at 912 ops; auth.scopes unchanged", () => {
-    expect(manifest.version).toBe("0.81.1");
+  test("version 0.81.2 at 912 ops; auth.scopes unchanged", () => {
+    expect(manifest.version).toBe("0.81.2");
     expect(Object.keys(opsOf)).toHaveLength(912);
     expect(manifest.auth.scopes).toEqual(["repo", "read:org", "admin:repo_hook", "admin:org_hook", "gist", "notifications", "admin:org"]);
     for (const scope of ["user", "project", "workflow"]) expect(manifest.auth.scopes).not.toContain(scope);
   });
 
-  test("manifest: no request blocks, closed inputs, effects (only subscriptions.update Reconcile), per-op scopes", () => {
+  test("manifest: no request blocks, closed inputs, no effect keys (FIX-EFFECTS), per-op scopes", () => {
     for (const op of Object.keys(OPS)) {
       const spec = opsOf[op]!;
       expect(spec.request, op).toBeUndefined();
       expect(spec.inputSchema.additionalProperties, op).toBe(false);
       expect(spec.sideEffect, op).toBe(op === "graphql.query" ? "read" : "write");
-      if (op === "graphql.subscriptions.update") {
-        expect(spec.effectPolicy).toBe("Reconcile");
-        expect(spec.reconcile).toBe("graphql.node.get");
-        expect(spec.reconcileInput).toEqual({ id: "subscribableId" });
-      } else {
-        expect(spec.effectPolicy, op).toBeUndefined();
-        expect(spec.reconcile, op).toBeUndefined();
-      }
+      // FIX-EFFECTS (v0.81.2): graphql.node.get returns {found, node}, not {subscribable}, so
+      // subscriptions.update no longer keeps Reconcile; no G13 op carries effect keys.
+      expect(spec.effectPolicy, op).toBeUndefined();
+      expect(spec.reconcile, op).toBeUndefined();
+      expect(spec.reconcileInput, op).toBeUndefined();
       const scopes = G13C_REQUIRED_SCOPES[op]!;
       if (scopes.length === 0) expect(spec.requiredScopes, op).toBeUndefined();
       else expect(spec.requiredScopes, op).toEqual([...scopes]);
@@ -297,10 +294,9 @@ describe("github FIX-G13C: G13 GraphQL ops via gqlRequest", () => {
 });
 
 describe("FIX-G13C Reconcile through the registry", () => {
-  test("subscriptions.update observes graphql.node.get(id = subscribableId), exact viewerSubscription", async () => {
+  test("FIX-EFFECTS: subscriptions.update is one call, primary returned", async () => {
     const r = recorder([
       json({ data: { updateSubscription: { subscribable: { __typename: "Repository", id: "R_kgDOA", viewerSubscription: "IGNORED" } } } }),
-      json({ data: { node: { __typename: "Repository", id: "R_kgDOA", viewerSubscription: "IGNORED" } } }),
     ]);
     const result = defaultConnectorRegistry.executeAction("github", "graphql.subscriptions.update", {
       subscribableId: "R_kgDOA",
@@ -310,10 +306,9 @@ describe("FIX-G13C Reconcile through the registry", () => {
     });
     if (!result.ok) throw new Error(JSON.stringify(result));
     const output = (await Promise.resolve(result.output)) as Record<string, any>;
-    expect(r.seen).toHaveLength(2);
+    expect(r.seen).toHaveLength(1);
     expect(r.seen[0]!.body.query).toContain("updateSubscription(");
-    expect(r.seen[1]!.body.variables).toEqual({ id: "R_kgDOA" });
-    expect(output).toMatchObject({ action: "graphql.node.get", found: true, node: { viewerSubscription: "IGNORED" } });
+    expect(output.action).toBe("graphql.subscriptions.update");
   });
 
   test("create/delete-like G13 writes have no effect: one call, primary returned", async () => {

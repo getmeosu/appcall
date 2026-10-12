@@ -26,7 +26,7 @@ const READS = [
 
 describe("github N10 fork sync and scan", () => {
   test("manifest keeps the base version and the N10 effect policies", () => {
-    expect(manifest.version).toBe("0.81.1");
+    expect(manifest.version).toBe("0.81.2");
     expect(Object.keys(manifest.operations).length).toBe(912);
     for (const key of READS) {
       const op = manifest.operations[key] as Record<string, unknown>;
@@ -45,8 +45,8 @@ describe("github N10 fork sync and scan", () => {
     expect(review.effectPolicy).toBe("Reconcile");
     expect(review.reconcile).toBe("pull_requests.reviews.get");
     const merges = manifest.operations["repos.merges"] as Record<string, unknown>;
-    expect(merges.effectPolicy).toBe("Idempotent");
-    expect(merges.reconcile).toBe("repos.compare");
+    expect(merges.effectPolicy).toBeUndefined();
+    expect(merges.reconcile).toBeUndefined();
     expect(manifest.operations["repos.merge_upstream"].description).toContain("branches.get");
     expect(manifest.operations["repos.merge_upstream"].description).toContain("grouped with branches, not forks");
     expect(manifest.operations["actions.runs.delete"]).toBeDefined();

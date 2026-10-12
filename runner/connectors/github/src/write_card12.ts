@@ -1,4 +1,5 @@
 import { createGitHubClient, parseGitHubRateLimit, type GitHubClient } from "./http";
+import { restAnyScopeMissing } from "./graphql";
 import { requireSingleSegment } from "./path_segment";
 
 type UnfollowUser = { username: string };
@@ -71,6 +72,9 @@ export function createWriteCard12Client(options: { accessToken: string; fetch?: 
         `/user/following/${seg(payload.username)}`,
         { method: "DELETE" },
       );
+      // FIX-EFFECTS: requiredScopes user:follow; GitHub lists alternatives in X-Accepted-OAuth-Scopes.
+      const capability = restAnyScopeMissing(response.status, response.headers, response.body, ["user:follow"], "user.following.unfollow");
+      if (capability) return capability;
       return noContent(
         response,
         204,

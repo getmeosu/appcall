@@ -1,3 +1,4 @@
+import { effectOf } from "./effects_final";
 import { describe, expect, test } from "bun:test";
 import manifest from "../manifest.json";
 import permissionFixture from "../fixtures/collaborator_permission.json";
@@ -48,14 +49,14 @@ const N3_READS = [
 
 describe("github N3 orgs teams hooks", () => {
   test("manifest is v0.79.0 with 715 ops and the N3 effect policies", () => {
-    expect(manifest.version).toBe("0.81.1");
+    expect(manifest.version).toBe("0.81.2");
     expect(Object.keys(manifest.operations).length).toBe(912);
     for (const key of N3_READS) {
       const op = manifest.operations[key] as Record<string, unknown>;
       expect(op.kind).toBe("action");
       expect(op.sideEffect).toBe("read");
-      expect(op.effectPolicy).toBeUndefined();
-      expect(op.reconcile).toBeUndefined();
+      expect(op.effectPolicy).toBe(effectOf(key).policy);
+      expect(op.reconcile).toBe(effectOf(key).reconcile);
     }
     for (const [key, reconcile] of [
       ["orgs.repos.create", "repos.get"],
@@ -64,25 +65,25 @@ describe("github N3 orgs teams hooks", () => {
     ] as const) {
       const op = manifest.operations[key] as Record<string, unknown>;
       expect(op.sideEffect).toBe("write");
-      expect(op.effectPolicy).toBe("Reconcile");
-      expect(op.reconcile).toBe(reconcile);
+      expect(op.effectPolicy).toBe(effectOf(key).policy);
+      expect(op.reconcile).toBe(effectOf(key).reconcile);
     }
     const remove = manifest.operations["teams.membership.remove"] as Record<string, unknown>;
     expect(remove.sideEffect).toBe("write");
-    expect(remove.effectPolicy).toBe("Idempotent");
-    expect(remove.reconcile).toBeUndefined();
+    expect(remove.effectPolicy).toBe(effectOf("teams.membership.remove").policy);
+    expect(remove.reconcile).toBe(effectOf("teams.membership.remove").reconcile);
     const dispatch = manifest.operations["repos.dispatch"] as Record<string, unknown>;
     expect(dispatch.sideEffect).toBe("write");
-    expect(dispatch.effectPolicy).toBeUndefined();
-    expect(dispatch.reconcile).toBeUndefined();
+    expect(dispatch.effectPolicy).toBe(effectOf("repos.dispatch").policy);
+    expect(dispatch.reconcile).toBe(effectOf("repos.dispatch").reconcile);
     expect(manifest.operations["contents.put"]).toBeUndefined();
     expect(manifest.operations["contents.delete"]).toBeUndefined();
     expect(manifest.operations["contents.push_files"]).toBeUndefined();
     expect(manifest.operations["repos.delete"]).toBeDefined();
     expect(manifest.operations["branches.protection.update"]).toBeDefined();
-    expect(manifest.operations["repos.contents.put"].effectPolicy).toBe("Reconcile");
-    expect(manifest.operations["repos.contents.delete"].effectPolicy).toBe("Idempotent");
-    expect(manifest.operations["repos.contents.push_files"].reconcile).toBe("commits.get");
+    expect(manifest.operations["repos.contents.put"].effectPolicy).toBe(effectOf("repos.contents.put").policy);
+    expect(manifest.operations["repos.contents.delete"].effectPolicy).toBe(effectOf("repos.contents.delete").policy);
+    expect(manifest.operations["repos.contents.push_files"].reconcile).toBe(effectOf("repos.contents.push_files").reconcile);
     expect(manifest.operations["orgs.teams.list"].sideEffect).toBe("read");
   });
 

@@ -337,6 +337,46 @@ export function restCapabilityMissing(
   return capabilityMissing(status, lowerHeaders(headers), body, [], { requiredScopes, operation });
 }
 
+/**
+ * FIX-EFFECTS: REST ops whose scopes are alternatives (GitHub lists them in
+ * X-Accepted-OAuth-Scopes, e.g. "user, user:follow" for /user/following/{username}).
+ * A 403/404 maps to CONNECTOR_CAPABILITY_MISSING (same meta-ads shape as
+ * restCapabilityMissing) only when NONE of the accepted scopes is granted, so a token that
+ * holds any of them keeps the provider status (e.g. a 404 for an unknown user). Returns null
+ * when either header is absent.
+ */
+export function restAnyScopeMissing(
+  status: number,
+  headers: Record<string, string>,
+  body: unknown,
+  requiredScopes: readonly string[],
+  operation: string,
+): GraphqlError | null {
+  if (status !== 403 && status !== 404) return null;
+  const lowered = lowerHeaders(headers);
+  const accepted = parseScopeHeader(lowered["x-accepted-oauth-scopes"]);
+  const granted = parseScopeHeader(lowered["x-oauth-scopes"]);
+  if (accepted === null || granted === null || accepted.length === 0) return null;
+  const have = new Set(granted);
+  if (accepted.some((scope) => have.has(scope))) return null;
+  const missing = requiredScopes.length > 0 ? [...requiredScopes] : accepted;
+  return {
+    ok: false,
+    error: {
+      code: "CONNECTOR_CAPABILITY_MISSING",
+      message: `GitHub ${operation} is missing permission ${missing.join(", ")}. Reconnect GitHub to re-consent with ${missing.join(", ")} (not part of the default connect scopes).`,
+      status,
+      reason: "permission_missing",
+      missingScopes: missing,
+      requiredScopes: [...requiredScopes],
+      reconsentRequired: true,
+      providerCode: null,
+      providerSubcode: null,
+      providerError: isRecord(body) ? body : null,
+    },
+  };
+}
+
 function upstream(message: string): GraphqlError {
   return {
     ok: false,

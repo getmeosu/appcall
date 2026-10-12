@@ -33,11 +33,10 @@ const READS = new Set([
   "graphql.enterprise.member_invitation.get",
   "graphql.enterprise.admin_invitation.get",
 ]);
-const RECONCILE: Record<string, { reconcile: string; reconcileInput?: Record<string, string> }> = {
-  "graphql.organizations.follow": { reconcile: "graphql.node.get", reconcileInput: { id: "organizationId" } },
-  "graphql.organizations.unfollow": { reconcile: "graphql.node.get", reconcileInput: { id: "organizationId" } },
-  "graphql.user_status.update": { reconcile: "graphql.viewer.get" },
-};
+// FIX-EFFECTS (v0.81.2): the graphql.node.get / graphql.viewer.get observes return {found, node} /
+// {viewer}, not these ops' own output ({organization}, {status}), so follow, unfollow and
+// user_status.update carry no effect keys. No G12 op keeps Reconcile.
+const RECONCILE: Record<string, { reconcile: string; reconcileInput?: Record<string, string> }> = {};
 
 type Fixture = {
   operation: string;
@@ -81,8 +80,8 @@ function call(op: string, input: Record<string, unknown>) {
 const opsOf = manifest.operations as Record<string, Record<string, any>>;
 
 describe("github FIX-G12C: G12 GraphQL ops via gqlRequest", () => {
-  test("version 0.81.1 at 912 ops; auth.scopes unchanged (per-op scopes only)", () => {
-    expect(manifest.version).toBe("0.81.1");
+  test("version 0.81.2 at 912 ops; auth.scopes unchanged (per-op scopes only)", () => {
+    expect(manifest.version).toBe("0.81.2");
     expect(Object.keys(opsOf)).toHaveLength(912);
     expect(manifest.auth.scopes).toEqual(["repo", "read:org", "admin:repo_hook", "admin:org_hook", "gist", "notifications", "admin:org"]);
     expect(manifest.auth.scopes).not.toContain("user");
@@ -339,37 +338,22 @@ describe("FIX-G12C Reconcile through the registry", () => {
     return { output: (await Promise.resolve(result.output)) as Record<string, any>, seen: r.seen };
   }
 
-  test("organizations.follow observes graphql.node.get(id = organizationId), exact viewerIsFollowing = true", async () => {
-    const { output, seen } = await run("graphql.organizations.follow", { organizationId: "O_kgDOA" }, [
+  test("FIX-EFFECTS: organizations.follow / unfollow and user_status.update are one call, primary returned", async () => {
+    const follow = await run("graphql.organizations.follow", { organizationId: "O_kgDOA" }, [
       json({ data: { followOrganization: { organization: { id: "O_kgDOA", login: "github", viewerIsFollowing: true } } } }),
-      json({ data: { node: { __typename: "Organization", id: "O_kgDOA", login: "github", viewerIsFollowing: true } } }),
     ]);
-    expect(seen).toHaveLength(2);
-    expect(seen[0]!.body.query).toContain("followOrganization(");
-    expect(seen[1]!.body.query).toContain("node(id: $id)");
-    expect(seen[1]!.body.variables).toEqual({ id: "O_kgDOA" });
-    expect(output).toMatchObject({ action: "graphql.node.get", found: true, node: { id: "O_kgDOA", viewerIsFollowing: true } });
-  });
-
-  test("organizations.unfollow observes viewerIsFollowing = false", async () => {
-    const { output, seen } = await run("graphql.organizations.unfollow", { organizationId: "O_kgDOA" }, [
+    expect(follow.seen).toHaveLength(1);
+    expect(follow.seen[0]!.body.query).toContain("followOrganization(");
+    expect(follow.output.action).toBe("graphql.organizations.follow");
+    const unfollow = await run("graphql.organizations.unfollow", { organizationId: "O_kgDOA" }, [
       json({ data: { unfollowOrganization: { organization: { id: "O_kgDOA", login: "github", viewerIsFollowing: false } } } }),
-      json({ data: { node: { __typename: "Organization", id: "O_kgDOA", viewerIsFollowing: false } } }),
     ]);
-    expect(seen[1]!.body.variables).toEqual({ id: "O_kgDOA" });
-    expect(output.node.viewerIsFollowing).toBe(false);
-  });
-
-  test("user_status.update observes graphql.viewer.get, exact on status", async () => {
+    expect(unfollow.seen).toHaveLength(1);
+    expect(unfollow.output.action).toBe("graphql.organizations.unfollow");
     const fx = await fixture("graphql.user_status.update");
-    const status = (fx.response.body as any).data.changeUserStatus.status;
-    const { output, seen } = await run("graphql.user_status.update", fx.input, [
-      json(fx.response.body),
-      json({ data: { viewer: { id: "U_kgDOA", login: "octocat", status } } }),
-    ]);
-    expect(seen[1]!.body.query).toContain("viewer {");
-    expect(seen[1]!.body.variables).toEqual({});
-    expect(output).toMatchObject({ action: "graphql.viewer.get", viewer: { status } });
+    const status = await run("graphql.user_status.update", fx.input, [json(fx.response.body)]);
+    expect(status.seen).toHaveLength(1);
+    expect(status.output.action).toBe("graphql.user_status.update");
   });
 
   test("user_lists.delete has no effect keys (deletes omit): one call, primary returned", async () => {

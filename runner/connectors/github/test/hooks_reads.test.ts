@@ -1,3 +1,4 @@
+import { effectOf } from "./effects_final";
 import { describe, expect, test } from "bun:test";
 import manifest from "../manifest.json";
 import hookFixture from "../fixtures/hook_get.json";
@@ -35,18 +36,18 @@ const READS = [
 
 describe("github hook reads", () => {
   test("manifest stays v0.79.0 at 852 ops and these reads omit effect policy", () => {
-    expect(manifest.version).toBe("0.81.1");
+    expect(manifest.version).toBe("0.81.2");
     expect(Object.keys(manifest.operations).length).toBe(912);
     for (const key of READS) {
       const op = manifest.operations[key] as Record<string, unknown>;
       expect(op.kind).toBe("action");
       expect(op.sideEffect).toBe("read");
-      expect(op.effectPolicy).toBeUndefined();
-      expect(op.reconcile).toBeUndefined();
+      expect(op.effectPolicy).toBe(effectOf(key).policy);
+      expect(op.reconcile).toBe(effectOf(key).reconcile);
       expect(op.observe).toBeUndefined();
     }
     expect(manifest.operations["repos.hooks.list"].sideEffect).toBe("read");
-    expect(manifest.operations["repos.hooks.create"].effectPolicy).toBe("Reconcile");
+    expect(manifest.operations["repos.hooks.create"].effectPolicy).toBe(effectOf("repos.hooks.create").policy);
     expect(manifest.operations["orgs.hooks.create"].sideEffect).toBe("write");
     expect(manifest.operations["orgs.hooks.delete"].sideEffect).toBe("write");
     expect(manifest.operations["repos.hooks.delete"].sideEffect).toBe("write");
