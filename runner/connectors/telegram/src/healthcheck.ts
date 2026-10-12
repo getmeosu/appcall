@@ -1,3 +1,4 @@
+import { telegramBotToken } from "./token";
 import { ConnectorHttpError, createConnectorHttpClient } from "../../../bun/src/http";
 import manifest from "../manifest.json";
 
@@ -23,7 +24,7 @@ export type ProviderHealthcheckResult = {
 export function healthcheck(input?: unknown): HealthcheckResult | Promise<ProviderHealthcheckResult> {
   if (isRecord(input) && typeof input.botToken === "string" && input.botToken.length > 0) {
     const fetchFn = typeof input.fetch === "function" ? (input.fetch as typeof fetch) : fetch;
-    return verifyBotToken(input.botToken, fetchFn);
+    return verifyBotToken(telegramBotToken(input.botToken), fetchFn);
   }
   return {
     connector: "telegram",

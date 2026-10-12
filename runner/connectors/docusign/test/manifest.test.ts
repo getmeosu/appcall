@@ -775,7 +775,7 @@ function deepEqual(a: unknown, b: unknown): boolean {
 describe("docusign manifest", () => {
   test("has tenant REST host, oauth hosts, version, and compiles", () => {
     expect(manifest.key).toBe("docusign");
-    expect(manifest.version).toBe("0.3.0");
+    expect(manifest.version).toBe("0.3.1");
     expect(manifest.runtime).toBe("bun");
     expect(manifest.categories).toEqual(["productivity"]);
     expect(manifest.network.allowedHosts).toEqual(["{{restHost}}", "{{oauthHost}}", "account.docusign.com", "account-d.docusign.com"]);

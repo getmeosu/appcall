@@ -15,7 +15,7 @@ describe("bamboohr manifest", () => {
   it("keeps connector identity, bun runtime, and Basic apiKey:x auth", () => {
     expect(manifest.key).toBe("bamboohr");
     expect(manifest.runtime).toBe("bun");
-    expect(manifest.version).toBe("0.2.0");
+    expect(manifest.version).toBe("0.2.1");
     expect(manifest.auth.type).toBe("api_key");
     expect(manifest.http.baseUrl).toBe("https://{{companyDomain}}.bamboohr.com");
     expect(manifest.http.auth).toEqual({

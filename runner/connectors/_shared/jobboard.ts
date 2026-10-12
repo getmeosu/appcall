@@ -194,6 +194,29 @@ export function assertHostLabel(value: unknown, field: string): string {
 }
 
 /**
+ * SEC-PATH-2c-3: a bare DNS hostname: two or more RFC 1123 labels (each via assertHostLabel), so
+ * no scheme, port, path, userinfo, percent forms, empty labels or trailing dot.
+ * Returned trimmed and lowercased (confluence site, docusign restHost/oauthHost).
+ */
+export function assertHostName(value: unknown, field: string): string {
+  if (typeof value !== "string" || value.trim().length === 0) return assertHostLabel(value, field);
+  if (/\s/.test(value.trim())) {
+    throw { ok: false, code: "INVALID_ACTION_INPUT", message: `${field} must be a bare hostname such as example.com` };
+  }
+  const labels = value.trim().split(".");
+  if (labels.length < 2 || value.trim().length > 253) {
+    throw { ok: false, code: "INVALID_ACTION_INPUT", message: `${field} must be a bare hostname such as example.com` };
+  }
+  return labels.map((label) => {
+    try {
+      return assertHostLabel(label, field);
+    } catch {
+      throw { ok: false, code: "INVALID_ACTION_INPUT", message: `${field} must be a bare hostname such as example.com` };
+    }
+  }).join(".");
+}
+
+/**
  * isUnsafePathSegment reports whether a caller id would change the request path
  * once interpolated, even after one round of percent-decoding: missing, blank or
  * whitespace-only, dot-only (".", ".."), a percent-encoded dot or blank form

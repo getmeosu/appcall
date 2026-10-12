@@ -1,3 +1,4 @@
+import { telegramBotToken } from "./token";
 import { createConnectorHttpClient, type ConnectorHttpClient } from "../../../bun/src/http";
 import manifest from "../manifest.json";
 
@@ -58,7 +59,7 @@ export type TelegramProviderError = {
 
 export async function sendTelegramMessage(input: TelegramSendMessageClientInput): Promise<TelegramSendMessageResult> {
   const validated = validateSendMessageInput(input);
-  const token = requireString(input.botToken, "botToken").trim();
+  const token = telegramBotToken(input.botToken);
   if (token.length === 0) {
     throw new Error("botToken is required");
   }
@@ -192,7 +193,7 @@ export function validateSendPhotoInput(input: unknown): SendPhotoInput {
 
 export async function sendTelegramPhoto(input: SendPhotoClientInput): Promise<SendPhotoResult> {
   const validated = validateSendPhotoInput(input);
-  const token = requireString(input.botToken, "botToken").trim();
+  const token = telegramBotToken(input.botToken);
   if (token.length === 0) throw new Error("botToken is required");
   const httpClient = input.httpClient ?? createConnectorHttpClient({
     allowedHosts: manifest.network.allowedHosts,
@@ -250,7 +251,7 @@ export function validateSendDocumentInput(input: unknown): SendDocumentInput {
 
 export async function sendTelegramDocument(input: SendDocumentClientInput): Promise<SendDocumentResult> {
   const validated = validateSendDocumentInput(input);
-  const token = requireString(input.botToken, "botToken").trim();
+  const token = telegramBotToken(input.botToken);
   if (token.length === 0) throw new Error("botToken is required");
   const httpClient = input.httpClient ?? createConnectorHttpClient({
     allowedHosts: manifest.network.allowedHosts,
@@ -309,7 +310,7 @@ export function validateEditMessageTextInput(input: unknown): EditMessageTextInp
 
 export async function editTelegramMessage(input: EditMessageTextClientInput): Promise<EditMessageTextResult> {
   const validated = validateEditMessageTextInput(input);
-  const token = requireString(input.botToken, "botToken").trim();
+  const token = telegramBotToken(input.botToken);
   if (token.length === 0) throw new Error("botToken is required");
   const httpClient = input.httpClient ?? createConnectorHttpClient({
     allowedHosts: manifest.network.allowedHosts,
@@ -360,7 +361,7 @@ export function validateDeleteMessageInput(input: unknown): DeleteMessageInput {
 
 export async function deleteTelegramMessage(input: DeleteMessageClientInput): Promise<DeleteMessageResult> {
   const validated = validateDeleteMessageInput(input);
-  const token = requireString(input.botToken, "botToken").trim();
+  const token = telegramBotToken(input.botToken);
   if (token.length === 0) throw new Error("botToken is required");
   const httpClient = input.httpClient ?? createConnectorHttpClient({
     allowedHosts: manifest.network.allowedHosts,
@@ -411,7 +412,7 @@ export function validateForwardMessageInput(input: unknown): ForwardMessageInput
 
 export async function forwardTelegramMessage(input: ForwardMessageClientInput): Promise<ForwardMessageResult> {
   const validated = validateForwardMessageInput(input);
-  const token = requireString(input.botToken, "botToken").trim();
+  const token = telegramBotToken(input.botToken);
   if (token.length === 0) throw new Error("botToken is required");
   const httpClient = input.httpClient ?? createConnectorHttpClient({
     allowedHosts: manifest.network.allowedHosts,
@@ -463,7 +464,7 @@ export function validatePinChatMessageInput(input: unknown): PinChatMessageInput
 
 export async function pinTelegramMessage(input: PinChatMessageClientInput): Promise<PinChatMessageResult> {
   const validated = validatePinChatMessageInput(input);
-  const token = requireString(input.botToken, "botToken").trim();
+  const token = telegramBotToken(input.botToken);
   if (token.length === 0) throw new Error("botToken is required");
   const httpClient = input.httpClient ?? createConnectorHttpClient({
     allowedHosts: manifest.network.allowedHosts,
@@ -545,7 +546,7 @@ export function validateSendLocationInput(input: unknown): SendLocationInput {
 
 export async function sendTelegramLocation(input: SendLocationClientInput): Promise<SendLocationResult> {
   const validated = validateSendLocationInput(input);
-  const token = requireString(input.botToken, "botToken").trim();
+  const token = telegramBotToken(input.botToken);
   if (token.length === 0) throw new Error("botToken is required");
   const httpClient = input.httpClient ?? createConnectorHttpClient({
     allowedHosts: manifest.network.allowedHosts,
@@ -677,7 +678,7 @@ export function validateSendPollInput(input: unknown): SendPollInput {
 
 export async function sendTelegramPoll(input: SendPollClientInput): Promise<SendPollResult> {
   const validated = validateSendPollInput(input);
-  const token = requireString(input.botToken, "botToken").trim();
+  const token = telegramBotToken(input.botToken);
   if (token.length === 0) throw new Error("botToken is required");
   const httpClient = input.httpClient ?? createConnectorHttpClient({
     allowedHosts: manifest.network.allowedHosts,
