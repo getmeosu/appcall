@@ -57,7 +57,7 @@ function deepEqual(a: unknown, b: unknown): boolean {
 describe("outlook manifest", () => {
   test("has bounded host, oauth, version, and compiles", () => {
     expect(manifest.key).toBe("outlook");
-    expect(manifest.version).toBe("0.2.0");
+    expect(manifest.version).toBe("0.2.1");
     expect(manifest.runtime).toBe("bun");
     expect(manifest.categories).toEqual(["email", "calendar"]);
     expect(manifest.network.allowedHosts).toEqual(["graph.microsoft.com", "login.microsoftonline.com"]);
@@ -185,18 +185,18 @@ describe("outlook manifest", () => {
 
   });
 
-  test("recipe operations equal runner operations and auth is type/scopes/setup only", async () => {
+  test("recipe operations equal runner operations and auth matches manifest.json (RECIPE-DRIFT-ALL)", async () => {
     const recipe = await Bun.file(new URL("../../recipes/outlook/recipe.json", import.meta.url)).json() as {
       source: { revision: string };
       selection: { operations: string[]; upstreamSha: string };
-      manifest: { operations: Record<string, { kind?: string; sideEffect?: string }>; auth: { type: string; scopes: unknown; setup: unknown } };
+      manifest: { operations: Record<string, { kind?: string; sideEffect?: string }>; auth: { type: string; scopes: unknown; setup: unknown; oauth: unknown } };
     };
     const runnerKeys = Object.keys(manifest.operations).sort();
     expect(recipe.source.revision).toBe("33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a");
     expect(recipe.selection.upstreamSha).toBe("33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a");
     expect(Object.keys(recipe.manifest.operations).sort()).toEqual(runnerKeys);
     expect([...recipe.selection.operations].sort()).toEqual(runnerKeys);
-    expect(Object.keys(recipe.manifest.auth).sort()).toEqual(["scopes", "setup", "type"]);
+    expect(Object.keys(recipe.manifest.auth).sort()).toEqual(["oauth", "scopes", "setup", "type"]);
     for (const [key, operation] of Object.entries(recipe.manifest.operations)) {
       if (operation.kind === "webhook") expect(operation.sideEffect, key).toBe("read");
     }
