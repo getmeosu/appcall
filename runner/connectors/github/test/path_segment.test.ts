@@ -91,8 +91,8 @@ async function run(fn: string, input: Record<string, unknown>) {
 }
 
 describe("github FIX-SEGMENT: manifest", () => {
-  test("FIX-SEGMENT-2 bump to 0.86.1 at 847 ops", () => {
-    expect(manifest.version).toBe("0.86.1");
+  test("version 0.86.2 at 847 ops (FIX-SEGMENT-2 was 0.86.1)", () => {
+    expect(manifest.version).toBe("0.86.2");
     expect(Object.keys(manifest.operations)).toHaveLength(847);
   });
 });

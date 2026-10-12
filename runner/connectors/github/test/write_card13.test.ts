@@ -45,7 +45,7 @@ function json(status: number, body: unknown) {
 
 describe("github write card 13 sub-issues labels teams writes", () => {
   test("version is 0.79.0 at 852 ops with the write breakdown", () => {
-    expect(manifest.version).toBe("0.86.1");
+    expect(manifest.version).toBe("0.86.2");
     const ops = manifest.operations as Record<string, Record<string, unknown>>;
     expect(Object.keys(ops)).toHaveLength(847);
     const kinds = { action: 0, sync: 0, webhook: 0 };
@@ -72,8 +72,9 @@ describe("github write card 13 sub-issues labels teams writes", () => {
       expect(op.reconcile).toBeUndefined();
       expect(op.effect).toBeUndefined();
     }
-    expect(ops["orgs.teams.update"].effectPolicy).toBe("Reconcile");
-    expect(ops["orgs.teams.update"].reconcile).toBe("orgs.teams.get");
+    // FIX-EFFECTS-b (0.86.2): no effect keys; orgs.teams.get does not expose notificationSetting / parentTeamId.
+    expect(ops["orgs.teams.update"].effectPolicy).toBeUndefined();
+    expect(ops["orgs.teams.update"].reconcile).toBeUndefined();
     expect(ops["orgs.teams.update"].effect).toBeUndefined();
     expect(String(ops["orgs.teams.get"].description)).toContain("GET /orgs/{org}/teams/{team_slug}");
     expect(ops["classroom"]).toBeUndefined();

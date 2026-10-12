@@ -286,6 +286,17 @@ const KNOWN_OPEN_OBSERVE_GAPS = [
   "github notifications.threads.subscription.set -> notifications.threads.subscription.get [thread_id]",
 ];
 
+// FIX-EFFECTS (0.81.2) removed exactly these 5 known gaps (linus recount; not 4): four ops lost
+// their effect keys and issues.comments.update was retargeted to issues.comments.get. None may
+// come back, and the list above is asserted by exact content and exact count, not a floor.
+const REMOVED_BY_FIX_EFFECTS = [
+  "github commits.comments.create -> commits.get [ref]",
+  "github commits.statuses.create -> commits.status.get [ref]",
+  "github issues.comments.delete -> issues.get [issueNumber]",
+  "github issues.comments.update -> issues.get [issueNumber]",
+  "github orgs.repos.create -> repos.get [owner,repo]",
+];
+
 describe("effect pairing scan (all connector manifests)", () => {
   const root = join(import.meta.dir, "..", "..", "connectors");
   const manifests = readdirSync(root)
@@ -296,6 +307,7 @@ describe("effect pairing scan (all connector manifests)", () => {
     const problems: string[] = [];
     const openGaps: string[] = [];
     let pairings = 0;
+    let githubPairings = 0;
     for (const manifest of manifests) {
       const ops = manifest.operations ?? {};
       for (const [name, op] of Object.entries(ops)) {
@@ -310,6 +322,7 @@ describe("effect pairing scan (all connector manifests)", () => {
           continue;
         }
         pairings += 1;
+        if (manifest.key === "github") githubPairings += 1;
         const observe = ops[target];
         if (!observe) {
           problems.push(`${manifest.key} ${name}: reconcile ${target} not declared`);
@@ -332,11 +345,22 @@ describe("effect pairing scan (all connector manifests)", () => {
         else openGaps.push(line);
       }
     }
-    // Exact count (linus): 83 pairings across all manifests, 41 of them github (FIX-EFFECTS 0.81.2;
-    // PRUNE-1 0.82.0, PRUNE-2 0.83.0, PRUNE-3 0.84.0, PRUNE-4 0.85.0 and PRUNE-5 0.86.0 remove no paired op). Update this number deliberately when pairings change.
-    expect(pairings).toBe(83);
+    // Exact count (linus): 82 pairings across all manifests, 40 of them github. FIX-EFFECTS 0.81.2
+    // left 83 / 41 (PRUNE-1 0.82.0 .. PRUNE-5 0.86.0 and FIX-SEGMENT-2 0.86.1 remove no paired op);
+    // FIX-EFFECTS-b 0.86.2 drops orgs.teams.update -> orgs.teams.get (83 -> 82, github 41 -> 40).
+    // Update these numbers deliberately when pairings change.
+    expect(pairings).toBe(82);
+    expect(githubPairings).toBe(40);
     expect(problems).toEqual([]);
+    expect(KNOWN_OPEN_OBSERVE_GAPS).toHaveLength(1);
+    expect(openGaps).toHaveLength(KNOWN_OPEN_OBSERVE_GAPS.length);
     expect(openGaps.sort()).toEqual([...KNOWN_OPEN_OBSERVE_GAPS].sort());
+    expect(REMOVED_BY_FIX_EFFECTS).toHaveLength(5);
+    expect(new Set(REMOVED_BY_FIX_EFFECTS).size).toBe(5);
+    for (const gone of REMOVED_BY_FIX_EFFECTS) {
+      expect(openGaps, gone).not.toContain(gone);
+      expect(KNOWN_OPEN_OBSERVE_GAPS, gone).not.toContain(gone);
+    }
   });
 
   test("the default registry (all manifests) loads with the pairing guard on", () => {
