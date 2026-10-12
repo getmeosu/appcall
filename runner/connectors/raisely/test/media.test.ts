@@ -26,9 +26,6 @@ describe("raisely campaigns.media.upload", () => {
     const form = calls[0]!.init!.body as FormData;
     expect(form.get("filename")).toBeInstanceOf(Blob);
     expect(result).toEqual({
-      connector: "raisely",
-      action: "campaigns.media.upload",
-      source: "provider",
       data: { data: { url: "https://cdn.example/hero.png", urls: ["https://cdn.example/hero.png"] } },
     });
   });

@@ -9,7 +9,7 @@ const HANDWRITTEN = new Set(["campaigns.media.upload"]);
 describe("raisely manifest", () => {
   it("declares the connector identity the control plane keys on", () => {
     expect(manifest.key).toBe("raisely");
-    expect(manifest.version).toBe("0.2.0");
+    expect(manifest.version).toBe("0.2.2");
     expect(manifest.runtime).toBe("bun");
     expect(manifest.http.baseUrl).toBe("https://api.raisely.com/v3");
     expect(manifest.http.auth.field).toBe("apiKey");

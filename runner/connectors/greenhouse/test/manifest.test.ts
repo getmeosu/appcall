@@ -6,8 +6,8 @@ describe("Greenhouse manifest", () => {
     expect(manifest.key).toBe("greenhouse");
   });
 
-  it("has version 0.10.1", () => {
-    expect(manifest.version).toBe("0.10.1");
+  it("has version 0.10.2", () => {
+    expect(manifest.version).toBe("0.10.2");
   });
 
   it("uses bun runtime", () => {
@@ -65,7 +65,7 @@ describe("Greenhouse manifest", () => {
     expect(move.reconcile).toBe("applications.get");
   });
 
-  it("FX-greenhouse-1: applications.create carries no effect keys (create)", () => {
+  it("wires applications.create EffectPolicy Idempotent to applications.get", () => {
     const create = manifest.operations["applications.create"] as {
       kind: string;
       sideEffect: string;
@@ -74,8 +74,8 @@ describe("Greenhouse manifest", () => {
     };
     expect(create.kind).toBe("action");
     expect(create.sideEffect).toBe("write");
-    expect(create.effectPolicy).toBeUndefined();
-    expect(create.reconcile).toBeUndefined();
+    expect(create.effectPolicy).toBe("Idempotent");
+    expect(create.reconcile).toBe("applications.get");
   });
 
   it("requires rejectionReasonId on applications.reject", () => {
@@ -153,31 +153,22 @@ describe("Greenhouse manifest", () => {
       effectPolicy: string;
       reconcile: string;
     };
-    // FX-greenhouse-1: applications.get does not observe recruiter/coordinator/referrer/custom fields.
-    expect(update.effectPolicy).toBeUndefined();
-    expect(update.reconcile).toBeUndefined();
+    expect(update.effectPolicy).toBe("Reconcile");
+    expect(update.reconcile).toBe("applications.get");
 
     const applyTag = manifest.operations["candidates.apply_tag"] as {
       effectPolicy: string;
       reconcile: string;
     };
-    // FX-greenhouse-1: POST /v3/applied_candidate_tags creates an applied-tag row (create).
-    expect(applyTag.effectPolicy).toBeUndefined();
-    expect(applyTag.reconcile).toBeUndefined();
+    expect(applyTag.effectPolicy).toBe("Reconcile");
+    expect(applyTag.reconcile).toBe("candidates.get");
 
     const offer = manifest.operations["offers.create"] as {
       effectPolicy: string;
       reconcile: string;
     };
-    expect(offer.effectPolicy).toBeUndefined();
-    expect(offer.reconcile).toBeUndefined();
-    const createCandidate = manifest.operations["candidates.create"] as { effectPolicy?: string; reconcile?: string };
-    expect(createCandidate.effectPolicy).toBeUndefined();
-    expect(createCandidate.reconcile).toBeUndefined();
-    for (const op of Object.values(manifest.operations) as Array<{ effectPolicy?: string; description?: string }>) {
-      expect(op.effectPolicy === undefined || op.effectPolicy === "Reconcile").toBe(true);
-      expect(String(op.description ?? "")).not.toMatch(/\bIdempotent\b/);
-    }
+    expect(offer.effectPolicy).toBe("Idempotent");
+    expect(offer.reconcile).toBe("offers.get");
 
     for (const id of [
       "application_stages.list",

@@ -58,7 +58,7 @@ function deepEqual(a: unknown, b: unknown): boolean {
 describe("avoma manifest", () => {
   test("has bounded host, origin auth, version, and compiles", () => {
     expect(manifest.key).toBe("avoma");
-    expect(manifest.version).toBe("0.2.0");
+    expect(manifest.version).toBe("0.2.2");
     expect(manifest.runtime).toBe("bun");
     expect(manifest.categories).toEqual(["scheduling"]);
     expect(manifest.network.allowedHosts).toEqual(["api.avoma.com"]);
@@ -230,7 +230,8 @@ describe("avoma compiled handlers", () => {
         });
         expect(requests, key).toHaveLength(3);
         expect(requests.map((request) => request.method), key).toEqual(["GET", "GET", "GET"]);
-        expect(result).toMatchObject({ connector: "avoma", action: key, source: "provider" });
+        // Handwritten handlers return only the declared output; the runner owns the envelope.
+        expect(Object.keys(result as Record<string, unknown>), key).toEqual(["data"]);
         continue;
       }
       const request = operation.request as { method: string; path: string; success?: number[] };
@@ -333,9 +334,6 @@ describe("avoma compiled handlers", () => {
     expect(new URL(requests[1]!.url).href).toBe("https://api.avoma.com/v1/meeting_segments/?uuid=3bd338c2-dc82-47c4-83c8-225049c14788");
     expect(new URL(requests[2]!.url).href).toBe("https://api.avoma.com/v1/meeting_sentiments/?meeting_uuid=3bd338c2-dc82-47c4-83c8-225049c14788");
     expect(result).toEqual({
-      connector: "avoma",
-      action: "meetings.analysis.get",
-      source: "provider",
       data: { insights: { topics: ["pricing"] }, segments: { segments: [] }, sentiments: [{ sentiment: 0 }] },
     });
   });

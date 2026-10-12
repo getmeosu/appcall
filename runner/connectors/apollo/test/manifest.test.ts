@@ -5,7 +5,7 @@ describe("apollo connector manifest", () => {
   test("declares key, name, runtime, and version", () => {
     expect(manifest.key).toBe("apollo");
     expect(manifest.name).toBe("Apollo");
-    expect(manifest.version).toBe("0.1.0");
+    expect(manifest.version).toBe("0.1.2");
     expect(manifest.runtime).toBe("bun");
   });
 

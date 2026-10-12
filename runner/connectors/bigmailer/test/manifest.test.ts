@@ -90,9 +90,9 @@ function requestOf(key: string): Record<string, unknown> {
 }
 
 describe("bigmailer manifest", () => {
-  test("keeps origin identity, auth, and version 0.2.0", () => {
+  test("keeps origin identity, auth, and version 0.2.1", () => {
     expect(manifest.key).toBe("bigmailer");
-    expect(manifest.version).toBe("0.2.0");
+    expect(manifest.version).toBe("0.2.1");
     expect(manifest.network.allowedHosts).toEqual(["api.bigmailer.io"]);
     expect(manifest.http.baseUrl).toBe("https://api.bigmailer.io");
     expect(manifest.http.auth).toMatchObject({

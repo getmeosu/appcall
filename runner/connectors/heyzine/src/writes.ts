@@ -62,10 +62,10 @@ async function postJson(key: string, path: string, body: Record<string, unknown>
     }
     throw { ok: false, code: "CONNECTOR_UNAVAILABLE", message: "Connector request failed." };
   }
-  return finish(key, response);
+  return finish(response);
 }
 
-function finish(action: string, response: { status: number; headers: Record<string, string>; body: string }): Record<string, unknown> {
+function finish(response: { status: number; headers: Record<string, string>; body: string }): Record<string, unknown> {
   let parsed: unknown = null;
   if (response.body.trim() !== "") {
     try {
@@ -92,7 +92,7 @@ function finish(action: string, response: { status: number; headers: Record<stri
       message: detail ?? "Heyzine rejected the request.",
     };
   }
-  return { connector: "heyzine", action, source: "provider", data: parsed };
+  return { data: parsed };
 }
 
 export function deleteFlipbook(inputValue: unknown): Promise<Record<string, unknown>> {

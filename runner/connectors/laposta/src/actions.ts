@@ -136,7 +136,7 @@ function formPost(spec: FormPostConfig, inputValue: unknown): unknown {
       },
       body: form.toString(),
     })
-    .then((response) => finish(spec.action, response));
+    .then((response) => finish(response));
 }
 
 export function appendFormValue(form: URLSearchParams, key: string, value: unknown): void {
@@ -182,7 +182,7 @@ function validate(spec: FormPostConfig, input: Record<string, unknown>): Record<
   return input;
 }
 
-function finish(action: string, response: { status: number; headers: Record<string, string>; body: string }): Record<string, unknown> {
+function finish(response: { status: number; headers: Record<string, string>; body: string }): Record<string, unknown> {
   const parsed = parseJson(response.body);
   if (response.status === 429) {
     throw {
@@ -199,7 +199,7 @@ function finish(action: string, response: { status: number; headers: Record<stri
       message: messageOf(parsed) ?? `Laposta request failed with HTTP ${response.status}`,
     };
   }
-  return { connector: "laposta", action, source: "provider", data: parsed };
+  return { data: parsed };
 }
 
 function parseJson(body: string): unknown {

@@ -20,7 +20,7 @@ function requestOf(key: string): Record<string, unknown> {
 describe("statuscake manifest", () => {
   test("keeps origin auth, host, provenance, and compiles", () => {
     expect(manifest.key).toBe("statuscake");
-    expect(manifest.version).toBe("0.2.0");
+    expect(manifest.version).toBe("0.2.1");
     expect(manifest.network.allowedHosts).toEqual(["api.statuscake.com"]);
     expect(manifest.http.baseUrl).toBe("https://api.statuscake.com/v1");
     expect(manifest.http.auth.value).toBe("Bearer {{apiKey}}");

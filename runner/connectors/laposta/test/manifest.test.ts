@@ -20,7 +20,7 @@ describe("laposta manifest", () => {
   it("keeps the public api-key contract and pinned provenance", () => {
     expect(manifest.key).toBe("laposta");
     expect(manifest.visibility).toBe("public");
-    expect(manifest.version).toBe("0.2.0");
+    expect(manifest.version).toBe("0.2.2");
     expect(manifest.http.auth.field).toBe("apiKey");
     expect(manifest.http.auth.basic).toEqual({ username: "{{apiKey}}", password: "" });
     expect(manifest.http.baseUrl).toBe("https://api.laposta.org");

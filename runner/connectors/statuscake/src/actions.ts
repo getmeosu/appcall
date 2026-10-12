@@ -143,12 +143,8 @@ function makeHandler(operationKey: (typeof FORM_OPS)[number]): CompiledHandler {
           request.result === undefined
             ? { data: parsed }
             : renderTemplate(request.result, { response: parsed, status: response.status, headers: response.headers, input: validated });
-        return {
-          connector: "statuscake",
-          action: operationKey,
-          source: "provider",
-          ...(isRecord(mapped) ? mapped : { data: mapped }),
-        };
+        // Only the declared output: the runner, not the handler, owns the envelope.
+        return isRecord(mapped) ? mapped : { data: mapped };
       })
       .catch((error) => {
         if (error instanceof ConnectorHttpError) {

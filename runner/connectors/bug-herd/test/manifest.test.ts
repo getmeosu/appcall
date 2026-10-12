@@ -93,7 +93,7 @@ function deepEqual(a: unknown, b: unknown): boolean {
 describe("bug-herd manifest", () => {
   test("has bounded host, origin auth, version, and compiles", () => {
     expect(manifest.key).toBe("bug-herd");
-    expect(manifest.version).toBe("0.2.0");
+    expect(manifest.version).toBe("0.2.1");
     expect(manifest.network.allowedHosts).toEqual(["www.bugherd.com"]);
     expect(manifest.http.baseUrl).toBe("https://www.bugherd.com");
     expect(manifest.http.auth).toMatchObject({
@@ -265,7 +265,12 @@ describe("bug-herd compiled handlers", () => {
       expect(new URL(requests[0]!.url).hostname, key).toBe("www.bugherd.com");
       expect(requests[0]!.headers.get("authorization"), key).toBe("Basic dG9rZW46eA==");
       expect(requests[0]!.headers.get("accept"), key).toBe("application/json");
-      expect(result).toMatchObject({ connector: "bug-herd", action: key, source: "provider" });
+      if (key === "attachments.upload") {
+        // Handwritten handler returns only the declared output; the runner owns the envelope.
+        expect(Object.keys(result as Record<string, unknown>), key).toEqual(["data"]);
+      } else {
+        expect(result).toMatchObject({ connector: "bug-herd", action: key, source: "provider" });
+      }
     }
   });
 
@@ -307,12 +312,7 @@ describe("bug-herd compiled handlers", () => {
     expect(file).toBeInstanceOf(File);
     expect((file as File).name).toBe("note.txt");
     expect(await (file as File).text()).toBe("hello");
-    expect(result).toMatchObject({
-      connector: "bug-herd",
-      action: "attachments.upload",
-      source: "provider",
-      data: { attachment: { id: 91, file_name: "note.txt" } },
-    });
+    expect(result).toEqual({ data: { attachment: { id: 91, file_name: "note.txt" } } });
   });
 
   test("runs fixtures against compiled handlers", async () => {

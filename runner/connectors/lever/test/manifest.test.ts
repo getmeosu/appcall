@@ -6,8 +6,8 @@ describe("Lever manifest", () => {
     expect(manifest.key).toBe("lever");
   });
 
-  it("has version 0.6.0", () => {
-    expect(manifest.version).toBe("0.6.0");
+  it("has version 0.6.1", () => {
+    expect(manifest.version).toBe("0.6.1");
   });
 
   it("uses bun runtime", () => {
@@ -156,6 +156,19 @@ describe("Lever manifest", () => {
     expect(op.reconcile).toBe("opportunities.get");
     expect(op.request.method).toBe("PUT");
     expect(op.request.body.reason).toBe("{{reason}}");
+  });
+
+  it("Reconcile writes declare the {opportunity} they answer with, like opportunities.update", () => {
+    // PLAT-OUT-2: EffectPolicy Reconcile answers with the opportunities.get
+    // observation ({ opportunity }), so these ops no longer declare { data }.
+    const ops = manifest.operations as Record<string, { outputSchema: unknown }>;
+    for (const key of ["opportunities.update_stage", "opportunities.archive"]) {
+      expect(ops[key]!.outputSchema).toEqual(ops["opportunities.update"]!.outputSchema);
+      expect(ops[key]!.outputSchema).toMatchObject({ additionalProperties: false, required: ["opportunity"] });
+      // The compiled PUT answers Lever's { data } envelope; the declared output is
+      // the reconciled answer, so the primary response is not held to it.
+      expect((ops[key] as { enforceOutputSchema?: boolean }).enforceOutputSchema).toBeUndefined();
+    }
   });
 
   it("declares job, opportunity, stage, user, interview, feedback, archive_reason models", () => {

@@ -56,12 +56,7 @@ export function uploadCampaignMedia(inputValue: unknown): Record<string, unknown
         message: `Raisely rejected the media upload (HTTP ${response.status}).`,
       };
     }
-    return {
-      connector: "raisely",
-      action: "campaigns.media.upload",
-      source: "provider",
-      data,
-    };
+    return { data };
   });
 }
 

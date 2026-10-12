@@ -4,10 +4,12 @@ import manifest from "../manifest.json";
 
 // Static result returned by the no-credential setup-validation path (the
 // connector is registered and reachable as code, but no provider call is made).
-export type HealthcheckResult = { connector: "apollo"; status: "ok"; source: "connector" };
+export type HealthcheckResult = { status: "ok"; source: "connector" };
 
 // Provider-confirmed result returned after a real authenticated call succeeds.
-export type ProviderHealthcheckResult = { connector: "apollo"; status: "ok"; source: "provider" };
+// `status` and `source` are the control plane's HealthcheckResponse contract
+// (crates/appcall-runner-client); the runner, not the handler, names the connector.
+export type ProviderHealthcheckResult = { status: "ok"; source: "provider" };
 
 // healthcheck performs a REAL authenticated provider call when a credential is
 // present in `input`, and otherwise returns the static connector-owned status.
@@ -25,7 +27,7 @@ export function healthcheck(input?: unknown): HealthcheckResult | Promise<Provid
     const fetchFn = typeof input.fetch === "function" ? (input.fetch as typeof fetch) : fetch;
     return verifyApiKey(input.apiKey, fetchFn);
   }
-  return { connector: "apollo", status: "ok", source: "connector" };
+  return { status: "ok", source: "connector" };
 }
 
 async function verifyApiKey(apiKey: string, fetchFn: typeof fetch): Promise<ProviderHealthcheckResult> {
@@ -55,7 +57,7 @@ async function verifyApiKey(apiKey: string, fetchFn: typeof fetch): Promise<Prov
     body = undefined;
   }
   if (isRecord(body) && body.is_logged_in === true) {
-    return { connector: "apollo", status: "ok", source: "provider" };
+    return { status: "ok", source: "provider" };
   }
   throw { ok: false, code: "CONNECTOR_UPSTREAM_ERROR", message: "Apollo rejected the credentials: API key is not logged in." };
 }

@@ -19,7 +19,7 @@ const handwritten = new Set([
 describe("anchor-browser manifest", () => {
   it("keeps the connector identity and bumps the deepened version", () => {
     expect(manifest.key).toBe("anchor-browser");
-    expect(manifest.version).toBe("0.2.0");
+    expect(manifest.version).toBe("0.2.2");
     expect(manifest.runtime).toBe("bun");
     expect(manifest.categories).toEqual(["dev-tools"]);
   });

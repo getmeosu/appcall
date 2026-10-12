@@ -68,7 +68,7 @@ function expectedHost(key: string): string {
 describe("quickbooks declarative compile", () => {
   test("compiles native oauth2 type/scopes/setup auth and static Intuit hosts", () => {
     expect(manifest.key).toBe("quickbooks");
-    expect(manifest.version).toBe("0.3.0");
+    expect(manifest.version).toBe("0.3.1");
     expect(manifest.auth.type).toBe("oauth2");
     expect(Object.keys(manifest.auth).sort()).toEqual(["scopes", "setup", "type"]);
     expect(manifest.auth.scopes).toEqual([

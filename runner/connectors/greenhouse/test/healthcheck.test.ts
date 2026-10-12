@@ -30,7 +30,7 @@ describe("Greenhouse healthcheck", () => {
       fetch: fetchImpl,
     });
 
-    expect(result.connector).toBe("greenhouse");
+    expect(result).not.toHaveProperty("connector");
     expect(result.status).toBe("ok");
     expect(calls).toHaveLength(2);
     expect(calls[0]!.url).toBe("https://auth.greenhouse.io/token");
