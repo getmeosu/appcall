@@ -1,7 +1,7 @@
 {
   "key": "figma",
   "name": "Figma",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "runtime": "bun",
   "visibility": "public",
   "categories": [
@@ -1564,6 +1564,1389 @@
         "nodeId": "1:2",
         "name": "Storybook",
         "url": "https://storybook.example.com/button"
+      }
+    },
+    "webhooks.create": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 65536,
+      "sideEffect": "write",
+      "title": "Create Webhook",
+      "description": "Create a Figma webhook that POSTs one event type to an HTTPS endpoint. context and contextId are both required: team with a team id, project with a project id, or file with a file key. Figma sends an immediate PING to the endpoint unless status is PAUSED. The passcode is echoed in every payload so the receiver can verify the call came from Figma. Requires the webhooks:write scope.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "eventType": {
+            "type": "string",
+            "description": "WebhookV2 event type, such as FILE_COMMENT, FILE_UPDATE, FILE_DELETE, FILE_VERSION_UPDATE, or LIBRARY_PUBLISH. See the Webhooks Events reference for the full list."
+          },
+          "context": {
+            "type": "string",
+            "enum": [
+              "team",
+              "project",
+              "file"
+            ],
+            "description": "Context the webhook is attached to."
+          },
+          "contextId": {
+            "type": "string",
+            "description": "Id of the team, project, or file to monitor."
+          },
+          "endpoint": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2048,
+            "description": "Publicly reachable HTTPS URL that receives the POST."
+          },
+          "passcode": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100,
+            "description": "Secret echoed back in each payload so the endpoint can verify Figma as the caller."
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ACTIVE",
+              "PAUSED"
+            ],
+            "description": "Initial state. ACTIVE (the default) also sends an immediate PING; PAUSED creates the webhook silently."
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 150,
+            "description": "Optional human-readable label for the webhook."
+          }
+        },
+        "required": [
+          "eventType",
+          "context",
+          "contextId",
+          "endpoint",
+          "passcode"
+        ],
+        "description": "Webhook definition."
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "webhook": {
+            "type": "object",
+            "description": "WebhookV2 object."
+          }
+        },
+        "required": [
+          "webhook"
+        ],
+        "description": "The created webhook."
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "POST",
+        "path": "/v2/webhooks",
+        "body": {
+          "event_type": "{{eventType}}",
+          "context": "{{context}}",
+          "context_id": "{{contextId}}",
+          "endpoint": "{{endpoint}}",
+          "passcode": "{{passcode}}",
+          "status": "{{status}}",
+          "description": "{{description}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "webhook": "{{response}}"
+        }
+      }
+    },
+    "webhooks.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "List Webhooks",
+      "description": "List the webhooks attached to one context \u2014 team, project, or file \u2014 through GET /v2/webhooks with context and context_id. This is the supported replacement for the deprecated GET /v2/teams/{team_id}/webhooks path. The per-context response returns the entire set; pagination only applies to the plan_api_id variant, which this connector does not expose. Requires the webhooks:read scope.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "context": {
+            "type": "string",
+            "enum": [
+              "team",
+              "project",
+              "file"
+            ],
+            "description": "Context type to query: team, project, or file."
+          },
+          "contextId": {
+            "type": "string",
+            "description": "Id of the team, project, or file whose webhooks to list."
+          }
+        },
+        "required": [
+          "context",
+          "contextId"
+        ],
+        "description": "Context to list webhooks for."
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "webhooks": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "WebhookV2 object."
+            },
+            "description": "WebhookV2 objects."
+          },
+          "nextPage": {
+            "type": "string",
+            "description": "Cursor for the next page when the plan_api_id variant paginates."
+          },
+          "prevPage": {
+            "type": "string",
+            "description": "Cursor for the previous page when the plan_api_id variant paginates."
+          }
+        },
+        "description": "Webhooks registered for the context."
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/v2/webhooks",
+        "query": {
+          "context": "{{context}}",
+          "context_id": "{{contextId}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "webhooks": "{{response.webhooks}}",
+          "nextPage": "{{response.pagination.next_page}}",
+          "prevPage": "{{response.pagination.prev_page}}"
+        }
+      }
+    },
+    "webhooks.get": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "sideEffect": "read",
+      "title": "Get Webhook",
+      "description": "Fetch one webhook by id. The passcode is returned as an empty string on reads. Requires the webhooks:read scope; a 404 means the webhook does not exist or the token cannot see it.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "webhookId": {
+            "type": "string",
+            "description": "Webhook id returned by webhooks.create or webhooks.list."
+          }
+        },
+        "required": [
+          "webhookId"
+        ],
+        "description": "Webhook to fetch."
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "webhook": {
+            "type": "object",
+            "description": "WebhookV2 object."
+          }
+        },
+        "required": [
+          "webhook"
+        ],
+        "description": "The requested webhook."
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/v2/webhooks/{{webhookId}}",
+        "success": [
+          200
+        ],
+        "result": {
+          "webhook": "{{response}}"
+        }
+      }
+    },
+    "webhooks.update": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 65536,
+      "sideEffect": "write",
+      "title": "Update Webhook",
+      "description": "Update an existing webhook's event type, endpoint, passcode, status, or description. Provide only the fields to change \u2014 omitted fields are left untouched. Requires the webhooks:write scope.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "webhookId": {
+            "type": "string",
+            "description": "Webhook id returned by webhooks.create or webhooks.list."
+          },
+          "eventType": {
+            "type": "string",
+            "description": "New event type that triggers the webhook."
+          },
+          "endpoint": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2048,
+            "description": "New HTTPS endpoint that receives the POST."
+          },
+          "passcode": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100,
+            "description": "New passcode echoed back in each payload."
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ACTIVE",
+              "PAUSED"
+            ],
+            "description": "New state: ACTIVE to resume delivery, PAUSED to stop it."
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 140,
+            "description": "New description. An empty string deletes the description."
+          }
+        },
+        "required": [
+          "webhookId"
+        ],
+        "description": "Fields to change on the webhook."
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "webhook": {
+            "type": "object",
+            "description": "WebhookV2 object."
+          }
+        },
+        "required": [
+          "webhook"
+        ],
+        "description": "The updated webhook."
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "PUT",
+        "path": "/v2/webhooks/{{webhookId}}",
+        "body": {
+          "event_type": "{{eventType}}",
+          "endpoint": "{{endpoint}}",
+          "passcode": "{{passcode}}",
+          "status": "{{status}}",
+          "description": "{{description}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "webhook": "{{response}}"
+        }
+      }
+    },
+    "webhooks.delete": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "sideEffect": "write",
+      "title": "Delete Webhook",
+      "description": "Permanently delete a webhook by id. This cannot be reversed. Figma returns the deleted WebhookV2 object. Requires the webhooks:write scope.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "webhookId": {
+            "type": "string",
+            "description": "Webhook id returned by webhooks.create or webhooks.list."
+          }
+        },
+        "required": [
+          "webhookId"
+        ],
+        "description": "Webhook to delete."
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "webhook": {
+            "type": "object",
+            "description": "WebhookV2 object."
+          }
+        },
+        "required": [
+          "webhook"
+        ],
+        "description": "The deleted webhook."
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "DELETE",
+        "path": "/v2/webhooks/{{webhookId}}",
+        "success": [
+          200
+        ],
+        "result": {
+          "webhook": "{{response}}"
+        }
+      }
+    },
+    "webhooks.listRequests": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "List Webhook Requests",
+      "description": "List the requests Figma sent to one webhook over the last seven days, for debugging deliveries. Each entry carries the request payload, the endpoint's response, and any error message. Requires the webhooks:read scope.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "webhookId": {
+            "type": "string",
+            "description": "Webhook id returned by webhooks.create or webhooks.list."
+          }
+        },
+        "required": [
+          "webhookId"
+        ],
+        "description": "Webhook whose recent requests to list."
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "requests": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "WebhookV2Request object."
+            },
+            "description": "WebhookV2Request objects."
+          }
+        },
+        "required": [
+          "requests"
+        ],
+        "description": "Recent delivery attempts."
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/v2/webhooks/{{webhookId}}/requests",
+        "success": [
+          200
+        ],
+        "result": {
+          "requests": "{{response.requests}}"
+        }
+      }
+    },
+    "variables.listPublished": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "List Published Variables",
+      "description": "List the variables and variable collections published from a main file (not a branch), including each item's subscribed_id and updatedAt. Modes are omitted here \u2014 use variables.listLocal to read mode values. Enterprise-plan members only; requires the file_variables:read scope.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "fileKey": {
+            "type": "string",
+            "description": "Main file key, not a branch key, since branches cannot publish."
+          }
+        },
+        "required": [
+          "fileKey"
+        ],
+        "description": "File to read published variables from."
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "variables": {
+            "type": "object",
+            "description": "Published variables keyed by variable id."
+          },
+          "variableCollections": {
+            "type": "object",
+            "description": "Published collections keyed by collection id."
+          }
+        },
+        "description": "Published variables and their collections."
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/v1/files/{{fileKey}}/variables/published",
+        "success": [
+          200
+        ],
+        "result": {
+          "variables": "{{response.meta.variables}}",
+          "variableCollections": "{{response.meta.variableCollections}}"
+        }
+      }
+    },
+    "variables.modify": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 4194304,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Create, Modify, or Delete Variables",
+      "description": "Bulk create, update, and delete variable collections, modes, variables, and mode values in one atomic request (4MB body limit). Provide at least one of the four arrays; each item's action selects CREATE, UPDATE, or DELETE. Temporary ids let items in the same request reference each other, and the response maps them to real ids in tempIdToRealId. Enterprise-plan members with edit access only; requires the file_variables:write scope.",
+      "inputSchema": {
+        "type": "object",
+        "anyOf": [
+          {
+            "required": [
+              "variableCollections"
+            ]
+          },
+          {
+            "required": [
+              "variableModes"
+            ]
+          },
+          {
+            "required": [
+              "variables"
+            ]
+          },
+          {
+            "required": [
+              "variableModeValues"
+            ]
+          }
+        ],
+        "properties": {
+          "fileKey": {
+            "type": "string",
+            "description": "File key or branch key whose variables to modify."
+          },
+          "variableCollections": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "VariableCollectionChange object."
+            },
+            "description": "Variable collection changes (action CREATE, UPDATE, or DELETE)."
+          },
+          "variableModes": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "VariableModeChange object."
+            },
+            "description": "Mode changes within collections (action CREATE, UPDATE, or DELETE)."
+          },
+          "variables": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "VariableChange object."
+            },
+            "description": "Variable changes (action CREATE, UPDATE, or DELETE)."
+          },
+          "variableModeValues": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "VariableModeValue object."
+            },
+            "description": "Value assignments for a variable in a specific mode."
+          }
+        },
+        "required": [
+          "fileKey"
+        ],
+        "description": "Atomic variable changes."
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "tempIdToRealId": {
+            "type": "object",
+            "description": "Temporary id to real id map."
+          }
+        },
+        "description": "Temporary-id mapping for created objects."
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "POST",
+        "path": "/v1/files/{{fileKey}}/variables",
+        "body": {
+          "variableCollections": "{{variableCollections}}",
+          "variableModes": "{{variableModes}}",
+          "variables": "{{variables}}",
+          "variableModeValues": "{{variableModeValues}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "tempIdToRealId": "{{response.meta.tempIdToRealId}}"
+        }
+      }
+    },
+    "activityLogs.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "List Activity Logs",
+      "description": "List organization activity-log events with an optional event-type filter and Unix timestamp window. Responses paginate: when nextPage is true, pass cursor back to continue from the last event seen. Enterprise-plan organization admins only; the token must carry the org:activity_log_read scope.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "events": {
+            "type": "string",
+            "description": "Comma-separated event types to include, such as org_user_create,org_user_delete. All events are returned when omitted."
+          },
+          "startTime": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Unix timestamp of the least recent event to include. Defaults to one year ago."
+          },
+          "endTime": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Unix timestamp of the most recent event to include. Defaults to now."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000,
+            "description": "Maximum number of events to return. Defaults to 1000."
+          },
+          "order": {
+            "type": "string",
+            "enum": [
+              "asc",
+              "desc"
+            ],
+            "description": "Event order by timestamp."
+          },
+          "cursor": {
+            "type": "string",
+            "description": "Cursor from a previous response's nextPage to continue past the last event seen."
+          }
+        },
+        "description": "Activity-log filter and pagination."
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "activityLogs": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "Activity log event."
+            },
+            "description": "Activity log events."
+          },
+          "cursor": {
+            "type": "string",
+            "description": "Cursor for the next page."
+          },
+          "nextPage": {
+            "type": "boolean",
+            "description": "Whether more events remain."
+          }
+        },
+        "description": "Activity-log events."
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/v1/activity_logs",
+        "query": {
+          "events": "{{events}}",
+          "start_time": "{{startTime}}",
+          "end_time": "{{endTime}}",
+          "limit": "{{limit}}",
+          "order": "{{order}}",
+          "cursor": "{{cursor}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "activityLogs": "{{response.meta.activity_logs}}",
+          "cursor": "{{response.meta.cursor}}",
+          "nextPage": "{{response.meta.next_page}}"
+        }
+      }
+    },
+    "analytics.componentActions": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Get Library Analytics Component Action Data",
+      "description": "Weekly time-series counts of component insertions and detachments for a published library file, grouped by component or team. Data covers up to one year. Enterprise-plan organizations only; requires the library_analytics:read scope.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "fileKey": {
+            "type": "string",
+            "description": "File key of the published library to read analytics for."
+          },
+          "groupBy": {
+            "type": "string",
+            "enum": [
+              "component",
+              "team"
+            ],
+            "description": "Dimension to group rows by."
+          },
+          "cursor": {
+            "type": "string",
+            "description": "Cursor from a previous response to fetch the next page."
+          },
+          "startDate": {
+            "type": "string",
+            "description": "ISO 8601 date (YYYY-MM-DD); data starts from the week containing it. Defaults to one year ago."
+          },
+          "endDate": {
+            "type": "string",
+            "description": "ISO 8601 date (YYYY-MM-DD); data ends at the week containing it. Defaults to the latest full week."
+          }
+        },
+        "required": [
+          "fileKey",
+          "groupBy"
+        ],
+        "description": "Library analytics query."
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "rows": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "Analytics row."
+            },
+            "description": "Analytics rows; columns depend on groupBy."
+          },
+          "cursor": {
+            "type": "string",
+            "description": "Cursor for the next page."
+          },
+          "nextPage": {
+            "type": "boolean",
+            "description": "Whether more rows remain."
+          }
+        },
+        "description": "Analytics rows."
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/v1/analytics/libraries/{{fileKey}}/component/actions",
+        "query": {
+          "group_by": "{{groupBy}}",
+          "start_date": "{{startDate}}",
+          "end_date": "{{endDate}}",
+          "cursor": "{{cursor}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "rows": "{{response.rows}}",
+          "cursor": "{{response.cursor}}",
+          "nextPage": "{{response.next_page}}"
+        }
+      }
+    },
+    "analytics.componentUsages": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Get Library Analytics Component Usage Data",
+      "description": "Summary of how many instances of each component in a published library exist across files, grouped by component or by file. Enterprise-plan organizations only; requires the library_analytics:read scope.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "fileKey": {
+            "type": "string",
+            "description": "File key of the published library to read analytics for."
+          },
+          "groupBy": {
+            "type": "string",
+            "enum": [
+              "component",
+              "file"
+            ],
+            "description": "Dimension to group rows by."
+          },
+          "cursor": {
+            "type": "string",
+            "description": "Cursor from a previous response to fetch the next page."
+          }
+        },
+        "required": [
+          "fileKey",
+          "groupBy"
+        ],
+        "description": "Library analytics query."
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "rows": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "Analytics row."
+            },
+            "description": "Analytics rows; columns depend on groupBy."
+          },
+          "cursor": {
+            "type": "string",
+            "description": "Cursor for the next page."
+          },
+          "nextPage": {
+            "type": "boolean",
+            "description": "Whether more rows remain."
+          }
+        },
+        "description": "Analytics rows."
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/v1/analytics/libraries/{{fileKey}}/component/usages",
+        "query": {
+          "group_by": "{{groupBy}}",
+          "cursor": "{{cursor}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "rows": "{{response.rows}}",
+          "cursor": "{{response.cursor}}",
+          "nextPage": "{{response.next_page}}"
+        }
+      }
+    },
+    "analytics.styleActions": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Get Library Analytics Style Action Data",
+      "description": "Weekly time-series counts of style insertions and detachments for a published library file, grouped by style or team. Enterprise-plan organizations only; requires the library_analytics:read scope.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "fileKey": {
+            "type": "string",
+            "description": "File key of the published library to read analytics for."
+          },
+          "groupBy": {
+            "type": "string",
+            "enum": [
+              "style",
+              "team"
+            ],
+            "description": "Dimension to group rows by."
+          },
+          "cursor": {
+            "type": "string",
+            "description": "Cursor from a previous response to fetch the next page."
+          },
+          "startDate": {
+            "type": "string",
+            "description": "ISO 8601 date (YYYY-MM-DD); data starts from the week containing it. Defaults to one year ago."
+          },
+          "endDate": {
+            "type": "string",
+            "description": "ISO 8601 date (YYYY-MM-DD); data ends at the week containing it. Defaults to the latest full week."
+          }
+        },
+        "required": [
+          "fileKey",
+          "groupBy"
+        ],
+        "description": "Library analytics query."
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "rows": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "Analytics row."
+            },
+            "description": "Analytics rows; columns depend on groupBy."
+          },
+          "cursor": {
+            "type": "string",
+            "description": "Cursor for the next page."
+          },
+          "nextPage": {
+            "type": "boolean",
+            "description": "Whether more rows remain."
+          }
+        },
+        "description": "Analytics rows."
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/v1/analytics/libraries/{{fileKey}}/style/actions",
+        "query": {
+          "group_by": "{{groupBy}}",
+          "start_date": "{{startDate}}",
+          "end_date": "{{endDate}}",
+          "cursor": "{{cursor}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "rows": "{{response.rows}}",
+          "cursor": "{{response.cursor}}",
+          "nextPage": "{{response.next_page}}"
+        }
+      }
+    },
+    "analytics.styleUsages": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Get Library Analytics Style Usage Data",
+      "description": "Summary of how many instances of each style in a published library exist across files, grouped by style or by file. Enterprise-plan organizations only; requires the library_analytics:read scope.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "fileKey": {
+            "type": "string",
+            "description": "File key of the published library to read analytics for."
+          },
+          "groupBy": {
+            "type": "string",
+            "enum": [
+              "style",
+              "file"
+            ],
+            "description": "Dimension to group rows by."
+          },
+          "cursor": {
+            "type": "string",
+            "description": "Cursor from a previous response to fetch the next page."
+          }
+        },
+        "required": [
+          "fileKey",
+          "groupBy"
+        ],
+        "description": "Library analytics query."
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "rows": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "Analytics row."
+            },
+            "description": "Analytics rows; columns depend on groupBy."
+          },
+          "cursor": {
+            "type": "string",
+            "description": "Cursor for the next page."
+          },
+          "nextPage": {
+            "type": "boolean",
+            "description": "Whether more rows remain."
+          }
+        },
+        "description": "Analytics rows."
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/v1/analytics/libraries/{{fileKey}}/style/usages",
+        "query": {
+          "group_by": "{{groupBy}}",
+          "cursor": "{{cursor}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "rows": "{{response.rows}}",
+          "cursor": "{{response.cursor}}",
+          "nextPage": "{{response.next_page}}"
+        }
+      }
+    },
+    "analytics.variableActions": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Get Library Analytics Variable Action Data",
+      "description": "Weekly time-series counts of variable insertions and detachments for a published library file, grouped by variable or team. Enterprise-plan organizations only; requires the library_analytics:read scope.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "fileKey": {
+            "type": "string",
+            "description": "File key of the published library to read analytics for."
+          },
+          "groupBy": {
+            "type": "string",
+            "enum": [
+              "variable",
+              "team"
+            ],
+            "description": "Dimension to group rows by."
+          },
+          "cursor": {
+            "type": "string",
+            "description": "Cursor from a previous response to fetch the next page."
+          },
+          "startDate": {
+            "type": "string",
+            "description": "ISO 8601 date (YYYY-MM-DD); data starts from the week containing it. Defaults to one year ago."
+          },
+          "endDate": {
+            "type": "string",
+            "description": "ISO 8601 date (YYYY-MM-DD); data ends at the week containing it. Defaults to the latest full week."
+          }
+        },
+        "required": [
+          "fileKey",
+          "groupBy"
+        ],
+        "description": "Library analytics query."
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "rows": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "Analytics row."
+            },
+            "description": "Analytics rows; columns depend on groupBy."
+          },
+          "cursor": {
+            "type": "string",
+            "description": "Cursor for the next page."
+          },
+          "nextPage": {
+            "type": "boolean",
+            "description": "Whether more rows remain."
+          }
+        },
+        "description": "Analytics rows."
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/v1/analytics/libraries/{{fileKey}}/variable/actions",
+        "query": {
+          "group_by": "{{groupBy}}",
+          "start_date": "{{startDate}}",
+          "end_date": "{{endDate}}",
+          "cursor": "{{cursor}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "rows": "{{response.rows}}",
+          "cursor": "{{response.cursor}}",
+          "nextPage": "{{response.next_page}}"
+        }
+      }
+    },
+    "analytics.variableUsages": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Get Library Analytics Variable Usage Data",
+      "description": "Summary of how many instances of each variable in a published library exist across files, grouped by variable or by file. Enterprise-plan organizations only; requires the library_analytics:read scope.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "fileKey": {
+            "type": "string",
+            "description": "File key of the published library to read analytics for."
+          },
+          "groupBy": {
+            "type": "string",
+            "enum": [
+              "variable",
+              "file"
+            ],
+            "description": "Dimension to group rows by."
+          },
+          "cursor": {
+            "type": "string",
+            "description": "Cursor from a previous response to fetch the next page."
+          }
+        },
+        "required": [
+          "fileKey",
+          "groupBy"
+        ],
+        "description": "Library analytics query."
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "rows": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "Analytics row."
+            },
+            "description": "Analytics rows; columns depend on groupBy."
+          },
+          "cursor": {
+            "type": "string",
+            "description": "Cursor for the next page."
+          },
+          "nextPage": {
+            "type": "boolean",
+            "description": "Whether more rows remain."
+          }
+        },
+        "description": "Analytics rows."
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/v1/analytics/libraries/{{fileKey}}/variable/usages",
+        "query": {
+          "group_by": "{{groupBy}}",
+          "cursor": "{{cursor}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "rows": "{{response.rows}}",
+          "cursor": "{{response.cursor}}",
+          "nextPage": "{{response.next_page}}"
+        }
+      }
+    },
+    "payments.get": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "sideEffect": "read",
+      "title": "Get Payments",
+      "description": "Fetch a user's payment information for a plugin, widget, or Community file owned by the token's account. Provide userId and exactly one of communityFileId, pluginId, or widgetId. The Payments API does not support OAuth2 \u2014 it authenticates with the personal access token only, and the user id comes from having that user OAuth2 to the Figma REST API.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string",
+            "description": "Id of the user whose payment information to fetch, as a string because Figma ids exceed 53-bit precision."
+          },
+          "communityFileId": {
+            "type": "string",
+            "description": "Community file id (the number after 'file/' on its Community page)."
+          },
+          "pluginId": {
+            "type": "string",
+            "description": "Plugin id from its manifest or Community page (the number after 'plugin/')."
+          },
+          "widgetId": {
+            "type": "string",
+            "description": "Widget id from its manifest or Community page (the number after 'widget/')."
+          }
+        },
+        "required": [
+          "userId"
+        ],
+        "description": "Payment query.",
+        "oneOf": [
+          {
+            "required": [
+              "communityFileId"
+            ]
+          },
+          {
+            "required": [
+              "pluginId"
+            ]
+          },
+          {
+            "required": [
+              "widgetId"
+            ]
+          }
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "payment": {
+            "type": "object",
+            "description": "PaymentInformation object."
+          }
+        },
+        "required": [
+          "payment"
+        ],
+        "description": "PaymentInformation for the user on the resource."
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/v1/payments",
+        "query": {
+          "user_id": "{{userId}}",
+          "community_file_id": "{{communityFileId}}",
+          "plugin_id": "{{pluginId}}",
+          "widget_id": "{{widgetId}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "payment": "{{response}}"
+        }
+      }
+    },
+    "team.listComponentSets": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "List Team Component Sets",
+      "description": "List published component sets in a Figma team's library. Paginate with pageSize and after/before cursor integers from a previous response. Requires the team_library_content:read scope.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "teamId": {
+            "type": "string",
+            "description": "Team id."
+          },
+          "pageSize": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000,
+            "description": "Results per page. Figma defaults to 30."
+          },
+          "after": {
+            "type": "integer",
+            "description": "Return component sets after this cursor."
+          },
+          "before": {
+            "type": "integer",
+            "description": "Return component sets before this cursor."
+          }
+        },
+        "required": [
+          "teamId"
+        ],
+        "description": "Team whose component sets to list."
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "componentSets": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "Component set metadata."
+            },
+            "description": "Published component sets."
+          },
+          "after": {
+            "type": "integer",
+            "description": "Cursor to fetch the next page."
+          },
+          "before": {
+            "type": "integer",
+            "description": "Cursor to fetch the previous page."
+          }
+        },
+        "description": "Published component sets."
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/v1/teams/{{teamId}}/component_sets",
+        "query": {
+          "page_size": "{{pageSize}}",
+          "after": "{{after}}",
+          "before": "{{before}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "componentSets": "{{response.meta.component_sets}}",
+          "after": "{{response.meta.cursor.after}}",
+          "before": "{{response.meta.cursor.before}}"
+        }
+      }
+    },
+    "devResources.update": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 65536,
+      "sideEffect": "write",
+      "title": "Update Dev Resources",
+      "description": "Bulk update the name and/or URL of existing dev resources, each identified by its id. Successes are listed in linksUpdated; per-resource failures come back in errors while the call still returns 200. Requires the file_dev_resources:write scope.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "devResources": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Unique identifier of the dev resource."
+                },
+                "name": {
+                  "type": "string",
+                  "description": "New name of the dev resource."
+                },
+                "url": {
+                  "type": "string",
+                  "description": "New URL of the dev resource."
+                }
+              },
+              "required": [
+                "id"
+              ],
+              "description": "DevResourceUpdate object."
+            },
+            "description": "List of dev resource updates. Each entry needs an id and at least a new name or url."
+          }
+        },
+        "required": [
+          "devResources"
+        ],
+        "description": "Dev resources to update."
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "linksUpdated": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "description": "Dev resource id."
+            },
+            "description": "Ids of dev resources that were updated."
+          },
+          "errors": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "Error entry with id and error."
+            },
+            "description": "Per-resource failures."
+          }
+        },
+        "description": "Update outcome."
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "PUT",
+        "path": "/v1/dev_resources",
+        "body": {
+          "dev_resources": "{{devResources}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "linksUpdated": "{{response.links_updated}}",
+          "errors": "{{response.errors}}"
+        }
       }
     }
   },

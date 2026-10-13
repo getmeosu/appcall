@@ -37,7 +37,7 @@ function sentBody(call: Call): unknown {
 
 describe("figma depth slice", () => {
   it("bumps the connector to a minor version for the new surface", () => {
-    expect(manifest.version).toBe("0.2.0");
+    expect(manifest.version).toBe("0.3.0");
   });
 
   it("comment.listReactions reads reactions through the meta envelope", async () => {

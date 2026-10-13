@@ -162,6 +162,11 @@ describe("figma manifest", () => {
       "comment.delete",
       "comment.deleteReaction",
       "devResources.create",
+      "devResources.update",
+      "variables.modify",
+      "webhooks.create",
+      "webhooks.delete",
+      "webhooks.update",
     ]);
   });
 
