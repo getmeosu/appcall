@@ -1,7 +1,7 @@
 {
   "key": "beehiiv",
   "name": "Beehiiv",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "runtime": "bun",
   "visibility": "public",
   "categories": [
@@ -1082,6 +1082,217 @@
         "success": [
           200
         ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "segments.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create segment",
+      "description": "Create a Beehiiv segment from subscription IDs, emails, or custom field filters.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "publicationId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Publication ID, for example pub_fixture-1."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "A unique name for the segment that does not already exist in the publication."
+          },
+          "input": {
+            "type": "object",
+            "additionalProperties": false,
+            "description": "Manual subscriptions or emails, or a dynamic custom_fields filter.",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "subscriptions",
+                  "emails",
+                  "custom_fields"
+                ],
+                "description": "How the segment is built."
+              },
+              "subscriptions": {
+                "type": "array",
+                "description": "Subscription IDs for a manual segment.",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "emails": {
+                "type": "array",
+                "description": "Email addresses for a manual segment.",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "custom_fields": {
+                "type": "array",
+                "description": "Custom field filters for a dynamic segment.",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "name": {
+                      "type": "string",
+                      "minLength": 1,
+                      "description": "Custom field display name."
+                    },
+                    "operator": {
+                      "type": "string",
+                      "minLength": 1,
+                      "description": "Comparison operator."
+                    },
+                    "value": {
+                      "type": "string",
+                      "description": "Value to compare. Omitted for exists and does_not_exist."
+                    }
+                  },
+                  "required": [
+                    "name",
+                    "operator"
+                  ]
+                }
+              },
+              "operator": {
+                "type": "string",
+                "enum": [
+                  "and",
+                  "or"
+                ],
+                "description": "How to combine custom field filters. Defaults to and."
+              }
+            },
+            "required": [
+              "type"
+            ]
+          }
+        },
+        "required": [
+          "publicationId",
+          "name",
+          "input"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/publications/{{publicationId}}/segments",
+        "success": [
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "name": "{{name}}",
+          "input": "{{input}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "segments.members.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List segment members",
+      "description": "List members of a Beehiiv segment as subscription records.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "publicationId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Publication ID, for example pub_fixture-1."
+          },
+          "segmentId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Segment ID."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Page size. Defaults to 10."
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Page number. Defaults to 1."
+          },
+          "expand": {
+            "type": "array",
+            "description": "Optional expansions.",
+            "items": {
+              "type": "string",
+              "enum": [
+                "stats",
+                "custom_fields",
+                "referrals",
+                "tags",
+                "subscription_premium_tiers"
+              ]
+            }
+          }
+        },
+        "required": [
+          "publicationId",
+          "segmentId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/publications/{{publicationId}}/segments/{{segmentId}}/members",
+        "success": [
+          200
+        ],
+        "query": {
+          "limit": "{{limit}}",
+          "page": "{{page}}",
+          "expand[]": "{{expand}}"
+        }
       },
       "enforceOutputSchema": true,
       "validationMode": "strict-generated",

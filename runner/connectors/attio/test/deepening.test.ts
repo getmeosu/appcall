@@ -7,6 +7,8 @@ import noteFixture from "../fixtures/note.json";
 import taskFixture from "../fixtures/task.json";
 import webhookFixture from "../fixtures/webhook.json";
 import meetingFixture from "../fixtures/meeting.json";
+import meetingCreatedFixture from "../fixtures/meetings-create.json";
+import meetingGotFixture from "../fixtures/meetings-get.json";
 import recordingFixture from "../fixtures/recording.json";
 import deletedFixture from "../fixtures/deleted.json";
 
@@ -32,7 +34,9 @@ describe("attio deepening", () => {
     expect(keys).toContain("records.search");
     expect(keys).toContain("companies.assert");
     expect(keys).toContain("call_recordings.get");
-    expect(keys).toHaveLength(109);
+    expect(keys).toContain("meetings.create");
+    expect(keys).toContain("meetings.get");
+    expect(keys).toHaveLength(111);
     expect(keys).toContain("records.find");
     expect(keys).toContain("records.searchV2");
     expect(keys).toContain("workspace_members.listV2");
@@ -237,6 +241,70 @@ describe("attio deepening", () => {
     expect(new URL(rec.calls[0]!.url).pathname).toBe(
       "/v2/meetings/cb59ab17-ad15-460c-a126-0715617c0853/call_recordings/e8f2a3b7-9b4d-4c5e-8a1f-3d7b2c5e8f9a",
     );
+  });
+
+  test("creates and gets a meeting as JSON", async () => {
+    const created = capture(meetingCreatedFixture);
+    const createdResult = await actions["meetings.create"]!({
+      accessToken: token,
+      title: "Onboarding Session",
+      description: "Getting you up to speed with the platform and answering any questions you have.",
+      is_all_day: false,
+      start: { datetime: "2027-11-27T14:00:00Z", timezone: "America/New_York" },
+      end: { datetime: "2027-11-27T15:00:00Z", timezone: "America/New_York" },
+      participants: [{ email_address: "person@company.com", is_organizer: true, status: "accepted", name: "Simon Mitchell" }],
+      linked_records: [{ object: "people", record_id: "891dcbfc-9141-415d-9b2a-2238a6cc012d" }],
+      fetch: created.fetchFn,
+    });
+    expect(created.calls[0]!.url).toBe("https://api.attio.com/v2/meetings");
+    expect(created.calls[0]!.init?.method).toBe("POST");
+    expect(new Headers(created.calls[0]!.init?.headers).get("content-type")).toBe("application/json");
+    expect(JSON.parse(String(created.calls[0]!.init?.body))).toEqual({
+      data: {
+        title: "Onboarding Session",
+        description: "Getting you up to speed with the platform and answering any questions you have.",
+        start: { datetime: "2027-11-27T14:00:00Z", timezone: "America/New_York" },
+        end: { datetime: "2027-11-27T15:00:00Z", timezone: "America/New_York" },
+        is_all_day: false,
+        participants: [{ email_address: "person@company.com", is_organizer: true, status: "accepted", name: "Simon Mitchell" }],
+        linked_records: [{ object: "people", record_id: "891dcbfc-9141-415d-9b2a-2238a6cc012d" }],
+      },
+    });
+    expect(createdResult).toMatchObject({ data: meetingCreatedFixture.data, source: "provider" });
+
+    const omitted = capture(meetingCreatedFixture);
+    await actions["meetings.create"]!({
+      accessToken: token,
+      title: "All day",
+      description: "All day meeting.",
+      is_all_day: true,
+      start: { date: "2027-11-27" },
+      end: { date: "2027-11-28" },
+      participants: [{ name: "Simon Mitchell", is_organizer: "true", status: "pending" }],
+      fetch: omitted.fetchFn,
+    });
+    expect(JSON.parse(String(omitted.calls[0]!.init?.body))).toEqual({
+      data: {
+        title: "All day",
+        description: "All day meeting.",
+        start: { date: "2027-11-27" },
+        end: { date: "2027-11-28" },
+        is_all_day: true,
+        participants: [{ name: "Simon Mitchell", is_organizer: "true", status: "pending" }],
+      },
+    });
+
+    const got = capture(meetingGotFixture);
+    const gotResult = await actions["meetings.get"]!({
+      accessToken: token,
+      meeting_id: "cb59ab17-ad15-460c-a126-0715617c0853",
+      fetch: got.fetchFn,
+    });
+    expect(got.calls[0]!.url).toBe("https://api.attio.com/v2/meetings/cb59ab17-ad15-460c-a126-0715617c0853");
+    expect(got.calls[0]!.init?.method ?? "GET").toBe("GET");
+    expect(got.calls[0]!.init?.body ?? null).toBeNull();
+    expect(new Headers(got.calls[0]!.init?.headers).get("content-type")).toBeNull();
+    expect(gotResult).toMatchObject({ data: meetingGotFixture.data, source: "provider" });
   });
 
   test("covers remaining Composio aliases with distinct HTTP requests", async () => {

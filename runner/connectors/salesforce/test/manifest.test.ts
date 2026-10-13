@@ -79,8 +79,8 @@ describe("salesforce connector manifest", () => {
     }
   });
 
-  test("manifest version is 0.5.0", () => {
-    expect(manifest.version).toBe("0.5.0");
+  test("manifest version is 0.6.0", () => {
+    expect(manifest.version).toBe("0.6.0");
   });
 
   test("manifest declares CRM models", () => {

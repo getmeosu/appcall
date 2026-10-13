@@ -1,7 +1,7 @@
 {
   "key": "attio",
   "name": "Attio",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "runtime": "bun",
   "visibility": "public",
   "categories": [
@@ -3992,6 +3992,270 @@
         "result": {
           "data": "{{response.data}}",
           "pagination": "{{response.pagination}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "meetings.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 5242880,
+      "title": "Create Meeting",
+      "description": "Create a meeting via POST /v2/meetings. Covers ATTIO_CREATE_MEETING.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "description": "The title of the meeting.",
+            "maxLength": 1000
+          },
+          "description": {
+            "type": "string",
+            "description": "The description of the meeting.",
+            "maxLength": 10000
+          },
+          "start": {
+            "description": "When the meeting starts. Use a datetime and optional timezone for non-all day meetings, or a date for all day meetings.",
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "datetime": {
+                    "type": "string",
+                    "description": "An ISO 8601 datetime indicating when a non-all day meeting starts."
+                  },
+                  "timezone": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "description": "The IANA timezone the meeting starts in. If a datetime value is provided without an offset, this timezone will be used to convert the datetime to UTC using the timezone offset. If a datetime value is provided with an offset, this timezone will not be used to apply any additional offset to the datetime. Invalid timezones will be treated as UTC."
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "datetime"
+                ]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "date": {
+                    "type": "string",
+                    "description": "An ISO 8601 date indicating when an all day meeting starts."
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "date"
+                ]
+              }
+            ]
+          },
+          "end": {
+            "description": "When the meeting ends. Use a datetime and optional timezone for non-all day meetings, or a date for all day meetings.",
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "datetime": {
+                    "type": "string",
+                    "description": "An ISO 8601 datetime indicating when a non-all day meeting ends. Note that this value is exclusive, meaning that the meeting ends before the specified time, not at it."
+                  },
+                  "timezone": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "description": "The IANA timezone the meeting ends in. If a datetime value is provided without an offset, this timezone will be used to convert the datetime to UTC using the timezone offset. If a datetime value is provided with an offset, this timezone will not be used to apply any additional offset to the datetime. Invalid timezones will be treated as UTC."
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "datetime"
+                ]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "date": {
+                    "type": "string",
+                    "description": "An ISO 8601 date indicating when an all day meeting ends. Note that dates are exclusive, meaning that the meeting ends before the specified time, not at it."
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "date"
+                ]
+              }
+            ]
+          },
+          "is_all_day": {
+            "type": "boolean",
+            "description": "Whether or not the meeting is an all day event. All day events may span multiple days. When true, start and end must use date format. When false, start and end must use datetime with timezone format."
+          },
+          "participants": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "email_address": {
+                  "type": "string",
+                  "description": "The email address of the participant. New person records and companies will automatically be created based upon the email address values provided. If omitted, a name must be provided instead."
+                },
+                "is_organizer": {
+                  "description": "Whether or not the participant is the organizer of the meeting.",
+                  "anyOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "type": "string",
+                      "enum": [
+                        "true"
+                      ]
+                    },
+                    {
+                      "type": "string",
+                      "enum": [
+                        "false"
+                      ]
+                    }
+                  ]
+                },
+                "status": {
+                  "type": "string",
+                  "description": "The status of the individual meeting participant.",
+                  "enum": [
+                    "accepted",
+                    "tentative",
+                    "declined",
+                    "pending"
+                  ]
+                },
+                "name": {
+                  "type": "string",
+                  "description": "The name of the participant. Required when no email_address is provided. Participants without an email do not create person or company records.",
+                  "minLength": 1
+                }
+              },
+              "additionalProperties": false,
+              "required": [
+                "is_organizer",
+                "status"
+              ]
+            },
+            "maxItems": 500
+          },
+          "linked_records": {
+            "type": "array",
+            "description": "A list of records to link to the meeting. Each record is specified by its object (slug or UUID) and record ID (UUID). Attio will automatically link the meeting participants' companies to the meeting; this behavior is asynchronous.",
+            "items": {
+              "type": "object",
+              "properties": {
+                "object": {
+                  "type": "string",
+                  "description": "The slug or UUID of the object that the record being linked belongs to."
+                },
+                "record_id": {
+                  "type": "string",
+                  "description": "The UUID of the record being linked."
+                }
+              },
+              "additionalProperties": false,
+              "required": [
+                "object",
+                "record_id"
+              ]
+            },
+            "maxItems": 50
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "title",
+          "description",
+          "start",
+          "end",
+          "is_all_day",
+          "participants"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {}
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v2/meetings",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "data": {
+            "title": "{{title}}",
+            "description": "{{description}}",
+            "start": "{{start}}",
+            "end": "{{end}}",
+            "is_all_day": "{{is_all_day}}",
+            "participants": "{{participants}}",
+            "linked_records": "{{linked_records}}"
+          }
+        },
+        "result": {
+          "data": "{{response.data}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "meetings.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get Meeting",
+      "description": "Get a meeting via GET /v2/meetings/{meeting_id}. Covers ATTIO_GET_MEETING.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "meeting_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "A UUID which identifies the meeting."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "meeting_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {}
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/meetings/{{meeting_id}}",
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response.data}}"
         }
       },
       "enforceOutputSchema": true,

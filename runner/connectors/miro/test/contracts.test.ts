@@ -14,7 +14,9 @@ function expectedUrl(c: { url?: string; path: string }): string {
 describe("miro declarative fixture contracts", () => {
   it("compiles every action and uses official OAuth metadata", () => {
     expect(Object.keys(actions).sort()).toEqual(actionKeys.sort());
-    expect(manifest.version).toBe("0.3.0");
+    expect(manifest.version).toBe("0.3.1");
+    expect(actionKeys.length).toBe(86);
+    expect(cases.length).toBe(86);
     expect(manifest.auth.scopes).toEqual(["boards:read", "boards:write"]);
     expect(manifest.auth.oauth.supportsRefresh).toBe(true);
     expect(manifest.provenance.source).toEqual({ url: "https://github.com/oomol-lab/open-connector", revision: "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a" });
