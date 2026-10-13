@@ -263,3 +263,93 @@ describe("error mapping", () => {
       .rejects.toMatchObject({ code: "CONNECTOR_UPSTREAM_ERROR" });
   });
 });
+
+function dummyInput(schema: { properties?: Record<string, any>; required?: string[]; items?: any; type?: string; enum?: unknown[] }): unknown {
+  if (Array.isArray(schema.enum) && schema.enum.length > 0) return schema.enum[0];
+  if (schema.type === "integer" || schema.type === "number") return schema.type === "integer" ? 1 : 1;
+  if (schema.type === "boolean") return true;
+  if (schema.type === "array") {
+    const items = schema.items ?? {};
+    return [dummyInput(items)];
+  }
+  if (schema.type === "object" || schema.properties) {
+    const input: Record<string, unknown> = {};
+    for (const key of schema.required ?? []) {
+      input[key] = dummyInput(schema.properties?.[key] ?? { type: "string" });
+    }
+    return input;
+  }
+  return "x";
+}
+
+describe("deepened REST handlers", () => {
+  const operations = manifest.operations as Record<string, Record<string, unknown>>;
+
+  it("issues a real HTTP request for every action with required input", async () => {
+    for (const key of ACTION_KEYS) {
+      const operation = operations[key]!;
+      const request = operation.request as { method: string; path: string; success?: number[] };
+      const input = dummyInput(operation.inputSchema as { properties?: Record<string, any>; required?: string[]; type?: string }) as Record<string, unknown>;
+      const { calls, fetchFn } = mockJson({ success: true, data: { id: 101 } }, request.success?.[0] ?? 200);
+      const result = await actions[key]!({ apiKey: "token", ...input, fetch: fetchFn }) as Record<string, unknown>;
+      expect(calls, key).toHaveLength(1);
+      expect(calls[0]!.init?.method ?? "GET", key).toBe(request.method);
+      const host = new URL(calls[0]!.url).hostname;
+      expect(host, key).toBe(key.startsWith("oauth.") ? "oauth.pipedrive.com" : "api.pipedrive.com");
+      expect(String(calls[0]!.url).startsWith("https://"), key).toBe(true);
+      if (!key.startsWith("oauth.")) {
+        expect(new Headers(calls[0]!.init?.headers).get("x-api-token"), key).toBe("token");
+      }
+      if (request.method === "GET") {
+        expect(calls[0]!.init?.body, key).toBeUndefined();
+      }
+      expect(result).toMatchObject({ connector: "pipedrive", action: key, source: "provider" });
+    }
+  });
+
+  it("gets the beta organization and person collections without a body", async () => {
+    const orgs = mockJson({ success: true, data: [{ id: 1, name: "Analytical Engines" }], additional_data: { next_cursor: "cursor-2" } });
+    const orgResult = await actions["organizations.list-beta"]!({
+      apiKey: "token",
+      cursor: "cursor-1",
+      limit: 100,
+      since: "2022-11-01 08:55:59",
+      until: "2022-12-01 08:55:59",
+      owner_id: 7,
+      first_char: "A",
+      fetch: orgs.fetchFn,
+    }) as Record<string, unknown>;
+    const orgUrl = new URL(orgs.calls[0]!.url);
+    expect(orgs.calls[0]!.init?.method ?? "GET").toBe("GET");
+    expect(orgs.calls[0]!.init?.body).toBeUndefined();
+    expect(orgUrl.protocol).toBe("https:");
+    expect(orgUrl.hostname).toBe("api.pipedrive.com");
+    expect(orgUrl.pathname).toBe("/api/v1/organizations/collection");
+    expect(orgUrl.searchParams.get("cursor")).toBe("cursor-1");
+    expect(orgUrl.searchParams.get("limit")).toBe("100");
+    expect(orgUrl.searchParams.get("since")).toBe("2022-11-01 08:55:59");
+    expect(orgUrl.searchParams.get("until")).toBe("2022-12-01 08:55:59");
+    expect(orgUrl.searchParams.get("owner_id")).toBe("7");
+    expect(orgUrl.searchParams.get("first_char")).toBe("A");
+    expect(orgResult.data).toMatchObject({ success: true });
+
+    const persons = mockJson({ success: true, data: [{ id: 1, name: "Ada Lovelace" }], additional_data: { next_cursor: null } });
+    await actions["persons.list-beta"]!({
+      apiKey: "token",
+      cursor: "cursor-1",
+      limit: 50,
+      owner_id: 7,
+      first_char: "A",
+      fetch: persons.fetchFn,
+    });
+    const personUrl = new URL(persons.calls[0]!.url);
+    expect(persons.calls[0]!.init?.method ?? "GET").toBe("GET");
+    expect(persons.calls[0]!.init?.body).toBeUndefined();
+    expect(personUrl.pathname).toBe("/api/v1/persons/collection");
+    expect(personUrl.searchParams.get("cursor")).toBe("cursor-1");
+    expect(personUrl.searchParams.get("limit")).toBe("50");
+    expect(personUrl.searchParams.get("owner_id")).toBe("7");
+    expect(personUrl.searchParams.get("first_char")).toBe("A");
+    expect(personUrl.searchParams.get("since")).toBeNull();
+  });
+});

@@ -777,79 +777,7 @@
       }
     },
     "operations": {
-      "healthcheck": {
-        "timeoutMs": 10000,
-        "maxInputBytes": 4096,
-        "maxResponseBytes": 1048576,
-        "kind": "action",
-        "sideEffect": "read",
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
-        "outputSchema": {
-          "type": "object",
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "data"
-          ]
-        },
-        "title": "Healthcheck",
-        "description": "Validate the Reply.io API key with GET /v3/whoami.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {},
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "GET",
-          "path": "/v3/whoami",
-          "success": [
-            200
-          ]
-        }
-      },
-      "users.list": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
-        "outputSchema": {
-          "type": "object",
-          "properties": {
-            "data": {
-              "type": "array"
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "data"
-          ]
-        },
-        "sideEffect": "read",
-        "title": "List team users",
-        "description": "List Reply.io team users via GET /v3/whoami/team-users.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {},
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "GET",
-          "path": "/v3/whoami/team-users",
-          "success": [
-            200
-          ]
-        }
-      },
-      "contacts.list": {
+      "contact_lists.list": {
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
         "maxResponseBytes": 5242880,
@@ -870,21 +798,21 @@
             "data"
           ]
         },
-        "title": "List contacts",
-        "description": "List Reply.io contacts with optional top/skip pagination and exact email lookup.",
+        "title": "List contact lists",
+        "description": "List Reply.io contact lists with optional top/skip pagination and name search.",
         "inputSchema": {
           "type": "object",
           "properties": {
-            "skip": {
-              "type": "integer",
-              "minimum": 0
-            },
             "top": {
               "type": "integer",
               "minimum": 1,
               "maximum": 1000
             },
-            "email": {
+            "skip": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "search": {
               "type": "string"
             }
           },
@@ -892,22 +820,23 @@
         },
         "request": {
           "method": "GET",
-          "path": "/v3/contacts",
+          "path": "/v3/contact-lists",
           "success": [
             200
           ],
           "query": {
-            "skip": "{{skip}}",
             "top": "{{top}}",
-            "email": "{{email}}"
+            "skip": "{{skip}}",
+            "search": "{{search}}"
           }
         }
       },
-      "contacts.search": {
+      "contacts.clear_opt_out": {
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
         "maxResponseBytes": 5242880,
         "kind": "action",
+        "sideEffect": "write",
         "enforceOutputSchema": true,
         "validationMode": "strict-generated",
         "responseFormat": "json",
@@ -923,75 +852,38 @@
             "data"
           ]
         },
-        "sideEffect": "read",
-        "title": "Search contacts by email",
-        "description": "Look up Reply.io contacts by exact email via GET /v3/contacts?email=.",
+        "title": "Clear contact opt-out",
+        "description": "Clear the opted-out flag on contacts via POST /v3/contacts/set-opted-out.",
         "inputSchema": {
           "type": "object",
           "properties": {
-            "email": {
-              "type": "string",
-              "minLength": 1
+            "contactIds": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "integer",
+                "minimum": 1
+              }
             }
           },
           "additionalProperties": false,
           "required": [
-            "email"
+            "contactIds"
           ]
         },
         "request": {
-          "method": "GET",
-          "path": "/v3/contacts",
+          "method": "POST",
+          "path": "/v3/contacts/set-opted-out",
           "success": [
             200
           ],
-          "query": {
-            "email": "{{email}}"
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "contactIds": "{{contactIds}}",
+            "isOptedOut": false
           }
-        }
-      },
-      "contacts.get": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
-        "sideEffect": "read",
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
-        "outputSchema": {
-          "type": "object",
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "data"
-          ]
-        },
-        "title": "Get contact",
-        "description": "Get one Reply.io contact by id.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "id": {
-              "type": "integer",
-              "minimum": 1
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "id"
-          ]
-        },
-        "request": {
-          "method": "GET",
-          "path": "/v3/contacts/{{id}}",
-          "success": [
-            200
-          ]
         }
       },
       "contacts.create": {
@@ -1139,6 +1031,382 @@
             "accountId": "{{accountId}}",
             "customFields": "{{customFields}}"
           }
+        }
+      },
+      "contacts.delete": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "destructive",
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "data": {
+              "type": [
+                "object",
+                "null"
+              ]
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "data"
+          ]
+        },
+        "title": "Delete contact",
+        "description": "Delete one Reply.io contact by id.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "id"
+          ]
+        },
+        "request": {
+          "method": "DELETE",
+          "path": "/v3/contacts/{{id}}",
+          "success": [
+            204
+          ]
+        }
+      },
+      "contacts.get": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "read",
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "data"
+          ]
+        },
+        "title": "Get contact",
+        "description": "Get one Reply.io contact by id.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "id"
+          ]
+        },
+        "request": {
+          "method": "GET",
+          "path": "/v3/contacts/{{id}}",
+          "success": [
+            200
+          ]
+        }
+      },
+      "contacts.list": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "read",
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "data"
+          ]
+        },
+        "title": "List contacts",
+        "description": "List Reply.io contacts with optional top/skip pagination and exact email lookup.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "skip": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "top": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000
+            },
+            "email": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/v3/contacts",
+          "success": [
+            200
+          ],
+          "query": {
+            "skip": "{{skip}}",
+            "top": "{{top}}",
+            "email": "{{email}}"
+          }
+        }
+      },
+      "contacts.move_to_sequence": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "write",
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "data": {
+              "type": [
+                "object",
+                "null"
+              ]
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "data"
+          ]
+        },
+        "title": "Move contact to sequence",
+        "description": "Enroll a contact in a sequence. Empty 204 on success.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "sequenceId": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "removeFromExisting": {
+              "type": "boolean"
+            },
+            "startStepId": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "ignoreStepDelay": {
+              "type": "boolean"
+            },
+            "startFrom": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "id",
+            "sequenceId"
+          ]
+        },
+        "request": {
+          "method": "POST",
+          "path": "/v3/contacts/{{id}}/move-to-sequence",
+          "success": [
+            204
+          ],
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "sequenceId": "{{sequenceId}}",
+            "removeFromExisting": "{{removeFromExisting}}",
+            "startStepId": "{{startStepId}}",
+            "ignoreStepDelay": "{{ignoreStepDelay}}",
+            "startFrom": "{{startFrom}}"
+          }
+        }
+      },
+      "contacts.search": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "data"
+          ]
+        },
+        "sideEffect": "read",
+        "title": "Search contacts by email",
+        "description": "Look up Reply.io contacts by exact email via GET /v3/contacts?email=.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "email": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "email"
+          ]
+        },
+        "request": {
+          "method": "GET",
+          "path": "/v3/contacts",
+          "success": [
+            200
+          ],
+          "query": {
+            "email": "{{email}}"
+          }
+        }
+      },
+      "contacts.set_status": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "write",
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "data"
+          ]
+        },
+        "title": "Set contact sequence status",
+        "description": "Set contacts to active, paused, finished, or outOfOffice across sequences they are in.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "contactIds": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "integer",
+                "minimum": 1
+              }
+            },
+            "statusInSequence": {
+              "type": "string",
+              "enum": [
+                "active",
+                "paused",
+                "finished",
+                "outOfOffice"
+              ]
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "contactIds",
+            "statusInSequence"
+          ]
+        },
+        "request": {
+          "method": "POST",
+          "path": "/v3/contacts/set-status-in-sequence",
+          "success": [
+            200
+          ],
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "contactIds": "{{contactIds}}",
+            "statusInSequence": "{{statusInSequence}}"
+          }
+        }
+      },
+      "contacts.statuses": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "read",
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "data"
+          ]
+        },
+        "title": "Get contact statuses",
+        "description": "Get a contact's opt-out, call, meeting, and per-sequence statuses.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "id"
+          ]
+        },
+        "request": {
+          "method": "GET",
+          "path": "/v3/contacts/{{id}}/statuses",
+          "success": [
+            200
+          ]
         }
       },
       "contacts.update": {
@@ -1322,7 +1590,89 @@
           }
         }
       },
-      "contacts.delete": {
+      "email_accounts.connect_gmail": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "data"
+          ]
+        },
+        "sideEffect": "write",
+        "title": "Connect Gmail account",
+        "description": "Start Gmail OAuth. Official GET /v3/email-accounts/connect/gmail returns 302 Location to Google's consent screen.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/v3/email-accounts/connect/gmail",
+          "success": [
+            302
+          ],
+          "result": {
+            "data": {
+              "location": "{{headers.location}}"
+            }
+          }
+        }
+      },
+      "email_accounts.connect_office365": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "data"
+          ]
+        },
+        "sideEffect": "write",
+        "title": "Connect Office 365 account",
+        "description": "Start Office 365 / Exchange OAuth. Official GET /v3/email-accounts/connect/office-365 returns 302 Location to Microsoft's consent screen.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/v3/email-accounts/connect/office-365",
+          "success": [
+            302
+          ],
+          "result": {
+            "data": {
+              "location": "{{headers.location}}"
+            }
+          }
+        }
+      },
+      "email_accounts.delete": {
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
         "maxResponseBytes": 5242880,
@@ -1346,8 +1696,8 @@
             "data"
           ]
         },
-        "title": "Delete contact",
-        "description": "Delete one Reply.io contact by id.",
+        "title": "Delete email account",
+        "description": "Delete one Reply.io email account by id.",
         "inputSchema": {
           "type": "object",
           "properties": {
@@ -1363,88 +1713,13 @@
         },
         "request": {
           "method": "DELETE",
-          "path": "/v3/contacts/{{id}}",
+          "path": "/v3/email-accounts/{{id}}",
           "success": [
             204
           ]
         }
       },
-      "contacts.move_to_sequence": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
-        "sideEffect": "write",
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
-        "outputSchema": {
-          "type": "object",
-          "properties": {
-            "data": {
-              "type": [
-                "object",
-                "null"
-              ]
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "data"
-          ]
-        },
-        "title": "Move contact to sequence",
-        "description": "Enroll a contact in a sequence. Empty 204 on success.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "id": {
-              "type": "integer",
-              "minimum": 1
-            },
-            "sequenceId": {
-              "type": "integer",
-              "minimum": 1
-            },
-            "removeFromExisting": {
-              "type": "boolean"
-            },
-            "startStepId": {
-              "type": "integer",
-              "minimum": 1
-            },
-            "ignoreStepDelay": {
-              "type": "boolean"
-            },
-            "startFrom": {
-              "type": "string"
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "id",
-            "sequenceId"
-          ]
-        },
-        "request": {
-          "method": "POST",
-          "path": "/v3/contacts/{{id}}/move-to-sequence",
-          "success": [
-            204
-          ],
-          "headers": {
-            "Content-Type": "application/json"
-          },
-          "body": {
-            "sequenceId": "{{sequenceId}}",
-            "removeFromExisting": "{{removeFromExisting}}",
-            "startStepId": "{{startStepId}}",
-            "ignoreStepDelay": "{{ignoreStepDelay}}",
-            "startFrom": "{{startFrom}}"
-          }
-        }
-      },
-      "contacts.statuses": {
+      "email_accounts.list": {
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
         "maxResponseBytes": 5242880,
@@ -1465,8 +1740,753 @@
             "data"
           ]
         },
-        "title": "Get contact statuses",
-        "description": "Get a contact's opt-out, call, meeting, and per-sequence statuses.",
+        "title": "List email accounts",
+        "description": "List Reply.io email accounts with optional top/skip pagination and my=true for the current user.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "top": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000
+            },
+            "skip": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "my": {
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/v3/email-accounts",
+          "success": [
+            200
+          ],
+          "query": {
+            "top": "{{top}}",
+            "skip": "{{skip}}",
+            "my": "{{my}}"
+          }
+        }
+      },
+      "email_accounts.list_disconnected": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "read",
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "data"
+          ]
+        },
+        "title": "List disconnected email accounts",
+        "description": "Filter email accounts to connectionStatus disconnected.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "top": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000
+            },
+            "skip": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "POST",
+          "path": "/v3/email-accounts/filter",
+          "success": [
+            200
+          ],
+          "query": {
+            "top": "{{top}}",
+            "skip": "{{skip}}"
+          },
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "status": "disconnected"
+          }
+        }
+      },
+      "email_accounts.update": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "write",
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "data"
+          ]
+        },
+        "title": "Update email account",
+        "description": "Patch an email account. Send only the official nested sections to change.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "connection": {
+              "type": "object",
+              "properties": {
+                "email": {
+                  "type": "string"
+                },
+                "senderName": {
+                  "type": "string"
+                },
+                "smtpHost": {
+                  "type": "string"
+                },
+                "smtpPort": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 65535
+                },
+                "smtpPassword": {
+                  "type": "string"
+                },
+                "smtpSsl": {
+                  "type": "boolean"
+                },
+                "imapHost": {
+                  "type": "string"
+                },
+                "imapPort": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 65535
+                },
+                "imapPassword": {
+                  "type": "string"
+                },
+                "imapSsl": {
+                  "type": "boolean"
+                }
+              },
+              "additionalProperties": false
+            },
+            "safety": {
+              "type": "object",
+              "properties": {
+                "dailyLimit": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "isEmailsThrottlingEnabled": {
+                  "type": "boolean"
+                },
+                "emailsPerInterval": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "emailsThrottlingSecondsInterval": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "isSendingDelayEnabled": {
+                  "type": "boolean"
+                },
+                "maxSendingDelaySeconds": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "minSendingDelaySeconds": {
+                  "type": "integer",
+                  "minimum": 0
+                }
+              },
+              "additionalProperties": false
+            },
+            "signature": {
+              "type": "object",
+              "properties": {
+                "signature": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": false
+            },
+            "optOut": {
+              "type": "object",
+              "properties": {
+                "message": {
+                  "type": "string"
+                },
+                "emailFooter": {
+                  "type": "string"
+                },
+                "isOptOutLinkEnabled": {
+                  "type": "boolean"
+                },
+                "optOutTextBlock": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": false
+            },
+            "rampUp": {
+              "type": "object",
+              "properties": {
+                "enabled": {
+                  "type": "boolean"
+                },
+                "startValue": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "incrementValue": {
+                  "type": "integer",
+                  "minimum": 0
+                }
+              },
+              "additionalProperties": false
+            },
+            "tags": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "id"
+          ]
+        },
+        "request": {
+          "method": "PATCH",
+          "path": "/v3/email-accounts/{{id}}",
+          "success": [
+            200
+          ],
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "connection": "{{connection}}",
+            "safety": "{{safety}}",
+            "signature": "{{signature}}",
+            "optOut": "{{optOut}}",
+            "rampUp": "{{rampUp}}",
+            "tags": "{{tags}}"
+          }
+        }
+      },
+      "email_accounts.v1.save": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "write",
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "data": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "integer"
+                }
+              },
+              "additionalProperties": true,
+              "required": [
+                "id"
+              ]
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "data"
+          ]
+        },
+        "title": "Save custom SMTP email account",
+        "description": "Add or update a custom SMTP/IMAP mailbox with POST /v1/EmailAccounts. Official add returns 201 and update returns 200, both JSON with integer id. This is not PATCH /v3/email-accounts/{id}.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "email": {
+              "type": "string"
+            },
+            "dailyLimit": {
+              "type": "integer"
+            },
+            "senderName": {
+              "type": "string"
+            },
+            "smtpHost": {
+              "type": "string"
+            },
+            "smtpPort": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 65535
+            },
+            "smtpPassword": {
+              "type": "string"
+            },
+            "smtpSsl": {
+              "type": "boolean"
+            },
+            "imapHost": {
+              "type": "string"
+            },
+            "imapPort": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 65535
+            },
+            "imapPassword": {
+              "type": "string"
+            },
+            "imapSsl": {
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": true,
+          "required": [
+            "email",
+            "dailyLimit",
+            "senderName",
+            "smtpHost",
+            "smtpPort",
+            "smtpPassword",
+            "imapHost",
+            "imapPort",
+            "imapPassword"
+          ]
+        },
+        "request": {
+          "method": "POST",
+          "path": "/v1/EmailAccounts",
+          "success": [
+            200,
+            201
+          ],
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "Email": "{{email}}",
+            "Daily Limit": "{{dailyLimit}}",
+            "SenderName": "{{senderName}}",
+            "SmtpHost": "{{smtpHost}}",
+            "SmtpPort": "{{smtpPort}}",
+            "SmtpPassword": "{{smtpPassword}}",
+            "SmtpSsl": "{{smtpSsl}}",
+            "ImapHost": "{{imapHost}}",
+            "ImapPort": "{{imapPort}}",
+            "ImapPassword": "{{imapPassword}}",
+            "ImapSsl": "{{imapSsl}}"
+          }
+        }
+      },
+      "healthcheck": {
+        "timeoutMs": 10000,
+        "maxInputBytes": 4096,
+        "maxResponseBytes": 1048576,
+        "kind": "action",
+        "sideEffect": "read",
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "data"
+          ]
+        },
+        "title": "Healthcheck",
+        "description": "Validate the Reply.io API key with GET /v3/whoami.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/v3/whoami",
+          "success": [
+            200
+          ]
+        }
+      },
+      "schedules.delete": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "destructive",
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "data": {
+              "type": [
+                "object",
+                "null"
+              ]
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "data"
+          ]
+        },
+        "title": "Delete schedule",
+        "description": "Delete a Reply.io sending schedule by id.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "id"
+          ]
+        },
+        "request": {
+          "method": "DELETE",
+          "path": "/v3/schedules/{{id}}",
+          "success": [
+            204
+          ]
+        }
+      },
+      "sequences.archive": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "write",
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "data"
+          ]
+        },
+        "title": "Archive sequence",
+        "description": "Archive a paused Reply.io sequence without permanently deleting it.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "id"
+          ]
+        },
+        "request": {
+          "method": "POST",
+          "path": "/v3/sequences/{{id}}/archive",
+          "success": [
+            200
+          ]
+        }
+      },
+      "sequences.contacts.remove": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "destructive",
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "data": {
+              "type": [
+                "object",
+                "null"
+              ]
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "data"
+          ]
+        },
+        "title": "Remove contact from sequence",
+        "description": "Remove one contact from a sequence. Empty 204 on success.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "contact_id": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "id",
+            "contact_id"
+          ]
+        },
+        "request": {
+          "method": "DELETE",
+          "path": "/v3/sequences/{{id}}/contact-links/{{contact_id}}",
+          "success": [
+            204
+          ]
+        }
+      },
+      "sequences.contacts.remove_bulk": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "write",
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "data"
+          ]
+        },
+        "title": "Bulk remove contacts from sequence",
+        "description": "Remove several contacts from a sequence in one call.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "contactIds": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "integer",
+                "minimum": 1
+              }
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "id",
+            "contactIds"
+          ]
+        },
+        "request": {
+          "method": "POST",
+          "path": "/v3/sequences/{{id}}/contact-links/bulk-delete",
+          "success": [
+            200
+          ],
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "contactIds": "{{contactIds}}"
+          }
+        }
+      },
+      "sequences.contacts.state": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "read",
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "data"
+          ]
+        },
+        "title": "List sequence contacts with state",
+        "description": "List contacts in a sequence with optional CurrentStep, LastStepCompletedAt, and Status columns.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "top": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            },
+            "skip": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "additionalColumns": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "id"
+          ]
+        },
+        "request": {
+          "method": "GET",
+          "path": "/v3/sequences/{{id}}/contacts/state",
+          "success": [
+            200
+          ],
+          "query": {
+            "top": "{{top}}",
+            "skip": "{{skip}}",
+            "additionalColumns": "{{additionalColumns}}"
+          }
+        }
+      },
+      "sequences.delete": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "destructive",
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "data": {
+              "type": [
+                "object",
+                "null"
+              ]
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "data"
+          ]
+        },
+        "title": "Delete sequence",
+        "description": "Delete a Reply.io sequence by id. Contacts remain in the account.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "id"
+          ]
+        },
+        "request": {
+          "method": "DELETE",
+          "path": "/v3/sequences/{{id}}",
+          "success": [
+            204
+          ]
+        }
+      },
+      "sequences.get": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "read",
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "data"
+          ]
+        },
+        "title": "Get sequence",
+        "description": "Get one Reply.io sequence by id.",
         "inputSchema": {
           "type": "object",
           "properties": {
@@ -1482,130 +2502,10 @@
         },
         "request": {
           "method": "GET",
-          "path": "/v3/contacts/{{id}}/statuses",
+          "path": "/v3/sequences/{{id}}",
           "success": [
             200
           ]
-        }
-      },
-      "contacts.set_status": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
-        "sideEffect": "write",
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
-        "outputSchema": {
-          "type": "object",
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "data"
-          ]
-        },
-        "title": "Set contact sequence status",
-        "description": "Set contacts to active, paused, finished, or outOfOffice across sequences they are in.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "contactIds": {
-              "type": "array",
-              "minItems": 1,
-              "items": {
-                "type": "integer",
-                "minimum": 1
-              }
-            },
-            "statusInSequence": {
-              "type": "string",
-              "enum": [
-                "active",
-                "paused",
-                "finished",
-                "outOfOffice"
-              ]
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "contactIds",
-            "statusInSequence"
-          ]
-        },
-        "request": {
-          "method": "POST",
-          "path": "/v3/contacts/set-status-in-sequence",
-          "success": [
-            200
-          ],
-          "headers": {
-            "Content-Type": "application/json"
-          },
-          "body": {
-            "contactIds": "{{contactIds}}",
-            "statusInSequence": "{{statusInSequence}}"
-          }
-        }
-      },
-      "contacts.clear_opt_out": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
-        "sideEffect": "write",
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
-        "outputSchema": {
-          "type": "object",
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "data"
-          ]
-        },
-        "title": "Clear contact opt-out",
-        "description": "Clear the opted-out flag on contacts via POST /v3/contacts/set-opted-out.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "contactIds": {
-              "type": "array",
-              "minItems": 1,
-              "items": {
-                "type": "integer",
-                "minimum": 1
-              }
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "contactIds"
-          ]
-        },
-        "request": {
-          "method": "POST",
-          "path": "/v3/contacts/set-opted-out",
-          "success": [
-            200
-          ],
-          "headers": {
-            "Content-Type": "application/json"
-          },
-          "body": {
-            "contactIds": "{{contactIds}}",
-            "isOptedOut": false
-          }
         }
       },
       "sequences.list": {
@@ -1662,94 +2562,6 @@
           }
         }
       },
-      "sequences.get": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
-        "sideEffect": "read",
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
-        "outputSchema": {
-          "type": "object",
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "data"
-          ]
-        },
-        "title": "Get sequence",
-        "description": "Get one Reply.io sequence by id.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "id": {
-              "type": "integer",
-              "minimum": 1
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "id"
-          ]
-        },
-        "request": {
-          "method": "GET",
-          "path": "/v3/sequences/{{id}}",
-          "success": [
-            200
-          ]
-        }
-      },
-      "sequences.start": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
-        "sideEffect": "write",
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
-        "outputSchema": {
-          "type": "object",
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "data"
-          ]
-        },
-        "title": "Start sequence",
-        "description": "Start a new or paused Reply.io sequence.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "id": {
-              "type": "integer",
-              "minimum": 1
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "id"
-          ]
-        },
-        "request": {
-          "method": "POST",
-          "path": "/v3/sequences/{{id}}/start",
-          "success": [
-            200
-          ]
-        }
-      },
       "sequences.pause": {
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
@@ -1794,7 +2606,7 @@
           ]
         }
       },
-      "sequences.archive": {
+      "sequences.start": {
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
         "maxResponseBytes": 5242880,
@@ -1815,8 +2627,8 @@
             "data"
           ]
         },
-        "title": "Archive sequence",
-        "description": "Archive a paused Reply.io sequence without permanently deleting it.",
+        "title": "Start sequence",
+        "description": "Start a new or paused Reply.io sequence.",
         "inputSchema": {
           "type": "object",
           "properties": {
@@ -1832,98 +2644,7 @@
         },
         "request": {
           "method": "POST",
-          "path": "/v3/sequences/{{id}}/archive",
-          "success": [
-            200
-          ]
-        }
-      },
-      "sequences.delete": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
-        "sideEffect": "destructive",
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
-        "outputSchema": {
-          "type": "object",
-          "properties": {
-            "data": {
-              "type": [
-                "object",
-                "null"
-              ]
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "data"
-          ]
-        },
-        "title": "Delete sequence",
-        "description": "Delete a Reply.io sequence by id. Contacts remain in the account.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "id": {
-              "type": "integer",
-              "minimum": 1
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "id"
-          ]
-        },
-        "request": {
-          "method": "DELETE",
-          "path": "/v3/sequences/{{id}}",
-          "success": [
-            204
-          ]
-        }
-      },
-      "sequences.steps.list": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
-        "sideEffect": "read",
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
-        "outputSchema": {
-          "type": "object",
-          "properties": {
-            "data": {
-              "type": "array"
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "data"
-          ]
-        },
-        "title": "List sequence steps",
-        "description": "List every step in a Reply.io sequence.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "id": {
-              "type": "integer",
-              "minimum": 1
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "id"
-          ]
-        },
-        "request": {
-          "method": "GET",
-          "path": "/v3/sequences/{{id}}/steps",
+          "path": "/v3/sequences/{{id}}/start",
           "success": [
             200
           ]
@@ -2169,7 +2890,7 @@
           ]
         }
       },
-      "sequences.contacts.state": {
+      "sequences.steps.list": {
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
         "maxResponseBytes": 5242880,
@@ -2182,7 +2903,7 @@
           "type": "object",
           "properties": {
             "data": {
-              "type": "object"
+              "type": "array"
             }
           },
           "additionalProperties": false,
@@ -2190,553 +2911,8 @@
             "data"
           ]
         },
-        "title": "List sequence contacts with state",
-        "description": "List contacts in a sequence with optional CurrentStep, LastStepCompletedAt, and Status columns.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "id": {
-              "type": "integer",
-              "minimum": 1
-            },
-            "top": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 100
-            },
-            "skip": {
-              "type": "integer",
-              "minimum": 0
-            },
-            "additionalColumns": {
-              "type": "string"
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "id"
-          ]
-        },
-        "request": {
-          "method": "GET",
-          "path": "/v3/sequences/{{id}}/contacts/state",
-          "success": [
-            200
-          ],
-          "query": {
-            "top": "{{top}}",
-            "skip": "{{skip}}",
-            "additionalColumns": "{{additionalColumns}}"
-          }
-        }
-      },
-      "sequences.contacts.remove": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
-        "sideEffect": "destructive",
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
-        "outputSchema": {
-          "type": "object",
-          "properties": {
-            "data": {
-              "type": [
-                "object",
-                "null"
-              ]
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "data"
-          ]
-        },
-        "title": "Remove contact from sequence",
-        "description": "Remove one contact from a sequence. Empty 204 on success.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "id": {
-              "type": "integer",
-              "minimum": 1
-            },
-            "contact_id": {
-              "type": "integer",
-              "minimum": 1
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "id",
-            "contact_id"
-          ]
-        },
-        "request": {
-          "method": "DELETE",
-          "path": "/v3/sequences/{{id}}/contact-links/{{contact_id}}",
-          "success": [
-            204
-          ]
-        }
-      },
-      "sequences.contacts.remove_bulk": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
-        "sideEffect": "write",
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
-        "outputSchema": {
-          "type": "object",
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "data"
-          ]
-        },
-        "title": "Bulk remove contacts from sequence",
-        "description": "Remove several contacts from a sequence in one call.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "id": {
-              "type": "integer",
-              "minimum": 1
-            },
-            "contactIds": {
-              "type": "array",
-              "minItems": 1,
-              "items": {
-                "type": "integer",
-                "minimum": 1
-              }
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "id",
-            "contactIds"
-          ]
-        },
-        "request": {
-          "method": "POST",
-          "path": "/v3/sequences/{{id}}/contact-links/bulk-delete",
-          "success": [
-            200
-          ],
-          "headers": {
-            "Content-Type": "application/json"
-          },
-          "body": {
-            "contactIds": "{{contactIds}}"
-          }
-        }
-      },
-      "email_accounts.list": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
-        "sideEffect": "read",
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
-        "outputSchema": {
-          "type": "object",
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "data"
-          ]
-        },
-        "title": "List email accounts",
-        "description": "List Reply.io email accounts with optional top/skip pagination and my=true for the current user.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "top": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 1000
-            },
-            "skip": {
-              "type": "integer",
-              "minimum": 0
-            },
-            "my": {
-              "type": "boolean"
-            }
-          },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "GET",
-          "path": "/v3/email-accounts",
-          "success": [
-            200
-          ],
-          "query": {
-            "top": "{{top}}",
-            "skip": "{{skip}}",
-            "my": "{{my}}"
-          }
-        }
-      },
-      "email_accounts.connect_gmail": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
-        "outputSchema": {
-          "type": "object",
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "data"
-          ]
-        },
-        "sideEffect": "write",
-        "title": "Connect Gmail account",
-        "description": "Start Gmail OAuth. Official GET /v3/email-accounts/connect/gmail returns 302 Location to Google's consent screen.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {},
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "GET",
-          "path": "/v3/email-accounts/connect/gmail",
-          "success": [
-            302
-          ],
-          "result": {
-            "data": {
-              "location": "{{headers.location}}"
-            }
-          }
-        }
-      },
-      "email_accounts.connect_office365": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
-        "outputSchema": {
-          "type": "object",
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "data"
-          ]
-        },
-        "sideEffect": "write",
-        "title": "Connect Office 365 account",
-        "description": "Start Office 365 / Exchange OAuth. Official GET /v3/email-accounts/connect/office-365 returns 302 Location to Microsoft's consent screen.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {},
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "GET",
-          "path": "/v3/email-accounts/connect/office-365",
-          "success": [
-            302
-          ],
-          "result": {
-            "data": {
-              "location": "{{headers.location}}"
-            }
-          }
-        }
-      },
-      "email_accounts.list_disconnected": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
-        "sideEffect": "read",
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
-        "outputSchema": {
-          "type": "object",
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "data"
-          ]
-        },
-        "title": "List disconnected email accounts",
-        "description": "Filter email accounts to connectionStatus disconnected.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "top": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 1000
-            },
-            "skip": {
-              "type": "integer",
-              "minimum": 0
-            }
-          },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "POST",
-          "path": "/v3/email-accounts/filter",
-          "success": [
-            200
-          ],
-          "query": {
-            "top": "{{top}}",
-            "skip": "{{skip}}"
-          },
-          "headers": {
-            "Content-Type": "application/json"
-          },
-          "body": {
-            "status": "disconnected"
-          }
-        }
-      },
-      "email_accounts.update": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
-        "sideEffect": "write",
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
-        "outputSchema": {
-          "type": "object",
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "data"
-          ]
-        },
-        "title": "Update email account",
-        "description": "Patch an email account. Send only the official nested sections to change.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "id": {
-              "type": "integer",
-              "minimum": 1
-            },
-            "connection": {
-              "type": "object",
-              "properties": {
-                "email": {
-                  "type": "string"
-                },
-                "senderName": {
-                  "type": "string"
-                },
-                "smtpHost": {
-                  "type": "string"
-                },
-                "smtpPort": {
-                  "type": "integer",
-                  "minimum": 1,
-                  "maximum": 65535
-                },
-                "smtpPassword": {
-                  "type": "string"
-                },
-                "smtpSsl": {
-                  "type": "boolean"
-                },
-                "imapHost": {
-                  "type": "string"
-                },
-                "imapPort": {
-                  "type": "integer",
-                  "minimum": 1,
-                  "maximum": 65535
-                },
-                "imapPassword": {
-                  "type": "string"
-                },
-                "imapSsl": {
-                  "type": "boolean"
-                }
-              },
-              "additionalProperties": false
-            },
-            "safety": {
-              "type": "object",
-              "properties": {
-                "dailyLimit": {
-                  "type": "integer",
-                  "minimum": 1
-                },
-                "isEmailsThrottlingEnabled": {
-                  "type": "boolean"
-                },
-                "emailsPerInterval": {
-                  "type": "integer",
-                  "minimum": 1
-                },
-                "emailsThrottlingSecondsInterval": {
-                  "type": "integer",
-                  "minimum": 1
-                },
-                "isSendingDelayEnabled": {
-                  "type": "boolean"
-                },
-                "maxSendingDelaySeconds": {
-                  "type": "integer",
-                  "minimum": 0
-                },
-                "minSendingDelaySeconds": {
-                  "type": "integer",
-                  "minimum": 0
-                }
-              },
-              "additionalProperties": false
-            },
-            "signature": {
-              "type": "object",
-              "properties": {
-                "signature": {
-                  "type": "string"
-                }
-              },
-              "additionalProperties": false
-            },
-            "optOut": {
-              "type": "object",
-              "properties": {
-                "message": {
-                  "type": "string"
-                },
-                "emailFooter": {
-                  "type": "string"
-                },
-                "isOptOutLinkEnabled": {
-                  "type": "boolean"
-                },
-                "optOutTextBlock": {
-                  "type": "string"
-                }
-              },
-              "additionalProperties": false
-            },
-            "rampUp": {
-              "type": "object",
-              "properties": {
-                "enabled": {
-                  "type": "boolean"
-                },
-                "startValue": {
-                  "type": "integer",
-                  "minimum": 0
-                },
-                "incrementValue": {
-                  "type": "integer",
-                  "minimum": 0
-                }
-              },
-              "additionalProperties": false
-            },
-            "tags": {
-              "type": "array",
-              "minItems": 1,
-              "items": {
-                "type": "string"
-              }
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "id"
-          ]
-        },
-        "request": {
-          "method": "PATCH",
-          "path": "/v3/email-accounts/{{id}}",
-          "success": [
-            200
-          ],
-          "headers": {
-            "Content-Type": "application/json"
-          },
-          "body": {
-            "connection": "{{connection}}",
-            "safety": "{{safety}}",
-            "signature": "{{signature}}",
-            "optOut": "{{optOut}}",
-            "rampUp": "{{rampUp}}",
-            "tags": "{{tags}}"
-          }
-        }
-      },
-      "email_accounts.delete": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
-        "sideEffect": "destructive",
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
-        "outputSchema": {
-          "type": "object",
-          "properties": {
-            "data": {
-              "type": [
-                "object",
-                "null"
-              ]
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "data"
-          ]
-        },
-        "title": "Delete email account",
-        "description": "Delete one Reply.io email account by id.",
+        "title": "List sequence steps",
+        "description": "List every step in a Reply.io sequence.",
         "inputSchema": {
           "type": "object",
           "properties": {
@@ -2751,111 +2927,10 @@
           ]
         },
         "request": {
-          "method": "DELETE",
-          "path": "/v3/email-accounts/{{id}}",
-          "success": [
-            204
-          ]
-        }
-      },
-      "contact_lists.list": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
-        "sideEffect": "read",
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
-        "outputSchema": {
-          "type": "object",
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "data"
-          ]
-        },
-        "title": "List contact lists",
-        "description": "List Reply.io contact lists with optional top/skip pagination and name search.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "top": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 1000
-            },
-            "skip": {
-              "type": "integer",
-              "minimum": 0
-            },
-            "search": {
-              "type": "string"
-            }
-          },
-          "additionalProperties": false
-        },
-        "request": {
           "method": "GET",
-          "path": "/v3/contact-lists",
+          "path": "/v3/sequences/{{id}}/steps",
           "success": [
             200
-          ],
-          "query": {
-            "top": "{{top}}",
-            "skip": "{{skip}}",
-            "search": "{{search}}"
-          }
-        }
-      },
-      "schedules.delete": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
-        "sideEffect": "destructive",
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
-        "outputSchema": {
-          "type": "object",
-          "properties": {
-            "data": {
-              "type": [
-                "object",
-                "null"
-              ]
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "data"
-          ]
-        },
-        "title": "Delete schedule",
-        "description": "Delete a Reply.io sending schedule by id.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "id": {
-              "type": "integer",
-              "minimum": 1
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "id"
-          ]
-        },
-        "request": {
-          "method": "DELETE",
-          "path": "/v3/schedules/{{id}}",
-          "success": [
-            204
           ]
         }
       },
@@ -2890,6 +2965,42 @@
             }
           },
           "additionalProperties": false
+        }
+      },
+      "users.list": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "data": {
+              "type": "array"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "data"
+          ]
+        },
+        "sideEffect": "read",
+        "title": "List team users",
+        "description": "List Reply.io team users via GET /v3/whoami/team-users.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/v3/whoami/team-users",
+          "success": [
+            200
+          ]
         }
       }
     },

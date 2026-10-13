@@ -553,14 +553,14 @@
       }
     },
     "operations": {
-      "healthcheck": {
+      "account.get": {
         "kind": "action",
         "sideEffect": "read",
         "timeoutMs": 5000,
         "maxInputBytes": 4096,
         "maxResponseBytes": 65536,
-        "title": "Healthcheck",
-        "description": "Validate the ASIN Data API key with GET /account.",
+        "title": "Get account",
+        "description": "Read ASIN Data API account credits and plan details with GET /account.",
         "inputSchema": {
           "type": "object",
           "properties": {},
@@ -578,101 +578,67 @@
           },
           "additionalProperties": false
         },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
         "request": {
           "method": "GET",
           "path": "/account",
           "success": [
             200
           ]
-        }
-      },
-      "destinations.list": {
-        "kind": "action",
-        "sideEffect": "read",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "title": "List destinations",
-        "description": "List ASIN Data API destinations with optional filtering and sorting.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "page": {
-              "type": "integer",
-              "minimum": 1
-            },
-            "sort_by": {
-              "type": "string",
-              "enum": [
-                "type",
-                "name"
-              ]
-            },
-            "search_term": {
-              "type": "string",
-              "minLength": 1
-            },
-            "sort_direction": {
-              "type": "string",
-              "enum": [
-                "ascending",
-                "descending"
-              ]
-            }
-          },
-          "additionalProperties": false
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
         },
         "enforceOutputSchema": true,
         "validationMode": "strict-generated",
-        "responseFormat": "json",
-        "request": {
-          "method": "GET",
-          "path": "/destinations",
-          "success": [
-            200
-          ],
-          "query": {
-            "page": "{{page}}",
-            "sort_by": "{{sort_by}}",
-            "search_term": "{{search_term}}",
-            "sort_direction": "{{sort_direction}}"
-          }
-        }
+        "responseFormat": "json"
       },
-      "collections.get": {
+      "collection-requests.create": {
         "kind": "action",
-        "sideEffect": "read",
+        "sideEffect": "write",
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
         "maxResponseBytes": 5242880,
-        "title": "Get collection",
-        "description": "Get one ASIN Data API collection by id.",
+        "title": "Add collection requests",
+        "description": "Add product-data requests to an idle ASIN Data API collection.",
         "inputSchema": {
           "type": "object",
           "properties": {
             "collection_id": {
               "type": "string",
+              "description": "Collection id.",
               "minLength": 1
+            },
+            "type": {
+              "type": "string",
+              "description": "Product Data API request type.",
+              "minLength": 1,
+              "enum": [
+                "product",
+                "search",
+                "offers",
+                "category"
+              ]
+            },
+            "asin": {
+              "type": "string",
+              "description": "Amazon ASIN when type is product or offers."
+            },
+            "search_term": {
+              "type": "string",
+              "description": "Search term when type is search."
+            },
+            "amazon_domain": {
+              "type": "string",
+              "description": "Amazon domain, for example amazon.com.",
+              "minLength": 1
+            },
+            "custom_id": {
+              "type": "string",
+              "description": "Caller-supplied request id."
             }
           },
           "additionalProperties": false,
           "required": [
-            "collection_id"
+            "collection_id",
+            "type",
+            "amazon_domain"
           ]
         },
         "outputSchema": {
@@ -687,16 +653,30 @@
           },
           "additionalProperties": false
         },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
         "request": {
-          "method": "GET",
+          "method": "PUT",
           "path": "/collections/{{collection_id}}",
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "requests": [
+              {
+                "type": "{{type}}",
+                "asin": "{{asin}}",
+                "search_term": "{{search_term}}",
+                "amazon_domain": "{{amazon_domain}}",
+                "custom_id": "{{custom_id}}"
+              }
+            ]
+          },
           "success": [
             200
           ]
-        }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
       },
       "collection-requests.list": {
         "kind": "action",
@@ -747,18 +727,33 @@
           ]
         }
       },
-      "account.get": {
+      "collection-results.get": {
         "kind": "action",
         "sideEffect": "read",
-        "timeoutMs": 5000,
-        "maxInputBytes": 4096,
-        "maxResponseBytes": 65536,
-        "title": "Get account",
-        "description": "Read ASIN Data API account credits and plan details with GET /account.",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Get collection result set",
+        "description": "Get one ASIN Data API collection result set by id.",
         "inputSchema": {
           "type": "object",
-          "properties": {},
-          "additionalProperties": false
+          "properties": {
+            "collection_id": {
+              "type": "string",
+              "description": "Collection id.",
+              "minLength": 1
+            },
+            "result_set_id": {
+              "type": "string",
+              "description": "Result set id.",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "collection_id",
+            "result_set_id"
+          ]
         },
         "outputSchema": {
           "type": "object",
@@ -774,7 +769,7 @@
         },
         "request": {
           "method": "GET",
-          "path": "/account",
+          "path": "/collections/{{collection_id}}/results/{{result_set_id}}",
           "success": [
             200
           ]
@@ -783,26 +778,26 @@
         "validationMode": "strict-generated",
         "responseFormat": "json"
       },
-      "destinations.get": {
+      "collection-results.list": {
         "kind": "action",
         "sideEffect": "read",
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
         "maxResponseBytes": 5242880,
-        "title": "Get destination",
-        "description": "Get one ASIN Data API destination by id.",
+        "title": "List collection result sets",
+        "description": "List result sets generated by an ASIN Data API collection.",
         "inputSchema": {
           "type": "object",
           "properties": {
-            "destination_id": {
+            "collection_id": {
               "type": "string",
-              "description": "Destination id.",
+              "description": "Collection id.",
               "minLength": 1
             }
           },
           "additionalProperties": false,
           "required": [
-            "destination_id"
+            "collection_id"
           ]
         },
         "outputSchema": {
@@ -819,7 +814,421 @@
         },
         "request": {
           "method": "GET",
-          "path": "/destinations/{{destination_id}}",
+          "path": "/collections/{{collection_id}}/results",
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "collections.create": {
+        "kind": "action",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Create collection",
+        "description": "Create an ASIN Data API collection that can hold up to 15,000 product-data requests.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "description": "Collection name.",
+              "minLength": 1
+            },
+            "enabled": {
+              "type": "boolean",
+              "description": "Whether the collection starts enabled."
+            },
+            "schedule_type": {
+              "type": "string",
+              "description": "Collection schedule.",
+              "minLength": 1,
+              "enum": [
+                "manual",
+                "daily",
+                "weekly",
+                "monthly",
+                "minutes"
+              ]
+            },
+            "priority": {
+              "type": "string",
+              "description": "Queue priority.",
+              "minLength": 1,
+              "enum": [
+                "highest",
+                "high",
+                "normal",
+                "low",
+                "lowest"
+              ]
+            },
+            "notification_webhook": {
+              "type": "string",
+              "description": "Webhook URL invoked when a result set completes."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "name"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "POST",
+          "path": "/collections",
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "name": "{{name}}",
+            "enabled": "{{enabled}}",
+            "schedule_type": "{{schedule_type}}",
+            "priority": "{{priority}}",
+            "notification_webhook": "{{notification_webhook}}"
+          },
+          "success": [
+            200,
+            201
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "collections.delete": {
+        "kind": "action",
+        "sideEffect": "destructive",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Delete collection",
+        "description": "Delete an ASIN Data API collection by id.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "collection_id": {
+              "type": "string",
+              "description": "Collection id.",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "collection_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "DELETE",
+          "path": "/collections/{{collection_id}}",
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "collections.get": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Get collection",
+        "description": "Get one ASIN Data API collection by id.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "collection_id": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "collection_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "request": {
+          "method": "GET",
+          "path": "/collections/{{collection_id}}",
+          "success": [
+            200
+          ]
+        }
+      },
+      "collections.list": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "List collections",
+        "description": "List ASIN Data API collections with optional paging and status filters.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "page": {
+              "type": "integer",
+              "description": "Page number.",
+              "minimum": 1
+            },
+            "page_size": {
+              "type": "integer",
+              "description": "Results per page, max 1000.",
+              "minimum": 1,
+              "maximum": 1000
+            },
+            "status": {
+              "type": "string",
+              "description": "Collection status filter.",
+              "minLength": 1,
+              "enum": [
+                "all",
+                "idle",
+                "queued",
+                "running"
+              ]
+            },
+            "search_term": {
+              "type": "string",
+              "description": "Filter collections by name."
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/collections",
+          "query": {
+            "page": "{{page}}",
+            "page_size": "{{page_size}}",
+            "status": "{{status}}",
+            "search_term": "{{search_term}}"
+          },
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "collections.start": {
+        "kind": "action",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Start collection",
+        "description": "Start an ASIN Data API collection. Requests in the collection consume product-data credits.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "collection_id": {
+              "type": "string",
+              "description": "Collection id.",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "collection_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/collections/{{collection_id}}/start",
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "collections.stop": {
+        "kind": "action",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Stop collection",
+        "description": "Stop a running ASIN Data API collection.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "collection_id": {
+              "type": "string",
+              "description": "Collection id.",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "collection_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/collections/{{collection_id}}/stop",
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "collections.update": {
+        "kind": "action",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Update collection",
+        "description": "Update an ASIN Data API collection name, schedule, or notification webhook.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "collection_id": {
+              "type": "string",
+              "description": "Collection id.",
+              "minLength": 1
+            },
+            "name": {
+              "type": "string",
+              "description": "Updated collection name."
+            },
+            "enabled": {
+              "type": "boolean",
+              "description": "Whether the collection is enabled."
+            },
+            "schedule_type": {
+              "type": "string",
+              "description": "Collection schedule.",
+              "minLength": 1,
+              "enum": [
+                "manual",
+                "daily",
+                "weekly",
+                "monthly",
+                "minutes"
+              ]
+            },
+            "notification_webhook": {
+              "type": "string",
+              "description": "Webhook URL invoked when a result set completes."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "collection_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "PUT",
+          "path": "/collections/{{collection_id}}",
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "name": "{{name}}",
+            "enabled": "{{enabled}}",
+            "schedule_type": "{{schedule_type}}",
+            "notification_webhook": "{{notification_webhook}}"
+          },
           "success": [
             200
           ]
@@ -943,45 +1352,27 @@
         "validationMode": "strict-generated",
         "responseFormat": "json"
       },
-      "collections.list": {
+      "destinations.get": {
         "kind": "action",
         "sideEffect": "read",
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
         "maxResponseBytes": 5242880,
-        "title": "List collections",
-        "description": "List ASIN Data API collections with optional paging and status filters.",
+        "title": "Get destination",
+        "description": "Get one ASIN Data API destination by id.",
         "inputSchema": {
           "type": "object",
           "properties": {
-            "page": {
-              "type": "integer",
-              "description": "Page number.",
-              "minimum": 1
-            },
-            "page_size": {
-              "type": "integer",
-              "description": "Results per page, max 1000.",
-              "minimum": 1,
-              "maximum": 1000
-            },
-            "status": {
+            "destination_id": {
               "type": "string",
-              "description": "Collection status filter.",
-              "minLength": 1,
-              "enum": [
-                "all",
-                "idle",
-                "queued",
-                "running"
-              ]
-            },
-            "search_term": {
-              "type": "string",
-              "description": "Filter collections by name."
+              "description": "Destination id.",
+              "minLength": 1
             }
           },
-          "additionalProperties": false
+          "additionalProperties": false,
+          "required": [
+            "destination_id"
+          ]
         },
         "outputSchema": {
           "type": "object",
@@ -997,13 +1388,7 @@
         },
         "request": {
           "method": "GET",
-          "path": "/collections",
-          "query": {
-            "page": "{{page}}",
-            "page_size": "{{page_size}}",
-            "status": "{{status}}",
-            "search_term": "{{search_term}}"
-          },
+          "path": "/destinations/{{destination_id}}",
           "success": [
             200
           ]
@@ -1012,59 +1397,41 @@
         "validationMode": "strict-generated",
         "responseFormat": "json"
       },
-      "collections.create": {
+      "destinations.list": {
         "kind": "action",
-        "sideEffect": "write",
+        "sideEffect": "read",
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
         "maxResponseBytes": 5242880,
-        "title": "Create collection",
-        "description": "Create an ASIN Data API collection that can hold up to 15,000 product-data requests.",
+        "title": "List destinations",
+        "description": "List ASIN Data API destinations with optional filtering and sorting.",
         "inputSchema": {
           "type": "object",
           "properties": {
-            "name": {
+            "page": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "sort_by": {
               "type": "string",
-              "description": "Collection name.",
+              "enum": [
+                "type",
+                "name"
+              ]
+            },
+            "search_term": {
+              "type": "string",
               "minLength": 1
             },
-            "enabled": {
-              "type": "boolean",
-              "description": "Whether the collection starts enabled."
-            },
-            "schedule_type": {
+            "sort_direction": {
               "type": "string",
-              "description": "Collection schedule.",
-              "minLength": 1,
               "enum": [
-                "manual",
-                "daily",
-                "weekly",
-                "monthly",
-                "minutes"
+                "ascending",
+                "descending"
               ]
-            },
-            "priority": {
-              "type": "string",
-              "description": "Queue priority.",
-              "minLength": 1,
-              "enum": [
-                "highest",
-                "high",
-                "normal",
-                "low",
-                "lowest"
-              ]
-            },
-            "notification_webhook": {
-              "type": "string",
-              "description": "Webhook URL invoked when a result set completes."
             }
           },
-          "additionalProperties": false,
-          "required": [
-            "name"
-          ]
+          "additionalProperties": false
         },
         "outputSchema": {
           "type": "object",
@@ -1078,72 +1445,159 @@
           },
           "additionalProperties": false
         },
-        "request": {
-          "method": "POST",
-          "path": "/collections",
-          "headers": {
-            "Content-Type": "application/json"
-          },
-          "body": {
-            "name": "{{name}}",
-            "enabled": "{{enabled}}",
-            "schedule_type": "{{schedule_type}}",
-            "priority": "{{priority}}",
-            "notification_webhook": "{{notification_webhook}}"
-          },
-          "success": [
-            200,
-            201
-          ]
-        },
         "enforceOutputSchema": true,
         "validationMode": "strict-generated",
-        "responseFormat": "json"
+        "responseFormat": "json",
+        "request": {
+          "method": "GET",
+          "path": "/destinations",
+          "success": [
+            200
+          ],
+          "query": {
+            "page": "{{page}}",
+            "sort_by": "{{sort_by}}",
+            "search_term": "{{search_term}}",
+            "sort_direction": "{{sort_direction}}"
+          }
+        }
       },
-      "collections.update": {
+      "destinations.update": {
         "kind": "action",
         "sideEffect": "write",
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
         "maxResponseBytes": 5242880,
-        "title": "Update collection",
-        "description": "Update an ASIN Data API collection name, schedule, or notification webhook.",
+        "title": "Update destination",
+        "description": "Update an ASIN Data API destination by id. The JSON body accepts the same parameters as create.",
         "inputSchema": {
           "type": "object",
           "properties": {
-            "collection_id": {
+            "destination_id": {
               "type": "string",
-              "description": "Collection id.",
+              "description": "Destination id.",
               "minLength": 1
             },
             "name": {
               "type": "string",
-              "description": "Updated collection name."
+              "description": "Destination name.",
+              "minLength": 1
             },
             "enabled": {
               "type": "boolean",
-              "description": "Whether the collection is enabled."
+              "description": "Whether the destination is enabled. Disabled destinations do not receive result sets."
             },
-            "schedule_type": {
+            "type": {
               "type": "string",
-              "description": "Collection schedule.",
+              "description": "Destination type.",
               "minLength": 1,
               "enum": [
-                "manual",
-                "daily",
-                "weekly",
-                "monthly",
-                "minutes"
+                "s3",
+                "gcs",
+                "azure",
+                "oss",
+                "s3compatible"
               ]
             },
-            "notification_webhook": {
+            "s3_access_key_id": {
               "type": "string",
-              "description": "Webhook URL invoked when a result set completes."
+              "description": "Amazon S3 access key id when type is s3 or s3compatible.",
+              "minLength": 1
+            },
+            "s3_secret_access_key": {
+              "type": "string",
+              "description": "Amazon S3 secret access key when type is s3 or s3compatible.",
+              "minLength": 1
+            },
+            "s3_bucket_name": {
+              "type": "string",
+              "description": "Amazon S3 bucket name when type is s3 or s3compatible.",
+              "minLength": 1
+            },
+            "s3_path_prefix": {
+              "type": "string",
+              "description": "Optional S3 path prefix.",
+              "minLength": 1
+            },
+            "s3_endpoint": {
+              "type": "string",
+              "description": "S3-compatible endpoint when type is s3compatible.",
+              "minLength": 1
+            },
+            "s3_region": {
+              "type": "string",
+              "description": "S3-compatible region when type is s3compatible.",
+              "minLength": 1
+            },
+            "gcs_access_key": {
+              "type": "string",
+              "description": "Google Cloud Storage interoperable access key when type is gcs.",
+              "minLength": 1
+            },
+            "gcs_secret_key": {
+              "type": "string",
+              "description": "Google Cloud Storage interoperable secret key when type is gcs.",
+              "minLength": 1
+            },
+            "gcs_bucket_name": {
+              "type": "string",
+              "description": "Google Cloud Storage bucket name when type is gcs.",
+              "minLength": 1
+            },
+            "gcs_path_prefix": {
+              "type": "string",
+              "description": "Optional Google Cloud Storage path prefix.",
+              "minLength": 1
+            },
+            "azure_account_name": {
+              "type": "string",
+              "description": "Azure storage account name when type is azure.",
+              "minLength": 1
+            },
+            "azure_account_key": {
+              "type": "string",
+              "description": "Azure storage account key when type is azure.",
+              "minLength": 1
+            },
+            "azure_container_name": {
+              "type": "string",
+              "description": "Azure container name when type is azure.",
+              "minLength": 1
+            },
+            "azure_path_prefix": {
+              "type": "string",
+              "description": "Optional Azure path prefix.",
+              "minLength": 1
+            },
+            "oss_access_key": {
+              "type": "string",
+              "description": "Alibaba Cloud OSS access key when type is oss.",
+              "minLength": 1
+            },
+            "oss_secret_key": {
+              "type": "string",
+              "description": "Alibaba Cloud OSS secret key when type is oss.",
+              "minLength": 1
+            },
+            "oss_bucket_name": {
+              "type": "string",
+              "description": "Alibaba Cloud OSS bucket name when type is oss.",
+              "minLength": 1
+            },
+            "oss_region_id": {
+              "type": "string",
+              "description": "Alibaba Cloud OSS region id when type is oss.",
+              "minLength": 1
+            },
+            "oss_path_prefix": {
+              "type": "string",
+              "description": "Optional Alibaba Cloud OSS path prefix.",
+              "minLength": 1
             }
           },
           "additionalProperties": false,
           "required": [
-            "collection_id"
+            "destination_id"
           ]
         },
         "outputSchema": {
@@ -1160,15 +1614,33 @@
         },
         "request": {
           "method": "PUT",
-          "path": "/collections/{{collection_id}}",
+          "path": "/destinations/{{destination_id}}",
           "headers": {
             "Content-Type": "application/json"
           },
           "body": {
             "name": "{{name}}",
             "enabled": "{{enabled}}",
-            "schedule_type": "{{schedule_type}}",
-            "notification_webhook": "{{notification_webhook}}"
+            "type": "{{type}}",
+            "s3_access_key_id": "{{s3_access_key_id}}",
+            "s3_secret_access_key": "{{s3_secret_access_key}}",
+            "s3_bucket_name": "{{s3_bucket_name}}",
+            "s3_path_prefix": "{{s3_path_prefix}}",
+            "s3_endpoint": "{{s3_endpoint}}",
+            "s3_region": "{{s3_region}}",
+            "gcs_access_key": "{{gcs_access_key}}",
+            "gcs_secret_key": "{{gcs_secret_key}}",
+            "gcs_bucket_name": "{{gcs_bucket_name}}",
+            "gcs_path_prefix": "{{gcs_path_prefix}}",
+            "azure_account_name": "{{azure_account_name}}",
+            "azure_account_key": "{{azure_account_key}}",
+            "azure_container_name": "{{azure_container_name}}",
+            "azure_path_prefix": "{{azure_path_prefix}}",
+            "oss_access_key": "{{oss_access_key}}",
+            "oss_secret_key": "{{oss_secret_key}}",
+            "oss_bucket_name": "{{oss_bucket_name}}",
+            "oss_region_id": "{{oss_region_id}}",
+            "oss_path_prefix": "{{oss_path_prefix}}"
           },
           "success": [
             200
@@ -1178,27 +1650,18 @@
         "validationMode": "strict-generated",
         "responseFormat": "json"
       },
-      "collections.delete": {
+      "healthcheck": {
         "kind": "action",
-        "sideEffect": "destructive",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "title": "Delete collection",
-        "description": "Delete an ASIN Data API collection by id.",
+        "sideEffect": "read",
+        "timeoutMs": 5000,
+        "maxInputBytes": 4096,
+        "maxResponseBytes": 65536,
+        "title": "Healthcheck",
+        "description": "Validate the ASIN Data API key with GET /account.",
         "inputSchema": {
           "type": "object",
-          "properties": {
-            "collection_id": {
-              "type": "string",
-              "description": "Collection id.",
-              "minLength": 1
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "collection_id"
-          ]
+          "properties": {},
+          "additionalProperties": false
         },
         "outputSchema": {
           "type": "object",
@@ -1212,216 +1675,47 @@
           },
           "additionalProperties": false
         },
-        "request": {
-          "method": "DELETE",
-          "path": "/collections/{{collection_id}}",
-          "success": [
-            200
-          ]
-        },
         "enforceOutputSchema": true,
         "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "collections.start": {
-        "kind": "action",
-        "sideEffect": "write",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "title": "Start collection",
-        "description": "Start an ASIN Data API collection. Requests in the collection consume product-data credits.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "collection_id": {
-              "type": "string",
-              "description": "Collection id.",
-              "minLength": 1
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "collection_id"
-          ]
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
+        "responseFormat": "json",
         "request": {
           "method": "GET",
-          "path": "/collections/{{collection_id}}/start",
+          "path": "/account",
           "success": [
             200
           ]
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
+        }
       },
-      "collections.stop": {
+      "products.category": {
         "kind": "action",
-        "sideEffect": "write",
-        "timeoutMs": 15000,
+        "sideEffect": "read",
+        "timeoutMs": 30000,
         "maxInputBytes": 65536,
         "maxResponseBytes": 5242880,
-        "title": "Stop collection",
-        "description": "Stop a running ASIN Data API collection.",
+        "title": "Get category results",
+        "description": "Retrieve Amazon category listings using GET /request?type=category.",
         "inputSchema": {
           "type": "object",
           "properties": {
-            "collection_id": {
+            "category_id": {
               "type": "string",
-              "description": "Collection id.",
+              "description": "Amazon category or browse-node id.",
               "minLength": 1
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "collection_id"
-          ]
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "GET",
-          "path": "/collections/{{collection_id}}/stop",
-          "success": [
-            200
-          ]
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "collection-requests.create": {
-        "kind": "action",
-        "sideEffect": "write",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "title": "Add collection requests",
-        "description": "Add product-data requests to an idle ASIN Data API collection.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "collection_id": {
-              "type": "string",
-              "description": "Collection id.",
-              "minLength": 1
-            },
-            "type": {
-              "type": "string",
-              "description": "Product Data API request type.",
-              "minLength": 1,
-              "enum": [
-                "product",
-                "search",
-                "offers",
-                "category"
-              ]
-            },
-            "asin": {
-              "type": "string",
-              "description": "Amazon ASIN when type is product or offers."
-            },
-            "search_term": {
-              "type": "string",
-              "description": "Search term when type is search."
             },
             "amazon_domain": {
               "type": "string",
               "description": "Amazon domain, for example amazon.com.",
               "minLength": 1
             },
-            "custom_id": {
-              "type": "string",
-              "description": "Caller-supplied request id."
+            "page": {
+              "type": "integer",
+              "description": "Results page.",
+              "minimum": 1
             }
           },
           "additionalProperties": false,
           "required": [
-            "collection_id",
-            "type",
-            "amazon_domain"
-          ]
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "PUT",
-          "path": "/collections/{{collection_id}}",
-          "headers": {
-            "Content-Type": "application/json"
-          },
-          "body": {
-            "requests": [
-              {
-                "type": "{{type}}",
-                "asin": "{{asin}}",
-                "search_term": "{{search_term}}",
-                "amazon_domain": "{{amazon_domain}}",
-                "custom_id": "{{custom_id}}"
-              }
-            ]
-          },
-          "success": [
-            200
-          ]
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "collection-results.list": {
-        "kind": "action",
-        "sideEffect": "read",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "title": "List collection result sets",
-        "description": "List result sets generated by an ASIN Data API collection.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "collection_id": {
-              "type": "string",
-              "description": "Collection id.",
-              "minLength": 1
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "collection_id"
+            "category_id"
           ]
         },
         "outputSchema": {
@@ -1438,58 +1732,13 @@
         },
         "request": {
           "method": "GET",
-          "path": "/collections/{{collection_id}}/results",
-          "success": [
-            200
-          ]
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "collection-results.get": {
-        "kind": "action",
-        "sideEffect": "read",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "title": "Get collection result set",
-        "description": "Get one ASIN Data API collection result set by id.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "collection_id": {
-              "type": "string",
-              "description": "Collection id.",
-              "minLength": 1
-            },
-            "result_set_id": {
-              "type": "string",
-              "description": "Result set id.",
-              "minLength": 1
-            }
+          "path": "/request",
+          "query": {
+            "type": "category",
+            "category_id": "{{category_id}}",
+            "amazon_domain": "{{amazon_domain}}",
+            "page": "{{page}}"
           },
-          "additionalProperties": false,
-          "required": [
-            "collection_id",
-            "result_set_id"
-          ]
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "GET",
-          "path": "/collections/{{collection_id}}/results/{{result_set_id}}",
           "success": [
             200
           ]
@@ -1553,36 +1802,32 @@
         "validationMode": "strict-generated",
         "responseFormat": "json"
       },
-      "products.search": {
+      "products.gtin": {
         "kind": "action",
         "sideEffect": "read",
         "timeoutMs": 30000,
         "maxInputBytes": 65536,
         "maxResponseBytes": 5242880,
-        "title": "Search products",
-        "description": "Search Amazon products using GET /request?type=search.",
+        "title": "Get product by GTIN",
+        "description": "Look up Amazon product data by GTIN, UPC, EAN, or ISBN using type=product.",
         "inputSchema": {
           "type": "object",
           "properties": {
-            "search_term": {
+            "gtin": {
               "type": "string",
-              "description": "Search keywords.",
+              "description": "GTIN, UPC, EAN, or ISBN.",
               "minLength": 1
             },
             "amazon_domain": {
               "type": "string",
-              "description": "Amazon domain, for example amazon.com.",
+              "description": "Amazon domain used for the GTIN lookup.",
               "minLength": 1
-            },
-            "page": {
-              "type": "integer",
-              "description": "Results page.",
-              "minimum": 1
             }
           },
           "additionalProperties": false,
           "required": [
-            "search_term"
+            "gtin",
+            "amazon_domain"
           ]
         },
         "outputSchema": {
@@ -1601,10 +1846,9 @@
           "method": "GET",
           "path": "/request",
           "query": {
-            "type": "search",
-            "search_term": "{{search_term}}",
-            "amazon_domain": "{{amazon_domain}}",
-            "page": "{{page}}"
+            "type": "product",
+            "gtin": "{{gtin}}",
+            "amazon_domain": "{{amazon_domain}}"
           },
           "success": [
             200
@@ -1669,20 +1913,20 @@
         "validationMode": "strict-generated",
         "responseFormat": "json"
       },
-      "products.category": {
+      "products.search": {
         "kind": "action",
         "sideEffect": "read",
         "timeoutMs": 30000,
         "maxInputBytes": 65536,
         "maxResponseBytes": 5242880,
-        "title": "Get category results",
-        "description": "Retrieve Amazon category listings using GET /request?type=category.",
+        "title": "Search products",
+        "description": "Search Amazon products using GET /request?type=search.",
         "inputSchema": {
           "type": "object",
           "properties": {
-            "category_id": {
+            "search_term": {
               "type": "string",
-              "description": "Amazon category or browse-node id.",
+              "description": "Search keywords.",
               "minLength": 1
             },
             "amazon_domain": {
@@ -1698,7 +1942,7 @@
           },
           "additionalProperties": false,
           "required": [
-            "category_id"
+            "search_term"
           ]
         },
         "outputSchema": {
@@ -1717,66 +1961,10 @@
           "method": "GET",
           "path": "/request",
           "query": {
-            "type": "category",
-            "category_id": "{{category_id}}",
+            "type": "search",
+            "search_term": "{{search_term}}",
             "amazon_domain": "{{amazon_domain}}",
             "page": "{{page}}"
-          },
-          "success": [
-            200
-          ]
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "products.gtin": {
-        "kind": "action",
-        "sideEffect": "read",
-        "timeoutMs": 30000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "title": "Get product by GTIN",
-        "description": "Look up Amazon product data by GTIN, UPC, EAN, or ISBN using type=product.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "gtin": {
-              "type": "string",
-              "description": "GTIN, UPC, EAN, or ISBN.",
-              "minLength": 1
-            },
-            "amazon_domain": {
-              "type": "string",
-              "description": "Amazon domain used for the GTIN lookup.",
-              "minLength": 1
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "gtin",
-            "amazon_domain"
-          ]
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "GET",
-          "path": "/request",
-          "query": {
-            "type": "product",
-            "gtin": "{{gtin}}",
-            "amazon_domain": "{{amazon_domain}}"
           },
           "success": [
             200

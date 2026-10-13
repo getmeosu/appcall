@@ -2,7 +2,7 @@ import { expect, it } from "bun:test";
 import manifest from "../manifest.json";
 
 it("declares bounded action schemas with titles and descriptions", () => {
-  expect(manifest.version).toBe("0.2.0");
+  expect(manifest.version).toBe("0.2.1");
   expect(manifest.http?.auth.field).toBe("apiKey");
   expect(manifest.network?.allowedHosts).toEqual(["esignatures.com"]);
   for (const [key, op] of Object.entries(manifest.operations) as [string, any][]) {
@@ -20,7 +20,7 @@ it("declares bounded action schemas with titles and descriptions", () => {
     expect(op.inputSchema.type).toBe("object");
     expect(op.outputSchema.type).toBe("object");
     const destructive = /delete|withdraw|remove/.test(key);
-    const write = /create|update|add|duplicate|move|send|resend|resolve/.test(key);
+    const write = /create|update|add|duplicate|move|send|resend|resolve|generate/.test(key);
     expect(op.sideEffect).toBe(destructive ? "destructive" : write ? "write" : "read");
     expect(op.enforceOutputSchema).toBe(true);
     expect(op.validationMode).toBe("strict-generated");

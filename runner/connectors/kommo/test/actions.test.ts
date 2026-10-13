@@ -1,4 +1,6 @@
 import { describe, expect, test } from "bun:test";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { compileDeclarativeConnector } from "../../../bun/src/declarative/compile";
 import manifest from "../manifest.json";
 
@@ -115,5 +117,81 @@ describe("kommo origin contract", () => {
     });
     const url = new URL(seen[0]!.url);
     expect(url.searchParams.getAll("filter[id][]")).toEqual(["10", "20"]);
+  });
+
+  test("airewriter file source sends an array and product import sends no body", async () => {
+    const fixtureRoot = join(import.meta.dir, "../fixtures");
+    const names = [
+      "ai-airewriter-sources-file-add-success.json",
+      "ai-airewriter-products-import-success.json",
+    ];
+    for (const name of names) {
+      const fixture = JSON.parse(readFileSync(join(fixtureRoot, "cases", name), "utf8"));
+      const exchange = fixture.exchanges[0];
+      const seen: Array<{ url: string; init?: RequestInit }> = [];
+      const bodyFile = join(fixtureRoot, "cases", exchange.response.bodyFile);
+      const result = await actions[fixture.operation]!({
+        ...fixture.input,
+        ...fixture.credentials,
+        fetch: async (url: RequestInfo | URL, init?: RequestInit) => {
+          seen.push({ url: String(url), init });
+          return new Response(readFileSync(bodyFile), {
+            status: exchange.response.status,
+            headers: exchange.response.headers,
+          });
+        },
+      });
+      expect(seen).toHaveLength(1);
+      expect(seen[0]!.init?.method).toBe(exchange.request.method);
+      expect(seen[0]!.url).toBe(exchange.request.url);
+      const headers = new Headers(seen[0]!.init?.headers);
+      expect(headers.get("authorization")).toBe("Bearer fixture-kommo-token");
+      expect(headers.get("x-language")).toBeNull();
+      const body = seen[0]!.init?.body == null ? null : String(seen[0]!.init?.body);
+      expect(body).toBe(exchange.request.body);
+      if (fixture.operation === "ai.airewriter.sources.file.add") {
+        expect(typeof body).toBe("string");
+        expect(JSON.parse(body as string).available_functions).toEqual(["agent"]);
+        expect(headers.get("content-type")).toBe("application/json");
+      } else {
+        expect(body).toBeNull();
+        expect(headers.get("content-type")).toBeNull();
+      }
+      const expected = JSON.parse(readFileSync(join(fixtureRoot, "cases", fixture.expected.resultFile), "utf8"));
+      expect(result).toEqual(expected);
+    }
+
+    const seen: Array<{ url: string; init?: RequestInit }> = [];
+    await actions["ai.airewriter.sources.file.add"]!({
+      ...creds,
+      url: "https://drive-c.kommo.com/download/file.docx",
+      fileUuid: "550e8400-e29b-41d4-a716-446655440000",
+      lang: "en",
+      availableFunctions: ["suggested_reply"],
+      fetch: async (url: RequestInfo | URL, init?: RequestInit) => {
+        seen.push({ url: String(url), init });
+        return res({ id: 1, name: "file.docx", updated_at: 1739451881, updated_by: 1 });
+      },
+    });
+    expect(JSON.parse(String(seen[0]!.init?.body))).toEqual({
+      url: "https://drive-c.kommo.com/download/file.docx",
+      file_uuid: "550e8400-e29b-41d4-a716-446655440000",
+      lang: "en",
+      available_functions: ["suggested_reply"],
+    });
+    await expect(actions["ai.airewriter.sources.file.add"]!({
+      ...creds,
+      url: "https://drive-c.kommo.com/download/file.docx",
+      fileUuid: "550e8400-e29b-41d4-a716-446655440000",
+      lang: "en",
+      availableFunctions: ["agent"],
+      extra: true,
+      fetch: async () => res({}),
+    })).rejects.toBeTruthy();
+    await expect(actions["ai.airewriter.products.import"]!({
+      ...creds,
+      language: "en",
+      fetch: async () => res({ code: 201, status: "success" }, 201),
+    })).rejects.toBeTruthy();
   });
 });

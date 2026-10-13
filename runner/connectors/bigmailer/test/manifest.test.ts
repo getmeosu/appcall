@@ -1,13 +1,11 @@
 import { describe, expect, test } from "bun:test";
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
+import { existsSync, readFileSync } from "node:fs";
 import manifest from "../manifest.json";
 import { compileDeclarativeConnector } from "../../../bun/src/declarative/compile";
 
 const operations = manifest.operations as Record<string, Record<string, unknown>>;
-const recipe = JSON.parse(
-  readFileSync(join(import.meta.dir, "../../../../scripts/connector-gen/openconnector/recipes/bigmailer/recipe.json"), "utf8"),
-) as {
+const recipePath = "scripts/connector-gen/openconnector/recipes/bigmailer/recipe.json";
+const recipe = JSON.parse(readFileSync(recipePath, "utf8")) as {
   selection: { operations: string[] };
   operationSources: Record<string, { sourceRefs: string[] }>;
   source: { spans: Record<string, unknown> };
@@ -21,6 +19,71 @@ const ORIGIN_OPS = [
   "lists.list",
   "contacts.list",
 ] as const;
+
+// ops the pinned recipe has real provenance for
+const PINNED_OPS = [
+  "brands.create",
+  "brands.get",
+  "brands.list",
+  "brands.update",
+  "bulkCampaigns.create",
+  "bulkCampaigns.get",
+  "bulkCampaigns.list",
+  "bulkCampaigns.update",
+  "connections.list",
+  "contactBatches.create",
+  "contactBatches.get",
+  "contacts.create",
+  "contacts.delete",
+  "contacts.get",
+  "contacts.list",
+  "contacts.update",
+  "contacts.upsert",
+  "fields.create",
+  "fields.delete",
+  "fields.get",
+  "fields.list",
+  "fields.update",
+  "healthcheck",
+  "lists.create",
+  "lists.delete",
+  "lists.get",
+  "lists.list",
+  "lists.update",
+  "messageTypes.list",
+  "properties.create",
+  "properties.delete",
+  "properties.get",
+  "properties.list",
+  "properties.update",
+  "segments.create",
+  "segments.delete",
+  "segments.get",
+  "segments.list",
+  "segments.update",
+  "senders.list",
+  "suppressionLists.create",
+  "suppressionLists.get",
+  "suppressionLists.list",
+  "templates.create",
+  "templates.delete",
+  "templates.get",
+  "templates.list",
+  "templates.update",
+  "transactionalCampaigns.create",
+  "transactionalCampaigns.get",
+  "transactionalCampaigns.list",
+  "transactionalCampaigns.update",
+  "users.create",
+  "users.delete",
+  "users.get",
+  "users.list",
+  "users.me",
+  "users.update",
+];
+
+// ops this branch added from the provider's live API; no pinned action id exists
+const DEEPENED_OPS = ["me.get"];
 
 const COMPOSIO_TOOLS: Record<string, string> = {
   BIGMAILER_CREATE_BRAND: "brands.create",
@@ -54,7 +117,7 @@ const COMPOSIO_TOOLS: Record<string, string> = {
   BIGMAILER_GET_TEMPLATE: "templates.get",
   BIGMAILER_GET_TRANSACTIONAL_CAMPAIGN: "transactionalCampaigns.get",
   BIGMAILER_GET_USER: "users.get",
-  BIGMAILER_GET_USER_INFO: "users.me",
+  BIGMAILER_GET_USER_INFO: "me.get",
   BIGMAILER_LIST_ALL_BRANDS: "brands.list",
   BIGMAILER_LIST_BRAND_PROPERTIES: "properties.list",
   BIGMAILER_LIST_BULK_CAMPAIGNS: "bulkCampaigns.list",
@@ -90,9 +153,9 @@ function requestOf(key: string): Record<string, unknown> {
 }
 
 describe("bigmailer manifest", () => {
-  test("keeps origin identity, auth, and version 0.2.0", () => {
+  test("keeps origin identity, auth, and version 0.2.1", () => {
     expect(manifest.key).toBe("bigmailer");
-    expect(manifest.version).toBe("0.2.0");
+    expect(manifest.version).toBe("0.2.1");
     expect(manifest.network.allowedHosts).toEqual(["api.bigmailer.io"]);
     expect(manifest.http.baseUrl).toBe("https://api.bigmailer.io");
     expect(manifest.http.auth).toMatchObject({
@@ -122,7 +185,7 @@ describe("bigmailer manifest", () => {
 
   test("covers every Composio BigMailer tool with a real HTTP operation", () => {
     expect(Object.keys(COMPOSIO_TOOLS)).toHaveLength(57);
-    expect(Object.keys(operations)).toHaveLength(58);
+    expect(Object.keys(operations)).toHaveLength(59);
     for (const [slug, key] of Object.entries(COMPOSIO_TOOLS)) {
       expect(operations[key], slug).toBeDefined();
       if (HANDWRITTEN.has(key)) {
@@ -187,23 +250,77 @@ describe("bigmailer manifest", () => {
     });
     expect(requestOf("contacts.create").query).toMatchObject({ validate: "{{validateEmail}}" });
     expect(requestOf("users.me")).toMatchObject({ method: "GET", path: "/v1/users/me" });
+    expect(requestOf("me.get")).toMatchObject({ method: "GET", path: "/v1/me" });
     expect(requestOf("connections.list").path).toBe("/v1/connections");
     expect(requestOf("messageTypes.list").query).toMatchObject({ type: "{{type}}" });
     expect((requestOf("bulkCampaigns.create").body as Record<string, unknown>).from).toBe("{{fromAddress}}");
     expect((requestOf("contacts.create").body as Record<string, unknown>).field_values).toBe("{{fieldValues}}");
   });
 
-  test("recipe operations match the runner manifest and reuse existing spans", () => {
+  test("recipe mirrors the deepened operations; provenance mappings stay pinned", () => {
+    expect(existsSync(recipePath)).toBe(true);
     expect(recipe.manifest.version).toBe("0.2.0");
     const runnerOps = Object.keys(operations).sort();
-    expect(Object.keys(recipe.manifest.operations).sort()).toEqual(runnerOps);
-    expect([...recipe.selection.operations].sort()).toEqual(runnerOps);
-    expect(Object.keys(recipe.operationSources).sort()).toEqual(runnerOps);
+    const recipeOps = Object.keys(recipe.manifest.operations).sort();
+    expect(recipeOps).toHaveLength(59);
+    expect(runnerOps).toEqual(recipeOps);
+    expect(runnerOps.filter((key) => !Object.hasOwn(recipe.operationSources, key))).toEqual(DEEPENED_OPS);
+    expect(Object.keys(recipe.operationSources).sort()).toEqual(PINNED_OPS);
+    expect([...recipe.selection.operations].sort()).toEqual(PINNED_OPS);
+    for (const key of recipeOps) {
+      const runnerOp = operations[key]!;
+      const recipeOp = recipe.manifest.operations[key] as Record<string, unknown>;
+      // The frozen recipe still records 1048576, below this operation's maxInputBytes.
+      // The origin handler keeps 8388608 so maxResponseBytes stays >= maxInputBytes.
+      if (key === "suppressionLists.create") {
+        expect(recipeOp.maxResponseBytes).toBe(1048576);
+        expect(runnerOp.maxResponseBytes).toBe(8388608);
+        expect(runnerOp.maxResponseBytes as number).toBeGreaterThanOrEqual(runnerOp.maxInputBytes as number);
+        const { maxResponseBytes: _recipeBudget, ...recipeRest } = recipeOp;
+        const { maxResponseBytes: _runnerBudget, ...runnerRest } = runnerOp;
+        expect(runnerRest).toEqual(recipeRest);
+        continue;
+      }
+      expect(runnerOp, key).toEqual(recipeOp);
+    }
     for (const [op, mapping] of Object.entries(recipe.operationSources)) {
       expect(mapping.sourceRefs.length, op).toBeGreaterThan(0);
       for (const ref of mapping.sourceRefs) {
         expect(recipe.source.spans[ref], `${op} sourceRef ${ref}`).toBeDefined();
       }
     }
+  });
+
+  test("adds the documented GET /v1/me identity check beside users.me", () => {
+    const users = operations["users.me"]!;
+    const me = operations["me.get"]!;
+    expect(users.description).toBe(
+      "Get the authenticated BigMailer user. Composio GET /me is implemented as GET /v1/users/me.",
+    );
+    expect(requestOf("users.me")).toEqual({ method: "GET", path: "/v1/users/me", success: [200] });
+    expect(me.title).toBe("Get authenticated account");
+    expect(me.description).toBe(
+      "Documented GET /v1/me identity check. Distinct from users.me, which is GET /v1/users/me.",
+    );
+    expect(me.sideEffect).toBe("read");
+    expect(me.kind).toBe("action");
+    expect(me.timeoutMs).toBe(users.timeoutMs);
+    expect(me.maxInputBytes).toBe(users.maxInputBytes);
+    expect(me.maxResponseBytes).toBe(users.maxResponseBytes);
+    expect(me.outputSchema).toEqual(users.outputSchema);
+    expect(me.responseFormat).toBe(users.responseFormat);
+    expect(me.validationMode).toBe(users.validationMode);
+    expect(me.enforceOutputSchema).toBe(users.enforceOutputSchema);
+    expect(me.request).toEqual({ method: "GET", path: "/v1/me", success: [200] });
+    const request = me.request as { body?: unknown; query?: unknown; headers?: unknown; baseUrl?: unknown };
+    expect(request.body).toBeUndefined();
+    expect(request.query).toBeUndefined();
+    expect(request.headers).toBeUndefined();
+    expect(request.baseUrl).toBeUndefined();
+    expect(me.inputSchema).toEqual({
+      type: "object",
+      properties: {},
+      additionalProperties: false,
+    });
   });
 });

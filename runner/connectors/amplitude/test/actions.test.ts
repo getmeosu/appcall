@@ -148,4 +148,55 @@ describe("amplitude HTTP first-slice actions", () => {
       }
     }
   });
+
+  test("chart annotation v3 fixtures replay the documented calls", async () => {
+    const dir = new URL("../fixtures/cases/", import.meta.url);
+    const names = [
+      "annotations.v3.list-success.json",
+      "annotations.v3.create-success.json",
+      "annotations.v3.delete-success.json",
+    ];
+    for (const name of names) {
+      const caseUrl = new URL(name, dir);
+      const fixture = await Bun.file(caseUrl).json();
+      const exchange = fixture.exchanges[0];
+      const responseBody = await Bun.file(new URL(exchange.response.bodyFile, caseUrl)).json();
+      const expected = await Bun.file(new URL(fixture.expected.resultFile, caseUrl)).json();
+      let captured: { url: string; method: string; body: string | null; headers: Record<string, string> } | undefined;
+      const result = await actions[fixture.operation]!({
+        ...fixture.credentials,
+        ...fixture.input,
+        fetch: async (input: RequestInfo | URL, init?: RequestInit) => {
+          captured = {
+            url: String(input),
+            method: String(init?.method ?? "GET"),
+            body: init?.body == null ? null : String(init.body),
+            headers: (init?.headers ?? {}) as Record<string, string>,
+          };
+          return res(responseBody, exchange.response.status);
+        },
+      });
+      expect(captured?.method, name).toBe(exchange.request.method);
+      expect(captured?.url, name).toBe(exchange.request.url);
+      expect(captured?.body, name).toBe(exchange.request.body);
+      expect(result, name).toEqual(expected);
+      const headerNames = Object.keys(captured?.headers ?? {}).sort();
+      if (exchange.request.method === "POST") {
+        expect(headerNames, name).toEqual(["Accept", "Authorization", "Content-Type"]);
+        expect(captured?.headers["Content-Type"], name).toBe("application/json");
+      } else {
+        expect(headerNames, name).toEqual(["Accept", "Authorization"]);
+        expect(captured?.headers["Content-Type"], name).toBeUndefined();
+      }
+    }
+  });
+
+  test("chart annotation v3 rejects an empty id and a create without start", async () => {
+    await expect(actions["annotations.v3.delete"]!({ ...creds, annotationId: "" })).rejects.toMatchObject({
+      code: "INVALID_ACTION_INPUT",
+    });
+    await expect(actions["annotations.v3.create"]!({ ...creds, label: "Feature X Release" })).rejects.toMatchObject({
+      code: "INVALID_ACTION_INPUT",
+    });
+  });
 });

@@ -41,7 +41,7 @@ describe("CrewAI contract", () => {
   });
 
   test("keeps bearer auth, fixed hosts, and JSON bounds", () => {
-    expect(manifest.network.allowedHosts).toEqual(["app.crewai.com", "{{crewName}}.crewai.com"]);
+    expect(manifest.network.allowedHosts).toEqual(["app.crewai.com", "*.crewai.com"]);
     expect(manifest.http.baseUrl).toBe("https://{{crewName}}.crewai.com");
     expect(manifest.http.auth).toEqual({
       field: "apiKey",

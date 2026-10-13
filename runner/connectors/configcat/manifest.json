@@ -1,7 +1,7 @@
 {
   "key": "configcat",
   "name": "ConfigCat",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "runtime": "bun",
   "visibility": "public",
   "categories": [
@@ -1178,6 +1178,419 @@
       "enforceOutputSchema": true,
       "validationMode": "strict-generated",
       "responseFormat": "json"
+    },
+    "settings.value.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "sideEffect": "read",
+      "title": "Get setting value",
+      "description": "Get one ConfigCat feature flag or setting value in an environment.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "environmentId",
+          "settingId"
+        ],
+        "properties": {
+          "environmentId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Environment UUID."
+          },
+          "settingId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Setting identifier."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/environments/{{environmentId}}/settings/{{settingId}}/value",
+        "success": [
+          200
+        ]
+      }
+    },
+    "settings.values.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "sideEffect": "read",
+      "title": "List environment setting values",
+      "description": "List ConfigCat setting values for one config and environment. Returns the ConfigSettingFormulasModel object.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "configId",
+          "environmentId"
+        ],
+        "properties": {
+          "configId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Config UUID."
+          },
+          "environmentId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Environment UUID."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/configs/{{configId}}/environments/{{environmentId}}/values",
+        "success": [
+          200
+        ]
+      }
+    },
+    "settings.value.patch": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "sideEffect": "write",
+      "title": "Patch setting value",
+      "description": "Patch one ConfigCat setting value with a JSON Patch array. Success is 200 application/json.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "environmentId",
+          "settingId",
+          "patch"
+        ],
+        "properties": {
+          "environmentId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Environment UUID."
+          },
+          "settingId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Setting identifier."
+          },
+          "patch": {
+            "type": "array",
+            "minItems": 1,
+            "description": "JSON Patch array for defaultValue, targetingRules, or percentageEvaluationAttribute.",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "op",
+                "path"
+              ],
+              "properties": {
+                "op": {
+                  "type": "string",
+                  "enum": [
+                    "add",
+                    "remove",
+                    "replace",
+                    "move",
+                    "copy",
+                    "test"
+                  ],
+                  "description": "JSON Patch operation."
+                },
+                "path": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "JSON Patch path."
+                },
+                "from": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "JSON Patch from path for move or copy."
+                },
+                "value": {
+                  "description": "JSON Patch value."
+                }
+              }
+            }
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Audit-log reason when the product requires one."
+          },
+          "bypassApproval": {
+            "type": "boolean",
+            "description": "Bypass approval when the caller has permission."
+          },
+          "latestVersionId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Last version id. A mismatch is rejected with 409."
+          }
+        }
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/v2/environments/{{environmentId}}/settings/{{settingId}}/value",
+        "success": [
+          200
+        ],
+        "query": {
+          "reason": "{{reason}}",
+          "bypassApproval": "{{bypassApproval}}",
+          "latestVersionId": "{{latestVersionId}}"
+        },
+        "body": "{{patch}}",
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    "settings.value.replace": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "sideEffect": "write",
+      "title": "Replace setting value",
+      "description": "Replace one ConfigCat setting value with an UpdateEvaluationFormulaModel JSON body. Omitting targetingRules resets them.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "environmentId",
+          "settingId",
+          "formula"
+        ],
+        "properties": {
+          "environmentId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Environment UUID."
+          },
+          "settingId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Setting identifier."
+          },
+          "formula": {
+            "type": "object",
+            "additionalProperties": true,
+            "required": [
+              "defaultValue"
+            ],
+            "description": "UpdateEvaluationFormulaModel.",
+            "properties": {
+              "defaultValue": {
+                "type": "object",
+                "additionalProperties": true,
+                "description": "Served value. At least one value field is required by the API."
+              },
+              "targetingRules": {
+                "type": "array",
+                "description": "Replacement targeting rules. Omit to reset them.",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              },
+              "percentageEvaluationAttribute": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "maxLength": 1000,
+                "description": "User attribute used for percentage evaluation."
+              }
+            }
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Audit-log reason when the product requires one."
+          },
+          "bypassApproval": {
+            "type": "boolean",
+            "description": "Bypass approval when the caller has permission."
+          },
+          "latestVersionId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Last version id. A mismatch is rejected with 409."
+          }
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/v2/environments/{{environmentId}}/settings/{{settingId}}/value",
+        "success": [
+          200
+        ],
+        "query": {
+          "reason": "{{reason}}",
+          "bypassApproval": "{{bypassApproval}}",
+          "latestVersionId": "{{latestVersionId}}"
+        },
+        "body": "{{formula}}",
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    "settings.metadata.update": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "sideEffect": "write",
+      "title": "Update setting metadata",
+      "description": "Patch ConfigCat setting metadata with a JSON Patch array. Only name, hint, and tags change; omitted fields stay unchanged.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "settingId",
+          "patch"
+        ],
+        "properties": {
+          "settingId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Setting identifier."
+          },
+          "patch": {
+            "type": "array",
+            "minItems": 1,
+            "description": "JSON Patch array for name, hint, or tags.",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "op",
+                "path"
+              ],
+              "properties": {
+                "op": {
+                  "type": "string",
+                  "enum": [
+                    "add",
+                    "remove",
+                    "replace",
+                    "move",
+                    "copy",
+                    "test"
+                  ],
+                  "description": "JSON Patch operation."
+                },
+                "path": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "JSON Patch path."
+                },
+                "from": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "JSON Patch from path for move or copy."
+                },
+                "value": {
+                  "description": "JSON Patch value."
+                }
+              }
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/v1/settings/{{settingId}}",
+        "success": [
+          200
+        ],
+        "body": "{{patch}}",
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
     }
   },
   "provenance": {

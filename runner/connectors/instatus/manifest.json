@@ -1,7 +1,7 @@
 {
   "key": "instatus",
   "name": "Instatus",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "runtime": "bun",
   "visibility": "public",
   "categories": [
@@ -490,6 +490,44 @@
           "notify": {
             "type": "boolean",
             "description": "Notify subscribers."
+          },
+          "components": {
+            "type": "array",
+            "minItems": 1,
+            "description": "IDs of components affected by the incident.",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "statuses": {
+            "type": "array",
+            "minItems": 1,
+            "description": "Statuses for the affected components. Each ID must also appear in components.",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "OPERATIONAL",
+                    "UNDERMAINTENANCE",
+                    "DEGRADEDPERFORMANCE",
+                    "PARTIALOUTAGE",
+                    "MAJOROUTAGE"
+                  ]
+                }
+              },
+              "required": [
+                "id",
+                "status"
+              ],
+              "additionalProperties": false
+            }
           }
         },
         "additionalProperties": false,
@@ -523,8 +561,10 @@
         },
         "body": {
           "name": "{{name}}",
+          "components": "{{components}}",
           "status": "{{status}}",
-          "notify": "{{notify}}"
+          "notify": "{{notify}}",
+          "statuses": "{{statuses}}"
         }
       },
       "enforceOutputSchema": true,
@@ -828,6 +868,108 @@
       "validationMode": "strict-generated",
       "responseFormat": "json"
     },
+    "components.updateV2": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Update component v2",
+      "description": "Update an Instatus component using the v2 API.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "pageId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Status page ID."
+          },
+          "componentId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Component ID."
+          },
+          "name": {
+            "type": "string",
+            "description": "Component name."
+          },
+          "description": {
+            "type": "string",
+            "description": "Component description."
+          },
+          "status": {
+            "type": "string",
+            "description": "Component status."
+          },
+          "order": {
+            "type": "integer",
+            "description": "Display order."
+          },
+          "showUptime": {
+            "type": "boolean",
+            "description": "Show uptime for this component."
+          },
+          "grouped": {
+            "type": "boolean",
+            "description": "Whether the component is grouped."
+          },
+          "archived": {
+            "type": "boolean",
+            "description": "Whether the component is archived."
+          },
+          "groupId": {
+            "type": "string",
+            "description": "Group ID to move this component into."
+          },
+          "translations": {
+            "type": "object",
+            "description": "Localized fields."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "pageId",
+          "componentId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/v2/{{pageId}}/components/{{componentId}}",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Accept": "application/json",
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "name": "{{name}}",
+          "description": "{{description}}",
+          "status": "{{status}}",
+          "order": "{{order}}",
+          "showUptime": "{{showUptime}}",
+          "grouped": "{{grouped}}",
+          "archived": "{{archived}}",
+          "groupId": "{{groupId}}",
+          "translations": "{{translations}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
     "components.delete": {
       "kind": "action",
       "sideEffect": "destructive",
@@ -934,6 +1076,66 @@
           "page": "{{page}}",
           "per_page": "{{perPage}}"
         }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "maintenances.listV2": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List maintenances v2",
+      "description": "List scheduled maintenances on an Instatus status page using the v2 API.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "pageId"
+        ],
+        "properties": {
+          "pageId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Status page ID."
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Page number."
+          },
+          "perPage": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Items per page."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/{{pageId}}/maintenances",
+        "query": {
+          "page": "{{page}}",
+          "per_page": "{{perPage}}"
+        },
+        "success": [
+          200
+        ]
       },
       "enforceOutputSchema": true,
       "validationMode": "strict-generated",
@@ -1178,6 +1380,48 @@
           "autoEnd": {
             "type": "boolean",
             "description": "Automatically end at the end time."
+          },
+          "components": {
+            "type": "array",
+            "minItems": 1,
+            "description": "IDs of components affected by the maintenance.",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "statuses": {
+            "type": "array",
+            "minItems": 1,
+            "description": "Statuses for the affected components. Each ID must also appear in components.",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "OPERATIONAL",
+                    "UNDERMAINTENANCE",
+                    "DEGRADEDPERFORMANCE",
+                    "PARTIALOUTAGE",
+                    "MAJOROUTAGE"
+                  ]
+                }
+              },
+              "required": [
+                "id",
+                "status"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "duration": {
+            "type": "integer",
+            "description": "Maintenance duration in minutes."
           }
         },
         "additionalProperties": false,
@@ -1185,10 +1429,13 @@
           "pageId",
           "maintenanceId",
           "message",
+          "components",
           "start",
           "end",
           "status",
           "notify",
+          "statuses",
+          "duration",
           "autoStart",
           "autoEnd"
         ]
@@ -1219,13 +1466,15 @@
         "body": {
           "name": "{{name}}",
           "message": "{{message}}",
-          "status": "{{status}}",
+          "components": "{{components}}",
           "start": "{{start}}",
           "end": "{{end}}",
+          "status": "{{status}}",
           "notify": "{{notify}}",
           "autoStart": "{{autoStart}}",
           "autoEnd": "{{autoEnd}}",
-          "components": []
+          "duration": "{{duration}}",
+          "statuses": "{{statuses}}"
         }
       },
       "enforceOutputSchema": true,
@@ -1278,6 +1527,113 @@
         "success": [
           200
         ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "maintenanceUpdates.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Add maintenance update",
+      "description": "Add an update to an Instatus maintenance.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "pageId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Status page ID."
+          },
+          "maintenanceId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Maintenance ID."
+          },
+          "message": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Update message."
+          },
+          "components": {
+            "type": "array",
+            "description": "Component IDs included in the update.",
+            "items": {
+              "type": "string"
+            }
+          },
+          "started": {
+            "type": "string",
+            "description": "Start time."
+          },
+          "end": {
+            "type": "string",
+            "description": "End time."
+          },
+          "status": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Maintenance update status."
+          },
+          "notify": {
+            "type": "boolean",
+            "description": "Notify subscribers."
+          },
+          "statuses": {
+            "type": "array",
+            "description": "Per-component statuses.",
+            "items": {
+              "type": "object"
+            }
+          },
+          "translations": {
+            "type": "object",
+            "description": "Localized fields."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "pageId",
+          "maintenanceId",
+          "message",
+          "status"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/{{pageId}}/maintenances/{{maintenanceId}}/maintenance-updates",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Accept": "application/json",
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "message": "{{message}}",
+          "components": "{{components}}",
+          "started": "{{started}}",
+          "end": "{{end}}",
+          "status": "{{status}}",
+          "notify": "{{notify}}",
+          "statuses": "{{statuses}}",
+          "translations": "{{translations}}"
+        }
       },
       "enforceOutputSchema": true,
       "validationMode": "strict-generated",

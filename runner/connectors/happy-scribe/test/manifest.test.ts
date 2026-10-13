@@ -32,6 +32,33 @@ const MISSING_STILL = ["HAPPY_SCRIBE_DELETE_WEBHOOK", "HAPPY_SCRIBE_HS_GET_WEBHO
 
 const DOC_PROBE_OPS = ["api.version", "errorCodes.list", "formats.list", "languages.list", "rateLimits.get"] as const;
 
+// ops the pinned recipe has real provenance for; unchanged by this branch
+const PINNED_OPS = [
+  "api.version",
+  "errorCodes.list",
+  "exports.create",
+  "exports.get",
+  "formats.list",
+  "healthcheck",
+  "languages.list",
+  "memberships.list",
+  "orders.confirm",
+  "orders.create",
+  "orders.createTranslation",
+  "orders.get",
+  "organizations.list",
+  "rateLimits.get",
+  "transcriptions.delete",
+  "transcriptions.get",
+  "transcriptions.list",
+  "translationTasks.create",
+  "translationTasks.get",
+  "uploads.new",
+];
+
+// ops this branch added from the provider's live API; no pinned action id exists
+const DEEPENED_OPS = ["transcriptions.create"];
+
 const compiled = compileDeclarativeConnector(manifest as never);
 
 function requestOf(key: string): Record<string, unknown> {
@@ -76,7 +103,7 @@ function deepEqual(a: unknown, b: unknown): boolean {
 describe("happy-scribe manifest", () => {
   test("has bounded host, origin auth, version, and compiles", () => {
     expect(manifest.key).toBe("happy-scribe");
-    expect(manifest.version).toBe("0.2.0");
+    expect(manifest.version).toBe("0.2.1");
     expect(manifest.runtime).toBe("bun");
     expect(manifest.categories).toEqual(["productivity"]);
     expect(manifest.network.allowedHosts).toEqual(["www.happyscribe.com"]);
@@ -105,7 +132,7 @@ describe("happy-scribe manifest", () => {
   test("covers every real Composio Happy Scribe HTTP tool", () => {
     expect(Object.keys(COMPOSIO_TOOLS)).toHaveLength(18);
     expect(MISSING_STILL).toHaveLength(2);
-    expect(Object.keys(operations).length).toBe(20);
+    expect(Object.keys(operations).length).toBe(21);
     for (const [slug, key] of Object.entries(COMPOSIO_TOOLS)) {
       expect(operations[key], slug).toBeDefined();
       expect(requestOf(key), slug).toBeDefined();
@@ -184,14 +211,104 @@ describe("happy-scribe manifest", () => {
     }
   });
 
-  test("keeps recipe operations equal to runner operations", async () => {
+  test("adds deprecated transcriptions.create as POST /transcriptions", () => {
+    expect(operations["transcriptions.create"]).toBeDefined();
+    const created = operations["transcriptions.create"]!;
+    const gotten = operations["transcriptions.get"]!;
+    const exported = operations["exports.create"]!;
+    expect(created.kind).toBe("action");
+    expect(created.sideEffect).toBe(exported.sideEffect);
+    expect(created.sideEffect).toBe("write");
+    expect(created.responseFormat).toBe("json");
+    expect(created.enforceOutputSchema).toBe(true);
+    expect(created.validationMode).toBe(exported.validationMode);
+    expect(created.timeoutMs).toBe(gotten.timeoutMs);
+    expect(created.maxInputBytes).toBe(gotten.maxInputBytes);
+    expect(created.maxResponseBytes).toBe(gotten.maxResponseBytes);
+    expect(created.outputSchema).toEqual(gotten.outputSchema);
+    const request = created.request as {
+      method: string;
+      path: string;
+      baseUrl?: string;
+      success: number[];
+      headers?: Record<string, string>;
+      body: { transcription: Record<string, string> };
+    };
+    expect(request.baseUrl).toBeUndefined();
+    expect(request).toEqual({
+      method: "POST",
+      path: "/transcriptions",
+      headers: { "Content-Type": "application/json" },
+      success: [200],
+      body: {
+        transcription: {
+          name: "{{name}}",
+          language: "{{language}}",
+          tmp_url: "{{tmpUrl}}",
+          organization_id: "{{organizationId}}",
+          is_subtitle: "{{isSubtitle}}",
+          service: "{{service}}",
+          folder: "{{folder}}",
+          folder_id: "{{folderId}}",
+          document_url: "{{documentUrl}}",
+          sharing_enabled: "{{sharingEnabled}}",
+          tags: "{{tags}}",
+        },
+      },
+    });
+    const schema = created.inputSchema as {
+      type: string;
+      additionalProperties: boolean;
+      required: string[];
+      properties: Record<string, { type?: string; items?: { type?: string } }>;
+    };
+    expect(schema.type).toBe("object");
+    expect(schema.additionalProperties).toBe(false);
+    expect(schema.required).toEqual(["name", "language", "tmpUrl", "organizationId", "isSubtitle"]);
+    expect(schema.properties.name?.type).toBe("string");
+    expect(schema.properties.language?.type).toBe("string");
+    expect(schema.properties.tmpUrl?.type).toBe("string");
+    expect(schema.properties.organizationId?.type).toBe("string");
+    expect(schema.properties.isSubtitle?.type).toBe("boolean");
+    expect(schema.properties.service?.type).toBe("string");
+    expect(schema.properties.folder?.type).toBe("string");
+    expect(schema.properties.folderId?.type).toBe("string");
+    expect(schema.properties.documentUrl?.type).toBe("string");
+    expect(schema.properties.sharingEnabled?.type).toBe("boolean");
+    expect(schema.properties.tags?.type).toBe("array");
+    expect(schema.properties.tags?.items?.type).toBe("string");
+    expect(Object.keys(schema.properties).sort()).toEqual([
+      "documentUrl",
+      "folder",
+      "folderId",
+      "isSubtitle",
+      "language",
+      "name",
+      "organizationId",
+      "service",
+      "sharingEnabled",
+      "tags",
+      "tmpUrl",
+    ]);
+  });
+
+  test("recipe mirrors the deepened operations; provenance mappings stay pinned", async () => {
     const recipe = await Bun.file(new URL("../../../../scripts/connector-gen/openconnector/recipes/happy_scribe/recipe.json", import.meta.url)).json();
-    expect(Object.keys(recipe.manifest.operations).sort()).toEqual(Object.keys(operations).sort());
-    expect([...recipe.selection.operations].sort()).toEqual(Object.keys(operations).sort());
-    expect(Object.keys(recipe.operationSources).sort()).toEqual(Object.keys(operations).sort());
-    expect(recipe.manifest.operations).toEqual(operations);
+    const runnerOps = Object.keys(operations).sort();
+    const recipeOps = Object.keys(recipe.manifest.operations).sort();
     expect(recipe.manifest.version).toBe("0.2.0");
     expect(recipe.source.revision).toBe("33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a");
+    expect(runnerOps).toEqual(recipeOps);
+    expect([...recipe.selection.operations].sort()).toEqual(PINNED_OPS);
+    expect(Object.keys(recipe.operationSources).sort()).toEqual(PINNED_OPS);
+    expect(runnerOps.filter((key) => !Object.hasOwn(recipe.operationSources, key))).toEqual(DEEPENED_OPS);
+    for (const key of recipeOps) {
+      expect(operations[key], key).toEqual(recipe.manifest.operations[key]);
+    }
+    for (const key of DEEPENED_OPS) {
+      expect(recipe.operationSources[key]).toBeUndefined();
+      expect(recipe.selection.operations).not.toContain(key);
+    }
     for (const operation of Object.values(recipe.manifest.operations) as Array<Record<string, unknown>>) {
       if (operation.kind === "webhook") expect(operation.sideEffect).toBe("read");
     }
@@ -334,6 +451,37 @@ describe("happy-scribe compiled handlers", () => {
     );
     expect(await requests[0]!.json()).toEqual({
       export: { format: "srt", transcription_ids: ["abc", "def"], show_timestamps: false },
+    });
+  });
+
+  test("transcriptions.create sends nested transcription JSON and keeps boolean and tag types", async () => {
+    const input = {
+      name: "My Interview",
+      language: "en-GB",
+      tmpUrl: "https://example.com/my_media.mp3",
+      organizationId: "123",
+      isSubtitle: true,
+      tags: ["To do", "req_1234"],
+    };
+    const { requests } = await invoke("transcriptions.create", input, () => jsonResponse({ id: "tr" }));
+    expect(requests[0]!.method).toBe("POST");
+    expect(new URL(requests[0]!.url).href).toBe("https://www.happyscribe.com/api/v1/transcriptions");
+    expect(requests[0]!.headers.get("content-type")).toBe("application/json");
+    expect(await requests[0]!.json()).toEqual({
+      transcription: {
+        name: "My Interview",
+        language: "en-GB",
+        tmp_url: "https://example.com/my_media.mp3",
+        organization_id: "123",
+        is_subtitle: true,
+        tags: ["To do", "req_1234"],
+      },
+    });
+    await expect(invoke("transcriptions.create", input, () => jsonResponse({ id: "tr" }, 201))).rejects.toMatchObject({
+      code: "CONNECTOR_UPSTREAM_ERROR",
+    });
+    await expect(invoke("transcriptions.create", input, () => jsonResponse({ id: "tr" }, 202))).rejects.toMatchObject({
+      code: "CONNECTOR_UPSTREAM_ERROR",
     });
   });
 

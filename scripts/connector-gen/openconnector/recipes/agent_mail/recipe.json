@@ -626,6 +626,489 @@
       }
     },
     "operations": {
+      "domains.get": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Get domain",
+        "description": "Get a single AgentMail sending domain.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "domain_id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Domain id."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "domain_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/v0/domains/{{domain_id}}",
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "domains.list": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "List domains",
+        "description": "List AgentMail sending domains available to the current API key.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            },
+            "page_token": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/v0/domains",
+          "success": [
+            200
+          ],
+          "query": {
+            "limit": "{{limit}}",
+            "page_token": "{{page_token}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "drafts.create": {
+        "kind": "action",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Create draft",
+        "description": "Create a draft in an AgentMail inbox.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "inbox_id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Inbox id."
+            },
+            "to": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Recipient address."
+            },
+            "subject": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Draft subject."
+            },
+            "text": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Plain-text body."
+            },
+            "html": {
+              "type": "string",
+              "minLength": 1,
+              "description": "HTML body."
+            },
+            "in_reply_to": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Message id this draft replies to."
+            },
+            "client_id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Caller-supplied idempotency id."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "inbox_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "POST",
+          "path": "/v0/inboxes/{{inbox_id}}/drafts",
+          "success": [
+            200,
+            201
+          ],
+          "body": {
+            "to": "{{to}}",
+            "subject": "{{subject}}",
+            "text": "{{text}}",
+            "html": "{{html}}",
+            "in_reply_to": "{{in_reply_to}}",
+            "client_id": "{{client_id}}"
+          },
+          "headers": {
+            "Content-Type": "application/json"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "drafts.list": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "List drafts",
+        "description": "List drafts in an AgentMail inbox.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "inbox_id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Inbox id."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            },
+            "page_token": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "inbox_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/v0/inboxes/{{inbox_id}}/drafts",
+          "success": [
+            200
+          ],
+          "query": {
+            "limit": "{{limit}}",
+            "page_token": "{{page_token}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "drafts.send": {
+        "kind": "action",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Send draft",
+        "description": "Send a previously created AgentMail draft.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "inbox_id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Inbox id."
+            },
+            "draft_id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Draft id."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "inbox_id",
+            "draft_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "POST",
+          "path": "/v0/inboxes/{{inbox_id}}/drafts/{{draft_id}}/send",
+          "success": [
+            200,
+            201
+          ],
+          "body": {},
+          "headers": {
+            "Content-Type": "application/json"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "drafts.update": {
+        "kind": "action",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Update draft",
+        "description": "Edit fields on an AgentMail draft. Omitted fields stay unchanged. An empty recipient list clears that field.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "inbox_id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Inbox id or email address."
+            },
+            "draft_id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Draft id."
+            },
+            "reply_to": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "description": "Reply-to addresses. Pass an empty list to clear them."
+            },
+            "to": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "description": "Recipient addresses. Pass an empty list to clear them."
+            },
+            "cc": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "description": "CC addresses. Pass an empty list to clear them."
+            },
+            "bcc": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "description": "BCC addresses. Pass an empty list to clear them."
+            },
+            "subject": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Subject of the draft."
+            },
+            "text": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Plain text body of the draft."
+            },
+            "html": {
+              "type": "string",
+              "minLength": 1,
+              "description": "HTML body of the draft."
+            },
+            "add_attachments": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "filename": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "Filename of the attachment."
+                  },
+                  "content_type": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "Content type of the attachment."
+                  },
+                  "content_disposition": {
+                    "type": "string",
+                    "enum": [
+                      "inline",
+                      "attachment"
+                    ],
+                    "description": "Content disposition of the attachment."
+                  },
+                  "content_id": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "Content ID of the attachment."
+                  },
+                  "content": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "Base64-encoded attachment content."
+                  },
+                  "url": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "URL AgentMail can download without custom authentication headers or cookies."
+                  }
+                },
+                "additionalProperties": false
+              },
+              "description": "Attachments to add. Provide content or url on each item."
+            },
+            "remove_attachments": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "description": "IDs of attachments to remove."
+            },
+            "add_labels": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "description": "Labels to add."
+            },
+            "remove_labels": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "description": "Labels to remove."
+            },
+            "send_at": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Time at which to schedule sending the draft."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "inbox_id",
+            "draft_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "PATCH",
+          "path": "/v0/inboxes/{{inbox_id}}/drafts/{{draft_id}}",
+          "success": [
+            200
+          ],
+          "body": {
+            "reply_to": "{{reply_to}}",
+            "to": "{{to}}",
+            "cc": "{{cc}}",
+            "bcc": "{{bcc}}",
+            "subject": "{{subject}}",
+            "text": "{{text}}",
+            "html": "{{html}}",
+            "add_attachments": "{{add_attachments}}",
+            "remove_attachments": "{{remove_attachments}}",
+            "add_labels": "{{add_labels}}",
+            "remove_labels": "{{remove_labels}}",
+            "send_at": "{{send_at}}"
+          },
+          "headers": {
+            "Content-Type": "application/json"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
       "healthcheck": {
         "timeoutMs": 5000,
         "maxInputBytes": 4096,
@@ -654,6 +1137,506 @@
         "request": {
           "method": "GET",
           "path": "/v0/auth/me",
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "inboxes.api_keys.create": {
+        "kind": "action",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Create inbox API key",
+        "description": "Create an inbox-scoped AgentMail API key. The full secret is returned once.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "inbox_id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Inbox id or email address."
+            },
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Name of the API key."
+            },
+            "expires_at": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Future expiration time. Omitted, the key inherits the authenticating key's expiry."
+            },
+            "permissions": {
+              "type": "object",
+              "properties": {
+                "inbox_read": {
+                  "type": "boolean"
+                },
+                "inbox_create": {
+                  "type": "boolean"
+                },
+                "inbox_update": {
+                  "type": "boolean"
+                },
+                "inbox_delete": {
+                  "type": "boolean"
+                },
+                "message_read": {
+                  "type": "boolean"
+                },
+                "message_reply": {
+                  "type": "boolean"
+                },
+                "message_send": {
+                  "type": "boolean"
+                },
+                "message_update": {
+                  "type": "boolean"
+                },
+                "message_delete": {
+                  "type": "boolean"
+                },
+                "label_spam_read": {
+                  "type": "boolean"
+                },
+                "label_blocked_read": {
+                  "type": "boolean"
+                },
+                "label_unauthenticated_read": {
+                  "type": "boolean"
+                },
+                "label_trash_read": {
+                  "type": "boolean"
+                },
+                "draft_read": {
+                  "type": "boolean"
+                },
+                "draft_create": {
+                  "type": "boolean"
+                },
+                "draft_update": {
+                  "type": "boolean"
+                },
+                "draft_delete": {
+                  "type": "boolean"
+                },
+                "draft_send": {
+                  "type": "boolean"
+                },
+                "webhook_read": {
+                  "type": "boolean"
+                },
+                "webhook_create": {
+                  "type": "boolean"
+                },
+                "webhook_update": {
+                  "type": "boolean"
+                },
+                "webhook_delete": {
+                  "type": "boolean"
+                },
+                "domain_read": {
+                  "type": "boolean"
+                },
+                "domain_create": {
+                  "type": "boolean"
+                },
+                "domain_update": {
+                  "type": "boolean"
+                },
+                "domain_delete": {
+                  "type": "boolean"
+                },
+                "list_entry_read": {
+                  "type": "boolean"
+                },
+                "list_entry_create": {
+                  "type": "boolean"
+                },
+                "list_entry_delete": {
+                  "type": "boolean"
+                },
+                "metrics_read": {
+                  "type": "boolean"
+                },
+                "api_key_read": {
+                  "type": "boolean"
+                },
+                "api_key_create": {
+                  "type": "boolean"
+                },
+                "api_key_update": {
+                  "type": "boolean"
+                },
+                "api_key_delete": {
+                  "type": "boolean"
+                },
+                "app_connect": {
+                  "type": "boolean"
+                },
+                "app_share_owner": {
+                  "type": "boolean"
+                },
+                "account_update": {
+                  "type": "boolean"
+                },
+                "pod_read": {
+                  "type": "boolean"
+                },
+                "pod_create": {
+                  "type": "boolean"
+                },
+                "pod_update": {
+                  "type": "boolean"
+                },
+                "pod_delete": {
+                  "type": "boolean"
+                },
+                "calendar_read": {
+                  "type": "boolean"
+                },
+                "calendar_update": {
+                  "type": "boolean"
+                },
+                "calendar_event_read": {
+                  "type": "boolean"
+                },
+                "calendar_event_create": {
+                  "type": "boolean"
+                },
+                "calendar_event_update": {
+                  "type": "boolean"
+                },
+                "calendar_event_delete": {
+                  "type": "boolean"
+                }
+              },
+              "additionalProperties": false,
+              "description": "Permission flags. Omit the object to grant every permission the inbox scope allows. When present, only flags set to true are granted."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "inbox_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "POST",
+          "path": "/v0/inboxes/{{inbox_id}}/api-keys",
+          "success": [
+            200
+          ],
+          "body": {
+            "name": "{{name}}",
+            "expires_at": "{{expires_at}}",
+            "permissions": "{{permissions}}"
+          },
+          "headers": {
+            "Content-Type": "application/json"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "inboxes.api_keys.list": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "List inbox API keys",
+        "description": "List API key metadata scoped to an AgentMail inbox. Secrets are not returned.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "inbox_id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Inbox id or email address."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Limit of number of items returned."
+            },
+            "page_token": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Page token for pagination."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "inbox_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/v0/inboxes/{{inbox_id}}/api-keys",
+          "query": {
+            "limit": "{{limit}}",
+            "page_token": "{{page_token}}"
+          },
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "inboxes.create": {
+        "kind": "action",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Create inbox",
+        "description": "Create an AgentMail inbox with optional username, domain, and display name.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "username": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Inbox username. Randomly generated if omitted."
+            },
+            "domain": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Verified sending domain. Defaults to agentmail.to."
+            },
+            "display_name": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Display name shown on outbound mail."
+            },
+            "client_id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Caller-supplied idempotency id."
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "active",
+                "paused"
+              ],
+              "description": "Create the inbox active or paused."
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "POST",
+          "path": "/v0/inboxes",
+          "success": [
+            200,
+            201
+          ],
+          "body": {
+            "username": "{{username}}",
+            "domain": "{{domain}}",
+            "display_name": "{{display_name}}",
+            "client_id": "{{client_id}}",
+            "status": "{{status}}"
+          },
+          "headers": {
+            "Content-Type": "application/json"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "inboxes.delete": {
+        "kind": "action",
+        "sideEffect": "destructive",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Delete inbox",
+        "description": "Permanently delete an AgentMail inbox.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "inbox_id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Inbox id or email address."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "inbox_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "DELETE",
+          "path": "/v0/inboxes/{{inbox_id}}",
+          "success": [
+            200,
+            204
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "inboxes.events.list": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "List inbox events",
+        "description": "List label-change events for an AgentMail inbox, newest first unless ascending is set.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "inbox_id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Inbox id or email address."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Limit of number of items returned."
+            },
+            "page_token": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Page token for pagination."
+            },
+            "ascending": {
+              "type": "boolean",
+              "description": "Sort in ascending temporal order."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "inbox_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/v0/inboxes/{{inbox_id}}/events",
+          "query": {
+            "limit": "{{limit}}",
+            "page_token": "{{page_token}}",
+            "ascending": "{{ascending}}"
+          },
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "inboxes.get": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "read",
+        "title": "Get inbox",
+        "description": "Get a single AgentMail inbox.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "inbox_id": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "inbox_id"
+          ],
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/v0/inboxes/{{inbox_id}}",
           "success": [
             200
           ]
@@ -716,24 +1699,245 @@
         "validationMode": "strict-generated",
         "responseFormat": "json"
       },
-      "inboxes.get": {
+      "inboxes.metrics.events.query": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Query inbox event metrics",
+        "description": "Query timestamped email-event counts for an AgentMail inbox.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "inbox_id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Inbox id or email address."
+            },
+            "event_types": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "message.received",
+                  "message.received.spam",
+                  "message.received.blocked",
+                  "message.received.unauthenticated",
+                  "message.sent",
+                  "message.delivered",
+                  "message.bounced",
+                  "message.complained",
+                  "message.rejected",
+                  "domain.verified"
+                ]
+              },
+              "minItems": 1,
+              "description": "Metric event types to query. Each value is sent as a repeated query parameter."
+            },
+            "start": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Start timestamp. Must be within the last 90 days."
+            },
+            "end": {
+              "type": "string",
+              "minLength": 1,
+              "description": "End timestamp. A future end is clamped to now."
+            },
+            "period": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 86400,
+              "description": "Bucket size in whole seconds. Omit for individual event counts."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Limit on number of buckets to return."
+            },
+            "descending": {
+              "type": "boolean",
+              "description": "Sort in descending order."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "inbox_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/v0/inboxes/{{inbox_id}}/metrics/events",
+          "query": {
+            "event_types": "{{event_types}}",
+            "start": "{{start}}",
+            "end": "{{end}}",
+            "period": "{{period}}",
+            "limit": "{{limit}}",
+            "descending": "{{descending}}"
+          },
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "inboxes.update": {
+        "kind": "action",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Update inbox",
+        "description": "Update an AgentMail inbox display name or pause/resume status.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "inbox_id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Inbox id or email address."
+            },
+            "display_name": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Updated display name."
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "active",
+                "paused"
+              ],
+              "description": "Pause or resume the inbox."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "inbox_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "PATCH",
+          "path": "/v0/inboxes/{{inbox_id}}",
+          "success": [
+            200,
+            201
+          ],
+          "body": {
+            "display_name": "{{display_name}}",
+            "status": "{{status}}"
+          },
+          "headers": {
+            "Content-Type": "application/json"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "messages.delete": {
+        "kind": "action",
+        "sideEffect": "destructive",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Delete message",
+        "description": "Delete a message from an AgentMail inbox.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "inbox_id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Inbox id."
+            },
+            "message_id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Message id."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "inbox_id",
+            "message_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "DELETE",
+          "path": "/v0/inboxes/{{inbox_id}}/messages/{{message_id}}",
+          "success": [
+            200,
+            204
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "messages.get": {
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
         "maxResponseBytes": 5242880,
         "kind": "action",
         "sideEffect": "read",
-        "title": "Get inbox",
-        "description": "Get a single AgentMail inbox.",
+        "title": "Get message",
+        "description": "Get a single message from an AgentMail inbox.",
         "inputSchema": {
           "type": "object",
           "properties": {
             "inbox_id": {
               "type": "string",
               "minLength": 1
+            },
+            "message_id": {
+              "type": "string",
+              "minLength": 1
             }
           },
           "required": [
-            "inbox_id"
+            "inbox_id",
+            "message_id"
           ],
           "additionalProperties": false
         },
@@ -751,7 +1955,7 @@
         },
         "request": {
           "method": "GET",
-          "path": "/v0/inboxes/{{inbox_id}}",
+          "path": "/v0/inboxes/{{inbox_id}}/messages/{{message_id}}",
           "success": [
             200
           ]
@@ -847,96 +2051,47 @@
         "validationMode": "strict-generated",
         "responseFormat": "json"
       },
-      "messages.get": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
-        "sideEffect": "read",
-        "title": "Get message",
-        "description": "Get a single message from an AgentMail inbox.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "inbox_id": {
-              "type": "string",
-              "minLength": 1
-            },
-            "message_id": {
-              "type": "string",
-              "minLength": 1
-            }
-          },
-          "required": [
-            "inbox_id",
-            "message_id"
-          ],
-          "additionalProperties": false
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "GET",
-          "path": "/v0/inboxes/{{inbox_id}}/messages/{{message_id}}",
-          "success": [
-            200
-          ]
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "inboxes.create": {
+      "messages.reply": {
         "kind": "action",
         "sideEffect": "write",
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
         "maxResponseBytes": 5242880,
-        "title": "Create inbox",
-        "description": "Create an AgentMail inbox with optional username, domain, and display name.",
+        "title": "Reply to message",
+        "description": "Reply to a message in an AgentMail inbox.",
         "inputSchema": {
           "type": "object",
           "properties": {
-            "username": {
+            "inbox_id": {
               "type": "string",
               "minLength": 1,
-              "description": "Inbox username. Randomly generated if omitted."
+              "description": "Inbox id."
             },
-            "domain": {
+            "message_id": {
               "type": "string",
               "minLength": 1,
-              "description": "Verified sending domain. Defaults to agentmail.to."
+              "description": "Message being replied to."
             },
-            "display_name": {
+            "text": {
               "type": "string",
               "minLength": 1,
-              "description": "Display name shown on outbound mail."
+              "description": "Plain-text reply body."
             },
-            "client_id": {
+            "html": {
               "type": "string",
               "minLength": 1,
-              "description": "Caller-supplied idempotency id."
+              "description": "HTML reply body."
             },
-            "status": {
-              "type": "string",
-              "enum": [
-                "active",
-                "paused"
-              ],
-              "description": "Create the inbox active or paused."
+            "reply_all": {
+              "type": "boolean",
+              "description": "Reply to all original recipients."
             }
           },
-          "additionalProperties": false
+          "additionalProperties": false,
+          "required": [
+            "inbox_id",
+            "message_id"
+          ]
         },
         "outputSchema": {
           "type": "object",
@@ -952,133 +2107,19 @@
         },
         "request": {
           "method": "POST",
-          "path": "/v0/inboxes",
+          "path": "/v0/inboxes/{{inbox_id}}/messages/{{message_id}}/reply",
           "success": [
             200,
             201
           ],
           "body": {
-            "username": "{{username}}",
-            "domain": "{{domain}}",
-            "display_name": "{{display_name}}",
-            "client_id": "{{client_id}}",
-            "status": "{{status}}"
+            "text": "{{text}}",
+            "html": "{{html}}",
+            "reply_all": "{{reply_all}}"
           },
           "headers": {
             "Content-Type": "application/json"
           }
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "inboxes.update": {
-        "kind": "action",
-        "sideEffect": "write",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "title": "Update inbox",
-        "description": "Update an AgentMail inbox display name or pause/resume status.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "inbox_id": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Inbox id or email address."
-            },
-            "display_name": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Updated display name."
-            },
-            "status": {
-              "type": "string",
-              "enum": [
-                "active",
-                "paused"
-              ],
-              "description": "Pause or resume the inbox."
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "inbox_id"
-          ]
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "PATCH",
-          "path": "/v0/inboxes/{{inbox_id}}",
-          "success": [
-            200,
-            201
-          ],
-          "body": {
-            "display_name": "{{display_name}}",
-            "status": "{{status}}"
-          },
-          "headers": {
-            "Content-Type": "application/json"
-          }
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "inboxes.delete": {
-        "kind": "action",
-        "sideEffect": "destructive",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "title": "Delete inbox",
-        "description": "Permanently delete an AgentMail inbox.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "inbox_id": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Inbox id or email address."
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "inbox_id"
-          ]
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "DELETE",
-          "path": "/v0/inboxes/{{inbox_id}}",
-          "success": [
-            200,
-            204
-          ]
         },
         "enforceOutputSchema": true,
         "validationMode": "strict-generated",
@@ -1183,47 +2224,28 @@
         "validationMode": "strict-generated",
         "responseFormat": "json"
       },
-      "messages.reply": {
+      "pods.list": {
         "kind": "action",
-        "sideEffect": "write",
+        "sideEffect": "read",
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
         "maxResponseBytes": 5242880,
-        "title": "Reply to message",
-        "description": "Reply to a message in an AgentMail inbox.",
+        "title": "List pods",
+        "description": "List AgentMail pods used for multi-tenant isolation.",
         "inputSchema": {
           "type": "object",
           "properties": {
-            "inbox_id": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Inbox id."
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
             },
-            "message_id": {
+            "page_token": {
               "type": "string",
-              "minLength": 1,
-              "description": "Message being replied to."
-            },
-            "text": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Plain-text reply body."
-            },
-            "html": {
-              "type": "string",
-              "minLength": 1,
-              "description": "HTML reply body."
-            },
-            "reply_all": {
-              "type": "boolean",
-              "description": "Reply to all original recipients."
+              "minLength": 1
             }
           },
-          "additionalProperties": false,
-          "required": [
-            "inbox_id",
-            "message_id"
-          ]
+          "additionalProperties": false
         },
         "outputSchema": {
           "type": "object",
@@ -1238,33 +2260,28 @@
           "additionalProperties": false
         },
         "request": {
-          "method": "POST",
-          "path": "/v0/inboxes/{{inbox_id}}/messages/{{message_id}}/reply",
+          "method": "GET",
+          "path": "/v0/pods",
           "success": [
-            200,
-            201
+            200
           ],
-          "body": {
-            "text": "{{text}}",
-            "html": "{{html}}",
-            "reply_all": "{{reply_all}}"
-          },
-          "headers": {
-            "Content-Type": "application/json"
+          "query": {
+            "limit": "{{limit}}",
+            "page_token": "{{page_token}}"
           }
         },
         "enforceOutputSchema": true,
         "validationMode": "strict-generated",
         "responseFormat": "json"
       },
-      "messages.delete": {
+      "threads.get": {
         "kind": "action",
-        "sideEffect": "destructive",
+        "sideEffect": "read",
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
         "maxResponseBytes": 5242880,
-        "title": "Delete message",
-        "description": "Delete a message from an AgentMail inbox.",
+        "title": "Get thread",
+        "description": "Get a single AgentMail conversation thread.",
         "inputSchema": {
           "type": "object",
           "properties": {
@@ -1273,16 +2290,16 @@
               "minLength": 1,
               "description": "Inbox id."
             },
-            "message_id": {
+            "thread_id": {
               "type": "string",
               "minLength": 1,
-              "description": "Message id."
+              "description": "Thread id."
             }
           },
           "additionalProperties": false,
           "required": [
             "inbox_id",
-            "message_id"
+            "thread_id"
           ]
         },
         "outputSchema": {
@@ -1298,11 +2315,10 @@
           "additionalProperties": false
         },
         "request": {
-          "method": "DELETE",
-          "path": "/v0/inboxes/{{inbox_id}}/messages/{{message_id}}",
+          "method": "GET",
+          "path": "/v0/inboxes/{{inbox_id}}/threads/{{thread_id}}",
           "success": [
-            200,
-            204
+            200
           ]
         },
         "enforceOutputSchema": true,
@@ -1391,403 +2407,6 @@
             "include_blocked": "{{include_blocked}}",
             "include_unauthenticated": "{{include_unauthenticated}}",
             "include_trash": "{{include_trash}}"
-          }
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "threads.get": {
-        "kind": "action",
-        "sideEffect": "read",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "title": "Get thread",
-        "description": "Get a single AgentMail conversation thread.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "inbox_id": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Inbox id."
-            },
-            "thread_id": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Thread id."
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "inbox_id",
-            "thread_id"
-          ]
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "GET",
-          "path": "/v0/inboxes/{{inbox_id}}/threads/{{thread_id}}",
-          "success": [
-            200
-          ]
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "drafts.list": {
-        "kind": "action",
-        "sideEffect": "read",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "title": "List drafts",
-        "description": "List drafts in an AgentMail inbox.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "inbox_id": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Inbox id."
-            },
-            "limit": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 100
-            },
-            "page_token": {
-              "type": "string",
-              "minLength": 1
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "inbox_id"
-          ]
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "GET",
-          "path": "/v0/inboxes/{{inbox_id}}/drafts",
-          "success": [
-            200
-          ],
-          "query": {
-            "limit": "{{limit}}",
-            "page_token": "{{page_token}}"
-          }
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "drafts.create": {
-        "kind": "action",
-        "sideEffect": "write",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "title": "Create draft",
-        "description": "Create a draft in an AgentMail inbox.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "inbox_id": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Inbox id."
-            },
-            "to": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Recipient address."
-            },
-            "subject": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Draft subject."
-            },
-            "text": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Plain-text body."
-            },
-            "html": {
-              "type": "string",
-              "minLength": 1,
-              "description": "HTML body."
-            },
-            "in_reply_to": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Message id this draft replies to."
-            },
-            "client_id": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Caller-supplied idempotency id."
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "inbox_id"
-          ]
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "POST",
-          "path": "/v0/inboxes/{{inbox_id}}/drafts",
-          "success": [
-            200,
-            201
-          ],
-          "body": {
-            "to": "{{to}}",
-            "subject": "{{subject}}",
-            "text": "{{text}}",
-            "html": "{{html}}",
-            "in_reply_to": "{{in_reply_to}}",
-            "client_id": "{{client_id}}"
-          },
-          "headers": {
-            "Content-Type": "application/json"
-          }
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "drafts.send": {
-        "kind": "action",
-        "sideEffect": "write",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "title": "Send draft",
-        "description": "Send a previously created AgentMail draft.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "inbox_id": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Inbox id."
-            },
-            "draft_id": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Draft id."
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "inbox_id",
-            "draft_id"
-          ]
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "POST",
-          "path": "/v0/inboxes/{{inbox_id}}/drafts/{{draft_id}}/send",
-          "success": [
-            200,
-            201
-          ],
-          "body": {},
-          "headers": {
-            "Content-Type": "application/json"
-          }
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "domains.list": {
-        "kind": "action",
-        "sideEffect": "read",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "title": "List domains",
-        "description": "List AgentMail sending domains available to the current API key.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "limit": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 100
-            },
-            "page_token": {
-              "type": "string",
-              "minLength": 1
-            }
-          },
-          "additionalProperties": false
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "GET",
-          "path": "/v0/domains",
-          "success": [
-            200
-          ],
-          "query": {
-            "limit": "{{limit}}",
-            "page_token": "{{page_token}}"
-          }
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "domains.get": {
-        "kind": "action",
-        "sideEffect": "read",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "title": "Get domain",
-        "description": "Get a single AgentMail sending domain.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "domain_id": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Domain id."
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "domain_id"
-          ]
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "GET",
-          "path": "/v0/domains/{{domain_id}}",
-          "success": [
-            200
-          ]
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "pods.list": {
-        "kind": "action",
-        "sideEffect": "read",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "title": "List pods",
-        "description": "List AgentMail pods used for multi-tenant isolation.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "limit": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 100
-            },
-            "page_token": {
-              "type": "string",
-              "minLength": 1
-            }
-          },
-          "additionalProperties": false
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "GET",
-          "path": "/v0/pods",
-          "success": [
-            200
-          ],
-          "query": {
-            "limit": "{{limit}}",
-            "page_token": "{{page_token}}"
           }
         },
         "enforceOutputSchema": true,

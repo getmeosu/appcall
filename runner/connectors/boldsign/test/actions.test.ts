@@ -41,4 +41,46 @@ describe("BoldSign depth fixtures", () => {
       }
     }
   });
+
+  it("keeps origin brands.get and adds the documented JSON routes", () => {
+    expect(manifest.version).toBe("0.2.1");
+    expect(manifest.http.baseUrl).toBe("https://api.boldsign.com");
+    expect(manifest.network.allowedHosts).toEqual(["api.boldsign.com"]);
+    expect(manifest.http.auth).toEqual({
+      field: "apiKey",
+      in: "header",
+      name: "X-API-KEY",
+      value: "{{apiKey}}",
+    });
+    expect(JSON.stringify(manifest.http.auth)).not.toContain("Authorization");
+    expect(JSON.stringify(manifest.network.allowedHosts)).not.toContain("api-eu.boldsign.com");
+
+    const operations = manifest.operations as Record<string, {
+      request: { method: string; path: string; body?: unknown; headers?: Record<string, string>; success: number[] };
+    }>;
+    expect(Object.keys(operations)).toHaveLength(26);
+    expect(operations["brands.get"]!.request).toMatchObject({ method: "GET", path: "/v1/brand/getbrand" });
+    expect(operations["brands.get"]!.request.body).toBeUndefined();
+    expect(operations["brands.get"]!.request.headers).toBeUndefined();
+
+    const added: Record<string, { method: string; path: string; success: number[]; body: boolean }> = {
+      "brands.getDetails": { method: "GET", path: "/v1/brand/get", success: [200], body: false },
+      "customFields.create": { method: "POST", path: "/v1/customField/create", success: [200], body: true },
+      "customFields.edit": { method: "POST", path: "/v1/customField/edit", success: [200], body: true },
+      "documents.behalfList": { method: "GET", path: "/v1/document/behalfList", success: [200], body: false },
+      "documents.edit": { method: "PUT", path: "/v1/document/edit", success: [200], body: true },
+      "embeddedRequests.createLink": { method: "POST", path: "/v1/document/createEmbeddedRequestUrl", success: [200], body: true },
+    };
+    for (const [key, spec] of Object.entries(added)) {
+      const request = operations[key]!.request;
+      expect(request.method).toBe(spec.method);
+      expect(request.path).toBe(spec.path);
+      expect(request.success).toEqual(spec.success);
+      expect(request.body !== undefined).toBe(spec.body);
+      expect(request.headers?.["Content-Type"]).toBe(spec.body ? "application/json" : undefined);
+      expect(JSON.stringify(request)).not.toContain("multipart");
+      expect(JSON.stringify(request.path)).not.toContain("extendExpiry");
+      expect(JSON.stringify(request.path)).not.toContain("RemoveAuthentication");
+    }
+  });
 });

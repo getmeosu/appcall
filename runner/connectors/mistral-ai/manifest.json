@@ -1,7 +1,7 @@
 {
   "key": "mistral-ai",
   "name": "Mistral AI",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "runtime": "bun",
   "visibility": "public",
   "categories": [
@@ -3414,6 +3414,66 @@
       "validationMode": "strict-generated",
       "responseFormat": "json"
     },
+    "libraries.patch": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "title": "Patch library",
+      "description": "Update a Mistral document library name or description with PATCH (beta).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "library_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Library UUID."
+          },
+          "name": {
+            "type": "string",
+            "description": "Updated library name."
+          },
+          "description": {
+            "type": "string",
+            "description": "Updated library description."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "library_id"
+        ]
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/v1/libraries/{{library_id}}",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "name": "{{name}}",
+          "description": "{{description}}"
+        }
+      }
+    },
     "libraries.delete": {
       "kind": "action",
       "sideEffect": "destructive",
@@ -3711,6 +3771,78 @@
       "enforceOutputSchema": true,
       "validationMode": "strict-generated",
       "responseFormat": "json"
+    },
+    "libraries.documents.patch": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "title": "Patch library document",
+      "description": "Update a library document name, attributes, or expiry with PATCH (beta).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "library_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Library UUID."
+          },
+          "document_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Document UUID."
+          },
+          "name": {
+            "type": "string",
+            "description": "Updated document name."
+          },
+          "attributes": {
+            "type": "object",
+            "description": "Custom document attributes.",
+            "additionalProperties": true
+          },
+          "expires_at": {
+            "type": "string",
+            "description": "When set, the document is deleted after this date-time."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "library_id",
+          "document_id"
+        ]
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/v1/libraries/{{library_id}}/documents/{{document_id}}",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "name": "{{name}}",
+          "attributes": "{{attributes}}",
+          "expires_at": "{{expires_at}}"
+        }
+      }
     },
     "libraries.documents.delete": {
       "kind": "action",
@@ -5020,6 +5152,66 @@
       "validationMode": "strict-generated",
       "responseFormat": "json"
     },
+    "observability.dataset_tasks.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "title": "List dataset tasks",
+      "description": "List import tasks for an observability dataset.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "dataset_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Dataset UUID."
+          },
+          "page": {
+            "type": "integer",
+            "description": "Page number, starting from 1.",
+            "minimum": 1
+          },
+          "page_size": {
+            "type": "integer",
+            "description": "Items per page.",
+            "minimum": 0,
+            "maximum": 100
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "dataset_id"
+        ]
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/observability/datasets/{{dataset_id}}/tasks",
+        "success": [
+          200
+        ],
+        "query": {
+          "page": "{{page}}",
+          "page_size": "{{page_size}}"
+        }
+      }
+    },
     "observability.dataset_imports.get": {
       "kind": "action",
       "sideEffect": "read",
@@ -5070,6 +5262,57 @@
       "enforceOutputSchema": true,
       "validationMode": "strict-generated",
       "responseFormat": "json"
+    },
+    "observability.dataset_tasks.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "title": "Get dataset task",
+      "description": "Retrieve one observability dataset import task by dataset and task id.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "dataset_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Dataset UUID."
+          },
+          "task_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Import task UUID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "dataset_id",
+          "task_id"
+        ]
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/observability/datasets/{{dataset_id}}/tasks/{{task_id}}",
+        "success": [
+          200
+        ]
+      }
     },
     "observability.dataset_records.get": {
       "kind": "action",

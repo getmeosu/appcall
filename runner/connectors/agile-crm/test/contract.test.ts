@@ -28,7 +28,7 @@ const operations = manifest.operations as Record<string, Op>;
 describe("agile-crm contract", () => {
   test("compiles tenant basic auth on the agilecrm host only", () => {
     expect(manifest.key).toBe("agile-crm");
-    expect(manifest.network.allowedHosts).toEqual(["{{domain}}.agilecrm.com"]);
+    expect(manifest.network.allowedHosts).toEqual(["*.agilecrm.com"]);
     expect(manifest.http.baseUrl).toBe("https://{{domain}}.agilecrm.com/dev");
     expect(manifest.http.auth.basic).toEqual({ username: "{{email}}", password: "{{apiKey}}" });
     expect(manifest.http.auth.value).toBeUndefined();

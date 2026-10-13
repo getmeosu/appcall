@@ -26,9 +26,10 @@ describe("pagerduty manifest", () => {
   it("declares the connector identity the control plane keys on", () => {
     expect(manifest.key).toBe("pagerduty");
     expect(manifest.runtime).toBe("bun");
-    expect(manifest.version).toBe("0.5.0");
+    expect(manifest.version).toBe("0.5.1");
     expect(manifest.categories).toEqual(["dev-tools"]);
     expect(manifest.models.length).toBeGreaterThan(0);
+    expect(Object.keys(operations).length).toBe(482);
   });
 
   it("sends the personal user token in PagerDuty's Token token= scheme", () => {
@@ -115,6 +116,25 @@ describe("pagerduty manifest", () => {
         expect(declared, `${key} references {{${name}}}`).toContain(name);
       }
     }
+  });
+
+  it("reads deprecated OAuth revocation request status without a body", () => {
+    const operation = operations["oauth-delegations.get-revocation-requests-status"];
+    expect(operation).toBeDefined();
+    expect(operation!.sideEffect).toBe("read");
+    expect(operation!.responseFormat).toBe("json");
+    expect(operation!.timeoutMs as number).toBeGreaterThan(0);
+    expect(operation!.timeoutMs as number).toBeLessThanOrEqual(300000);
+    expect(operation!.maxResponseBytes as number).toBeGreaterThanOrEqual(operation!.maxInputBytes as number);
+    const request = operation!.request as Record<string, unknown>;
+    expect(request.method).toBe("GET");
+    expect(request.path).toBe("/oauth_delegations/revocation_requests/status");
+    expect(request.baseUrl).toBeUndefined();
+    expect(request.body).toBeUndefined();
+    expect(request.headers).toBeUndefined();
+    const schema = operation!.inputSchema as { properties?: Record<string, { type?: string }>; required?: string[] };
+    expect(schema.properties?.requested_at_end?.type).toBe("string");
+    expect(schema.required ?? []).not.toContain("requested_at_end");
   });
 
   it("keeps every operation key inside the control plane's safe charset", () => {
