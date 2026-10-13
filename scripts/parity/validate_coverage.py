@@ -39,6 +39,24 @@ dispatch, or registrations living outside the scanned files). A
 ``mapped_handwritten`` or non-pending webhook classification keeps the default
 gate green but is not certification evidence; canonical artifacts remain the
 contract surface.
+
+Component-split artifacts may carry one extra canonical top-level field,
+``component_of`` (non-empty string). Members of a component group must
+annotate their ``notes`` with ``; component_of=<SLUG>;
+component_split=<n1>/<n2>/<n3>`` matching the members' ``composio_tools`` in
+bytewise key order, and no tool slug may appear in more than one component of
+the same parent (core ``core.component_duplicate_tool``). A missing or
+mistyped annotation is the ``component_split_mismatch`` advisory: a count
+typo is an annotation defect, while the per-artifact identity invariant and
+duplicate detection keep the tool accounting honest on their own. Legacy
+artifacts do not participate in group checks.
+
+Canonical ``notes`` clause order: ``source=<URL>; fetched=<YYYY-MM-DD>``,
+then at most one ``; inventory_note=<[a-z0-9_]+>`` and at most one
+``; dual_mapped=...`` in either order, then the optional
+``; component_of=...; component_split=...`` pair. Anything else (bad
+characters, duplicates, wrong order relative to the component pair) fails
+the grammar and classifies the artifact as legacy.
 """
 
 import argparse
@@ -51,16 +69,25 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 CANONICAL_KEYS = ("key", "slug", "composio_tools", "mapped", "missing_http",
                   "missing_still", "full_depth", "notes")
+COMPONENT_KEY = "component_of"
 MAPPED_ENTRY_KEYS = {"tool", "operation"}
 MISSING_HTTP_KEYS = {"tool", "method", "path", "docs", "notes"}
 MISSING_STILL_KEYS = {"tool", "why"}
 
 WHY_RE = re.compile(
     r"^reason=(no_public_json_route|non_json_success|client_only_projection|"
-    r"privileged_dashboard_only_scope|deprecated_product); "
+    r"privileged_dashboard_only_scope|deprecated_product|out_of_component_scope); "
     r"evidence=https?://\S+(,https?://\S+)*; fetched=\d{4}-\d{2}-\d{2}$"
 )
-NOTES_RE = re.compile(r"^source=https?://\S+; fetched=\d{4}-\d{2}-\d{2}(; dual_mapped=.*)?$")
+NOTES_RE = re.compile(
+    r"^source=https?://\S+; fetched=\d{4}-\d{2}-\d{2}"
+    # Optional dual_mapped / inventory_note clauses, each at most once and
+    # accepted in either order (checked-in artifacts use dual_mapped first).
+    r"(?:(?:; inventory_note=[a-z0-9_]+)?(?:; dual_mapped=[^;]*)?"
+    r"|(?:; dual_mapped=[^;]*)?(?:; inventory_note=[a-z0-9_]+)?)"
+    r"(; component_of=[^;]+; component_split=[^;]+)?$"
+)
+COMPONENT_CLAUSE_RE = re.compile(r"; component_of=([^;]+); component_split=([^;]+)")
 PLACEHOLDER_REASONS = {"todo", "tbd", "unknown", "n/a", "na", "none", "?"}
 
 CORE_ARTIFACT_UNREADABLE = "core.artifact_unreadable"
@@ -86,15 +113,18 @@ TRIGGER_PENDING = "trigger_pending"
 CORE_KEY_PATH_MISMATCH = "core.key_path_mismatch"
 CORE_ENTRY_TOOL_MISSING = "core.entry_tool_missing"
 CORE_FULL_DEPTH_FALSE = "core.full_depth_false"
+CORE_COMPONENT_DUPLICATE_TOOL = "core.component_duplicate_tool"
 CORE_RULES = (CORE_ARTIFACT_UNREADABLE, CORE_IDENTITY, CORE_MANIFEST_UNREADABLE, CORE_MAPPED_OPERATION_MISSING,
               CORE_MAPPED_OPERATION_UNIMPLEMENTED, CORE_DUPLICATE_TOOL, CORE_EMPTY_REASON,
               CORE_MISSING_HTTP_INCOMPLETE, CORE_KEY_PATH_MISMATCH, CORE_ENTRY_TOOL_MISSING,
-              CORE_FULL_DEPTH_FALSE)
+              CORE_FULL_DEPTH_FALSE, CORE_COMPONENT_DUPLICATE_TOOL)
 ADV_KEY_PATH_MISMATCH = "legacy.key_path_mismatch"
 ADV_ENTRY_TOOL_MISSING = "legacy.entry_tool_missing"
+ADV_COMPONENT_SPLIT_MISMATCH = "component_split_mismatch"
 ADVISORY_RULES = (ADV_MAPPED_SHAPE, ADV_MISSING_STILL_SHAPE, ADV_WHY_SYNTAX, ADV_NOTES_PREFIX,
                   ADV_FULL_DEPTH_MISSING, ADV_SLUG_MISSING, ADV_TOTAL_MISSING,
-                  ADV_MISSING_HTTP_SHAPE, ADV_KEY_SET, ADV_KEY_PATH_MISMATCH, ADV_ENTRY_TOOL_MISSING)
+                  ADV_MISSING_HTTP_SHAPE, ADV_KEY_SET, ADV_KEY_PATH_MISMATCH, ADV_ENTRY_TOOL_MISSING,
+                  ADV_COMPONENT_SPLIT_MISMATCH)
 
 
 def discover_artifacts(connectors_root):
@@ -266,31 +296,39 @@ def validate_artifact(path, connectors_root, cache=None):
         return {"path": relative, "key": None, "format": "legacy", "mapped_count": 0,
                 "composio_tools": 0, "full_depth": False,
                 "mapped_declarative": 0, "mapped_handwritten": 0, "mapped_unimplemented": 0,
-                "trigger_pending": 0,
+                "trigger_pending": 0, "component_of": None, "notes": None, "tools": [],
                 "core": [{"rule": CORE_ARTIFACT_UNREADABLE, "message": f"cannot read valid JSON: {error}"}],
                 "advisories": []}
     if not isinstance(artifact, dict):
         return {"path": relative, "key": None, "format": "legacy", "mapped_count": 0,
                 "composio_tools": 0, "full_depth": False,
                 "mapped_declarative": 0, "mapped_handwritten": 0, "mapped_unimplemented": 0,
-                "trigger_pending": 0,
+                "trigger_pending": 0, "component_of": None, "notes": None, "tools": [],
                 "core": [{"rule": CORE_ARTIFACT_UNREADABLE, "message": "artifact must be a JSON object"}],
                 "advisories": []}
 
     key = _expected_key(path, connectors_root)
     declared_key = artifact.get("key")
     declared_key = declared_key.strip() if isinstance(declared_key, str) else None
+    component_value = artifact.get(COMPONENT_KEY)
+    component_of = component_value.strip() if isinstance(component_value, str) and component_value.strip() else None
     advisories = []
     mapped = _normalize_mapped(artifact, advisories)
     reasons = _normalize_missing_still(artifact, advisories)
     missing_http = _normalize_missing_http(artifact, advisories)
 
-    if set(artifact) != set(CANONICAL_KEYS):
-        missing = sorted(set(CANONICAL_KEYS) - set(artifact))
-        extra = sorted(set(artifact) - set(CANONICAL_KEYS))
-        detail = ", ".join(filter(None, [f"missing {missing}" if missing else "",
-                                         f"extra {extra}" if extra else ""]))
-        advisories.append((ADV_KEY_SET, f"top-level key set is not canonical ({detail})"))
+    allowed_keys = set(CANONICAL_KEYS) | {COMPONENT_KEY}
+    missing = sorted(set(CANONICAL_KEYS) - set(artifact))
+    extra = sorted(set(artifact) - allowed_keys)
+    detail_parts = []
+    if missing:
+        detail_parts.append(f"missing {missing}")
+    if extra:
+        detail_parts.append(f"extra {extra}")
+    if COMPONENT_KEY in artifact and component_of is None:
+        detail_parts.append(f"{COMPONENT_KEY} is not a non-empty string")
+    if detail_parts:
+        advisories.append((ADV_KEY_SET, f"top-level key set is not canonical ({', '.join(detail_parts)})"))
     if not isinstance(artifact.get("slug"), str) or not artifact["slug"].strip():
         advisories.append((ADV_SLUG_MISSING, "no canonical slug"))
     if not isinstance(artifact.get("full_depth"), bool):
@@ -409,9 +447,73 @@ def validate_artifact(path, connectors_root, cache=None):
             "mapped_count": len(mapped), "composio_tools": declared if isinstance(declared, int) else total,
             "mapped_declarative": mapped_declarative, "mapped_handwritten": mapped_handwritten,
             "mapped_unimplemented": mapped_unimplemented, "trigger_pending": trigger_pending,
+            "component_of": component_of,
+            "notes": notes if isinstance(notes, str) else None,
+            "tools": sorted(seen_tools) if component_of else [],
             "full_depth": artifact.get("full_depth") is True,
             "core": core,
             "advisories": [{"rule": rule, "message": message} for rule, message in advisories]}
+
+
+def _component_clause(notes):
+    if not isinstance(notes, str):
+        return None
+    match = COMPONENT_CLAUSE_RE.search(notes)
+    return (match.group(1), match.group(2)) if match else None
+
+
+def _apply_component_checks(results):
+    """Cross-artifact component-split checks.
+
+    Only canonical-format artifacts participate, so legacy behavior is
+    unchanged. Duplicate tool slugs across components of the same parent are
+    a core violation; the notes ``component_split`` annotation is checked as
+    an advisory (a count typo is an annotation defect, while the per-artifact
+    identity invariant and duplicate detection keep the tool accounting
+    honest on their own).
+    """
+    groups = defaultdict(list)
+    for result in results:
+        if result.get("component_of") and result["format"] == "canonical":
+            groups[result["component_of"]].append(result)
+    report = []
+    for parent in sorted(groups):
+        members = sorted(groups[parent], key=lambda result: (result["key"], result["path"]))
+        expected_split = "/".join(str(member["composio_tools"]) for member in members)
+        for member in members:
+            clause = _component_clause(member.get("notes"))
+            problem = None
+            if clause is None:
+                problem = (f"missing '; component_of={parent}; component_split={expected_split}' "
+                           f"notes clause")
+            elif clause[0] != parent:
+                problem = f"notes component_of {clause[0]!r} does not match {parent!r}"
+            elif clause[1] != expected_split:
+                problem = (f"notes component_split {clause[1]!r} does not match {expected_split!r} "
+                           f"(composio_tools in bytewise key order)")
+            if problem:
+                member["advisories"].append({"rule": ADV_COMPONENT_SPLIT_MISMATCH, "message": problem})
+        owners = defaultdict(list)
+        for member in members:
+            for tool in member.get("tools", []):
+                owners[tool].append(member)
+        duplicates = []
+        for tool in sorted(owners):
+            if len(owners[tool]) > 1:
+                duplicates.append(tool)
+                owners[tool][-1]["core"].append({
+                    "rule": CORE_COMPONENT_DUPLICATE_TOOL,
+                    "message": f"tool {tool!r} appears in {len(owners[tool])} components of "
+                               f"{parent!r}: " + ", ".join(owner["path"] for owner in owners[tool]),
+                })
+        report.append({
+            "component_of": parent,
+            "split": expected_split,
+            "members": [{"key": member["key"], "path": member["path"],
+                         "composio_tools": member["composio_tools"]} for member in members],
+            "duplicate_tools": duplicates,
+        })
+    return report
 
 
 def validate_all(connectors_root):
@@ -419,6 +521,7 @@ def validate_all(connectors_root):
     cache = {}
     results = [validate_artifact(path, connectors_root, cache)
                for path in discover_artifacts(connectors_root)]
+    component_groups = _apply_component_checks(results)
     rules = defaultdict(lambda: {"severity": None, "count": 0, "artifacts": set()})
     for result in results:
         for finding in result["core"]:
@@ -445,7 +548,9 @@ def validate_all(connectors_root):
             "mapped_handwritten": sum(result["mapped_handwritten"] for result in results),
             "mapped_unimplemented": sum(result["mapped_unimplemented"] for result in results),
             "trigger_pending": sum(result["trigger_pending"] for result in results),
+            "component_artifact_count": sum(bool(result.get("component_of")) for result in results),
         },
+        "component_groups": component_groups,
         "rules": [{"rule": rule, "severity": data["severity"], "count": data["count"],
                    "artifacts": sorted(data["artifacts"])} for rule, data in ordered],
         "artifacts": results,
@@ -479,6 +584,14 @@ def _print_report(report, strict):
         for entry in report["rules"]:
             paths = ", ".join(entry["artifacts"])
             print(f"{entry['rule']:<38} {entry['severity']:<9} {entry['count']:>6}  {paths}")
+    if report.get("component_groups"):
+        print()
+        print("Component groups:")
+        for group in report["component_groups"]:
+            members = ", ".join(f"{member['key']}={member['composio_tools']}"
+                                for member in group["members"])
+            note = "ok" if not group["duplicate_tools"] else f"duplicate tools: {', '.join(group['duplicate_tools'])}"
+            print(f"  {group['component_of']}: split {group['split']} ({members}) [{note}]")
     if stats["core_violations"]:
         print("\nExit 1: core violations present.")
     elif strict and stats["advisories"]:
