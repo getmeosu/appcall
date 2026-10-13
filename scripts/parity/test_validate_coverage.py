@@ -229,7 +229,7 @@ class CoreRuleTests(ValidatorTestCase):
             "key": "demo", "slug": "DEMO", "composio_tools": 1,
             "mapped": [], "missing_http": [],
             "missing_still": [{"tool": "DEMO_LEGACY", "why": "TODO"}],
-            "full_depth": False, "notes": CANONICAL_NOTES,
+            "full_depth": True, "notes": CANONICAL_NOTES,
         }
         _, connectors, root = self.make_repo(artifact, GET_OP)
         result = validate_artifact(root / "runner/connectors/demo.coverage.json", connectors)
@@ -253,7 +253,7 @@ class CoreRuleTests(ValidatorTestCase):
         artifact = {
             "key": "demo", "slug": "DEMO", "composio_tools": 1,
             "mapped": [{"tool": "DEMO_GET", "operation": "nope"}],
-            "missing_http": [], "missing_still": [], "full_depth": False, "notes": CANONICAL_NOTES,
+            "missing_http": [], "missing_still": [], "full_depth": True, "notes": CANONICAL_NOTES,
         }
         _, _, root = self.make_repo(artifact, GET_OP)
         output = io.StringIO()
@@ -353,13 +353,46 @@ class RequestShapeTests(ValidatorTestCase):
             "key": "demo", "slug": "DEMO", "composio_tools": 1,
             "mapped": [], "missing_http": [{"tool": "DEMO_LIST", "method": 200, "path": "/v1/list",
                                             "docs": "https://docs.example/list", "notes": "status=200; body=object"}],
-            "missing_still": [], "full_depth": False, "notes": CANONICAL_NOTES,
+            "missing_still": [], "full_depth": True, "notes": CANONICAL_NOTES,
         }
         _, connectors, root = self.make_repo(artifact, GET_OP)
         result = validate_artifact(root / "runner/connectors/demo.coverage.json", connectors)
         self.assertEqual([finding["rule"] for finding in result["core"]],
                          ["core.missing_http_incomplete"])
         self.assertEqual(self.run_main("--root", str(root)), 1)
+
+
+class FullDepthFalseTests(ValidatorTestCase):
+    def canonical_artifact(self, full_depth):
+        return {
+            "key": "demo", "slug": "DEMO", "composio_tools": 1,
+            "mapped": [{"tool": "DEMO_GET", "operation": "get"}],
+            "missing_http": [], "missing_still": [], "full_depth": full_depth,
+            "notes": CANONICAL_NOTES,
+        }
+
+    def test_canonical_full_depth_false_is_core(self):
+        _, connectors, root = self.make_repo(self.canonical_artifact(False), GET_OP)
+        result = validate_artifact(root / "runner/connectors/demo.coverage.json", connectors)
+        self.assertEqual(result["format"], "canonical")
+        self.assertEqual([finding["rule"] for finding in result["core"]], ["core.full_depth_false"])
+        self.assertEqual(self.run_main("--root", str(root)), 1)
+
+    def test_canonical_full_depth_true_is_clean(self):
+        _, connectors, root = self.make_repo(self.canonical_artifact(True), GET_OP)
+        result = validate_artifact(root / "runner/connectors/demo.coverage.json", connectors)
+        self.assert_clean(result)
+        self.assertEqual(self.run_main("--root", str(root)), 0)
+
+    def test_legacy_full_depth_false_is_unaffected(self):
+        artifact = {"mapped": {"DEMO_GET": "get"}, "full_depth": False}
+        _, connectors, root = self.make_repo(artifact, GET_OP)
+        result = validate_artifact(root / "runner/connectors/demo.coverage.json", connectors)
+        self.assertEqual(result["format"], "legacy")
+        self.assertEqual(result["core"], [])
+        self.assertNotIn("core.full_depth_false",
+                         {finding["rule"] for finding in result["core"]})
+        self.assertEqual(self.run_main("--root", str(root)), 0)
 
 
 if __name__ == "__main__":
