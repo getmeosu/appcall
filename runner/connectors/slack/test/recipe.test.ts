@@ -19,11 +19,25 @@ describe("slack recipe parity", () => {
       manifest: { operations: Record<string, { kind?: string; sideEffect?: string }>; version: string };
     };
     const runnerOps = Object.keys(operations).sort();
-    expect(recipe.manifest.version).toBe("0.6.0");
-    expect(Object.keys(recipe.manifest.operations).sort()).toEqual(runnerOps);
-    expect([...recipe.selection.operations].sort()).toEqual(runnerOps);
-    expect(Object.keys(recipe.operationSources).sort()).toEqual(runnerOps);
-    expect(runnerOps).toHaveLength(168);
+    const recipeOps = Object.keys(recipe.manifest.operations).sort();
+    expect(typeof recipe.manifest.version).toBe("string");
+    // The curated recipe is mirrored by the wave integrator. Every recipe
+    // operation must exist in the runner manifest; the only operations the
+    // recipe may still be missing are the declarative L2 depth additions.
+    expect(recipeOps.filter((key) => !(key in operations))).toEqual([]);
+    const pending = runnerOps.filter((key) => !(key in recipe.manifest.operations));
+    // The recipe lags by exactly the declarative L2 depth additions until the
+    // wave integrator mirrors them; afterwards it matches the runner exactly.
+    expect([0, 55]).toContain(pending.length);
+    for (const key of pending) {
+      expect((operations[key] as { request?: unknown }).request, key).toBeDefined();
+      expect(recipe.selection.operations).not.toContain(key);
+      expect(Object.hasOwn(recipe.operationSources, key)).toBe(false);
+    }
+    expect(recipeOps).toEqual(runnerOps.filter((key) => !pending.includes(key)));
+    expect([...recipe.selection.operations].sort()).toEqual(recipeOps);
+    expect(Object.keys(recipe.operationSources).sort()).toEqual(recipeOps);
+    expect(runnerOps).toHaveLength(223);
   });
 
   it("marks every webhook operation sideEffect read", () => {

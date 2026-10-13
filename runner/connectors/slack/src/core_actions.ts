@@ -13,9 +13,11 @@ type JsonSchema = {
 type SlackRequest = {
   method?: string;
   path?: string;
+  baseUrl?: string;
   query?: Record<string, unknown>;
   headers?: Record<string, string>;
   body?: unknown;
+  bodyEncoding?: string;
   parameters?: Array<{ wireName: string; inputName: string; in: string; explode?: boolean }>;
 };
 
@@ -74,13 +76,17 @@ async function callSlack(
 ): Promise<Record<string, unknown>> {
   const method = request.method ?? "GET";
   const url = buildSlackUrl(request, params);
-  const body = method === "GET" || method === "DELETE" ? undefined : renderBody(request.body, params);
+  const body = method === "GET" || method === "DELETE" ? undefined : renderBody(request, params);
   const headers: Record<string, string> = {};
   if (SLACK_HTTP.headers) {
     for (const [key, value] of Object.entries(SLACK_HTTP.headers)) headers[key] = value;
   }
   headers.Authorization = `Bearer ${token}`;
-  if (body !== undefined) headers["Content-Type"] = "application/json";
+  if (body !== undefined) {
+    headers["Content-Type"] = request.bodyEncoding === "form"
+      ? "application/x-www-form-urlencoded"
+      : "application/json";
+  }
 
   let response: Response;
   try {
@@ -101,7 +107,12 @@ async function callSlack(
   }
 
   const payload = await readSlackJson(response, operation.maxResponseBytes ?? 1024 * 1024);
-  if (!response.ok || payload.ok !== true) {
+  // Slack Web API methods answer { ok: true }. The Audit Logs API does too, but
+  // SCIM answers a bare RFC 7643 resource with no `ok` field, so a missing flag
+  // is only a failure when the body carries an `error` string.
+  const providerFailed = payload.ok === false
+    || (payload.ok === undefined && typeof payload.error === "string" && payload.error.length > 0);
+  if (!response.ok || providerFailed) {
     const providerError = typeof payload.error === "string" && /^[A-Za-z0-9_-]{1,64}$/.test(payload.error)
       ? payload.error
       : undefined;
@@ -132,7 +143,7 @@ async function callSlack(
 }
 
 function buildSlackUrl(request: SlackRequest, params: Record<string, unknown>): string {
-  const base = (SLACK_HTTP.baseUrl ?? "https://slack.com").replace(/\/$/, "");
+  const base = (request.baseUrl ?? SLACK_HTTP.baseUrl ?? "https://slack.com").replace(/\/$/, "");
   const url = new URL(`${base}${request.path ?? ""}`);
   const renderedQuery = renderTemplate(request.query ?? {}, params);
   if (isRecord(renderedQuery)) {
@@ -156,10 +167,23 @@ function buildSlackUrl(request: SlackRequest, params: Record<string, unknown>): 
   return url.toString();
 }
 
-function renderBody(template: unknown, params: Record<string, unknown>): string | undefined {
+function renderBody(request: SlackRequest, params: Record<string, unknown>): string | undefined {
+  const template = request.body;
   if (template === undefined) return undefined;
   const rendered = renderTemplate(template, params);
   if (rendered === undefined) return undefined;
+  if (request.bodyEncoding === "form") {
+    if (!isRecord(rendered)) return undefined;
+    const form = new URLSearchParams();
+    for (const [key, value] of Object.entries(rendered)) {
+      if (value === undefined) continue;
+      if (value === null || typeof value === "object") {
+        throw actionError("INVALID_ACTION_INPUT", `Invalid form field for slack request: ${key}.`);
+      }
+      form.set(key, String(value));
+    }
+    return form.toString();
+  }
   return JSON.stringify(rendered);
 }
 

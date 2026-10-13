@@ -61,3 +61,73 @@ describe("Toggl Track auth contract", () => {
     await expect(actions["projects.list"]!({ apiKey: "x", workspaceId: null, fetch: mock([]).fetch })).rejects.toMatchObject({ code: "INVALID_ACTION_INPUT" });
   });
 });
+
+describe("Toggl Track depth contracts", () => {
+  const mock = (body: unknown, status = 200) => {
+    const calls: Request[] = [];
+    const fetch = async (u: RequestInfo | URL, i?: RequestInit) => {
+      calls.push(new Request(u, i));
+      return new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
+    };
+    return { calls, fetch };
+  };
+
+  it("routes webhook and report operations to their own API bases", async () => {
+    const webhook = mock({ id: 9 });
+    await actions["webhookSubscriptions.delete"]!({
+      apiKey: "tok",
+      workspaceId: 12,
+      subscriptionId: 9,
+      fetch: webhook.fetch,
+    });
+    expect(webhook.calls[0].method).toBe("DELETE");
+    expect(webhook.calls[0].url).toBe("https://api.track.toggl.com/webhooks/api/v1/subscriptions/12/9");
+
+    const report = mock([]);
+    await actions["reports.searchTimeEntries"]!({
+      apiKey: "tok",
+      workspaceId: 12,
+      startDate: "2026-09-01",
+      endDate: "2026-09-30",
+      pageSize: 50,
+      fetch: report.fetch,
+    });
+    expect(report.calls[0].url).toBe("https://api.track.toggl.com/reports/api/v3/workspace/12/search/time_entries");
+    expect(await report.calls[0].json()).toEqual({
+      start_date: "2026-09-01",
+      end_date: "2026-09-30",
+      page_size: 50,
+    });
+  });
+
+  it("sends the bulk JSON Patch array with comma-separated ids", async () => {
+    const m = mock({ success: [99, 100], failure: [] });
+    await actions["timeEntries.patch"]!({
+      apiKey: "tok",
+      workspaceId: 12,
+      timeEntryIds: "99,100",
+      meta: true,
+      patchInput: [{ op: "replace", path: "/description", value: "Deep work" }],
+      fetch: m.fetch,
+    });
+    expect(m.calls[0].url).toBe("https://api.track.toggl.com/api/v9/workspaces/12/time_entries/99%2C100?meta=true");
+    expect(await m.calls[0].json()).toEqual([{ op: "replace", path: "/description", value: "Deep work" }]);
+  });
+
+  it("renders invitation workspaces in the provider wire shape", async () => {
+    const m = mock({ data: [] });
+    await actions["invitations.create"]!({
+      apiKey: "tok",
+      organizationId: 7,
+      emails: ["ada@example.com"],
+      skipEmail: true,
+      workspaces: [{ workspace_id: 12, admin: false }],
+      fetch: m.fetch,
+    });
+    expect(await m.calls[0].json()).toEqual({
+      emails: ["ada@example.com"],
+      skip_email: true,
+      workspaces: [{ workspace_id: 12, admin: false }],
+    });
+  });
+});
