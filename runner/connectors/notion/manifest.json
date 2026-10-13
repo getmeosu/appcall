@@ -1,7 +1,7 @@
 {
   "key": "notion",
   "name": "Notion",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "runtime": "bun",
   "visibility": "public",
   "categories": [
@@ -45,7 +45,8 @@
     "comment",
     "file_upload",
     "view",
-    "search"
+    "search",
+    "plugin"
   ],
   "http": {
     "baseUrl": "https://api.notion.com",
@@ -4164,6 +4165,117 @@
       "maxResponseBytes": 1048576,
       "title": "View Created",
       "description": "Inbound Notion webhook when a view is created."
+    },
+    "plugins.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List Plugins",
+      "description": "List Agent Skills plugins shared with this connection via GET /v1/ai/plugins.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "pageSize": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Number of results per page, 1-100."
+          },
+          "startCursor": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "Opaque cursor returned by the previous page."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/ai/plugins",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "query": {
+          "page_size": "{{pageSize}}",
+          "start_cursor": "{{startCursor}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "plugins.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get Plugin",
+      "description": "Fetch a signed URL for one Agent Skills plugin directory via GET /v1/ai/plugins/{id}.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "pluginId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "Plugin id returned by List Plugins."
+          }
+        },
+        "required": [
+          "pluginId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/ai/plugins/{{pluginId}}",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
     }
   }
 }

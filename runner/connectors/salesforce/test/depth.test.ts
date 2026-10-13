@@ -46,8 +46,8 @@ const CASES = cases as DepthCase[];
 
 describe("salesforce composio depth", () => {
   test("reaches the Composio Salesforce tool count", () => {
-    expect(manifest.version).toBe("0.5.0");
-    expect(Object.keys(manifest.operations)).toHaveLength(264);
+    expect(manifest.version).toBe("0.6.0");
+    expect(Object.keys(manifest.operations)).toHaveLength(292);
   });
 
   test("operation budgets stay inside the runner contract", () => {
@@ -127,8 +127,12 @@ describe("salesforce composio depth", () => {
     expect(Object.keys(recipe.manifest.auth).sort()).toEqual(["scopes", "setup", "type"]);
     expect(recipe.auth.type).toBe("oauth2");
     expect(recipe.source.revision).toBe("33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a");
-    expect([...recipe.selection.operations].sort()).toEqual(Object.keys(manifest.operations).sort());
-    expect(Object.keys(recipe.manifest.operations).sort()).toEqual(Object.keys(manifest.operations).sort());
+    expect([...recipe.selection.operations].sort()).toEqual(Object.keys(recipe.manifest.operations).sort());
+    expect(recipe.selection.operations).toHaveLength(264);
+    expect(Object.keys(recipe.manifest.operations)).toHaveLength(264);
+    for (const key of recipe.selection.operations) {
+      expect(manifest.operations[key as keyof typeof manifest.operations], key).toBeDefined();
+    }
   });
 
   test("new operations call the documented Salesforce resources", async () => {

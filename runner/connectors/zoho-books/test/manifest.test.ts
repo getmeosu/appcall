@@ -3,7 +3,7 @@ import manifest from "../manifest.json";
 
 describe("Zoho Books manifest", () => {
   it("has correct key", () => expect(manifest.key).toBe("zoho-books"));
-  it("has version 0.3.0", () => expect(manifest.version).toBe("0.3.0"));
+  it("has version 0.3.1", () => expect(manifest.version).toBe("0.3.1"));
   it("uses bun runtime", () => expect(manifest.runtime).toBe("bun"));
   it("requires oauth2 auth", () => expect(manifest.auth.type).toBe("oauth2"));
   it("allows the legacy and official Zoho Books hosts", () =>
@@ -40,7 +40,39 @@ describe("Zoho Books manifest", () => {
       expect(op.title).toBeTruthy();
       expect(op.description).toBeTruthy();
     }
-    expect(ops).toHaveLength(942);
+    expect(ops).toHaveLength(950);
+    const v4 = {
+      "journals.delete-comment-v4": ["DELETE", "/books/v4/journals/{{journal_id}}/comments/{{comment_id}}"],
+      "journals.delete-v4": ["DELETE", "/books/v4/journals/{{journal_id}}"],
+      "projects.delete-comment-v4": ["DELETE", "/books/v4/projects/{{project_id}}/comments/{{comment_id}}"],
+      "projects.delete-v4": ["DELETE", "/books/v4/projects/{{project_id}}"],
+      "journals.list-v4": ["GET", "/books/v4/journals"],
+      "journals.list-credits-v4": ["GET", "/books/v4/journals/{{journal_id}}/credits"],
+      "journals.get-v4": ["GET", "/books/v4/journals/{{journal_id}}"],
+      "journals.list-templates-v4": ["GET", "/books/v4/journals/templates"],
+    } as const;
+    for (const [key, [method, path]] of Object.entries(v4)) {
+      const op = manifest.operations[key as keyof typeof manifest.operations] as {
+        sideEffect?: string;
+        request?: {
+          method?: string;
+          path?: string;
+          baseUrl?: string;
+          body?: unknown;
+          headers?: Record<string, string>;
+        };
+        inputSchema?: { additionalProperties?: boolean; required?: string[] };
+      };
+      expect(op.request?.method).toBe(method);
+      expect(op.request?.path).toBe(path);
+      expect(op.request?.baseUrl).toBe("https://www.zohoapis.com");
+      expect(op.request?.body).toBeUndefined();
+      expect(op.request?.headers?.["Content-Type"]).toBeUndefined();
+      expect(op.sideEffect).toBe(method === "GET" ? "read" : "write");
+      expect(op.inputSchema?.additionalProperties).toBe(false);
+      expect(op.inputSchema?.required ?? []).not.toContain("organization_id");
+      expect(op.inputSchema?.required ?? []).toContain("organization-id");
+    }
     expect(manifest.operations["journals.delete-documents"].request.path).toBe(
       "/journals/{{journal_id}}/documents/{{document_id}}",
     );
