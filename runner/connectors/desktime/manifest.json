@@ -1,0 +1,718 @@
+{
+  "key": "desktime",
+  "name": "DeskTime",
+  "version": "0.1.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "productivity",
+    "time-tracking"
+  ],
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
+    }
+  },
+  "auth": {
+    "type": "api_key",
+    "scopes": [],
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "DeskTime API key",
+          "required": true,
+          "secret": true
+        }
+      ]
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "desktime.com"
+    ]
+  },
+  "models": [
+    "company",
+    "employee",
+    "project"
+  ],
+  "http": {
+    "baseUrl": "https://desktime.com/api/v2/json",
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "X-API-Key",
+      "value": "{{apiKey}}"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "Retry-After",
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "message",
+        "error"
+      ]
+    },
+    "headers": {
+      "Accept": "application/json"
+    }
+  },
+  "operations": {
+    "projects.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 1048576,
+      "title": "Create Project with Optional Task",
+      "description": "Create a DeskTime project and an optional initial task. Names are query parameters on POST /create-project.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "project": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Project name."
+          },
+          "task": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Optional task name."
+          }
+        },
+        "required": [
+          "project"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": [
+              "project"
+            ],
+            "properties": {
+              "project": {
+                "type": "object"
+              },
+              "__request_time": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/create-project",
+        "success": [
+          200
+        ],
+        "query": {
+          "project": "{{project}}",
+          "task": "{{task}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "company.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 1048576,
+      "title": "Get Account Details",
+      "description": "Read company account settings, including work hours and timezone.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": [
+              "name"
+            ],
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "timezone_identifier": {
+                "type": "string"
+              },
+              "__request_time": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/company",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "employees.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 1048576,
+      "title": "Get All Company Employees",
+      "description": "List company employees and tracking data for a day, week, or month.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "date": {
+            "type": "string",
+            "minLength": 10,
+            "maxLength": 10,
+            "description": "Date in YYYY-MM-DD format. Omitted means today."
+          },
+          "period": {
+            "type": "string",
+            "enum": [
+              "day",
+              "week",
+              "month"
+            ],
+            "description": "Tracking period. Omitted means day."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": [
+              "employees"
+            ],
+            "properties": {
+              "employees": {
+                "type": "object"
+              }
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/employees",
+        "success": [
+          200
+        ],
+        "query": {
+          "date": "{{date}}",
+          "period": "{{period}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "employee.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 1048576,
+      "title": "Get Employee",
+      "description": "Read one employee's profile, work settings, and tracking data. Uses /employee/basic.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Employee ID. Omitted means the API-key user."
+          },
+          "date": {
+            "type": "string",
+            "minLength": 10,
+            "maxLength": 10,
+            "description": "Date in YYYY-MM-DD format. Omitted means today."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": [
+              "id",
+              "name"
+            ],
+            "properties": {
+              "id": {
+                "type": "integer"
+              },
+              "name": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/employee/basic",
+        "success": [
+          200
+        ],
+        "query": {
+          "id": "{{id}}",
+          "date": "{{date}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "employee.apps": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 1048576,
+      "title": "Get Employee Apps",
+      "description": "Read one employee's tracking data, including tracked apps, for a date.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Employee ID. Omitted means the API-key user."
+          },
+          "date": {
+            "type": "string",
+            "minLength": 10,
+            "maxLength": 10,
+            "description": "Date in YYYY-MM-DD format. Omitted means today."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": [
+              "id",
+              "name"
+            ],
+            "properties": {
+              "id": {
+                "type": "integer"
+              },
+              "name": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/employee/apps",
+        "success": [
+          200
+        ],
+        "query": {
+          "id": "{{id}}",
+          "date": "{{date}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "employee.projects": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 1048576,
+      "title": "Get Employee Projects",
+      "description": "Read one employee's tracking data, including tracked projects, for a date.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Employee ID. Omitted means the API-key user."
+          },
+          "date": {
+            "type": "string",
+            "minLength": 10,
+            "maxLength": 10,
+            "description": "Date in YYYY-MM-DD format. Omitted means today."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": [
+              "id",
+              "name"
+            ],
+            "properties": {
+              "id": {
+                "type": "integer"
+              },
+              "name": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/employee/projects",
+        "success": [
+          200
+        ],
+        "query": {
+          "id": "{{id}}",
+          "date": "{{date}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "employee.projects-and-apps": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 1048576,
+      "title": "Get Employee Projects and Apps",
+      "description": "Read one employee's tracking data, including tracked projects and apps, for a date.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Employee ID. Omitted means the API-key user."
+          },
+          "date": {
+            "type": "string",
+            "minLength": 10,
+            "maxLength": 10,
+            "description": "Date in YYYY-MM-DD format. Omitted means today."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": [
+              "id",
+              "name"
+            ],
+            "properties": {
+              "id": {
+                "type": "integer"
+              },
+              "name": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/employee",
+        "success": [
+          200
+        ],
+        "query": {
+          "id": "{{id}}",
+          "date": "{{date}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "projects.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 1048576,
+      "title": "Get Projects List",
+      "description": "List active company projects and their tasks. Archived projects are not included.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": [
+              "projects"
+            ],
+            "properties": {
+              "projects": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/projects",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "ping": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 5000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 1048576,
+      "title": "Ping DeskTime API",
+      "description": "Check that the DeskTime API responds. The documented ping route does not take parameters.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": [
+              "pong",
+              "__request_time"
+            ],
+            "properties": {
+              "pong": {
+                "type": "string"
+              },
+              "__request_time": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/ping",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "projects.start": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 1048576,
+      "title": "Start Project Task",
+      "description": "Start time tracking for a project and an optional task. DeskTime creates missing names.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "project": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Project name."
+          },
+          "task": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Optional task name."
+          }
+        },
+        "required": [
+          "project"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": [
+              "started"
+            ],
+            "properties": {
+              "started": {
+                "type": "boolean"
+              },
+              "__request_time": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/start-project",
+        "success": [
+          200
+        ],
+        "query": {
+          "project": "{{project}}",
+          "task": "{{task}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "projects.stop": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 1048576,
+      "title": "Stop Project Task",
+      "description": "Stop time tracking for a project and an optional task.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "project": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Project name."
+          },
+          "task": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Optional task name."
+          }
+        },
+        "required": [
+          "project"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": [
+              "stopped"
+            ],
+            "properties": {
+              "stopped": {
+                "type": "boolean"
+              },
+              "__request_time": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/stop-project",
+        "success": [
+          200
+        ],
+        "query": {
+          "project": "{{project}}",
+          "task": "{{task}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    }
+  }
+}

@@ -1,0 +1,722 @@
+{
+  "key": "apiverve",
+  "name": "APIVerve",
+  "version": "0.1.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "developer-tools"
+  ],
+  "auth": {
+    "type": "api_key",
+    "scopes": [],
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "APIVerve API key",
+          "required": true,
+          "secret": true
+        }
+      ]
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "api.apiverve.com"
+    ]
+  },
+  "models": [
+    "advice",
+    "age",
+    "airline",
+    "airport",
+    "air-quality",
+    "antonym",
+    "currency",
+    "dictionary",
+    "weather"
+  ],
+  "http": {
+    "baseUrl": "https://api.apiverve.com",
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "x-api-key",
+      "value": "{{apiKey}}"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "Retry-After",
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "error",
+        "message"
+      ],
+      "bodyErrorPaths": [
+        "error"
+      ]
+    },
+    "headers": {
+      "Accept": "application/json"
+    }
+  },
+  "operations": {
+    "healthcheck": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 2097152,
+      "title": "Healthcheck",
+      "description": "Validate the APIVerve API key by requesting one advice slip.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "status",
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "status": {
+            "type": "string"
+          },
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/advice",
+        "success": [
+          200
+        ],
+        "result": {
+          "status": "{{response.status}}",
+          "data": "{{response.data}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "advice.generate": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 2097152,
+      "title": "Generate Advice",
+      "description": "Generate one random advice slip from GET /v1/advice.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "status",
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "status": {
+            "type": "string"
+          },
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/advice",
+        "success": [
+          200
+        ],
+        "result": {
+          "status": "{{response.status}}",
+          "data": "{{response.data}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "age.calculate": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 2097152,
+      "title": "Calculate Age",
+      "description": "Calculate age from a YYYY-MM-DD date of birth. Optional timezone is an IANA name.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "dob"
+        ],
+        "properties": {
+          "dob": {
+            "type": "string",
+            "minLength": 10,
+            "maxLength": 10,
+            "description": "Date of birth in YYYY-MM-DD format."
+          },
+          "timezone": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "description": "IANA timezone used to interpret the date of birth."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "status",
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "status": {
+            "type": "string"
+          },
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/agecalculator",
+        "success": [
+          200
+        ],
+        "result": {
+          "status": "{{response.status}}",
+          "data": "{{response.data}}"
+        },
+        "query": {
+          "dob": "{{dob}}",
+          "timezone": "{{timezone}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "airlines.lookup-by-name": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 2097152,
+      "title": "Look Up Airline by Name",
+      "description": "Look up airlines by name on GET /v1/airlinelookup. Partial names match. JSON only; XML and YAML accept values are not sent.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "Airline name or partial name, for example American."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "status",
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "status": {
+            "type": "string"
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/airlinelookup",
+        "success": [
+          200
+        ],
+        "result": {
+          "status": "{{response.status}}",
+          "data": "{{response.data}}"
+        },
+        "query": {
+          "name": "{{name}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "airports.lookup-by-icao": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 2097152,
+      "title": "Airport Lookup by ICAO",
+      "description": "Get airport information for a 4-letter ICAO code from GET /v1/airports.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "icao"
+        ],
+        "properties": {
+          "icao": {
+            "type": "string",
+            "minLength": 4,
+            "maxLength": 4,
+            "description": "Four-letter ICAO airport code, for example KMCI."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "status",
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "status": {
+            "type": "string"
+          },
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/airports",
+        "success": [
+          200
+        ],
+        "result": {
+          "status": "{{response.status}}",
+          "data": "{{response.data}}"
+        },
+        "query": {
+          "icao": "{{icao}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "airports.distance": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 2097152,
+      "title": "Airport Distance by IATA",
+      "description": "Get the flight distance between two airports by their IATA codes.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "iata1",
+          "iata2"
+        ],
+        "properties": {
+          "iata1": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 3,
+            "description": "IATA code of the first airport, for example JFK."
+          },
+          "iata2": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 3,
+            "description": "IATA code of the second airport, for example LAX."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "status",
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "status": {
+            "type": "string"
+          },
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/airportdistance",
+        "success": [
+          200
+        ],
+        "result": {
+          "status": "{{response.status}}",
+          "data": "{{response.data}}"
+        },
+        "query": {
+          "iata1": "{{iata1}}",
+          "iata2": "{{iata2}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "air-quality.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 2097152,
+      "title": "Get Air Quality",
+      "description": "Get current air quality, pollutant levels, and a health recommendation for a city.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "city"
+        ],
+        "properties": {
+          "city": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "City name, for example Berlin."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "status",
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "status": {
+            "type": "string"
+          },
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/airquality",
+        "success": [
+          200
+        ],
+        "result": {
+          "status": "{{response.status}}",
+          "data": "{{response.data}}"
+        },
+        "query": {
+          "city": "{{city}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "antonyms.find": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 2097152,
+      "title": "Find Antonyms",
+      "description": "Get antonyms for a word. Optional language defaults to English when omitted.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "word"
+        ],
+        "properties": {
+          "word": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "Word to look up antonyms for."
+          },
+          "language": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "description": "Language to return the antonyms in. Defaults to English."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "status",
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "status": {
+            "type": "string"
+          },
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/antonym",
+        "success": [
+          200
+        ],
+        "result": {
+          "status": "{{response.status}}",
+          "data": "{{response.data}}"
+        },
+        "query": {
+          "word": "{{word}}",
+          "language": "{{language}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "currency.convert": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 2097152,
+      "title": "Convert Currency",
+      "description": "Convert an amount between two ISO 4217 currencies. value, from, and to are the documented query names for amount, source currency, and target currency. Optional date selects a past closing rate.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "value",
+          "from",
+          "to"
+        ],
+        "properties": {
+          "value": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Amount in the source currency. Must be zero or greater."
+          },
+          "from": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 3,
+            "description": "ISO 4217 currency code to convert from, for example USD."
+          },
+          "to": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 3,
+            "description": "ISO 4217 currency code to convert to, for example EUR."
+          },
+          "date": {
+            "type": "string",
+            "minLength": 10,
+            "maxLength": 10,
+            "description": "Optional past date in YYYY-MM-DD for that day's closing rate."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "status",
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "status": {
+            "type": "string"
+          },
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/currencyconverter",
+        "success": [
+          200
+        ],
+        "result": {
+          "status": "{{response.status}}",
+          "data": "{{response.data}}"
+        },
+        "query": {
+          "value": "{{value}}",
+          "from": "{{from}}",
+          "to": "{{to}}",
+          "date": "{{date}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "dictionary.define": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 2097152,
+      "title": "Get Word Definition",
+      "description": "Get dictionary definitions for a word.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "word"
+        ],
+        "properties": {
+          "word": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "Word to define, for example apple."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "status",
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "status": {
+            "type": "string"
+          },
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/dictionary",
+        "success": [
+          200
+        ],
+        "result": {
+          "status": "{{response.status}}",
+          "data": "{{response.data}}"
+        },
+        "query": {
+          "word": "{{word}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "weather.by-city": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 2097152,
+      "title": "Weather by City",
+      "description": "Get current weather for a city from GET /v1/weatherforecast. Optional forecast false omits the 7-day forecast. JSON only; XML and YAML accept values are not sent.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "city"
+        ],
+        "properties": {
+          "city": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "City name, for example Berlin."
+          },
+          "forecast": {
+            "type": "boolean",
+            "description": "Set false to omit the 7-day forecast. Included by default when omitted."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "status",
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "status": {
+            "type": "string"
+          },
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/weatherforecast",
+        "success": [
+          200
+        ],
+        "result": {
+          "status": "{{response.status}}",
+          "data": "{{response.data}}"
+        },
+        "query": {
+          "city": "{{city}}",
+          "forecast": "{{forecast}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    }
+  }
+}

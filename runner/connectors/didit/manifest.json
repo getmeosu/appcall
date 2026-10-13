@@ -1,0 +1,986 @@
+{
+  "key": "didit",
+  "name": "Didit",
+  "version": "0.1.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "security",
+    "identity"
+  ],
+  "auth": {
+    "type": "api_key",
+    "scopes": [],
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "Didit API key",
+          "required": true,
+          "secret": true
+        }
+      ]
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "verification.didit.me"
+    ]
+  },
+  "models": [
+    "session",
+    "workflow",
+    "user",
+    "business",
+    "billing"
+  ],
+  "http": {
+    "baseUrl": "https://verification.didit.me",
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "x-api-key",
+      "value": "{{apiKey}}"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "Retry-After",
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "detail"
+      ]
+    },
+    "headers": {
+      "Accept": "application/json"
+    }
+  },
+  "operations": {
+    "healthcheck": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 5000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "title": "Healthcheck",
+      "description": "Validate the Didit API key by reading the organization's prepaid credit balance.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {},
+        "required": []
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/v3/billing/balance/",
+        "success": [
+          200
+        ]
+      }
+    },
+    "sessions.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 30000,
+      "maxInputBytes": 8388608,
+      "maxResponseBytes": 8388608,
+      "title": "Create Verification Session",
+      "description": "Create one hosted KYC or KYB verification session with POST /v3/session/ and return the hosted URL. The workflow type selects KYC or KYB. portraitImage is an optional base64 string inside the JSON body, not a file upload.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "workflowId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "description": "Stable workflow_id of a published workflow. This is not the per-version uuid."
+          },
+          "vendorData": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 512,
+            "description": "Your user or business identifier. Sessions with the same value are grouped on one profile."
+          },
+          "callback": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2048,
+            "description": "Redirect URL Didit stores on the session. Didit appends the session id and status. This connector does not fetch it."
+          },
+          "callbackMethod": {
+            "type": "string",
+            "enum": [
+              "initiator",
+              "completer",
+              "both"
+            ],
+            "description": "Which device may perform the final redirect."
+          },
+          "metadata": {
+            "description": "Private correlation JSON stored on the session and echoed in decisions. An object is sent as JSON; a string is sent as a JSON string.",
+            "anyOf": [
+              {
+                "type": "object",
+                "additionalProperties": true
+              },
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 8192
+              }
+            ]
+          },
+          "language": {
+            "type": "string",
+            "enum": [
+              "en",
+              "ar",
+              "bg",
+              "bn",
+              "bs",
+              "ca",
+              "cnr",
+              "cs",
+              "da",
+              "de",
+              "el",
+              "es",
+              "et",
+              "fa",
+              "fi",
+              "fr",
+              "he",
+              "hi",
+              "hr",
+              "hu",
+              "hy",
+              "id",
+              "it",
+              "ja",
+              "ka",
+              "kk",
+              "ko",
+              "ky",
+              "lt",
+              "lv",
+              "mk",
+              "mn",
+              "ms",
+              "nl",
+              "no",
+              "pl",
+              "pt-BR",
+              "pt",
+              "ro",
+              "ru",
+              "sk",
+              "sl",
+              "so",
+              "sq",
+              "sr",
+              "sv",
+              "th",
+              "tr",
+              "uk",
+              "uz",
+              "vi",
+              "zh-CN",
+              "zh-TW",
+              "zh"
+            ],
+            "description": "Didit interface language. Omit to let the browser decide."
+          },
+          "contactDetails": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "email": {
+                "type": "string",
+                "minLength": 3,
+                "maxLength": 320,
+                "description": "Email address prefilled for the session."
+              },
+              "send_notification_emails": {
+                "type": "boolean",
+                "description": "When true and email is set, Didit sends the verification invitation. Omit or false to leave notification emails disabled."
+              },
+              "email_lang": {
+                "type": "string",
+                "enum": [
+                  "en",
+                  "ar",
+                  "bg",
+                  "bn",
+                  "bs",
+                  "ca",
+                  "cnr",
+                  "cs",
+                  "da",
+                  "de",
+                  "el",
+                  "es",
+                  "et",
+                  "fa",
+                  "fi",
+                  "fr",
+                  "he",
+                  "hi",
+                  "hr",
+                  "hu",
+                  "hy",
+                  "id",
+                  "it",
+                  "ja",
+                  "ka",
+                  "kk",
+                  "ko",
+                  "ky",
+                  "lt",
+                  "lv",
+                  "mk",
+                  "mn",
+                  "ms",
+                  "nl",
+                  "no",
+                  "pl",
+                  "pt-BR",
+                  "pt",
+                  "ro",
+                  "ru",
+                  "sk",
+                  "sl",
+                  "so",
+                  "sq",
+                  "sr",
+                  "sv",
+                  "th",
+                  "tr",
+                  "uk",
+                  "uz",
+                  "vi",
+                  "zh-CN",
+                  "zh-TW",
+                  "zh"
+                ],
+                "description": "Language of Didit notification emails."
+              },
+              "phone": {
+                "type": "string",
+                "minLength": 2,
+                "maxLength": 32,
+                "description": "Phone number in E.164 format."
+              }
+            },
+            "required": [],
+            "description": "Optional contact prefill. Notification email is sent only when sendNotificationEmails is true."
+          },
+          "expectedDetails": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "first_name": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128,
+                "description": "Expected first name for cross-validation."
+              },
+              "last_name": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128,
+                "description": "Expected last name for cross-validation."
+              },
+              "date_of_birth": {
+                "type": "string",
+                "minLength": 10,
+                "maxLength": 10,
+                "description": "Expected date of birth, YYYY-MM-DD."
+              },
+              "gender": {
+                "type": "string",
+                "enum": [
+                  "M",
+                  "F"
+                ],
+                "description": "Expected gender, M or F."
+              },
+              "nationality": {
+                "type": "string",
+                "minLength": 2,
+                "maxLength": 8,
+                "description": "Expected nationality as ISO 3166-1 alpha-3."
+              },
+              "country": {
+                "type": "string",
+                "minLength": 2,
+                "maxLength": 8,
+                "description": "Fallback ISO 3166-1 alpha-3 country for ID and proof-of-address mismatch checks."
+              },
+              "id_country": {
+                "type": "string",
+                "minLength": 2,
+                "maxLength": 8,
+                "description": "Expected ID document country, ISO 3166-1 alpha-3."
+              },
+              "poa_country": {
+                "type": "string",
+                "minLength": 2,
+                "maxLength": 8,
+                "description": "Expected proof-of-address country, ISO 3166-1 alpha-3."
+              },
+              "address": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 512,
+                "description": "Expected address in human-readable form."
+              },
+              "identification_number": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 64,
+                "description": "Expected document, personal, or tax number."
+              },
+              "ip_address": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 45,
+                "description": "Expected client IP address. A mismatch is recorded as a warning."
+              },
+              "expected_document_types": {
+                "type": "array",
+                "description": "ID document type codes the user may present.",
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "P",
+                    "ID",
+                    "DL",
+                    "RP",
+                    "HIC",
+                    "TC",
+                    "SSC"
+                  ]
+                }
+              },
+              "company_name": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256,
+                "description": "Expected legal company name for a KYB registry search."
+              },
+              "registry_country": {
+                "type": "string",
+                "minLength": 2,
+                "maxLength": 8,
+                "description": "Company registry country, ISO 3166-1 alpha-2."
+              },
+              "registration_number": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 64,
+                "description": "Expected company registration number."
+              }
+            },
+            "required": [],
+            "description": "Expected person or company details for cross-validation or KYB registry prefilling."
+          },
+          "portraitImage": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2796203,
+            "description": "Base64 portrait (JPEG, PNG, WebP, or TIFF, image up to 2 MB) sent as the JSON string portrait_image."
+          },
+          "sandboxScenario": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "description": "Sandbox-only scenario slug. Live applications reject this field."
+          }
+        },
+        "required": [
+          "workflowId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "POST",
+        "path": "/v3/session/",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "workflow_id": "{{workflowId}}",
+          "vendor_data": "{{vendorData}}",
+          "callback": "{{callback}}",
+          "callback_method": "{{callbackMethod}}",
+          "metadata": "{{metadata}}",
+          "language": "{{language}}",
+          "contact_details": "{{contactDetails}}",
+          "expected_details": "{{expectedDetails}}",
+          "portrait_image": "{{portraitImage}}",
+          "sandbox_scenario": "{{sandboxScenario}}"
+        },
+        "success": [
+          201
+        ]
+      }
+    },
+    "billing.balance.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "title": "Get Billing Balance",
+      "description": "Read the organization's prepaid Didit credit balance and auto-refill settings.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {},
+        "required": []
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/v3/billing/balance/",
+        "success": [
+          200
+        ]
+      }
+    },
+    "businesses.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 8192,
+      "maxResponseBytes": 5242880,
+      "title": "Get Business",
+      "description": "Fetch one aggregated KYB business profile by the exact vendor_data identifier.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "vendorData": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 512,
+            "description": "Exact free-form business identifier. This is not a Didit UUID unless your own identifier is one."
+          }
+        },
+        "required": [
+          "vendorData"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/v3/businesses/{{vendorData}}/",
+        "success": [
+          200
+        ]
+      }
+    },
+    "users.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 8192,
+      "maxResponseBytes": 5242880,
+      "title": "Get User",
+      "description": "Fetch one aggregated KYC user profile by the exact vendor_data identifier, including identity summary, session counts, metadata, and activity.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "vendorData": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 512,
+            "description": "Exact free-form user identifier. This is not a Didit UUID unless your own identifier is one."
+          }
+        },
+        "required": [
+          "vendorData"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/v3/users/{{vendorData}}/",
+        "success": [
+          200
+        ]
+      }
+    },
+    "sessions.decision.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 8192,
+      "maxResponseBytes": 10485760,
+      "title": "Get Verification Decision",
+      "description": "Retrieve the current KYC or KYB decision and feature reports for one session. Media fields in the JSON are short-lived URLs and are not downloaded.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "sessionId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "description": "Session UUID returned by session creation, listing, or a webhook."
+          },
+          "include": {
+            "type": "string",
+            "enum": [
+              "events",
+              "resubmissions",
+              "events,resubmissions"
+            ],
+            "description": "Extra decision sections. events includes the KYC timeline, review activity, blocklist flags, cost breakdown, and expanded workflow metadata."
+          }
+        },
+        "required": [
+          "sessionId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/v3/session/{{sessionId}}/decision/",
+        "query": {
+          "include": "{{include}}"
+        },
+        "success": [
+          200
+        ]
+      }
+    },
+    "workflows.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 8192,
+      "maxResponseBytes": 5242880,
+      "title": "Get Workflow",
+      "description": "Fetch the full configuration and pricing of one workflow version by its per-version uuid, not the stable workflow_id.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "workflowVersionId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "description": "Per-version uuid from workflow list results, not the stable workflow_id."
+          }
+        },
+        "required": [
+          "workflowVersionId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/v3/workflows/{{workflowVersionId}}/",
+        "success": [
+          200
+        ]
+      }
+    },
+    "businesses.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 8192,
+      "maxResponseBytes": 5242880,
+      "title": "List Businesses",
+      "description": "List KYB business profiles for this application. Didit's list endpoint has no filter or search parameters.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Maximum rows in this page. Didit defaults to 50 when omitted. At least 1."
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Zero-based number of rows to skip. Didit returns next and previous URLs in the JSON body; this connector does not accept or follow those URLs."
+          }
+        },
+        "required": []
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/v3/businesses/",
+        "query": {
+          "limit": "{{limit}}",
+          "offset": "{{offset}}"
+        },
+        "success": [
+          200
+        ]
+      }
+    },
+    "users.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 8192,
+      "maxResponseBytes": 5242880,
+      "title": "List Users",
+      "description": "List KYC user profiles for this application. Didit's list endpoint has no filter parameters.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Maximum rows in this page. Didit defaults to 50 when omitted. At least 1."
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Zero-based number of rows to skip. Didit returns next and previous URLs in the JSON body; this connector does not accept or follow those URLs."
+          }
+        },
+        "required": []
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/v3/users/",
+        "query": {
+          "limit": "{{limit}}",
+          "offset": "{{offset}}"
+        },
+        "success": [
+          200
+        ]
+      }
+    },
+    "sessions.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 5242880,
+      "title": "List Verification Sessions",
+      "description": "List one page of KYC, KYB, or standalone verification sessions. session_kind all is a single Didit route with concatenated pagination; call user and business separately when a stable cursor matters.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "sessionKind": {
+            "type": "string",
+            "enum": [
+              "user",
+              "business",
+              "all"
+            ],
+            "description": "user lists KYC sessions, business lists KYB sessions, and all concatenates both on this same route."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Maximum rows in this page. Didit defaults to 50 when omitted. At least 1."
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Zero-based number of rows to skip. Didit returns next and previous URLs in the JSON body; this connector does not accept or follow those URLs."
+          },
+          "status": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 512,
+            "description": "Comma-separated case-sensitive statuses, for example Approved,In Review."
+          },
+          "vendorData": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 512,
+            "description": "Exact vendor_data match."
+          },
+          "search": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "description": "Smart search across session ids, numbers, names, contact data, document data, and vendor_data."
+          },
+          "workflowId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2048,
+            "description": "Comma-separated workflow UUIDs. Malformed UUIDs are ignored by Didit."
+          },
+          "dateFrom": {
+            "type": "string",
+            "minLength": 10,
+            "maxLength": 10,
+            "description": "Earliest creation date, UTC YYYY-MM-DD."
+          },
+          "dateTo": {
+            "type": "string",
+            "minLength": 10,
+            "maxLength": 10,
+            "description": "Latest creation date, UTC YYYY-MM-DD. KYB compares against midnight."
+          },
+          "country": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "description": "Comma-separated country codes. KYC uses alpha-3 document issuing states; KYB uses the registry country."
+          },
+          "apiService": {
+            "type": "string",
+            "enum": [
+              "ID_VERIFICATION",
+              "FACE_MATCH",
+              "AGE_ESTIMATION",
+              "FACE_SEARCH",
+              "POA",
+              "AML",
+              "KYB_REGISTRY",
+              "PASSIVE_LIVENESS",
+              "DATABASE_VALIDATION",
+              "PHONE_VERIFICATION",
+              "EMAIL_VERIFICATION"
+            ],
+            "description": "Restrict standalone API sessions to one Didit service."
+          },
+          "warning": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 512,
+            "description": "Comma-separated warning risk codes. A session matches if it raised any of them."
+          }
+        },
+        "required": []
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/v3/sessions/",
+        "query": {
+          "session_kind": "{{sessionKind}}",
+          "limit": "{{limit}}",
+          "offset": "{{offset}}",
+          "status": "{{status}}",
+          "vendor_data": "{{vendorData}}",
+          "search": "{{search}}",
+          "workflow_id": "{{workflowId}}",
+          "date_from": "{{dateFrom}}",
+          "date_to": "{{dateTo}}",
+          "country": "{{country}}",
+          "api_service": "{{apiService}}",
+          "warning": "{{warning}}"
+        },
+        "success": [
+          200
+        ]
+      }
+    },
+    "workflows.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 8192,
+      "maxResponseBytes": 5242880,
+      "title": "List Workflows",
+      "description": "List workflow versions with publication status, feature summary, and expected per-run pricing.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Maximum rows in this page. Didit defaults to 50 when omitted. At least 1."
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Zero-based number of rows to skip. Didit returns next and previous URLs in the JSON body; this connector does not accept or follow those URLs."
+          }
+        },
+        "required": []
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/v3/workflows/",
+        "query": {
+          "limit": "{{limit}}",
+          "offset": "{{offset}}"
+        },
+        "success": [
+          200
+        ]
+      }
+    }
+  }
+}

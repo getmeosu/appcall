@@ -1,0 +1,970 @@
+{
+  "key": "apexverify",
+  "name": "ApexVerify",
+  "version": "0.1.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "data"
+  ],
+  "auth": {
+    "type": "api_key",
+    "scopes": [],
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "ApexVerify API key",
+          "required": true,
+          "secret": true
+        }
+      ]
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "api.apexverify.com"
+    ]
+  },
+  "models": [
+    "account",
+    "batch",
+    "unit"
+  ],
+  "http": {
+    "baseUrl": "https://api.apexverify.com",
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "X-API-Key",
+      "value": "{{apiKey}}"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "Retry-After",
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "message",
+        "detail.0.msg"
+      ]
+    },
+    "headers": {
+      "Accept": "application/json"
+    }
+  },
+  "operations": {
+    "healthcheck": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 5000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "title": "Healthcheck",
+      "description": "Validate the ApexVerify API key by reading account credit balances.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {},
+        "required": []
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/v1/account/credits",
+        "success": [
+          200
+        ]
+      }
+    },
+    "account.credits.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "title": "Get Account Credits",
+      "description": "Return the account email and phone verification credit balances.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {},
+        "required": []
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/v1/account/credits",
+        "success": [
+          200
+        ]
+      }
+    },
+    "batches.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 5242880,
+      "title": "List Batches",
+      "description": "List verification batches, optionally filtered by creation time, one offset page at a time.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Maximum batches for this page. ApexVerify defaults to 100 and documents no maximum."
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Zero-based number of batches to skip."
+          },
+          "fromDate": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "description": "Include batches created at or after this ISO 8601 timestamp."
+          },
+          "toDate": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "description": "Include batches created at or before this ISO 8601 timestamp."
+          }
+        },
+        "required": []
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/v1/batch",
+        "query": {
+          "limit": "{{limit}}",
+          "offset": "{{offset}}",
+          "from_date": "{{fromDate}}",
+          "to_date": "{{toDate}}"
+        },
+        "success": [
+          200
+        ]
+      }
+    },
+    "batches.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "title": "Get Batch Details",
+      "description": "Get one batch status, metadata, parameters, parsed-content counts, estimated cost, and final statistics.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "batchUuid": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "description": "Batch UUID returned by ApexVerify."
+          }
+        },
+        "required": [
+          "batchUuid"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/v1/batch/{{batchUuid}}/details",
+        "success": [
+          200
+        ]
+      }
+    },
+    "batches.prepare": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 30000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "title": "Prepare Batch",
+      "description": "Start or repeat asynchronous parsing, deduplication, and cost calculation for an uploaded batch. Does not launch paid verification.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "batchUuid": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "description": "Batch UUID returned by ApexVerify."
+          }
+        },
+        "required": [
+          "batchUuid"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "PATCH",
+        "path": "/v1/batch/{{batchUuid}}",
+        "success": [
+          200
+        ]
+      }
+    },
+    "batches.launch": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 30000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "title": "Launch Batch Verification",
+      "description": "Launch paid verification for a prepared batch. confirmCreditSpend must be true and is not sent to ApexVerify.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "batchUuid": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "description": "Batch UUID returned by ApexVerify."
+          },
+          "confirmCreditSpend": {
+            "type": "boolean",
+            "const": true,
+            "description": "Must be true. Validated locally and never sent to ApexVerify."
+          }
+        },
+        "required": [
+          "batchUuid",
+          "confirmCreditSpend"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "POST",
+        "path": "/v1/batch/{{batchUuid}}",
+        "success": [
+          200
+        ]
+      }
+    },
+    "batches.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "title": "Delete Batch",
+      "description": "Permanently delete one batch by UUID. confirmDeletion must be true and is not sent to ApexVerify. Deletion is refused while the batch is processing.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "batchUuid": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "description": "Batch UUID returned by ApexVerify."
+          },
+          "confirmDeletion": {
+            "type": "boolean",
+            "const": true,
+            "description": "Must be true. Validated locally and never sent to ApexVerify."
+          }
+        },
+        "required": [
+          "batchUuid",
+          "confirmDeletion"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "DELETE",
+        "path": "/v1/batch/{{batchUuid}}",
+        "success": [
+          200
+        ]
+      }
+    },
+    "batches.export": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 60000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 26214400,
+      "title": "Export Batch Results",
+      "description": "Export a completed batch as JSON. format must be json. The XLSX workbook is a binary download and is not offered.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "batchUuid": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "description": "Batch UUID returned by ApexVerify."
+          },
+          "format": {
+            "type": "string",
+            "minLength": 1,
+            "enum": [
+              "json"
+            ],
+            "description": "JSON export only. XLSX is a binary workbook and is rejected."
+          },
+          "includeDetails": {
+            "type": "boolean",
+            "description": "Include per-value verification details in the JSON export."
+          },
+          "includeStatistics": {
+            "type": "boolean",
+            "description": "Include aggregate verification statistics in the JSON export."
+          }
+        },
+        "required": [
+          "batchUuid",
+          "format"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/v1/batch/{{batchUuid}}/export",
+        "query": {
+          "format": "{{format}}",
+          "include_details": "{{includeDetails}}",
+          "include_statistics": "{{includeStatistics}}"
+        },
+        "success": [
+          200
+        ]
+      }
+    },
+    "units.verify": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 1048576,
+      "title": "Verify Email or Phone",
+      "description": "Verify one email address or phone number. This spends a prepaid credit. confirmCreditUsage must be true and is not sent to ApexVerify. Audience, industry, and objective use ApexVerify numeric codes, not display labels.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "type": {
+            "type": "string",
+            "minLength": 1,
+            "enum": [
+              "email",
+              "phone"
+            ],
+            "description": "email or phone."
+          },
+          "unit": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 320,
+            "description": "Single email address or phone number to verify."
+          },
+          "targetCountry": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 2,
+            "enum": [
+              "AD",
+              "AE",
+              "AF",
+              "AG",
+              "AI",
+              "AL",
+              "AM",
+              "AO",
+              "AR",
+              "AS",
+              "AT",
+              "AU",
+              "AW",
+              "AZ",
+              "BA",
+              "BB",
+              "BD",
+              "BE",
+              "BF",
+              "BG",
+              "BH",
+              "BI",
+              "BJ",
+              "BL",
+              "BM",
+              "BN",
+              "BO",
+              "BR",
+              "BT",
+              "BW",
+              "BY",
+              "BZ",
+              "CA",
+              "CD",
+              "CF",
+              "CG",
+              "CH",
+              "CI",
+              "CK",
+              "CL",
+              "CM",
+              "CN",
+              "CO",
+              "CR",
+              "CU",
+              "CV",
+              "CW",
+              "CY",
+              "CZ",
+              "DE",
+              "DJ",
+              "DK",
+              "DM",
+              "DO",
+              "DZ",
+              "EC",
+              "EE",
+              "EG",
+              "ER",
+              "ES",
+              "ET",
+              "FI",
+              "FJ",
+              "FK",
+              "FO",
+              "FR",
+              "GA",
+              "GB",
+              "GD",
+              "GE",
+              "GG",
+              "GH",
+              "GI",
+              "GL",
+              "GN",
+              "GP",
+              "GQ",
+              "GR",
+              "GS",
+              "GT",
+              "GW",
+              "GY",
+              "HK",
+              "HN",
+              "HR",
+              "HT",
+              "HU",
+              "ID",
+              "IE",
+              "IL",
+              "IN",
+              "IO",
+              "IQ",
+              "IR",
+              "IS",
+              "IT",
+              "JE",
+              "JM",
+              "JO",
+              "JP",
+              "KE",
+              "KG",
+              "KH",
+              "KM",
+              "KN",
+              "KR",
+              "KW",
+              "KY",
+              "KZ",
+              "LA",
+              "LB",
+              "LC",
+              "LI",
+              "LK",
+              "LR",
+              "LS",
+              "LT",
+              "LU",
+              "LV",
+              "LY",
+              "MA",
+              "MC",
+              "MD",
+              "ME",
+              "MF",
+              "MG",
+              "MK",
+              "ML",
+              "MM",
+              "MN",
+              "MO",
+              "MP",
+              "MQ",
+              "MR",
+              "MS",
+              "MT",
+              "MU",
+              "MV",
+              "MW",
+              "MX",
+              "MY",
+              "MZ",
+              "NA",
+              "NC",
+              "NE",
+              "NF",
+              "NG",
+              "NI",
+              "NL",
+              "NO",
+              "NP",
+              "NR",
+              "NU",
+              "NZ",
+              "OM",
+              "PA",
+              "PE",
+              "PF",
+              "PG",
+              "PH",
+              "PK",
+              "PL",
+              "PM",
+              "PS",
+              "PT",
+              "PW",
+              "PY",
+              "QA",
+              "RE",
+              "RO",
+              "RS",
+              "RU",
+              "RW",
+              "SA",
+              "SB",
+              "SC",
+              "SD",
+              "SE",
+              "SG",
+              "SI",
+              "SK",
+              "SL",
+              "SM",
+              "SN",
+              "SO",
+              "SR",
+              "SS",
+              "ST",
+              "SV",
+              "SX",
+              "SY",
+              "SZ",
+              "TC",
+              "TD",
+              "TG",
+              "TH",
+              "TJ",
+              "TL",
+              "TM",
+              "TN",
+              "TO",
+              "TR",
+              "TT",
+              "TW",
+              "TZ",
+              "UA",
+              "UG",
+              "UM",
+              "US",
+              "UY",
+              "UZ",
+              "VC",
+              "VE",
+              "VG",
+              "VN",
+              "VU",
+              "WS",
+              "YE",
+              "YT",
+              "ZA",
+              "ZM",
+              "ZW"
+            ],
+            "description": "ISO 3166-1 alpha-2 country code accepted by ApexVerify."
+          },
+          "targetAudience": {
+            "type": "string",
+            "minLength": 1,
+            "enum": [
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8",
+              "9",
+              "10",
+              "11",
+              "12",
+              "13",
+              "14",
+              "15",
+              "16",
+              "17",
+              "18",
+              "19",
+              "20",
+              "21",
+              "22",
+              "23"
+            ],
+            "description": "ApexVerify target audience code 1 through 23."
+          },
+          "targetMarketIndustry": {
+            "type": "string",
+            "minLength": 1,
+            "enum": [
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8",
+              "9",
+              "10",
+              "11",
+              "12",
+              "13",
+              "14",
+              "15",
+              "16",
+              "17",
+              "18",
+              "19",
+              "20",
+              "21",
+              "22",
+              "23",
+              "24",
+              "25",
+              "26",
+              "27",
+              "28",
+              "29",
+              "30",
+              "31",
+              "32",
+              "33",
+              "34",
+              "35",
+              "36",
+              "37",
+              "38",
+              "39",
+              "40",
+              "41",
+              "42",
+              "43",
+              "44",
+              "45",
+              "46",
+              "47",
+              "48",
+              "49",
+              "50",
+              "51",
+              "52",
+              "53",
+              "54",
+              "55",
+              "56",
+              "57",
+              "58",
+              "59",
+              "60",
+              "61",
+              "62",
+              "63",
+              "64",
+              "65",
+              "66",
+              "67",
+              "68",
+              "69",
+              "70",
+              "71",
+              "72",
+              "73",
+              "74",
+              "75",
+              "76",
+              "77",
+              "78",
+              "79",
+              "80",
+              "81",
+              "82",
+              "83",
+              "84",
+              "85",
+              "86",
+              "87",
+              "88",
+              "89",
+              "90",
+              "91",
+              "92",
+              "93",
+              "94",
+              "95",
+              "96",
+              "97",
+              "98",
+              "99",
+              "100",
+              "101",
+              "102",
+              "103",
+              "104",
+              "105",
+              "106",
+              "107",
+              "108",
+              "109",
+              "110",
+              "111",
+              "112",
+              "113",
+              "114",
+              "115"
+            ],
+            "description": "ApexVerify target market industry code 1 through 115."
+          },
+          "targetObjective": {
+            "type": "string",
+            "minLength": 1,
+            "enum": [
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8",
+              "9",
+              "10",
+              "11",
+              "12",
+              "13",
+              "14",
+              "15",
+              "16"
+            ],
+            "description": "ApexVerify target objective code 1 through 16."
+          },
+          "useAccountCache": {
+            "type": "boolean",
+            "description": "Allow a recent connected-account cache result."
+          },
+          "maxAccountCacheBackoff": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 180,
+            "description": "Maximum connected-account cache age in days, from 1 through 180."
+          },
+          "useGlobalCache": {
+            "type": "boolean",
+            "description": "Allow anonymized global-cache reuse. May refund part of the credit."
+          },
+          "maxGlobalCacheBackoff": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 180,
+            "description": "Maximum global-cache age in days, from 1 through 180."
+          },
+          "confirmCreditUsage": {
+            "type": "boolean",
+            "const": true,
+            "description": "Must be true. Validated locally and never sent to ApexVerify."
+          }
+        },
+        "required": [
+          "type",
+          "unit",
+          "targetCountry",
+          "confirmCreditUsage"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "POST",
+        "path": "/v1/unit",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "type": "{{type}}",
+          "target_country": "{{targetCountry}}",
+          "unit": "{{unit}}",
+          "target_audience": "{{targetAudience}}",
+          "target_market_industry": "{{targetMarketIndustry}}",
+          "target_objective": "{{targetObjective}}",
+          "use_account_cache": "{{useAccountCache}}",
+          "max_account_cache_backoff": "{{maxAccountCacheBackoff}}",
+          "use_global_cache": "{{useGlobalCache}}",
+          "max_global_cache_backoff": "{{maxGlobalCacheBackoff}}"
+        },
+        "success": [
+          200
+        ]
+      }
+    }
+  }
+}

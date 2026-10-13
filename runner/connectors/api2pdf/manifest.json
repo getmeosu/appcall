@@ -1,0 +1,772 @@
+{
+  "key": "api2pdf",
+  "name": "API2PDF",
+  "version": "0.1.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "documents"
+  ],
+  "auth": {
+    "type": "api_key",
+    "scopes": [],
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "API2PDF API key",
+          "required": true,
+          "secret": true
+        }
+      ]
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "v2.api2pdf.com"
+    ]
+  },
+  "models": [
+    "pdf"
+  ],
+  "http": {
+    "baseUrl": "https://v2.api2pdf.com",
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "Authorization",
+      "value": "{{apiKey}}"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "Retry-After",
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "Error",
+        "error",
+        "message"
+      ],
+      "bodyErrorPaths": [
+        "Error"
+      ]
+    },
+    "headers": {
+      "Accept": "application/json"
+    }
+  },
+  "operations": {
+    "chrome.html-to-pdf": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 120000,
+      "maxInputBytes": 26214400,
+      "maxResponseBytes": 26214400,
+      "title": "Add header and footer",
+      "description": "Convert HTML to PDF with Headless Chrome. Put displayHeaderFooter, headerTemplate, and footerTemplate in options. Success is the JSON FileUrl envelope.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "html"
+        ],
+        "properties": {
+          "html": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Raw HTML to convert to PDF."
+          },
+          "inline": {
+            "type": "boolean",
+            "description": "When true, the FileUrl opens in the browser. When false, it downloads. The HTTP body stays JSON."
+          },
+          "inlinePdf": {
+            "type": "boolean",
+            "description": "When true, API2PDF returns the PDF inline. Leave false to receive the JSON FileUrl envelope."
+          },
+          "fileName": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Output PDF file name. API2PDF assigns a random name when omitted."
+          },
+          "options": {
+            "type": "object",
+            "description": "Headless Chrome print options. Set displayHeaderFooter with headerTemplate and footerTemplate for page headers and footers.",
+            "additionalProperties": true,
+            "properties": {
+              "displayHeaderFooter": {
+                "type": "boolean"
+              },
+              "headerTemplate": {
+                "type": "string"
+              },
+              "footerTemplate": {
+                "type": "string"
+              },
+              "landscape": {
+                "type": "boolean"
+              },
+              "printBackground": {
+                "type": "boolean"
+              },
+              "preferCSSPageSize": {
+                "type": "boolean"
+              },
+              "marginTop": {
+                "type": "string"
+              },
+              "marginBottom": {
+                "type": "string"
+              },
+              "marginLeft": {
+                "type": "string"
+              },
+              "marginRight": {
+                "type": "string"
+              },
+              "pageRanges": {
+                "type": "string"
+              },
+              "scale": {
+                "type": "number"
+              },
+              "delay": {
+                "type": "number"
+              }
+            }
+          },
+          "useCustomStorage": {
+            "type": "boolean",
+            "description": "When true, upload the PDF with the storage settings instead of API2PDF hosting."
+          },
+          "storage": {
+            "type": "object",
+            "description": "Custom upload target. Required by the API when useCustomStorage is true.",
+            "additionalProperties": false,
+            "properties": {
+              "method": {
+                "type": "string",
+                "minLength": 1,
+                "description": "HTTP method for the upload, usually PUT."
+              },
+              "url": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Presigned URL that receives the generated file."
+              },
+              "extraHTTPHeaders": {
+                "type": "object",
+                "description": "Headers sent with the storage upload.",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "API2PDF JSON success envelope."
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/chrome/pdf/html",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "html": "{{html}}",
+          "inline": "{{inline}}",
+          "inlinePdf": "{{inlinePdf}}",
+          "fileName": "{{fileName}}",
+          "options": "{{options}}",
+          "useCustomStorage": "{{useCustomStorage}}",
+          "storage": "{{storage}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "files.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 30000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "title": "Delete PDF",
+      "description": "Delete a generated file immediately by its ResponseId. API2PDF otherwise deletes hosted files after 24 hours.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "responseId"
+        ],
+        "properties": {
+          "responseId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "ResponseId from a previous API2PDF generation call."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "API2PDF JSON success envelope."
+          }
+        }
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/file/{{responseId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "pdf.extract-pages": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 120000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Extract PDF pages",
+      "description": "Extract a zero-based page range from a source PDF. End is exclusive. Success is a JSON FileUrl for the new PDF.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "url"
+        ],
+        "properties": {
+          "url": {
+            "type": "string",
+            "minLength": 1,
+            "description": "HTTP or HTTPS URL of the source PDF."
+          },
+          "inline": {
+            "type": "boolean",
+            "description": "When true, the FileUrl opens in the browser. When false, it downloads. The HTTP body stays JSON."
+          },
+          "fileName": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Output file name. API2PDF assigns a random name when omitted."
+          },
+          "extraHTTPHeaders": {
+            "type": "object",
+            "description": "Headers API2PDF sends when it fetches a source URL.",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "useCustomStorage": {
+            "type": "boolean",
+            "description": "When true, upload the result with the storage settings instead of API2PDF hosting."
+          },
+          "storage": {
+            "type": "object",
+            "description": "Custom upload target. Required by the API when useCustomStorage is true.",
+            "additionalProperties": false,
+            "properties": {
+              "method": {
+                "type": "string",
+                "minLength": 1,
+                "description": "HTTP method for the upload, usually PUT."
+              },
+              "url": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Presigned URL that receives the generated file."
+              },
+              "extraHTTPHeaders": {
+                "type": "object",
+                "description": "Headers sent with the storage upload.",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "start": {
+            "type": "integer",
+            "description": "Zero-based inclusive start page. Negative indexes count from the end."
+          },
+          "end": {
+            "type": "integer",
+            "description": "Zero-based exclusive end page. Negative indexes count from the end."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "API2PDF JSON success envelope."
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/pdfsharp/extract-pages",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "url": "{{url}}",
+          "start": "{{start}}",
+          "end": "{{end}}",
+          "inline": "{{inline}}",
+          "fileName": "{{fileName}}",
+          "extraHTTPHeaders": "{{extraHTTPHeaders}}",
+          "useCustomStorage": "{{useCustomStorage}}",
+          "storage": "{{storage}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "libreoffice.pdf-to-html": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 120000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Convert PDF to HTML",
+      "description": "Convert a PDF URL to HTML with LibreOffice. The documented success body is JSON with a FileUrl for the HTML file, not raw HTML.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "url"
+        ],
+        "properties": {
+          "url": {
+            "type": "string",
+            "minLength": 1,
+            "description": "HTTP or HTTPS URL of the source PDF. The JSON success body is a FileUrl for the HTML file."
+          },
+          "inline": {
+            "type": "boolean",
+            "description": "When true, the FileUrl opens in the browser. When false, it downloads. The HTTP body stays JSON."
+          },
+          "fileName": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Output file name. API2PDF assigns a random name when omitted."
+          },
+          "extraHTTPHeaders": {
+            "type": "object",
+            "description": "Headers API2PDF sends when it fetches a source URL.",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "useCustomStorage": {
+            "type": "boolean",
+            "description": "When true, upload the result with the storage settings instead of API2PDF hosting."
+          },
+          "storage": {
+            "type": "object",
+            "description": "Custom upload target. Required by the API when useCustomStorage is true.",
+            "additionalProperties": false,
+            "properties": {
+              "method": {
+                "type": "string",
+                "minLength": 1,
+                "description": "HTTP method for the upload, usually PUT."
+              },
+              "url": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Presigned URL that receives the generated file."
+              },
+              "extraHTTPHeaders": {
+                "type": "object",
+                "description": "Headers sent with the storage upload.",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "API2PDF JSON success envelope."
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/libreoffice/pdf-to-html",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "url": "{{url}}",
+          "inline": "{{inline}}",
+          "fileName": "{{fileName}}",
+          "extraHTTPHeaders": "{{extraHTTPHeaders}}",
+          "useCustomStorage": "{{useCustomStorage}}",
+          "storage": "{{storage}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "libreoffice.thumbnail": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 120000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Generate thumbnail",
+      "description": "Generate a first-page image preview of a PDF or Office file. Success is JSON with a FileUrl for the image.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "url"
+        ],
+        "properties": {
+          "url": {
+            "type": "string",
+            "minLength": 1,
+            "description": "HTTP or HTTPS URL of a PDF or Office file. The JSON success body is a FileUrl for the first-page image."
+          },
+          "inline": {
+            "type": "boolean",
+            "description": "When true, the FileUrl opens in the browser. When false, it downloads. The HTTP body stays JSON."
+          },
+          "fileName": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Output file name. API2PDF assigns a random name when omitted."
+          },
+          "extraHTTPHeaders": {
+            "type": "object",
+            "description": "Headers API2PDF sends when it fetches a source URL.",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "useCustomStorage": {
+            "type": "boolean",
+            "description": "When true, upload the result with the storage settings instead of API2PDF hosting."
+          },
+          "storage": {
+            "type": "object",
+            "description": "Custom upload target. Required by the API when useCustomStorage is true.",
+            "additionalProperties": false,
+            "properties": {
+              "method": {
+                "type": "string",
+                "minLength": 1,
+                "description": "HTTP method for the upload, usually PUT."
+              },
+              "url": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Presigned URL that receives the generated file."
+              },
+              "extraHTTPHeaders": {
+                "type": "object",
+                "description": "Headers sent with the storage upload.",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "API2PDF JSON success envelope."
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/libreoffice/thumbnail",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "url": "{{url}}",
+          "inline": "{{inline}}",
+          "fileName": "{{fileName}}",
+          "extraHTTPHeaders": "{{extraHTTPHeaders}}",
+          "useCustomStorage": "{{useCustomStorage}}",
+          "storage": "{{storage}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "pdf.merge": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 120000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Merge PDFs",
+      "description": "Merge public PDF URLs in order into one PDF. Success is JSON with a FileUrl for the merged file.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "urls"
+        ],
+        "properties": {
+          "urls": {
+            "type": "array",
+            "minItems": 1,
+            "description": "Public PDF URLs merged in the given order.",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "inline": {
+            "type": "boolean",
+            "description": "When true, the FileUrl opens in the browser. When false, it downloads. The HTTP body stays JSON."
+          },
+          "fileName": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Output PDF file name. API2PDF assigns a random name when omitted."
+          },
+          "extraHTTPHeaders": {
+            "type": "object",
+            "description": "Headers API2PDF sends when it fetches a source URL.",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "useCustomStorage": {
+            "type": "boolean",
+            "description": "When true, upload the merged PDF with the storage settings."
+          },
+          "storage": {
+            "type": "object",
+            "description": "Custom upload target. Required by the API when useCustomStorage is true.",
+            "additionalProperties": false,
+            "properties": {
+              "method": {
+                "type": "string",
+                "minLength": 1,
+                "description": "HTTP method for the upload, usually PUT."
+              },
+              "url": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Presigned URL that receives the generated file."
+              },
+              "extraHTTPHeaders": {
+                "type": "object",
+                "description": "Headers sent with the storage upload.",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "API2PDF JSON success envelope."
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/pdfsharp/merge",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "urls": "{{urls}}",
+          "inline": "{{inline}}",
+          "fileName": "{{fileName}}",
+          "extraHTTPHeaders": "{{extraHTTPHeaders}}",
+          "useCustomStorage": "{{useCustomStorage}}",
+          "storage": "{{storage}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "pdf.compress": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 120000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Optimize PDF",
+      "description": "Compress an existing PDF to reduce its size. Official route POST /pdfsharp/compress. Success is JSON with a FileUrl.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "url"
+        ],
+        "properties": {
+          "url": {
+            "type": "string",
+            "minLength": 1,
+            "description": "HTTP or HTTPS URL of the PDF to compress. The JSON success body is a FileUrl for the smaller PDF."
+          },
+          "inline": {
+            "type": "boolean",
+            "description": "When true, the FileUrl opens in the browser. When false, it downloads. The HTTP body stays JSON."
+          },
+          "fileName": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Output file name. API2PDF assigns a random name when omitted."
+          },
+          "extraHTTPHeaders": {
+            "type": "object",
+            "description": "Headers API2PDF sends when it fetches a source URL.",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "useCustomStorage": {
+            "type": "boolean",
+            "description": "When true, upload the result with the storage settings instead of API2PDF hosting."
+          },
+          "storage": {
+            "type": "object",
+            "description": "Custom upload target. Required by the API when useCustomStorage is true.",
+            "additionalProperties": false,
+            "properties": {
+              "method": {
+                "type": "string",
+                "minLength": 1,
+                "description": "HTTP method for the upload, usually PUT."
+              },
+              "url": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Presigned URL that receives the generated file."
+              },
+              "extraHTTPHeaders": {
+                "type": "object",
+                "description": "Headers sent with the storage upload.",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "API2PDF JSON success envelope."
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/pdfsharp/compress",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "url": "{{url}}",
+          "inline": "{{inline}}",
+          "fileName": "{{fileName}}",
+          "extraHTTPHeaders": "{{extraHTTPHeaders}}",
+          "useCustomStorage": "{{useCustomStorage}}",
+          "storage": "{{storage}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    }
+  }
+}

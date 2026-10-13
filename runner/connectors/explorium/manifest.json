@@ -1,0 +1,704 @@
+{
+  "key": "explorium",
+  "name": "Explorium",
+  "version": "0.1.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "sales",
+    "data-enrichment"
+  ],
+  "auth": {
+    "type": "api_key",
+    "scopes": [],
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "Explorium API key",
+          "required": true,
+          "secret": true
+        }
+      ]
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "api.explorium.ai"
+    ]
+  },
+  "models": [
+    "business",
+    "prospect",
+    "job",
+    "credit",
+    "autocomplete"
+  ],
+  "http": {
+    "baseUrl": "https://api.explorium.ai",
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "api_key",
+      "value": "{{apiKey}}"
+    },
+    "headers": {
+      "Accept": "application/json"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "Retry-After",
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "message",
+        "error",
+        "detail",
+        "error.message"
+      ]
+    }
+  },
+  "operations": {
+    "autocomplete.filter-values": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 1048576,
+      "title": "Autocomplete Filter Values",
+      "description": "Find normalized Explorium filter values with GET /v2/autocomplete. The JSON array is returned as data.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "field": {
+            "type": "string",
+            "enum": [
+              "country",
+              "country_code",
+              "region_country_code",
+              "google_category",
+              "naics_category",
+              "linkedin_category",
+              "company_tech_stack_tech",
+              "company_tech_stack_categories",
+              "job_title",
+              "company_size",
+              "company_revenue",
+              "number_of_locations",
+              "company_age",
+              "job_department",
+              "job_level",
+              "city_region_country",
+              "company_name",
+              "business_intent_topics",
+              "city_region",
+              "skills",
+              "interests"
+            ],
+            "description": "Filter field whose accepted values to search."
+          },
+          "query": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Optional text prefix or phrase. Omit to browse values when the field allows it."
+          },
+          "semantic_search": {
+            "type": "boolean",
+            "description": "Use semantic matching when the selected field supports it."
+          }
+        },
+        "required": [
+          "field"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": true,
+              "required": [
+                "query",
+                "label",
+                "value"
+              ],
+              "properties": {
+                "query": {
+                  "type": "string"
+                },
+                "label": {
+                  "type": "string"
+                },
+                "value": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/autocomplete",
+        "success": [
+          200
+        ],
+        "query": {
+          "field": "{{field}}",
+          "query": "{{query}}",
+          "semantic_search": "{{semantic_search}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "businesses.firmographics.enrich": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 262144,
+      "maxResponseBytes": 5242880,
+      "title": "Enrich Business Firmographics",
+      "description": "Enrich Explorium business ids with POST /v2/businesses/firmographics/enrich. This is the synchronous JSON call, not the async /job route.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "business_ids": {
+            "description": "One business id string, or 1 to 50 business ids.",
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 32,
+                "maxLength": 32,
+                "description": "32-character Explorium business id. The provider expects lowercase hexadecimal."
+              },
+              {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 50,
+                "items": {
+                  "type": "string",
+                  "minLength": 32,
+                  "maxLength": 32,
+                  "description": "32-character Explorium business id. The provider expects lowercase hexadecimal."
+                }
+              }
+            ]
+          }
+        },
+        "required": [
+          "business_ids"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v2/businesses/firmographics/enrich",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "business_ids": "{{business_ids}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "credits.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 1048576,
+      "title": "Get Credit Balance",
+      "description": "Read allocated credits, remaining credits, and trial or paid account type with GET /v2/credits.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/credits",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "jobs.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 1048576,
+      "title": "Get Job Status",
+      "description": "Read one Explorium job with GET /v2/jobs/status/{job_id}. The body is JSON. results.format may be csv and results.download_url is metadata in that object; this call does not download the file.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "job_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Job id returned by a job list or job submission."
+          }
+        },
+        "required": [
+          "job_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/jobs/status/{{job_id}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "jobs.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 1048576,
+      "title": "List Jobs",
+      "description": "List Explorium asynchronous jobs with GET /v2/jobs. Optional status and skip filters do not create or cancel jobs.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "queued",
+              "running",
+              "succeeded",
+              "failed",
+              "cancelled",
+              "expired"
+            ]
+          },
+          "skip": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Zero-based number of jobs to skip."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/jobs",
+        "success": [
+          200
+        ],
+        "query": {
+          "status": "{{status}}",
+          "skip": "{{skip}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "businesses.match": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 262144,
+      "maxResponseBytes": 5242880,
+      "title": "Match Businesses",
+      "description": "Resolve 1 to 50 businesses with POST /v2/businesses/match. name, domain, url, and linkedin_url are JSON fields on businesses_to_match. The request URL stays on api.explorium.ai.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "businesses_to_match": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 50,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 256
+                },
+                "domain": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "url": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Website stored in the match record."
+                },
+                "linkedin_url": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "LinkedIn company URL stored in the match record."
+                }
+              },
+              "minProperties": 1
+            }
+          }
+        },
+        "required": [
+          "businesses_to_match"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v2/businesses/match",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "businesses_to_match": "{{businesses_to_match}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "prospects.match": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 262144,
+      "maxResponseBytes": 5242880,
+      "title": "Match Prospects",
+      "description": "Resolve 1 to 50 people with POST /v2/prospects/match. LinkedIn and other identifiers are JSON fields on prospects_to_match.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "prospects_to_match": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 50,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "business_id": {
+                  "type": "string",
+                  "minLength": 32,
+                  "maxLength": 32,
+                  "description": "32-character Explorium business id. The provider expects lowercase hexadecimal."
+                },
+                "full_name": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "company_name": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "email": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "phone_number": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "linkedin": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "LinkedIn profile URL stored in the match record."
+                }
+              },
+              "minProperties": 1
+            }
+          }
+        },
+        "required": [
+          "prospects_to_match"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v2/prospects/match",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "prospects_to_match": "{{prospects_to_match}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "businesses.search": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 262144,
+      "maxResponseBytes": 5242880,
+      "title": "Search Businesses",
+      "description": "Search businesses with POST /v2/businesses. mode and page_size are required. filters is the Explorium business filter object.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "mode": {
+            "type": "string",
+            "enum": [
+              "full",
+              "preview"
+            ]
+          },
+          "page_size": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 500
+          },
+          "exclude": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 1000,
+            "items": {
+              "type": "string",
+              "minLength": 32,
+              "maxLength": 32,
+              "description": "32-character Explorium business id. The provider expects lowercase hexadecimal."
+            },
+            "description": "Business ids to exclude, up to 1000."
+          },
+          "filters": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Explorium business filters. Use autocomplete for normalized values."
+          },
+          "next_cursor": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Opaque cursor from the previous page."
+          }
+        },
+        "required": [
+          "mode",
+          "page_size"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v2/businesses",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "mode": "{{mode}}",
+          "page_size": "{{page_size}}",
+          "exclude": "{{exclude}}",
+          "filters": "{{filters}}",
+          "next_cursor": "{{next_cursor}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "prospects.search": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 262144,
+      "maxResponseBytes": 5242880,
+      "title": "Search Prospects",
+      "description": "Search prospects with POST /v2/prospects. mode and page_size are required. filters is the Explorium prospect filter object.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "mode": {
+            "type": "string",
+            "enum": [
+              "full",
+              "preview"
+            ]
+          },
+          "page_size": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 500
+          },
+          "exclude": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 1000,
+            "items": {
+              "type": "string",
+              "minLength": 40,
+              "maxLength": 40,
+              "description": "40-character Explorium prospect id. The provider expects lowercase hexadecimal."
+            },
+            "description": "Prospect ids to exclude, up to 1000."
+          },
+          "filters": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Explorium prospect filters. Use autocomplete for normalized values."
+          },
+          "next_cursor": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Opaque cursor from the previous page."
+          }
+        },
+        "required": [
+          "mode",
+          "page_size"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v2/prospects",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "mode": "{{mode}}",
+          "page_size": "{{page_size}}",
+          "exclude": "{{exclude}}",
+          "filters": "{{filters}}",
+          "next_cursor": "{{next_cursor}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    }
+  }
+}

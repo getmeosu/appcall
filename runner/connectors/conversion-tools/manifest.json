@@ -1,0 +1,573 @@
+{
+  "key": "conversion-tools",
+  "name": "Conversion Tools",
+  "version": "0.1.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "documents"
+  ],
+  "auth": {
+    "type": "api_key",
+    "scopes": [],
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "Conversion Tools API token",
+          "required": true,
+          "secret": true
+        }
+      ]
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "api.conversiontools.io"
+    ]
+  },
+  "models": [
+    "task",
+    "file",
+    "conversion"
+  ],
+  "http": {
+    "baseUrl": "https://api.conversiontools.io/v1",
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "Authorization",
+      "value": "Bearer {{apiKey}}"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "Retry-After",
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "error",
+        "message"
+      ]
+    },
+    "headers": {
+      "Accept": "application/json"
+    }
+  },
+  "operations": {
+    "convert.excel-to-html": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Convert Excel to HTML",
+      "description": "Create a convert.excel_to_html task for an uploaded file id. Returns the JSON task id. Does not upload bytes or accept a file URL.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "fileId"
+        ],
+        "properties": {
+          "fileId": {
+            "type": "string",
+            "minLength": 32,
+            "maxLength": 32,
+            "description": "32-character file id from an earlier upload. Not file bytes and not a URL."
+          },
+          "sheet": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "description": "Worksheet name to convert, for example Sheet1."
+          },
+          "sandbox": {
+            "type": "boolean",
+            "description": "When true, the task runs in sandbox mode and does not count against quota."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "Task creation JSON with error and task_id."
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/tasks",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "type": "convert.excel_to_html",
+          "options": {
+            "file_id": "{{fileId}}",
+            "sheet": "{{sheet}}",
+            "sandbox": "{{sandbox}}"
+          }
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "convert.word-to-text": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Convert Word to Text",
+      "description": "Create a convert.word_to_text task for an uploaded file id. Returns the JSON task id. Does not upload bytes, poll, or accept a file URL.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "fileId"
+        ],
+        "properties": {
+          "fileId": {
+            "type": "string",
+            "minLength": 32,
+            "maxLength": 32,
+            "description": "32-character file id from an earlier upload. Not file bytes and not a URL."
+          },
+          "sandbox": {
+            "type": "boolean",
+            "description": "When true, the task runs in sandbox mode and does not count against quota."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "Task creation JSON with error and task_id."
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/tasks",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "type": "convert.word_to_text",
+          "options": {
+            "file_id": "{{fileId}}",
+            "sandbox": "{{sandbox}}"
+          }
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "tasks.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Create Conversion Task",
+      "description": "Create one conversion task from a type and an uploaded file id. Sandbox and conversion options stay in the JSON options object. Does not accept a source URL or callback URL.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "type",
+          "fileId"
+        ],
+        "properties": {
+          "type": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "description": "Conversion type identifier such as convert.xml_to_excel. Not a URL."
+          },
+          "fileId": {
+            "type": "string",
+            "minLength": 32,
+            "maxLength": 32,
+            "description": "32-character file id from an earlier upload. Not file bytes and not a URL."
+          },
+          "sandbox": {
+            "type": "boolean",
+            "description": "When true, the task runs in sandbox mode and does not count against quota."
+          },
+          "filename": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255,
+            "description": "Output file name."
+          },
+          "pages": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "description": "Page range such as 1-5,7."
+          },
+          "delimiter": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 32,
+            "description": "CSV separator name such as comma or tabulation."
+          },
+          "quality": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Image quality from 1 to 100."
+          },
+          "sheet": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "description": "Worksheet name for spreadsheet conversions."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "Task creation JSON with error and task_id."
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/tasks",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "type": "{{type}}",
+          "options": {
+            "file_id": "{{fileId}}",
+            "sandbox": "{{sandbox}}",
+            "filename": "{{filename}}",
+            "pages": "{{pages}}",
+            "delimiter": "{{delimiter}}",
+            "quality": "{{quality}}",
+            "sheet": "{{sheet}}"
+          }
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "auth.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 1048576,
+      "title": "Get Auth Info",
+      "description": "Get the authenticated account email from GET /auth.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "Auth JSON with error and email."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/auth",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "config.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 1048576,
+      "title": "Get Conversion Config",
+      "description": "Get account conversion configuration from GET /config. This is not the public catalog and does not download a file.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "Config JSON with error and conversions."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/config",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "files.info": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 1048576,
+      "title": "Get File Info",
+      "description": "Get JSON metadata for one file id from GET /files/{file_id}/info. This does not download file bytes.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "fileId"
+        ],
+        "properties": {
+          "fileId": {
+            "type": "string",
+            "minLength": 32,
+            "maxLength": 32,
+            "description": "32-character file id. Not a URL."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "File metadata JSON with name, size, and preview."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/files/{{fileId}}/info",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "tasks.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 1048576,
+      "title": "Get Task Status",
+      "description": "Get one conversion task from GET /tasks/{task_id}. A finished task includes file_id. This does not download the file.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "taskId"
+        ],
+        "properties": {
+          "taskId": {
+            "type": "string",
+            "minLength": 32,
+            "maxLength": 32,
+            "description": "32-character task id returned when the task was created."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "Task status JSON with status, file_id, and conversionProgress."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/tasks/{{taskId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "tasks.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 1048576,
+      "title": "List Conversion Tasks",
+      "description": "List up to 50 recent tasks from GET /tasks. Optional status filters PENDING, RUNNING, SUCCESS, or ERROR.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "PENDING",
+              "RUNNING",
+              "SUCCESS",
+              "ERROR"
+            ],
+            "description": "When set, only tasks in this status are returned."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "Task list JSON with error and a data array."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/tasks",
+        "query": {
+          "status": "{{status}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "tasks.retention.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Update Task Retention",
+      "description": "Set standard_24h or ttl_15m retention for one task with PATCH /tasks/{task_id}/retention.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "taskId",
+          "retentionMode"
+        ],
+        "properties": {
+          "taskId": {
+            "type": "string",
+            "minLength": 32,
+            "maxLength": 32,
+            "description": "32-character task id."
+          },
+          "retentionMode": {
+            "type": "string",
+            "enum": [
+              "standard_24h",
+              "ttl_15m"
+            ],
+            "description": "standard_24h keeps files for 24 hours. ttl_15m keeps them for 15 minutes and requires a paid plan."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "Retention JSON with retentionMode and dateExpires."
+          }
+        }
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/tasks/{{taskId}}/retention",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "retentionMode": "{{retentionMode}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    }
+  }
+}

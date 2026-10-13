@@ -1,0 +1,997 @@
+{
+  "key": "bulkpublish",
+  "name": "BulkPublish",
+  "version": "0.1.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "social-media",
+    "marketing"
+  ],
+  "auth": {
+    "type": "api_key",
+    "scopes": [],
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "BulkPublish API key",
+          "required": true,
+          "secret": true
+        }
+      ]
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "app.bulkpublish.com"
+    ]
+  },
+  "models": [
+    "analytics-summary",
+    "api-usage",
+    "quota",
+    "platform",
+    "activity",
+    "channel",
+    "label",
+    "media",
+    "notification",
+    "post"
+  ],
+  "http": {
+    "baseUrl": "https://app.bulkpublish.com",
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "Authorization",
+      "value": "Bearer {{apiKey}}"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "Retry-After",
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "error.message",
+        "message",
+        "error"
+      ]
+    },
+    "headers": {
+      "Accept": "application/json"
+    }
+  },
+  "operations": {
+    "analytics.summary": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 1048576,
+      "title": "Get Analytics Summary",
+      "description": "Summarize post counts by status, platform, and day. GET /api/analytics/summary. from and to are required YYYY-MM-DD dates; the server clamps the window to 30 days. tz is the IANA day-boundary timezone. heatmap=1 includes publishedTimes.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "from": {
+            "type": "string",
+            "minLength": 10,
+            "description": "Inclusive start date, YYYY-MM-DD.",
+            "maxLength": 10
+          },
+          "to": {
+            "type": "string",
+            "minLength": 10,
+            "description": "Inclusive end date, YYYY-MM-DD.",
+            "maxLength": 10
+          },
+          "tz": {
+            "type": "string",
+            "minLength": 1,
+            "description": "IANA timezone used for day boundaries. Defaults to UTC when omitted."
+          },
+          "heatmap": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Set to 1 to include raw publish timestamps.",
+            "enum": [
+              "1"
+            ]
+          },
+          "channelIds": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Comma-separated channel ids."
+          },
+          "platforms": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Comma-separated platform keys."
+          },
+          "labelIds": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Comma-separated label ids. A post matches any of them."
+          },
+          "postFormat": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Limit to single posts or threads.",
+            "enum": [
+              "post",
+              "thread"
+            ]
+          },
+          "mediaType": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Limit by the first media file.",
+            "enum": [
+              "text",
+              "image",
+              "video"
+            ]
+          },
+          "compare": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Set to 1 to include the previous equal-length window.",
+            "enum": [
+              "1"
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "from",
+          "to"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": [
+              "totalPosts",
+              "published",
+              "scheduled",
+              "failed",
+              "partial",
+              "byPlatform",
+              "byDay",
+              "from",
+              "to"
+            ],
+            "properties": {
+              "totalPosts": {
+                "type": "integer"
+              },
+              "published": {
+                "type": "integer"
+              },
+              "scheduled": {
+                "type": "integer"
+              },
+              "failed": {
+                "type": "integer"
+              },
+              "partial": {
+                "type": "integer"
+              },
+              "byPlatform": {
+                "type": "object"
+              },
+              "byDay": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              },
+              "publishedTimes": {
+                "type": "array"
+              },
+              "from": {
+                "type": "string"
+              },
+              "to": {
+                "type": "string"
+              },
+              "previous": {
+                "type": [
+                  "object",
+                  "null"
+                ]
+              },
+              "previousWindow": {
+                "type": [
+                  "object",
+                  "null"
+                ]
+              }
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/analytics/summary",
+        "success": [
+          200
+        ],
+        "query": {
+          "from": "{{from}}",
+          "to": "{{to}}",
+          "tz": "{{tz}}",
+          "heatmap": "{{heatmap}}",
+          "channelIds": "{{channelIds}}",
+          "platforms": "{{platforms}}",
+          "labelIds": "{{labelIds}}",
+          "postFormat": "{{postFormat}}",
+          "mediaType": "{{mediaType}}",
+          "compare": "{{compare}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "api-keys.usage": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 1048576,
+      "title": "Get API Request Usage",
+      "description": "Return today's organization-wide API request count, daily limit, plan, and per-key breakdown. GET /api/api-keys/usage. The call itself consumes one daily request.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": [
+              "today",
+              "limit",
+              "plan",
+              "perKey"
+            ],
+            "properties": {
+              "today": {
+                "type": "integer"
+              },
+              "limit": {
+                "type": "integer"
+              },
+              "plan": {
+                "type": "string",
+                "enum": [
+                  "free",
+                  "ltd",
+                  "pro",
+                  "business"
+                ]
+              },
+              "perKey": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/api-keys/usage",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "quotas.usage": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 1048576,
+      "title": "Get Plan Usage",
+      "description": "Return the connected organization's plan, feature limits, and current resource usage. GET /api/quotas/usage. tz sets the calendar day for usage.scheduledToday.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "tz": {
+            "type": "string",
+            "minLength": 1,
+            "description": "IANA timezone used for today's scheduled-post count. Defaults to UTC when omitted."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": [
+              "organizationId",
+              "plan",
+              "limits",
+              "usage"
+            ],
+            "properties": {
+              "organizationId": {
+                "type": "integer"
+              },
+              "plan": {
+                "type": "string",
+                "enum": [
+                  "free",
+                  "ltd",
+                  "pro",
+                  "business"
+                ]
+              },
+              "limits": {
+                "type": "object"
+              },
+              "usage": {
+                "type": "object"
+              },
+              "subscription": {
+                "type": "object"
+              },
+              "channelSlots": {
+                "type": "object"
+              }
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/quotas/usage",
+        "success": [
+          200
+        ],
+        "query": {
+          "tz": "{{tz}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "platforms.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 1048576,
+      "title": "Get Platform Availability",
+      "description": "Return current connection and publishing availability for every supported platform and platform variant. GET /api/platforms.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": [
+              "platforms"
+            ],
+            "properties": {
+              "platforms": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/platforms",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "activity.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 1048576,
+      "title": "List Activity",
+      "description": "Return one page of organization audit activity. GET /api/activity. Pagination is page and limit. action and resource filter the log. There is no cursor parameter.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Page number. Defaults to 1 when omitted."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Items per page. Defaults to 20 when omitted."
+          },
+          "action": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by provider action type."
+          },
+          "resource": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by provider resource type."
+          },
+          "userId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Only entries recorded for this member."
+          },
+          "from": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Earliest entry, ISO 8601. A bare date starts at its first instant."
+          },
+          "to": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Latest entry, ISO 8601. A bare date includes that whole day."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": [
+              "activities",
+              "pagination"
+            ],
+            "properties": {
+              "activities": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              },
+              "pagination": {
+                "type": "object"
+              }
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/activity",
+        "success": [
+          200
+        ],
+        "query": {
+          "page": "{{page}}",
+          "limit": "{{limit}}",
+          "action": "{{action}}",
+          "resource": "{{resource}}",
+          "userId": "{{userId}}",
+          "from": "{{from}}",
+          "to": "{{to}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "channels.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 1048576,
+      "title": "List Channels",
+      "description": "Return connected social channels, including platform and token state. GET /api/channels. active defaults to true on the server; send false for inactive channels.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "active": {
+            "type": "boolean",
+            "description": "Return active channels when true. Set false to return inactive channels."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": [
+              "channels",
+              "capabilities"
+            ],
+            "properties": {
+              "channels": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              },
+              "capabilities": {
+                "type": "object"
+              }
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/channels",
+        "success": [
+          200
+        ],
+        "query": {
+          "active": "{{active}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "labels.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 1048576,
+      "title": "List Labels",
+      "description": "Return post or media labels in the connected organization. GET /api/labels. The official Node SDK types the JSON success body as an array of label objects. type filters post or media labels.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter labels by post or media.",
+            "enum": [
+              "post",
+              "media"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/labels",
+        "success": [
+          200
+        ],
+        "query": {
+          "type": "{{type}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "media.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 1048576,
+      "title": "List Media",
+      "description": "Search uploaded media by filename or labels and return one page of files. GET /api/media. labelIds is a comma-separated string. Pagination is page and limit.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Page number. Defaults to 1 when omitted."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Items per page. Defaults to 20 when omitted."
+          },
+          "search": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Search media by filename."
+          },
+          "labelIds": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Comma-separated media label ids."
+          },
+          "type": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by image or video.",
+            "enum": [
+              "image",
+              "video"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": [
+              "files",
+              "page",
+              "limit",
+              "total"
+            ],
+            "properties": {
+              "files": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              },
+              "page": {
+                "type": "integer"
+              },
+              "limit": {
+                "type": "integer"
+              },
+              "total": {
+                "type": "integer"
+              }
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/media",
+        "success": [
+          200
+        ],
+        "query": {
+          "page": "{{page}}",
+          "limit": "{{limit}}",
+          "search": "{{search}}",
+          "labelIds": "{{labelIds}}",
+          "type": "{{type}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "notifications.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 1048576,
+      "title": "List Notifications",
+      "description": "Return one page of organization notifications. GET /api/notifications. unreadOnly restricts the page to unread items. Pagination is page and limit.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Page number. Defaults to 1 when omitted."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Items per page. Defaults to 20 when omitted."
+          },
+          "unreadOnly": {
+            "type": "boolean",
+            "description": "Return only unread notifications when true."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": [
+              "notifications",
+              "unreadTotal",
+              "pagination"
+            ],
+            "properties": {
+              "notifications": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              },
+              "unreadTotal": {
+                "type": "integer"
+              },
+              "pagination": {
+                "type": "object"
+              }
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/notifications",
+        "success": [
+          200
+        ],
+        "query": {
+          "page": "{{page}}",
+          "limit": "{{limit}}",
+          "unreadOnly": "{{unreadOnly}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "posts.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 1048576,
+      "title": "List Posts",
+      "description": "Search and filter the connected organization's posts and return one page. GET /api/posts. Pagination is page and limit (1-500). There is no cursor parameter.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Page number. Defaults to 1 when omitted."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Maximum posts on this page, from 1 to 500. Defaults to 20 when omitted.",
+            "maximum": 500
+          },
+          "status": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by post status.",
+            "enum": [
+              "draft",
+              "scheduled",
+              "publishing",
+              "published",
+              "processing",
+              "failed",
+              "partial"
+            ]
+          },
+          "channelId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Filter by connected channel id."
+          },
+          "labelId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Filter by one label id."
+          },
+          "labelIds": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Comma-separated label ids."
+          },
+          "labelMode": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Combine multiple label ids with or or and.",
+            "enum": [
+              "or",
+              "and"
+            ]
+          },
+          "search": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Search within post content."
+          },
+          "from": {
+            "type": "string",
+            "minLength": 10,
+            "description": "Include posts created on or after this YYYY-MM-DD date.",
+            "maxLength": 10
+          },
+          "to": {
+            "type": "string",
+            "minLength": 10,
+            "description": "Include posts created on or before this YYYY-MM-DD date.",
+            "maxLength": 10
+          },
+          "scheduledFrom": {
+            "type": "string",
+            "minLength": 10,
+            "description": "Include posts scheduled on or after this YYYY-MM-DD date.",
+            "maxLength": 10
+          },
+          "scheduledTo": {
+            "type": "string",
+            "minLength": 10,
+            "description": "Include posts scheduled on or before this YYYY-MM-DD date.",
+            "maxLength": 10
+          },
+          "recurring": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Set to true to return recurring posts only.",
+            "enum": [
+              "true"
+            ]
+          },
+          "approvalStatus": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by approval state.",
+            "enum": [
+              "none",
+              "pending",
+              "approved",
+              "rejected"
+            ]
+          },
+          "assignedTo": {
+            "type": "string",
+            "minLength": 1,
+            "description": "User id, me, or unassigned."
+          },
+          "order": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Timeline sort direction.",
+            "enum": [
+              "asc",
+              "desc"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": [
+              "posts",
+              "total",
+              "page",
+              "limit",
+              "totalPages"
+            ],
+            "properties": {
+              "posts": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              },
+              "total": {
+                "type": "integer"
+              },
+              "page": {
+                "type": "integer"
+              },
+              "limit": {
+                "type": "integer"
+              },
+              "totalPages": {
+                "type": "integer"
+              }
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/posts",
+        "success": [
+          200
+        ],
+        "query": {
+          "page": "{{page}}",
+          "limit": "{{limit}}",
+          "status": "{{status}}",
+          "channelId": "{{channelId}}",
+          "labelId": "{{labelId}}",
+          "labelIds": "{{labelIds}}",
+          "labelMode": "{{labelMode}}",
+          "search": "{{search}}",
+          "from": "{{from}}",
+          "to": "{{to}}",
+          "scheduledFrom": "{{scheduledFrom}}",
+          "scheduledTo": "{{scheduledTo}}",
+          "recurring": "{{recurring}}",
+          "approvalStatus": "{{approvalStatus}}",
+          "assignedTo": "{{assignedTo}}",
+          "order": "{{order}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    }
+  }
+}

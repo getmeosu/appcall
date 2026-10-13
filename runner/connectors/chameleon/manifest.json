@@ -1,0 +1,314 @@
+{
+  "key": "chameleon",
+  "name": "Chameleon",
+  "version": "0.1.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "marketing"
+  ],
+  "auth": {
+    "type": "api_key",
+    "scopes": [],
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "Chameleon account secret",
+          "required": true,
+          "secret": true
+        }
+      ]
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "api.chameleon.io"
+    ]
+  },
+  "models": [
+    "account",
+    "delivery",
+    "event"
+  ],
+  "http": {
+    "baseUrl": "https://api.chameleon.io",
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "X-Account-Secret",
+      "value": "{{apiKey}}"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "X-Ratelimit-Wait",
+      "retryAfterPaths": [
+        "wait"
+      ],
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "messages.0",
+        "message"
+      ]
+    },
+    "headers": {
+      "Accept": "application/json"
+    }
+  },
+  "operations": {
+    "account.identity.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "title": "Get Account Identity",
+      "description": "Return the Chameleon account ID and admin user ID for the connected account secret. GET https://api.chameleon.io with X-Account-Secret.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "account",
+          "user"
+        ],
+        "properties": {
+          "account": {
+            "type": "object"
+          },
+          "user": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/",
+        "success": [
+          200
+        ],
+        "result": {
+          "account": "{{response.account}}",
+          "user": "{{response.user}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "deliveries.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "title": "Get Delivery",
+      "description": "Retrieve one Chameleon experience delivery by ID. GET /v3/edit/delivery/{deliveryId}. Does not trigger, change, or cancel the delivery.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "deliveryId"
+        ],
+        "properties": {
+          "deliveryId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Chameleon delivery ID."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "delivery"
+        ],
+        "properties": {
+          "delivery": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v3/edit/delivery/{{deliveryId}}",
+        "success": [
+          200
+        ],
+        "result": {
+          "delivery": "{{response.delivery}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "deliveries.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 5242880,
+      "title": "List Deliveries",
+      "description": "List one page of scheduled Chameleon experience deliveries. GET /v3/edit/deliveries. The opaque cursor is sent as the before query parameter. experienceId is sent as model_id.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 500,
+            "description": "Maximum deliveries in this page."
+          },
+          "cursor": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Continuation cursor. Sent unchanged as the before query parameter."
+          },
+          "profileId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Chameleon profile ID. Sent as profile_id."
+          },
+          "experienceId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Tour or microsurvey ID. Sent as model_id."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "deliveries"
+        ],
+        "properties": {
+          "deliveries": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "cursor": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v3/edit/deliveries",
+        "query": {
+          "limit": "{{limit}}",
+          "before": "{{cursor}}",
+          "profile_id": "{{profileId}}",
+          "model_id": "{{experienceId}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "deliveries": "{{response.deliveries}}",
+          "cursor": "{{response.cursor}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "events.track": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 65536,
+      "title": "Track Event",
+      "description": "Record one named event for a Chameleon profile. POST /v3/observe/hooks/events. Provide exactly one of profileId or profileUid. profileId is sent as id and profileUid as uid. The properties object is sent as the JSON properties field.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "eventName"
+        ],
+        "properties": {
+          "eventName": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Event name. Sent as name."
+          },
+          "profileId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Chameleon profile ID. Sent as id. Do not combine with profileUid."
+          },
+          "profileUid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "External profile UID. Sent as uid. Do not combine with profileId."
+          },
+          "properties": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Event properties. Sent as the JSON properties object."
+          }
+        },
+        "oneOf": [
+          {
+            "required": [
+              "profileId"
+            ]
+          },
+          {
+            "required": [
+              "profileUid"
+            ]
+          }
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "event"
+        ],
+        "properties": {
+          "event": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v3/observe/hooks/events",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "id": "{{profileId}}",
+          "uid": "{{profileUid}}",
+          "name": "{{eventName}}",
+          "properties": "{{properties}}"
+        },
+        "success": [
+          200,
+          201
+        ],
+        "result": {
+          "event": "{{response.event}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    }
+  }
+}

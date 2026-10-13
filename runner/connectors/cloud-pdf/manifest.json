@@ -1,0 +1,704 @@
+{
+  "key": "cloud-pdf",
+  "name": "CloudPDF",
+  "version": "0.1.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "documents"
+  ],
+  "auth": {
+    "type": "api_key",
+    "scopes": [],
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "CloudPDF simple API key",
+          "required": true,
+          "secret": true
+        }
+      ]
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "api.cloudpdf.io"
+    ]
+  },
+  "models": [
+    "account",
+    "document",
+    "file",
+    "webhook"
+  ],
+  "http": {
+    "baseUrl": "https://api.cloudpdf.io/v2",
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "X-Authorization",
+      "value": "{{apiKey}}"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "Retry-After",
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "message",
+        "error",
+        "code"
+      ]
+    },
+    "headers": {
+      "Accept": "application/json"
+    }
+  },
+  "operations": {
+    "account.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "title": "Get Account",
+      "description": "Return the connected CloudPDF organization's plan, allowances, and current upload, view, and storage usage.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "CloudPDF JSON object."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/account",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "documents.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "title": "Get Document",
+      "description": "Retrieve one CloudPDF document by UUID, including metadata, default permissions, and current file processing status.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "documentId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "description": "CloudPDF document UUID. It is a path segment, not a URL."
+          }
+        },
+        "required": [
+          "documentId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "CloudPDF JSON object."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/documents/{{documentId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "documents.files.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "title": "Get Document File",
+      "description": "Retrieve one CloudPDF file version and its processing status. Success is JSON file metadata, not PDF bytes.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "documentId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "description": "CloudPDF document UUID. It is a path segment, not a URL."
+          },
+          "fileId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "description": "CloudPDF file-version UUID. It is a path segment, not a URL."
+          }
+        },
+        "required": [
+          "documentId",
+          "fileId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "CloudPDF JSON object."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/documents/{{documentId}}/files/{{fileId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "documents.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Update Document",
+      "description": "Update selected metadata or default permissions on a known CloudPDF document. Omitted fields are left off the JSON body.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "documentId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "description": "CloudPDF document UUID. It is a path segment, not a URL."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 512,
+            "description": "New document name. Omission keeps the current name."
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 4096,
+            "description": "New document description. Omission keeps the current value."
+          },
+          "parentId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "description": "Folder ID to move the document into. Omission keeps the current parent."
+          },
+          "tags": {
+            "type": "array",
+            "maxItems": 50,
+            "uniqueItems": true,
+            "description": "Replacement tag list. An empty array removes all tags. Omission keeps current tags.",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            }
+          },
+          "defaultPermissions": {
+            "type": "object",
+            "additionalProperties": false,
+            "description": "Default document permissions. Omitted nested fields are not sent.",
+            "properties": {
+              "download": {
+                "type": "string",
+                "enum": [
+                  "NotAllowed",
+                  "Allowed",
+                  "EmailRequired"
+                ],
+                "description": "Whether viewers may download the PDF."
+              },
+              "search": {
+                "type": "boolean",
+                "description": "Whether search is allowed."
+              },
+              "selection": {
+                "type": "boolean",
+                "description": "Whether text selection is allowed."
+              },
+              "info": {
+                "type": "array",
+                "maxItems": 4,
+                "uniqueItems": true,
+                "description": "Viewer fields required before the document opens.",
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "email",
+                    "name",
+                    "organization",
+                    "phone"
+                  ]
+                }
+              },
+              "public": {
+                "type": "boolean",
+                "description": "Whether the document is publicly accessible."
+              }
+            }
+          }
+        },
+        "required": [
+          "documentId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "CloudPDF JSON object."
+          }
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/documents/{{documentId}}",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "name": "{{name}}",
+          "description": "{{description}}",
+          "parentId": "{{parentId}}",
+          "tags": "{{tags}}",
+          "defaultPermissions": "{{defaultPermissions}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "documents.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "title": "Delete Document",
+      "description": "Permanently delete one CloudPDF document by UUID. Success is a JSON object containing deletionTime.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "documentId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "description": "CloudPDF document UUID. It is a path segment, not a URL."
+          }
+        },
+        "required": [
+          "documentId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "CloudPDF JSON object."
+          }
+        }
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/documents/{{documentId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "webhooks.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "title": "List Webhooks",
+      "description": "Return webhook subscriptions for the connected CloudPDF organization. The provider success body is a JSON array.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "description": "CloudPDF JSON array of webhook objects.",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/webhooks",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "webhooks.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "title": "Get Webhook",
+      "description": "Retrieve one CloudPDF webhook subscription by its decimal ID.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "webhookId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 32,
+            "description": "Decimal CloudPDF webhook ID, such as 23. It is a path segment, not a URL."
+          }
+        },
+        "required": [
+          "webhookId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "CloudPDF JSON object."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/webhooks/{{webhookId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "webhooks.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Create Webhook",
+      "description": "Create a CloudPDF webhook subscription for document, collection, tracker, lead, or file-processing events. The callback URL is stored by CloudPDF and is not requested by this connector.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 512,
+            "description": "Short label identifying the webhook subscription."
+          },
+          "url": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2048,
+            "description": "Public callback URL stored by CloudPDF. This connector does not request it."
+          },
+          "secret": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 512,
+            "description": "Optional secret CloudPDF appends to callback requests as a query parameter."
+          },
+          "events": {
+            "type": "array",
+            "maxItems": 16,
+            "uniqueItems": true,
+            "description": "Event slugs. An empty array subscribes to no events. Omission leaves the field unset.",
+            "items": {
+              "type": "string",
+              "enum": [
+                "document.created",
+                "document.updated",
+                "collection.created",
+                "collection.updated",
+                "tracker.new",
+                "lead.new",
+                "file.processed"
+              ]
+            }
+          },
+          "headers": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Callback header names and values stored by CloudPDF. An empty object clears headers on update when sent."
+          }
+        },
+        "required": [
+          "name",
+          "url"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "CloudPDF JSON object."
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/webhooks",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "name": "{{name}}",
+          "url": "{{url}}",
+          "secret": "{{secret}}",
+          "events": "{{events}}",
+          "headers": "{{headers}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "webhooks.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Update Webhook",
+      "description": "Update selected fields of a CloudPDF webhook subscription. Omitted fields are left off the JSON body.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "webhookId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 32,
+            "description": "Decimal CloudPDF webhook ID, such as 23. It is a path segment, not a URL."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 512,
+            "description": "New webhook label. Omission keeps the current label."
+          },
+          "url": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2048,
+            "description": "New public callback URL stored by CloudPDF. Omission keeps the current URL. This connector does not request it."
+          },
+          "secret": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 512,
+            "description": "New callback query-string secret. Omission keeps the current secret."
+          },
+          "events": {
+            "type": "array",
+            "maxItems": 16,
+            "uniqueItems": true,
+            "description": "Event slugs. An empty array subscribes to no events. Omission leaves the field unset.",
+            "items": {
+              "type": "string",
+              "enum": [
+                "document.created",
+                "document.updated",
+                "collection.created",
+                "collection.updated",
+                "tracker.new",
+                "lead.new",
+                "file.processed"
+              ]
+            }
+          },
+          "headers": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Callback header names and values stored by CloudPDF. An empty object clears headers on update when sent."
+          }
+        },
+        "required": [
+          "webhookId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "CloudPDF JSON object."
+          }
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/webhooks/{{webhookId}}",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "name": "{{name}}",
+          "url": "{{url}}",
+          "secret": "{{secret}}",
+          "events": "{{events}}",
+          "headers": "{{headers}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "webhooks.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "title": "Delete Webhook",
+      "description": "Delete one CloudPDF webhook subscription by its decimal ID. Success is the JSON webhook object.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "webhookId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 32,
+            "description": "Decimal CloudPDF webhook ID, such as 23. It is a path segment, not a URL."
+          }
+        },
+        "required": [
+          "webhookId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "CloudPDF JSON object."
+          }
+        }
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/webhooks/{{webhookId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    }
+  }
+}

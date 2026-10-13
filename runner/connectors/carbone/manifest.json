@@ -1,0 +1,949 @@
+{
+  "key": "carbone",
+  "name": "Carbone",
+  "version": "0.1.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "documents"
+  ],
+  "auth": {
+    "type": "api_key",
+    "scopes": [],
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "Carbone API token",
+          "required": true,
+          "secret": true
+        }
+      ]
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "api.carbone.io"
+    ]
+  },
+  "models": [
+    "template",
+    "report"
+  ],
+  "http": {
+    "baseUrl": "https://api.carbone.io",
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "Authorization",
+      "value": "Bearer {{apiKey}}"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "Retry-After",
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "error",
+        "message"
+      ]
+    },
+    "headers": {
+      "Accept": "application/json",
+      "carbone-version": "5"
+    }
+  },
+  "operations": {
+    "status.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "title": "Get Carbone server status",
+      "description": "Read Carbone Cloud health. The JSON body includes success, code, message, and version.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": [
+              "success"
+            ],
+            "properties": {
+              "success": {
+                "type": "boolean"
+              }
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/status",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "templates.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 5242880,
+      "title": "List templates",
+      "description": "List deployed Carbone templates with cursor pagination. Filters are query parameters on GET /templates.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 32,
+            "description": "Template ID in 64-bit form. A version ID is not accepted in this filter."
+          },
+          "versionId": {
+            "type": "string",
+            "minLength": 64,
+            "maxLength": 64,
+            "description": "Version ID, the 64-character SHA-256 of one template version."
+          },
+          "category": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "Category name to match."
+          },
+          "origin": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 4,
+            "description": "Upload origin: 0 API, 1 Studio, 2 Salesforce, 3 Odoo, 4 HubSpot."
+          },
+          "includeVersions": {
+            "type": "boolean",
+            "description": "When true, list every version of one template ID. Default is false."
+          },
+          "search": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "Fuzzy template name, or an exact template ID or version ID."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Page size. The provider default is 100."
+          },
+          "cursor": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 512,
+            "description": "Cursor from a previous nextCursor value."
+          },
+          "carboneVersion": {
+            "type": "integer",
+            "enum": [
+              3,
+              4,
+              5
+            ],
+            "description": "Optional Carbone major version sent as the carbone-version header. Omit to send 5."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": [
+              "success"
+            ],
+            "properties": {
+              "success": {
+                "type": "boolean"
+              }
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/templates",
+        "headers": {
+          "carbone-version": "{{carboneVersion}}"
+        },
+        "query": {
+          "id": "{{id}}",
+          "versionId": "{{versionId}}",
+          "category": "{{category}}",
+          "origin": "{{origin}}",
+          "includeVersions": "{{includeVersions}}",
+          "search": "{{search}}",
+          "limit": "{{limit}}",
+          "cursor": "{{cursor}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "templates.categories.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "title": "List template categories",
+      "description": "List category names used by deployed Carbone templates.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "carboneVersion": {
+            "type": "integer",
+            "enum": [
+              3,
+              4,
+              5
+            ],
+            "description": "Optional Carbone major version sent as the carbone-version header. Omit to send 5."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": [
+              "success"
+            ],
+            "properties": {
+              "success": {
+                "type": "boolean"
+              }
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/templates/categories",
+        "headers": {
+          "carbone-version": "{{carboneVersion}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "templates.tags.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "title": "List template tags",
+      "description": "List tag names used by deployed Carbone templates.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "carboneVersion": {
+            "type": "integer",
+            "enum": [
+              3,
+              4,
+              5
+            ],
+            "description": "Optional Carbone major version sent as the carbone-version header. Omit to send 5."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": [
+              "success"
+            ],
+            "properties": {
+              "success": {
+                "type": "boolean"
+              }
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/templates/tags",
+        "headers": {
+          "carbone-version": "{{carboneVersion}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "templates.upload": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 60000,
+      "maxInputBytes": 26214400,
+      "maxResponseBytes": 26214400,
+      "title": "Upload a template",
+      "description": "Store a template as a JSON base64 string and return its template id and version id.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "template": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 20000000,
+            "description": "Template bytes as base64 or a base64 data-URI."
+          }
+        },
+        "required": [
+          "template"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": [
+              "success"
+            ],
+            "properties": {
+              "success": {
+                "type": "boolean"
+              }
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/template",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "template": "{{template}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "templates.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Update template metadata",
+      "description": "Patch the name, tags, comment, category, expireAt, or deployedAt of one template version. At least one metadata field is required.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "templateId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "description": "Template ID (64-bit) or version ID (64 hexadecimal characters) to patch."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "Template name."
+          },
+          "tags": {
+            "type": "array",
+            "maxItems": 16,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100
+            },
+            "description": "Tags. Duplicates are removed by Carbone. The combined list is limited to about 100 characters."
+          },
+          "comment": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "Template comment."
+          },
+          "category": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "Category, used like a folder."
+          },
+          "expireAt": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991,
+            "description": "UTC unix time when the template expires. 0 keeps it permanent. Values at or above 42000000000 mean now."
+          },
+          "deployedAt": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991,
+            "description": "UTC unix time of the deployed version. Values at or above 42000000000 mean now. Future times are rejected by Carbone."
+          },
+          "carboneVersion": {
+            "type": "integer",
+            "enum": [
+              3,
+              4,
+              5
+            ],
+            "description": "Optional Carbone major version sent as the carbone-version header. Omit to send 5."
+          }
+        },
+        "required": [
+          "templateId"
+        ],
+        "anyOf": [
+          {
+            "required": [
+              "name"
+            ]
+          },
+          {
+            "required": [
+              "tags"
+            ]
+          },
+          {
+            "required": [
+              "comment"
+            ]
+          },
+          {
+            "required": [
+              "category"
+            ]
+          },
+          {
+            "required": [
+              "expireAt"
+            ]
+          },
+          {
+            "required": [
+              "deployedAt"
+            ]
+          }
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": [
+              "success"
+            ],
+            "properties": {
+              "success": {
+                "type": "boolean"
+              }
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/template/{{templateId}}",
+        "headers": {
+          "Content-Type": "application/json",
+          "carbone-version": "{{carboneVersion}}"
+        },
+        "body": {
+          "name": "{{name}}",
+          "tags": "{{tags}}",
+          "comment": "{{comment}}",
+          "category": "{{category}}",
+          "expireAt": "{{expireAt}}",
+          "deployedAt": "{{deployedAt}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "templates.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "title": "Delete Carbone template",
+      "description": "Expire a template or one version immediately. Carbone returns JSON and removes the file after the storage retention delay.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "templateId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "description": "Template ID (64-bit) or version ID (64 hexadecimal characters)."
+          }
+        },
+        "required": [
+          "templateId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": [
+              "success"
+            ],
+            "properties": {
+              "success": {
+                "type": "boolean"
+              }
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/template/{{templateId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "reports.generate": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 90000,
+      "maxInputBytes": 26214400,
+      "maxResponseBytes": 26214400,
+      "title": "Generate Carbone report",
+      "description": "Render a stored template and return a JSON render id. The rendered file is not part of this response.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "description": "JSON object or array of objects merged into the template with {d.} tags.",
+            "anyOf": [
+              {
+                "type": "object"
+              },
+              {
+                "type": "array",
+                "maxItems": 100,
+                "items": {
+                  "type": "object"
+                }
+              }
+            ]
+          },
+          "enum": {
+            "type": "object",
+            "description": "Enumerations for the convEnum formatter."
+          },
+          "lang": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 35,
+            "description": "Locale of the generated document, for example en-us."
+          },
+          "timezone": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "description": "IANA timezone used when formatting dates, for example Europe/Paris."
+          },
+          "convertTo": {
+            "description": "Output format such as pdf, or an object with formatName and formatOptions.",
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 32
+              },
+              {
+                "type": "object"
+              }
+            ]
+          },
+          "complement": {
+            "type": "object",
+            "description": "Extra object merged with {c.} tags."
+          },
+          "reportName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255,
+            "description": "Static or dynamic file name. Carbone appends the output extension."
+          },
+          "batchOutput": {
+            "type": "string",
+            "enum": [
+              "zip",
+              "pdf"
+            ],
+            "description": "Batch archive type. This call still returns a render id."
+          },
+          "hardRefresh": {
+            "type": "boolean",
+            "description": "Force pagination and table of contents to be recomputed."
+          },
+          "variableStr": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000,
+            "description": "Alias declaration, for example {#def = d.id}."
+          },
+          "batchSplitBy": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "Batch split path, for example d.items."
+          },
+          "translations": {
+            "type": "object",
+            "description": "Localization dictionary for translation tags."
+          },
+          "currencySource": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 12,
+            "description": "Currency code of amounts in the dataset, for example EUR."
+          },
+          "currencyTarget": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 12,
+            "description": "Currency code to convert amounts into, for example USD."
+          },
+          "currencyRates": {
+            "type": "object",
+            "description": "Map of currency codes to exchange rates."
+          },
+          "templateId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "description": "Template ID (64-bit) or version ID (64 hexadecimal characters)."
+          }
+        },
+        "required": [
+          "data",
+          "templateId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": [
+              "success"
+            ],
+            "properties": {
+              "success": {
+                "type": "boolean"
+              }
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/render/{{templateId}}",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "data": "{{data}}",
+          "enum": "{{enum}}",
+          "lang": "{{lang}}",
+          "timezone": "{{timezone}}",
+          "convertTo": "{{convertTo}}",
+          "complement": "{{complement}}",
+          "reportName": "{{reportName}}",
+          "batchOutput": "{{batchOutput}}",
+          "hardRefresh": "{{hardRefresh}}",
+          "variableStr": "{{variableStr}}",
+          "batchSplitBy": "{{batchSplitBy}}",
+          "translations": "{{translations}}",
+          "currencySource": "{{currencySource}}",
+          "currencyTarget": "{{currencyTarget}}",
+          "currencyRates": "{{currencyRates}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "reports.render-direct": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 90000,
+      "maxInputBytes": 26214400,
+      "maxResponseBytes": 26214400,
+      "title": "Render template direct",
+      "description": "Render a base64 template in one JSON call to POST /render/template and return a render id.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "description": "JSON object or array of objects merged into the template with {d.} tags.",
+            "anyOf": [
+              {
+                "type": "object"
+              },
+              {
+                "type": "array",
+                "maxItems": 100,
+                "items": {
+                  "type": "object"
+                }
+              }
+            ]
+          },
+          "enum": {
+            "type": "object",
+            "description": "Enumerations for the convEnum formatter."
+          },
+          "lang": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 35,
+            "description": "Locale of the generated document, for example en-us."
+          },
+          "timezone": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "description": "IANA timezone used when formatting dates, for example Europe/Paris."
+          },
+          "convertTo": {
+            "description": "Output format such as pdf, or an object with formatName and formatOptions.",
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 32
+              },
+              {
+                "type": "object"
+              }
+            ]
+          },
+          "complement": {
+            "type": "object",
+            "description": "Extra object merged with {c.} tags."
+          },
+          "reportName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255,
+            "description": "Static or dynamic file name. Carbone appends the output extension."
+          },
+          "batchOutput": {
+            "type": "string",
+            "enum": [
+              "zip",
+              "pdf"
+            ],
+            "description": "Batch archive type. This call still returns a render id."
+          },
+          "hardRefresh": {
+            "type": "boolean",
+            "description": "Force pagination and table of contents to be recomputed."
+          },
+          "variableStr": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000,
+            "description": "Alias declaration, for example {#def = d.id}."
+          },
+          "batchSplitBy": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "Batch split path, for example d.items."
+          },
+          "translations": {
+            "type": "object",
+            "description": "Localization dictionary for translation tags."
+          },
+          "currencySource": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 12,
+            "description": "Currency code of amounts in the dataset, for example EUR."
+          },
+          "currencyTarget": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 12,
+            "description": "Currency code to convert amounts into, for example USD."
+          },
+          "currencyRates": {
+            "type": "object",
+            "description": "Map of currency codes to exchange rates."
+          },
+          "template": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 20000000,
+            "description": "Template bytes as base64 or a base64 data-URI."
+          },
+          "carboneVersion": {
+            "type": "integer",
+            "enum": [
+              3,
+              4,
+              5
+            ],
+            "description": "Optional Carbone major version sent as the carbone-version header. Omit to send 5."
+          }
+        },
+        "required": [
+          "data",
+          "template"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": [
+              "success"
+            ],
+            "properties": {
+              "success": {
+                "type": "boolean"
+              }
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/render/template",
+        "headers": {
+          "Content-Type": "application/json",
+          "carbone-version": "{{carboneVersion}}"
+        },
+        "body": {
+          "template": "{{template}}",
+          "data": "{{data}}",
+          "enum": "{{enum}}",
+          "lang": "{{lang}}",
+          "timezone": "{{timezone}}",
+          "convertTo": "{{convertTo}}",
+          "complement": "{{complement}}",
+          "reportName": "{{reportName}}",
+          "batchOutput": "{{batchOutput}}",
+          "hardRefresh": "{{hardRefresh}}",
+          "variableStr": "{{variableStr}}",
+          "batchSplitBy": "{{batchSplitBy}}",
+          "translations": "{{translations}}",
+          "currencySource": "{{currencySource}}",
+          "currencyTarget": "{{currencyTarget}}",
+          "currencyRates": "{{currencyRates}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    }
+  }
+}

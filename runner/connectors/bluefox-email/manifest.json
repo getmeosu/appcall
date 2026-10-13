@@ -1,0 +1,1016 @@
+{
+  "key": "bluefox-email",
+  "name": "BlueFox Email",
+  "version": "0.1.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "email"
+  ],
+  "auth": {
+    "type": "api_key",
+    "scopes": [],
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "BlueFox Email API key",
+          "description": "Project API key from Project Settings > API Keys. Sent as Authorization: Bearer.",
+          "required": true,
+          "secret": true
+        }
+      ]
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "api.bluefox.email"
+    ]
+  },
+  "models": [
+    "contact",
+    "subscriber",
+    "transactional-email",
+    "triggered-email"
+  ],
+  "http": {
+    "baseUrl": "https://api.bluefox.email/v1",
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "Authorization",
+      "value": "Bearer {{apiKey}}"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "Retry-After",
+      "retryAfterKind": "seconds",
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "error.message",
+        "error.name",
+        "message"
+      ]
+    },
+    "headers": {
+      "Accept": "application/json"
+    }
+  },
+  "operations": {
+    "contacts.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Create Contact",
+      "description": "Create a project contact with POST /v1/contacts/{projectId}. This stores the contact and does not subscribe it to a list. Success is HTTP 201 with the JSON envelope.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "project_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "BlueFox project id from Project Settings or the contact Code Guide."
+          },
+          "fields": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "JSON body sent unchanged. email is required. name, tags, and data are optional. The live Contact schema also accepts registered custom properties as flat keys on this object, for example plan. BlueFox drops a key that is not email, name, tags, or a registered custom-property name. data is the custom-property object from the legacy contacts guide.",
+            "properties": {
+              "email": {
+                "type": "string",
+                "minLength": 3,
+                "maxLength": 320,
+                "description": "Email address for the new contact."
+              },
+              "name": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 500,
+                "description": "Display name."
+              },
+              "tags": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 200
+                },
+                "description": "Tag names."
+              },
+              "data": {
+                "type": "object",
+                "additionalProperties": true,
+                "description": "Custom-property values keyed by the API names configured on the project."
+              }
+            },
+            "required": [
+              "email"
+            ]
+          }
+        },
+        "required": [
+          "project_id",
+          "fields"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": [
+              "status",
+              "result"
+            ],
+            "properties": {
+              "status": {
+                "type": "integer"
+              },
+              "result": {
+                "type": "object"
+              }
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/contacts/{{project_id}}",
+        "success": [
+          201
+        ],
+        "body": "{{fields}}",
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "contacts.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 8192,
+      "maxResponseBytes": 1048576,
+      "title": "Delete Contact",
+      "description": "Permanently delete one contact with DELETE /v1/contacts/{projectId}/{email}. BlueFox also removes that contact from every subscriber list. Success is HTTP 200 JSON, not an empty body.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "project_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "BlueFox project id from Project Settings or the contact Code Guide."
+          },
+          "contact_email": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 320,
+            "description": "Current email address of the contact to delete."
+          }
+        },
+        "required": [
+          "project_id",
+          "contact_email"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": [
+              "status",
+              "result"
+            ],
+            "properties": {
+              "status": {
+                "type": "integer"
+              },
+              "result": {
+                "type": "object"
+              }
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/contacts/{{project_id}}/{{contact_email}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "contacts.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 8192,
+      "maxResponseBytes": 1048576,
+      "title": "Get Contact",
+      "description": "Retrieve one contact with GET /v1/contacts/{projectId}/{email}. Custom property values are flat keys on the contact, not nested under customFields.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "project_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "BlueFox project id from Project Settings or the contact Code Guide."
+          },
+          "contact_email": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 320,
+            "description": "Current email address identifying the contact."
+          }
+        },
+        "required": [
+          "project_id",
+          "contact_email"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": [
+              "status",
+              "result"
+            ],
+            "properties": {
+              "status": {
+                "type": "integer"
+              },
+              "result": {
+                "type": "object"
+              }
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/contacts/{{project_id}}/{{contact_email}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "contacts.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 5242880,
+      "title": "List Contacts",
+      "description": "List contacts in one project with GET /v1/contacts/{projectId}. limit is 1 through 30 and skip is the offset; omit both to use the server default page of 10. This operation does not follow result.next.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "project_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "BlueFox project id from Project Settings or the contact Code Guide."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 30,
+            "description": "Page size. BlueFox documents a default of 10 and a maximum of 30."
+          },
+          "skip": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Number of matching contacts to skip."
+          }
+        },
+        "required": [
+          "project_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": [
+              "status",
+              "result"
+            ],
+            "properties": {
+              "status": {
+                "type": "integer"
+              },
+              "result": {
+                "type": "object"
+              }
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/contacts/{{project_id}}",
+        "success": [
+          200
+        ],
+        "query": {
+          "limit": "{{limit}}",
+          "skip": "{{skip}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "contacts.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Update Contact",
+      "description": "Update one contact with PATCH /v1/contacts/{projectId}/{email}. contact_email is the current address. fields.email, when sent, becomes the address later lookups must use.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "project_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "BlueFox project id from Project Settings or the contact Code Guide."
+          },
+          "contact_email": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 320,
+            "description": "Current email address identifying the contact."
+          },
+          "fields": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "JSON body sent unchanged. At least one property is required. email is the replacement address. Registered custom properties may be flat keys. data is the legacy custom-property object. Later lookups must use the replacement email.",
+            "properties": {
+              "email": {
+                "type": "string",
+                "minLength": 3,
+                "maxLength": 320,
+                "description": "Replacement email address."
+              },
+              "name": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 500,
+                "description": "Display name."
+              },
+              "tags": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 200
+                },
+                "description": "Tag names."
+              },
+              "data": {
+                "type": "object",
+                "additionalProperties": true,
+                "description": "Replacement custom-property values keyed by project API names."
+              }
+            },
+            "minProperties": 1
+          }
+        },
+        "required": [
+          "project_id",
+          "contact_email",
+          "fields"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": [
+              "status",
+              "result"
+            ],
+            "properties": {
+              "status": {
+                "type": "integer"
+              },
+              "result": {
+                "type": "object"
+              }
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/contacts/{{project_id}}/{{contact_email}}",
+        "success": [
+          200
+        ],
+        "body": "{{fields}}",
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "subscribers.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 8192,
+      "maxResponseBytes": 1048576,
+      "title": "Get Subscriber",
+      "description": "Retrieve one subscriber with GET /v1/subscriber-lists/{id}/{email}. Custom field values are nested under customFields. BlueFox does not provide an API that discovers subscriber-list ids.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "subscriber_list_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "Subscriber-list id copied from the BlueFox UI."
+          },
+          "subscriber_email": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 320,
+            "description": "Current email address identifying the subscriber."
+          }
+        },
+        "required": [
+          "subscriber_list_id",
+          "subscriber_email"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": [
+              "status",
+              "result"
+            ],
+            "properties": {
+              "status": {
+                "type": "integer"
+              },
+              "result": {
+                "type": "object"
+              }
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/subscriber-lists/{{subscriber_list_id}}/{{subscriber_email}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "subscribers.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 8192,
+      "maxResponseBytes": 5242880,
+      "title": "List Subscribers",
+      "description": "List subscribers on one known list with GET /v1/subscriber-lists/{id}. This legacy route documents no filter or pagination query. result.next may be present; this operation does not follow it.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "subscriber_list_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "Subscriber-list id copied from the BlueFox UI. BlueFox does not provide an API that discovers list ids."
+          }
+        },
+        "required": [
+          "subscriber_list_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": [
+              "status",
+              "result"
+            ],
+            "properties": {
+              "status": {
+                "type": "integer"
+              },
+              "result": {
+                "type": "object"
+              }
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/subscriber-lists/{{subscriber_list_id}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "subscribers.subscribe": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Subscribe To List",
+      "description": "Create a subscriber-list membership with POST /v1/subscriber-lists/{id}. The call can create the contact. Setting status to active bypasses double opt-in; omitting status keeps the list's normal opt-in and may send a confirmation email. Success is HTTP 201 JSON.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "subscriber_list_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "Subscriber-list id copied from Manage List > Code Guide."
+          },
+          "fields": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "JSON body sent unchanged. email is required. status active bypasses double opt-in; omit status to keep the list's normal opt-in. status unverified starts double opt-in when the list uses it. data is the legacy custom-property object, and registered custom properties may also be flat keys.",
+            "properties": {
+              "email": {
+                "type": "string",
+                "minLength": 3,
+                "maxLength": 320,
+                "description": "Email address to subscribe."
+              },
+              "name": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 500,
+                "description": "Display name."
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "unverified",
+                  "active"
+                ],
+                "description": "active bypasses double opt-in. unverified uses the list confirmation flow. Omit the field for the list default."
+              },
+              "data": {
+                "type": "object",
+                "additionalProperties": true,
+                "description": "Custom-property values keyed by the API names configured on the project."
+              }
+            },
+            "required": [
+              "email"
+            ]
+          }
+        },
+        "required": [
+          "subscriber_list_id",
+          "fields"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": [
+              "status",
+              "result"
+            ],
+            "properties": {
+              "status": {
+                "type": "integer"
+              },
+              "result": {
+                "type": "object"
+              }
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/subscriber-lists/{{subscriber_list_id}}",
+        "success": [
+          201
+        ],
+        "body": "{{fields}}",
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "subscribers.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Update Subscriber",
+      "description": "Update one subscriber with PATCH /v1/subscriber-lists/{id}/{email}. This can change the address, unsubscribe, pause, or reactivate the subscriber. The legacy route's OpenAPI entry omits a response schema; the API overview and the project-scoped equivalent both describe the JSON envelope {status, result}.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "subscriber_list_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "Subscriber-list id copied from the BlueFox UI."
+          },
+          "subscriber_email": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 320,
+            "description": "Current email address identifying the subscriber."
+          },
+          "fields": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "JSON body sent unchanged. At least one property is required. email is the replacement address. status paused requires pausedUntil, a future timezone-aware ISO 8601 timestamp, and pausedUntil is otherwise not allowed. name and data follow the legacy subscriber guide; registered custom properties may be flat keys.",
+            "properties": {
+              "email": {
+                "type": "string",
+                "minLength": 3,
+                "maxLength": 320,
+                "description": "Replacement email address. Later lookups must use it."
+              },
+              "name": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 500,
+                "description": "Display name."
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "active",
+                  "paused",
+                  "unsubscribed"
+                ],
+                "description": "active re-enables email, unsubscribed opts out, and paused suppresses email until pausedUntil."
+              },
+              "pausedUntil": {
+                "type": "string",
+                "minLength": 20,
+                "maxLength": 40,
+                "description": "Future timezone-aware ISO 8601 timestamp. Required when status is paused and otherwise not allowed."
+              },
+              "data": {
+                "type": "object",
+                "additionalProperties": true,
+                "description": "Replacement custom-property values keyed by project API names."
+              }
+            },
+            "minProperties": 1
+          }
+        },
+        "required": [
+          "subscriber_list_id",
+          "subscriber_email",
+          "fields"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": [
+              "status",
+              "result"
+            ],
+            "properties": {
+              "status": {
+                "type": "integer"
+              },
+              "result": {
+                "type": "object"
+              }
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/subscriber-lists/{{subscriber_list_id}}/{{subscriber_email}}",
+        "success": [
+          200
+        ],
+        "body": "{{fields}}",
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "emails.send-transactional": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 30000,
+      "maxInputBytes": 10485760,
+      "maxResponseBytes": 10485760,
+      "title": "Send Transactional Email",
+      "description": "Queue one transactional email with POST /v1/send-transactional. The project is resolved from transactionalId, so the route has no project id. transactional_id is sent as transactionalId. data is Handlebars merge tags. attachments are JSON objects with filename and base64 content. The send is immediate and can fail with HTTP 405 when credits are exhausted.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "email": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 320,
+            "description": "External recipient email address."
+          },
+          "transactional_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "Transactional email id from the BlueFox Code Guide, not a template id."
+          },
+          "data": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Handlebars merge-tag values for the selected transactional email."
+          },
+          "attachments": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "filename",
+                "content"
+              ],
+              "properties": {
+                "filename": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 255,
+                  "description": "File name including an extension. The live OpenAPI key is filename."
+                },
+                "content": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 8000000,
+                  "description": "Base64 file content inside the JSON body, not a multipart upload."
+                }
+              }
+            },
+            "description": "Optional files. BlueFox publishes no attachment count or size limit."
+          }
+        },
+        "required": [
+          "email",
+          "transactional_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": [
+              "status",
+              "result"
+            ],
+            "properties": {
+              "status": {
+                "type": "integer"
+              },
+              "result": {
+                "type": "object"
+              }
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/send-transactional",
+        "success": [
+          200
+        ],
+        "body": {
+          "email": "{{email}}",
+          "transactionalId": "{{transactional_id}}",
+          "data": "{{data}}",
+          "attachments": "{{attachments}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "emails.send-triggered": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 30000,
+      "maxInputBytes": 10485760,
+      "maxResponseBytes": 10485760,
+      "title": "Send Triggered Email",
+      "description": "Start one triggered flow with POST /v1/send-triggered. The project is resolved from triggeredId. triggered_id is sent as triggeredId. emails is required so this call cannot fall through to every active subscriber on the linked list. attachments use the JSON key filename plus base64 content. The flow can send more than one message and can fail with HTTP 405 when credits are exhausted.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "triggered_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "Triggered email flow id copied from BlueFox, not a template id."
+          },
+          "emails": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 320,
+              "description": "External recipient email address."
+            },
+            "description": "Recipients. BlueFox publishes no maximum. Omitting emails on the raw API sends the linked list; this action does not allow that omission."
+          },
+          "data": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Handlebars merge-tag values for the selected triggered flow."
+          },
+          "attachments": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "filename",
+                "content"
+              ],
+              "properties": {
+                "filename": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 255,
+                  "description": "File name including an extension. The live OpenAPI key is filename."
+                },
+                "content": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 8000000,
+                  "description": "Base64 file content inside the JSON body, not a multipart upload."
+                }
+              }
+            },
+            "description": "Optional files. Each item uses filename and base64 content."
+          }
+        },
+        "required": [
+          "triggered_id",
+          "emails"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": [
+              "status",
+              "result"
+            ],
+            "properties": {
+              "status": {
+                "type": "integer"
+              },
+              "result": {
+                "type": "object"
+              }
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/send-triggered",
+        "success": [
+          200
+        ],
+        "body": {
+          "triggeredId": "{{triggered_id}}",
+          "emails": "{{emails}}",
+          "data": "{{data}}",
+          "attachments": "{{attachments}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    }
+  }
+}

@@ -1,0 +1,658 @@
+{
+  "key": "beatapi",
+  "name": "BeatAPI",
+  "version": "0.1.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "artificial-intelligence",
+    "media"
+  ],
+  "auth": {
+    "type": "api_key",
+    "scopes": [],
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "BeatAPI API key",
+          "required": true,
+          "secret": true
+        }
+      ]
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "api.beatapi.io"
+    ]
+  },
+  "models": [
+    "task",
+    "usage",
+    "effect",
+    "generation-model",
+    "workflow"
+  ],
+  "http": {
+    "baseUrl": "https://api.beatapi.io",
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "Authorization",
+      "value": "Bearer {{apiKey}}"
+    },
+    "headers": {
+      "Accept": "application/json"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "Retry-After",
+      "retryAfterPaths": [
+        "error.retry_after_seconds"
+      ],
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "error.message",
+        "message"
+      ]
+    }
+  },
+  "operations": {
+    "ecommerce-video.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Create Ecommerce Video Task",
+      "description": "Start one ecommerce video task with POST /v1/ecommerce-video/tasks and return its task id.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "images",
+          "duration"
+        ],
+        "properties": {
+          "images": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 7,
+            "description": "One to seven HTTPS product or lifestyle image URLs. Put the primary image first.",
+            "items": {
+              "type": "string",
+              "minLength": 8,
+              "maxLength": 2048
+            }
+          },
+          "duration": {
+            "type": "integer",
+            "minimum": 10,
+            "maximum": 60,
+            "description": "Output duration in seconds, from 10 to 60."
+          },
+          "prompt": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000,
+            "description": "Optional creative direction, up to 2,000 characters."
+          },
+          "aspectRatio": {
+            "type": "string",
+            "enum": [
+              "16:9",
+              "9:16",
+              "1:1"
+            ],
+            "description": "Output placement: 16:9 landscape, 9:16 vertical, or 1:1 square."
+          },
+          "language": {
+            "type": "string",
+            "enum": [
+              "en",
+              "zh"
+            ],
+            "description": "Dialogue and narration language: en or zh."
+          },
+          "idempotencyKey": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255,
+            "description": "Optional Idempotency-Key header. Reuse it only with the identical JSON body."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/ecommerce-video/tasks",
+        "headers": {
+          "Content-Type": "application/json",
+          "Idempotency-Key": "{{idempotencyKey}}"
+        },
+        "body": {
+          "images": "{{images}}",
+          "duration": "{{duration}}",
+          "prompt": "{{prompt}}",
+          "aspect_ratio": "{{aspectRatio}}",
+          "language": "{{language}}"
+        },
+        "success": [
+          201
+        ],
+        "result": {
+          "data": "{{response.data}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "images.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 30000,
+      "maxInputBytes": 262144,
+      "maxResponseBytes": 1048576,
+      "title": "Create Image Generation Task",
+      "description": "Start one image task with POST /v1/images/tasks. The generation object is that route's JSON body.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "generation"
+        ],
+        "properties": {
+          "generation": {
+            "type": "object",
+            "minProperties": 1,
+            "additionalProperties": true,
+            "required": [
+              "model",
+              "prompt"
+            ],
+            "description": "Complete request for one image model on POST /v1/images/tasks. Extra properties are that model's controls.",
+            "properties": {
+              "model": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128,
+                "description": "Image model id returned by List Generation Models."
+              },
+              "prompt": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 5000,
+                "description": "Prompt for this model, from 1 to 5,000 characters."
+              }
+            }
+          },
+          "idempotencyKey": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255,
+            "description": "Optional Idempotency-Key header. Reuse it only with the identical JSON body."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/images/tasks",
+        "headers": {
+          "Content-Type": "application/json",
+          "Idempotency-Key": "{{idempotencyKey}}"
+        },
+        "body": "{{generation}}",
+        "success": [
+          201
+        ],
+        "result": {
+          "data": "{{response.data}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "video-analysis.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Create Video Analysis Task",
+      "description": "Start one video analysis task with POST /v1/video-analysis/tasks and return its task id.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "videoUrl",
+          "prompt"
+        ],
+        "properties": {
+          "videoUrl": {
+            "type": "string",
+            "minLength": 8,
+            "maxLength": 2048,
+            "description": "Account-owned HTTPS MP4 or MOV URL, at most 600 seconds."
+          },
+          "prompt": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 12000,
+            "description": "Analysis instructions, from 1 to 12,000 characters."
+          },
+          "analysisDepth": {
+            "type": "string",
+            "enum": [
+              "standard",
+              "deep"
+            ],
+            "description": "Reasoning depth. Standard is the lower-cost default."
+          },
+          "maxOutputTokens": {
+            "type": "integer",
+            "minimum": 256,
+            "maximum": 8192,
+            "description": "Maximum answer budget in tokens, from 256 to 8,192."
+          },
+          "idempotencyKey": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255,
+            "description": "Optional Idempotency-Key header. Reuse it only with the identical JSON body."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/video-analysis/tasks",
+        "headers": {
+          "Content-Type": "application/json",
+          "Idempotency-Key": "{{idempotencyKey}}"
+        },
+        "body": {
+          "video_url": "{{videoUrl}}",
+          "prompt": "{{prompt}}",
+          "analysis_depth": "{{analysisDepth}}",
+          "max_output_tokens": "{{maxOutputTokens}}"
+        },
+        "success": [
+          201
+        ],
+        "result": {
+          "data": "{{response.data}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "videos.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 30000,
+      "maxInputBytes": 262144,
+      "maxResponseBytes": 1048576,
+      "title": "Create Video Generation Task",
+      "description": "Start one video task with POST /v1/videos/tasks. The generation object is that route's JSON body.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "generation"
+        ],
+        "properties": {
+          "generation": {
+            "type": "object",
+            "minProperties": 1,
+            "additionalProperties": true,
+            "required": [
+              "model"
+            ],
+            "description": "Exact model-specific body for POST /v1/videos/tasks. Prompt is optional because some motion models do not use it.",
+            "properties": {
+              "model": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128,
+                "description": "Video model id returned by List Generation Models."
+              },
+              "prompt": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 5000,
+                "description": "Prompt for this model, from 1 to 5,000 characters."
+              }
+            }
+          },
+          "idempotencyKey": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255,
+            "description": "Optional Idempotency-Key header. Reuse it only with the identical JSON body."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/videos/tasks",
+        "headers": {
+          "Content-Type": "application/json",
+          "Idempotency-Key": "{{idempotencyKey}}"
+        },
+        "body": "{{generation}}",
+        "success": [
+          201
+        ],
+        "result": {
+          "data": "{{response.data}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "tasks.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 2097152,
+      "title": "Get Task",
+      "description": "Read one task with GET /v1/tasks/{task_id}. This is a single status read, not a polling loop.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "taskId"
+        ],
+        "properties": {
+          "taskId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 512,
+            "description": "Task id returned by a BeatAPI create call."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/tasks/{{taskId}}",
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response.data}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "usage.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "title": "Get Usage",
+      "description": "Read USD balance, task totals, concurrency, and breakdowns with GET /v1/usage.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "period": {
+            "type": "string",
+            "enum": [
+              "24h",
+              "7d",
+              "30d",
+              "all"
+            ],
+            "description": "Window ending now. Omit for the provider default, which is all."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/usage",
+        "query": {
+          "period": "{{period}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response.data}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "effects.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 8192,
+      "maxResponseBytes": 5242880,
+      "title": "List Effects",
+      "description": "List published image and video effects with GET /v1/effects.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "outputType": {
+            "type": "string",
+            "enum": [
+              "image",
+              "video"
+            ],
+            "description": "Return only effects that produce this media type."
+          },
+          "category": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "description": "Return only effects in this provider-defined category."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/effects",
+        "query": {
+          "output_type": "{{outputType}}",
+          "category": "{{category}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response.data}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "generation-models.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 8192,
+      "maxResponseBytes": 5242880,
+      "title": "List Generation Models",
+      "description": "List image and video generation models with GET /v1/media/models.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "mediaType": {
+            "type": "string",
+            "enum": [
+              "image",
+              "video"
+            ],
+            "description": "Return only image or video models. Omit to return both."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/media/models",
+        "query": {
+          "media_type": "{{mediaType}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response.data}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "workflows.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "title": "List Workflows",
+      "description": "List high-level workflows and what each one produces with GET /v1/workflows.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/workflows",
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response.data}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    }
+  }
+}

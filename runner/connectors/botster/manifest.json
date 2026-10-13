@@ -1,0 +1,645 @@
+{
+  "key": "botster",
+  "name": "Botster",
+  "version": "0.1.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "web-scraping"
+  ],
+  "auth": {
+    "type": "api_key",
+    "scopes": [],
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "Botster API token",
+          "required": true,
+          "secret": true
+        }
+      ]
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "botster.io"
+    ]
+  },
+  "models": [
+    "bot",
+    "job",
+    "run",
+    "credit"
+  ],
+  "http": {
+    "baseUrl": "https://botster.io/api/v2",
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "Authorization",
+      "value": "Bearer {{apiKey}}"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "Retry-After",
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "message",
+        "error",
+        "detail"
+      ]
+    },
+    "headers": {
+      "Accept": "application/json"
+    }
+  },
+  "operations": {
+    "bots.calculate": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Calculate Bot Cost",
+      "description": "Price one intended launch with POST /bots/{botSlug}/calculate. Send the same flat JSON body you would launch: input plus bot-specific options as sibling keys. This does not start the bot or spend credits.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "botSlug": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "Bot identifier from List Bots, for example google-local-finder or linkedin-profile-scraper."
+          },
+          "body": {
+            "type": "object",
+            "description": "Flat JSON body. input is required. Put each bot-specific option as its own key beside input, which is the shape documented at https://botster.io/info/api-docs. Do not nest those keys under options.",
+            "required": [
+              "input"
+            ],
+            "properties": {
+              "input": {
+                "description": "Main bot input. A non-empty string, or a non-empty array of non-empty strings, exactly as the selected bot expects.",
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  }
+                ]
+              },
+              "webhook": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Optional HTTPS URL that receives one JSON POST when the job completes."
+              }
+            }
+          }
+        },
+        "required": [
+          "botSlug",
+          "body"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "description": "Provider JSON object or array, preserved without renaming fields."
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/bots/{{botSlug}}/calculate",
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{{body}}"
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "jobs.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "title": "Delete Job",
+      "description": "Permanently delete one job with DELETE /jobs/{jobId}. This is not archive. Success is an HTTP 200 JSON object or array. An empty body is not accepted.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "jobId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "Job identifier returned by Launch Bot or List Jobs."
+          }
+        },
+        "required": [
+          "jobId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "description": "Provider JSON object or array, preserved without renaming fields."
+          }
+        }
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/jobs/{{jobId}}",
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "runs.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "title": "Delete Run",
+      "description": "Permanently delete one data run and its stored results with DELETE /runs/{runId}. The job itself is left in place. Success is an HTTP 200 JSON object or array.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "runId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "Data-run identifier from the job results field returned by Get Job."
+          }
+        },
+        "required": [
+          "runId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "description": "Provider JSON object or array, preserved without renaming fields."
+          }
+        }
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/runs/{{runId}}",
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "credits.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "title": "Get Credit Balance",
+      "description": "Read the account credit balance with GET /credits. Use this before a launch or restart that can spend credits.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "description": "Provider JSON object or array, preserved without renaming fields."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/credits",
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "jobs.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "title": "Get Job",
+      "description": "Read one job with GET /jobs/{jobId}. The provider JSON is returned under data, including the results field of data-run identifiers used by Get Run Results.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "jobId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "Job identifier returned by Launch Bot or List Jobs."
+          }
+        },
+        "required": [
+          "jobId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "description": "Provider JSON object or array, preserved without renaming fields."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/jobs/{{jobId}}",
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "runs.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 8192,
+      "maxResponseBytes": 10485760,
+      "title": "Get Run Results",
+      "description": "Read one data run with GET /runs/{runId}. The provider JSON object or array is returned under data without dropping bot-specific fields.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "runId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "Data-run identifier from the job results field returned by Get Job."
+          }
+        },
+        "required": [
+          "runId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "description": "Provider JSON object or array, preserved without renaming fields."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/runs/{{runId}}",
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "bots.launch": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Launch Bot",
+      "description": "Launch one bot with POST /bots/{botSlug}. The JSON body is flat: input is required, each bot option is a sibling key, and webhook is an optional HTTPS callback. This can spend credits. The provider JSON is returned under data.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "botSlug": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "Bot identifier from List Bots, for example google-local-finder or linkedin-profile-scraper."
+          },
+          "body": {
+            "type": "object",
+            "description": "Flat JSON body. input is required. Put each bot-specific option as its own key beside input, which is the shape documented at https://botster.io/info/api-docs. Do not nest those keys under options.",
+            "required": [
+              "input"
+            ],
+            "properties": {
+              "input": {
+                "description": "Main bot input. A non-empty string, or a non-empty array of non-empty strings, exactly as the selected bot expects.",
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  }
+                ]
+              },
+              "webhook": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Optional HTTPS URL that receives one JSON POST when the job completes."
+              }
+            }
+          }
+        },
+        "required": [
+          "botSlug",
+          "body"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "description": "Provider JSON object or array, preserved without renaming fields."
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/bots/{{botSlug}}",
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{{body}}"
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "bots.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 5242880,
+      "title": "List Bots",
+      "description": "List or search bots with GET /bots. Botster documents page, per, and search. nextCursor is sent as next_cursor on this same route when a previous response returned one.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Page number. Botster documents page=1 for the first page. Omit to let the provider default."
+          },
+          "per": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Page size. Botster documents per=50 and does not publish a maximum."
+          },
+          "search": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "Text matched against available bots."
+          },
+          "nextCursor": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500,
+            "description": "Opaque continuation cursor from a previous list response. Omit on the first page. Sent as next_cursor on the same list route."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "description": "Provider JSON object or array, preserved without renaming fields."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/bots",
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response}}"
+        },
+        "query": {
+          "page": "{{page}}",
+          "per": "{{per}}",
+          "search": "{{search}}",
+          "next_cursor": "{{nextCursor}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "jobs.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 5242880,
+      "title": "List Jobs",
+      "description": "List account jobs with GET /jobs. Botster documents page and per. nextCursor is sent as next_cursor on this same route when a previous response returned one.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Page number. Botster documents page=1 for the first page. Omit to let the provider default."
+          },
+          "per": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Page size. Botster documents per=50 and does not publish a maximum."
+          },
+          "nextCursor": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500,
+            "description": "Opaque continuation cursor from a previous list response. Omit on the first page. Sent as next_cursor on the same list route."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "description": "Provider JSON object or array, preserved without renaming fields."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/jobs",
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response}}"
+        },
+        "query": {
+          "page": "{{page}}",
+          "per": "{{per}}",
+          "next_cursor": "{{nextCursor}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "jobs.restart": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 30000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "title": "Restart Job",
+      "description": "Restart one job with a body-less POST /jobs/{jobId}/restart. This can repeat the bot's effects and spend more credits. The provider JSON is returned under data; the new job id may differ.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "jobId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "Job identifier returned by Launch Bot or List Jobs."
+          }
+        },
+        "required": [
+          "jobId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "description": "Provider JSON object or array, preserved without renaming fields."
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/jobs/{{jobId}}/restart",
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    }
+  }
+}

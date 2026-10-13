@@ -1,0 +1,594 @@
+{
+  "key": "arena",
+  "name": "Are.na",
+  "version": "0.1.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "bookmarking",
+    "productivity"
+  ],
+  "auth": {
+    "type": "api_key",
+    "scopes": [],
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "Are.na access token",
+          "required": true,
+          "secret": true
+        }
+      ]
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "api.are.na"
+    ]
+  },
+  "models": [
+    "user",
+    "channel",
+    "block",
+    "connection",
+    "feed"
+  ],
+  "http": {
+    "baseUrl": "https://api.are.na/v3",
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "Authorization",
+      "value": "Bearer {{apiKey}}"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "Retry-After",
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "error.message",
+        "details.message",
+        "error"
+      ]
+    },
+    "headers": {
+      "Accept": "application/json"
+    }
+  },
+  "operations": {
+    "users.me": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "title": "Get current user",
+      "description": "Return the authenticated Are.na user, including the token holder's email.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/me",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "blocks.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 5242880,
+      "title": "Get block",
+      "description": "Get one Are.na block by numeric ID, including its subtype, content, source, and creator.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "block_id"
+        ],
+        "properties": {
+          "block_id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Numeric block ID."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/blocks/{{block_id}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "channels.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 5242880,
+      "title": "Get channel",
+      "description": "Get one Are.na channel by numeric ID or slug, including visibility, counts, owner, and permissions.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "channel_id"
+        ],
+        "properties": {
+          "channel_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Numeric channel ID or channel slug."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/channels/{{channel_id}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "channels.contents.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 8192,
+      "maxResponseBytes": 5242880,
+      "title": "List channel contents",
+      "description": "Return one page of blocks and nested channels from an Are.na channel. Pagination is the public page and per query, not a cursor.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "channel_id"
+        ],
+        "properties": {
+          "channel_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Numeric channel ID or channel slug."
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "1-based page number. Omit for the first page."
+          },
+          "per": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Page size from 1 to 100. Are.na calls this per."
+          },
+          "sort": {
+            "type": "string",
+            "enum": [
+              "position_asc",
+              "position_desc",
+              "created_at_asc",
+              "created_at_desc",
+              "updated_at_asc",
+              "updated_at_desc"
+            ],
+            "description": "position_asc is the owner's manual order. position_desc reverses it. created_at and updated_at order by those timestamps."
+          },
+          "user_id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Only return content added by this Are.na user ID."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/channels/{{channel_id}}/contents",
+        "query": {
+          "page": "{{page}}",
+          "per": "{{per}}",
+          "sort": "{{sort}}",
+          "user_id": "{{user_id}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "feed.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 8192,
+      "maxResponseBytes": 5242880,
+      "title": "Get my feed",
+      "description": "Return one page of the authenticated user's activity feed, newest first.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Maximum feed items in this page, from 1 to 100."
+          },
+          "next": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Cursor from meta.next_cursor. Sent as the public next query parameter to page toward older items."
+          },
+          "prev": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Cursor from meta.prev_cursor. Sent as the public prev query parameter to page toward newer items."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/me/feed",
+        "query": {
+          "limit": "{{limit}}",
+          "next": "{{next}}",
+          "prev": "{{prev}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "channels.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "maxInputBytes": 262144,
+      "maxResponseBytes": 1048576,
+      "title": "Create channel",
+      "description": "Create a channel owned by the authenticated user. Are.na generates the slug from the title. Visibility defaults to closed when omitted.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "title"
+        ],
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Channel title. Are.na generates the slug from this value."
+          },
+          "visibility": {
+            "type": "string",
+            "enum": [
+              "public",
+              "private",
+              "closed"
+            ],
+            "description": "public lets anyone view and add content. private limits viewing to the owner and collaborators. closed lets anyone view but only collaborators add content."
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Optional Markdown description."
+          },
+          "metadata": {
+            "type": "object",
+            "maxProperties": 50,
+            "description": "Up to 50 metadata keys. Keys are alphanumeric or underscore and at most 40 characters. Values are strings up to 2000 characters, numbers, or booleans.",
+            "additionalProperties": {
+              "oneOf": [
+                {
+                  "type": "string",
+                  "maxLength": 2000
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "boolean"
+                }
+              ]
+            }
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/channels",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "title": "{{title}}",
+          "visibility": "{{visibility}}",
+          "description": "{{description}}",
+          "metadata": "{{metadata}}"
+        },
+        "success": [
+          201
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "channels.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "maxInputBytes": 262144,
+      "maxResponseBytes": 1048576,
+      "title": "Update channel",
+      "description": "Update selected fields of a channel the authenticated user can edit. Omitted fields stay unchanged. A null description is not sent.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "channel_id"
+        ],
+        "properties": {
+          "channel_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Numeric channel ID or current slug. Prefer the numeric ID because a title change regenerates the slug."
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "description": "New channel title. Updating it also changes the slug."
+          },
+          "visibility": {
+            "type": "string",
+            "enum": [
+              "public",
+              "private",
+              "closed"
+            ],
+            "description": "public lets anyone view and add content. private limits viewing to the owner and collaborators. closed lets anyone view but only collaborators add content."
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "description": "New Markdown description. Omit this field to leave the current description unchanged."
+          },
+          "metadata": {
+            "type": "object",
+            "maxProperties": 50,
+            "description": "Metadata merge. New keys are added and existing keys are replaced. Values are strings up to 2000 characters, numbers, or booleans. Null removals are not accepted here because a null template value is omitted rather than sent.",
+            "additionalProperties": {
+              "oneOf": [
+                {
+                  "type": "string",
+                  "maxLength": 2000
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "boolean"
+                }
+              ]
+            }
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/channels/{{channel_id}}",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "title": "{{title}}",
+          "visibility": "{{visibility}}",
+          "description": "{{description}}",
+          "metadata": "{{metadata}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "connections.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Add to channels",
+      "description": "Connect an existing block or channel to one or more target channels without duplicating the underlying resource.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "connectable_id",
+          "connectable_type",
+          "channel_ids"
+        ],
+        "properties": {
+          "connectable_id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Numeric ID of the existing block or channel to add."
+          },
+          "connectable_type": {
+            "type": "string",
+            "enum": [
+              "Block",
+              "Channel"
+            ],
+            "description": "Type of the existing resource to add."
+          },
+          "channel_ids": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 20,
+            "uniqueItems": true,
+            "description": "One to 20 target channel identifiers. Each item is a numeric ID or a channel slug.",
+            "items": {
+              "oneOf": [
+                {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                {
+                  "type": "string",
+                  "minLength": 1
+                }
+              ]
+            }
+          },
+          "position": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "1-based insertion position. Valid only when channel_ids contains exactly one target channel."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/connections",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "connectable_id": "{{connectable_id}}",
+          "connectable_type": "{{connectable_type}}",
+          "channel_ids": "{{channel_ids}}",
+          "position": "{{position}}"
+        },
+        "success": [
+          201
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    }
+  }
+}

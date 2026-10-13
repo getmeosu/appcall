@@ -1,0 +1,267 @@
+{
+  "key": "bing-webmaster-tools",
+  "name": "Bing Webmaster Tools",
+  "version": "0.1.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": ["analytics"],
+  "auth": {
+    "type": "api_key",
+    "scopes": [],
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "Bing Webmaster API key",
+          "required": true,
+          "secret": true
+        }
+      ]
+    }
+  },
+  "network": { "allowedHosts": ["ssl.bing.com"] },
+  "models": ["site", "url", "feed"],
+  "http": {
+    "baseUrl": "https://ssl.bing.com/webmaster/api.svc/json",
+    "auth": {
+      "field": "apiKey",
+      "in": "query",
+      "name": "apikey",
+      "value": "{{apiKey}}"
+    },
+    "headers": { "Accept": "application/json" },
+    "errors": {
+      "rateLimitStatuses": [429],
+      "retryAfterHeader": "Retry-After",
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": ["Message", "message", "error"]
+    }
+  },
+  "operations": {
+    "sites.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "title": "List Sites",
+      "description": "GET GetUserSites. Returns the sites on the API key, including verification state.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": ["data"],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": ["d"],
+            "additionalProperties": false,
+            "properties": {
+              "d": { "type": "array", "items": { "type": "object" } }
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/GetUserSites",
+        "success": [200]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "urls.inspect": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 8192,
+      "maxResponseBytes": 1048576,
+      "title": "Inspect URL",
+      "description": "GET GetUrlInfo for one page or directory in a verified site.",
+      "inputSchema": {
+        "type": "object",
+        "required": ["site_url", "url"],
+        "additionalProperties": false,
+        "properties": {
+          "site_url": { "type": "string", "minLength": 1, "maxLength": 2048, "description": "Exact site URL from List Sites." },
+          "url": { "type": "string", "minLength": 1, "maxLength": 2048, "description": "Page or directory URL to inspect." }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": ["data"],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": ["d"],
+            "additionalProperties": false,
+            "properties": { "d": { "type": "object" } }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/GetUrlInfo",
+        "query": { "siteUrl": "{{site_url}}", "url": "{{url}}" },
+        "success": [200]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "urls.children.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 5242880,
+      "title": "List Child URLs",
+      "description": "POST GetChildrenUrlInfo for one page of child URL index details. Filters are fields of that single call.",
+      "inputSchema": {
+        "type": "object",
+        "required": ["site_url", "url", "page_number"],
+        "additionalProperties": false,
+        "properties": {
+          "site_url": { "type": "string", "minLength": 1, "maxLength": 2048, "description": "Exact site URL from List Sites." },
+          "url": { "type": "string", "minLength": 1, "maxLength": 2048, "description": "Directory or container URL." },
+          "page_number": { "type": "integer", "minimum": 0, "maximum": 65535, "description": "Zero-based page. Bing requires this argument." },
+          "http_code_filter": { "type": "integer", "minimum": 0, "maximum": 127, "description": "HttpCodeFilters bitmask." },
+          "crawl_date_filter": { "type": "integer", "enum": [0, 1, 2, 4], "description": "CrawlDateFilter integer." },
+          "document_flags_filter": { "type": "integer", "minimum": 0, "maximum": 3, "description": "DocFlagsFilters bitmask." },
+          "discovered_date_filter": { "type": "integer", "enum": [0, 1, 2], "description": "DiscoveredDateFilter integer." }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": ["data"],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": ["d"],
+            "additionalProperties": false,
+            "properties": {
+              "d": { "type": "array", "items": { "type": "object" } }
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/GetChildrenUrlInfo",
+        "headers": { "Content-Type": "application/json" },
+        "body": {
+          "siteUrl": "{{site_url}}",
+          "url": "{{url}}",
+          "page": "{{page_number}}",
+          "filterProperties": {
+            "__type": "FilterProperties:#Microsoft.Bing.Webmaster.Api",
+            "CrawlDateFilter": "{{crawl_date_filter}}",
+            "DiscoveredDateFilter": "{{discovered_date_filter}}",
+            "DocFlagsFilters": "{{document_flags_filter}}",
+            "HttpCodeFilters": "{{http_code_filter}}"
+          }
+        },
+        "success": [200]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "feeds.submit": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 30000,
+      "maxInputBytes": 8192,
+      "maxResponseBytes": 65536,
+      "title": "Submit Feed",
+      "description": "POST SubmitFeed for one sitemap or feed URL. The JSON success body is an object whose d field is null.",
+      "inputSchema": {
+        "type": "object",
+        "required": ["site_url", "feed_url"],
+        "additionalProperties": false,
+        "properties": {
+          "site_url": { "type": "string", "minLength": 1, "maxLength": 2048, "description": "Exact site URL from List Sites." },
+          "feed_url": { "type": "string", "minLength": 1, "maxLength": 2048, "description": "Sitemap or feed URL owned by the site." }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": ["data"],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": ["d"],
+            "additionalProperties": false,
+            "properties": { "d": { "type": "null" } }
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/SubmitFeed",
+        "headers": { "Content-Type": "application/json" },
+        "body": { "siteUrl": "{{site_url}}", "feedUrl": "{{feed_url}}" },
+        "success": [200]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "urls.submit": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 30000,
+      "maxInputBytes": 2097152,
+      "maxResponseBytes": 2097152,
+      "title": "Submit URLs",
+      "description": "POST SubmitUrlBatch with one to 500 owned URLs. The JSON success body is an object whose d field is null.",
+      "inputSchema": {
+        "type": "object",
+        "required": ["site_url", "urls"],
+        "additionalProperties": false,
+        "properties": {
+          "site_url": { "type": "string", "minLength": 1, "maxLength": 2048, "description": "Exact site URL from List Sites." },
+          "urls": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 500,
+            "items": { "type": "string", "minLength": 1, "maxLength": 2048 },
+            "description": "Owned URLs to submit, in order."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": ["data"],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": ["d"],
+            "additionalProperties": false,
+            "properties": { "d": { "type": "null" } }
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/SubmitUrlBatch",
+        "headers": { "Content-Type": "application/json" },
+        "body": { "siteUrl": "{{site_url}}", "urlList": "{{urls}}" },
+        "success": [200]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    }
+  }
+}

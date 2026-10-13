@@ -1,0 +1,1124 @@
+{
+  "key": "delighted",
+  "name": "Delighted",
+  "version": "0.1.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "surveys"
+  ],
+  "auth": {
+    "type": "api_key",
+    "scopes": [],
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "Delighted API key",
+          "required": true,
+          "secret": true
+        }
+      ]
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "api.delighted.com"
+    ]
+  },
+  "models": [
+    "person",
+    "survey-response",
+    "autopilot",
+    "bounce",
+    "unsubscribe"
+  ],
+  "http": {
+    "baseUrl": "https://api.delighted.com/v1",
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "Authorization",
+      "basic": {
+        "username": "{{apiKey}}",
+        "password": ""
+      }
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "Retry-After",
+      "defaultRetryAfterSeconds": 60,
+      "messagePaths": [
+        "message",
+        "error"
+      ]
+    },
+    "headers": {
+      "Accept": "application/json"
+    }
+  },
+  "operations": {
+    "autopilot.email.memberships.add": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Add Person to Autopilot Email",
+      "description": "Enroll a person in email Autopilot or update their properties. POST /v1/autopilot/email/memberships.json sends one JSON object. Autopilot must already be configured for email.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "person_email": {
+            "type": "string",
+            "minLength": 3,
+            "description": "Email address to enroll or update. Required for email Autopilot."
+          },
+          "person_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Existing Delighted person id."
+          },
+          "person_name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Person name."
+          },
+          "person_phone_number": {
+            "type": "string",
+            "minLength": 2,
+            "description": "Phone number in E.164 format, for example +17132746524."
+          },
+          "properties": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Custom properties stored on the Autopilot membership. Special keys include question_product_name, delighted_email_subject, delighted_intro_message, locale, thank_you_message, thank_you_link_text, and thank_you_link_url."
+          }
+        },
+        "required": [
+          "person_email"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": true,
+            "required": [
+              "person"
+            ],
+            "properties": {
+              "person": {
+                "type": "object"
+              },
+              "properties": {
+                "type": "object"
+              }
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/autopilot/email/memberships.json",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "person_email": "{{person_email}}",
+          "person_id": "{{person_id}}",
+          "person_name": "{{person_name}}",
+          "person_phone_number": "{{person_phone_number}}",
+          "properties": "{{properties}}"
+        },
+        "success": [
+          201
+        ],
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "autopilot.sms.memberships.add": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Add Person to Autopilot SMS",
+      "description": "Enroll a person in SMS Autopilot or update their properties. POST /v1/autopilot/sms/memberships.json sends one JSON object. SMS Autopilot must already be configured.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "person_phone_number": {
+            "type": "string",
+            "minLength": 2,
+            "description": "Phone number in E.164 format, for example +17132746524. Required for SMS Autopilot."
+          },
+          "person_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Existing Delighted person id."
+          },
+          "person_name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Person name."
+          },
+          "person_email": {
+            "type": "string",
+            "minLength": 3,
+            "description": "Email address of the person."
+          },
+          "properties": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Custom properties stored on the SMS Autopilot membership."
+          }
+        },
+        "required": [
+          "person_phone_number"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": true,
+            "required": [
+              "person"
+            ],
+            "properties": {
+              "person": {
+                "type": "object"
+              },
+              "properties": {
+                "type": "object"
+              }
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/autopilot/sms/memberships.json",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "person_phone_number": "{{person_phone_number}}",
+          "person_id": "{{person_id}}",
+          "person_name": "{{person_name}}",
+          "person_email": "{{person_email}}",
+          "properties": "{{properties}}"
+        },
+        "success": [
+          201
+        ],
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "people.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Create or Update Person",
+      "description": "Create or update a person and optionally schedule a survey. POST /v1/people.json sends one JSON object. Email is required unless phone_number is set. send false skips scheduling.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "email": {
+            "type": "string",
+            "minLength": 3,
+            "description": "Email address. Required when phone_number is omitted."
+          },
+          "phone_number": {
+            "type": "string",
+            "minLength": 2,
+            "description": "Phone number in E.164 format. Required when email is omitted or channel is sms."
+          },
+          "channel": {
+            "type": "string",
+            "enum": [
+              "email",
+              "sms"
+            ],
+            "description": "Survey channel. Defaults to email when omitted."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Person name."
+          },
+          "delay": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Seconds to wait before sending the survey. 0 sends immediately."
+          },
+          "send": {
+            "type": "boolean",
+            "description": "Set false to save the person without scheduling a survey. Defaults to true when omitted."
+          },
+          "properties": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Custom properties for segmentation and survey text."
+          },
+          "last_sent_at": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Unix timestamp of the previous survey send."
+          },
+          "email_update": {
+            "type": "string",
+            "minLength": 3,
+            "description": "Replacement email when updating an existing person."
+          },
+          "phone_number_update": {
+            "type": "string",
+            "minLength": 2,
+            "description": "Replacement E.164 phone number when updating an existing person."
+          }
+        },
+        "anyOf": [
+          {
+            "required": [
+              "email"
+            ]
+          },
+          {
+            "required": [
+              "phone_number"
+            ]
+          }
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": true,
+            "required": [
+              "id"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "email": {
+                "type": "string"
+              },
+              "survey_scheduled_at": {
+                "type": "integer"
+              },
+              "properties": {
+                "type": "object"
+              }
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/people.json",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "email": "{{email}}",
+          "phone_number": "{{phone_number}}",
+          "channel": "{{channel}}",
+          "name": "{{name}}",
+          "delay": "{{delay}}",
+          "send": "{{send}}",
+          "properties": "{{properties}}",
+          "last_sent_at": "{{last_sent_at}}",
+          "email_update": "{{email_update}}",
+          "phone_number_update": "{{phone_number_update}}"
+        },
+        "success": [
+          201
+        ],
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "survey-requests.pending.delete": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Delete Pending Survey Requests",
+      "description": "Cancel every survey scheduled for one email but not yet sent. DELETE /v1/people/{person_email}/survey_requests/pending.json has no body and returns a JSON object.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "person_email": {
+            "type": "string",
+            "minLength": 3,
+            "description": "Email whose pending survey requests should be deleted."
+          }
+        },
+        "required": [
+          "person_email"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "ok"
+            ],
+            "properties": {
+              "ok": {
+                "type": "boolean",
+                "description": "True when Delighted accepted the request."
+              }
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/people/{{person_email}}/survey_requests/pending.json",
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "people.delete": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Delete Person",
+      "description": "Permanently delete a person and related survey data. DELETE /v1/people/{person_identifier} has no body. The identifier is an id, email:address, or phone_number:+E164. Success is HTTP 202 with a JSON object.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "person_identifier": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Person id, email:address, or phone_number:+E164. Examples: 24248363, email:jony@appleseed.com, phone_number:+17132746524."
+          }
+        },
+        "required": [
+          "person_identifier"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "ok"
+            ],
+            "properties": {
+              "ok": {
+                "type": "boolean",
+                "description": "True when Delighted accepted the request."
+              }
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/people/{{person_identifier}}",
+        "success": [
+          202
+        ],
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "autopilot.email.configuration.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "title": "Get Autopilot Email Configuration",
+      "description": "Read the email Autopilot configuration. GET /v1/autopilot/email.json returns one JSON object.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": true,
+            "required": [
+              "platform_id",
+              "active",
+              "frequency"
+            ],
+            "properties": {
+              "platform_id": {
+                "type": "string"
+              },
+              "active": {
+                "type": "boolean"
+              },
+              "frequency": {
+                "type": "integer"
+              },
+              "created_at": {
+                "type": "integer"
+              },
+              "updated_at": {
+                "type": "integer"
+              }
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/autopilot/email.json",
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "autopilot.sms.configuration.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "title": "Get Autopilot SMS Configuration",
+      "description": "Read the SMS Autopilot configuration. GET /v1/autopilot/sms.json returns one JSON object.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": true,
+            "required": [
+              "platform_id",
+              "active",
+              "frequency"
+            ],
+            "properties": {
+              "platform_id": {
+                "type": "string"
+              },
+              "active": {
+                "type": "boolean"
+              },
+              "frequency": {
+                "type": "integer"
+              },
+              "created_at": {
+                "type": "integer"
+              },
+              "updated_at": {
+                "type": "integer"
+              }
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/autopilot/sms.json",
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "autopilot.sms.memberships.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 5242880,
+      "title": "List Autopilot SMS Memberships",
+      "description": "List SMS Autopilot memberships. GET /v1/autopilot/sms/memberships.json returns a JSON array. page_info is the cursor from the Link rel=next header.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "per_page": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Results per page. Default 20, maximum 100."
+          },
+          "person_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Restrict results to this person id."
+          },
+          "person_email": {
+            "type": "string",
+            "minLength": 3,
+            "description": "Restrict results to this email address."
+          },
+          "person_phone_number": {
+            "type": "string",
+            "minLength": 2,
+            "description": "Restrict results to this E.164 phone number."
+          },
+          "page_info": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Cursor from the Link rel=next header."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/autopilot/sms/memberships.json",
+        "query": {
+          "per_page": "{{per_page}}",
+          "person_id": "{{person_id}}",
+          "person_email": "{{person_email}}",
+          "person_phone_number": "{{person_phone_number}}",
+          "page_info": "{{page_info}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "bounces.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 5242880,
+      "title": "List Bounced People",
+      "description": "List bounced people, oldest bounce first. GET /v1/bounces.json returns a JSON array.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "per_page": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Results per page. Default 20, maximum 100."
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Page number. Default 1."
+          },
+          "since": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Unix timestamp. Include bounces on or after this time."
+          },
+          "until": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Unix timestamp. Include bounces on or before this time."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/bounces.json",
+        "query": {
+          "per_page": "{{per_page}}",
+          "page": "{{page}}",
+          "since": "{{since}}",
+          "until": "{{until}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "people.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 5242880,
+      "title": "List People",
+      "description": "List people in creation order. GET /v1/people.json returns a JSON array. email and phone_number are mutually exclusive filters on this same route. page_info is the cursor from the Link rel=next header.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "per_page": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Results per page. Default 20, maximum 100."
+          },
+          "since": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Unix timestamp. Include people created on or after this time."
+          },
+          "until": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Unix timestamp. Include people created on or before this time."
+          },
+          "email": {
+            "type": "string",
+            "minLength": 3,
+            "description": "Restrict results to this email address. Do not combine with phone_number."
+          },
+          "phone_number": {
+            "type": "string",
+            "minLength": 2,
+            "description": "Restrict results to this E.164 phone number. Do not combine with email."
+          },
+          "page_info": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Cursor from the Link rel=next header."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/people.json",
+        "query": {
+          "per_page": "{{per_page}}",
+          "since": "{{since}}",
+          "until": "{{until}}",
+          "email": "{{email}}",
+          "phone_number": "{{phone_number}}",
+          "page_info": "{{page_info}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "survey-responses.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 5242880,
+      "title": "List Survey Responses",
+      "description": "List survey responses, oldest first unless order says otherwise. GET /v1/survey_responses.json returns a JSON array. expand[] repeats for person and notes.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "per_page": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Results per page. Default 20, maximum 100."
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Page number. Default 1."
+          },
+          "since": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Unix timestamp. Include responses created on or after this time."
+          },
+          "until": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Unix timestamp. Include responses created on or before this time."
+          },
+          "updated_since": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Unix timestamp. Include responses updated on or after this time."
+          },
+          "updated_until": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Unix timestamp. Include responses updated on or before this time."
+          },
+          "trend": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Trend id. The id is the last path segment of the trend URL."
+          },
+          "person_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Restrict responses to this person id."
+          },
+          "person_email": {
+            "type": "string",
+            "minLength": 3,
+            "description": "Restrict responses to this email address."
+          },
+          "order": {
+            "type": "string",
+            "enum": [
+              "asc",
+              "desc",
+              "asc:updated_at",
+              "desc:updated_at"
+            ],
+            "description": "Sort by creation time or updated_at. asc is the default."
+          },
+          "expand": {
+            "type": "array",
+            "maxItems": 2,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "enum": [
+                "person",
+                "notes"
+              ]
+            },
+            "description": "Objects to expand. Repeat expand[] for person and notes."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/survey_responses.json",
+        "query": {
+          "per_page": "{{per_page}}",
+          "page": "{{page}}",
+          "since": "{{since}}",
+          "until": "{{until}}",
+          "updated_since": "{{updated_since}}",
+          "updated_until": "{{updated_until}}",
+          "trend": "{{trend}}",
+          "person_id": "{{person_id}}",
+          "person_email": "{{person_email}}",
+          "order": "{{order}}"
+        },
+        "parameters": [
+          {
+            "wireName": "expand[]",
+            "inputName": "expand",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "allowReserved": false
+          }
+        ],
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "unsubscribes.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 5242880,
+      "title": "List Unsubscribed People",
+      "description": "List unsubscribed people, oldest unsubscribe first. GET /v1/unsubscribes.json returns a JSON array.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "per_page": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Results per page. Default 20, maximum 100."
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Page number. Default 1."
+          },
+          "since": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Unix timestamp. Include unsubscribes on or after this time."
+          },
+          "until": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Unix timestamp. Include unsubscribes on or before this time."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/unsubscribes.json",
+        "query": {
+          "per_page": "{{per_page}}",
+          "page": "{{page}}",
+          "since": "{{since}}",
+          "until": "{{until}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "unsubscribes.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Unsubscribe Person",
+      "description": "Add an email to the unsubscribe list. POST /v1/unsubscribes.json sends one JSON object. This does not delete previous responses and cannot be reversed through the API.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "person_email": {
+            "type": "string",
+            "minLength": 3,
+            "description": "Email address to unsubscribe from future surveys."
+          }
+        },
+        "required": [
+          "person_email"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "ok"
+            ],
+            "properties": {
+              "ok": {
+                "type": "boolean",
+                "description": "True when Delighted accepted the request."
+              }
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/unsubscribes.json",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "person_email": "{{person_email}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    }
+  }
+}

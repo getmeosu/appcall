@@ -1,0 +1,513 @@
+{
+  "key": "dromo",
+  "name": "Dromo",
+  "version": "0.1.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "spreadsheets"
+  ],
+  "auth": {
+    "type": "api_key",
+    "scopes": [],
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "Dromo backend license key",
+          "required": true,
+          "secret": true
+        }
+      ]
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "app.dromo.io"
+    ]
+  },
+  "models": [
+    "import-schema",
+    "upload",
+    "headless-import"
+  ],
+  "http": {
+    "baseUrl": "https://app.dromo.io/api/v1",
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "X-Dromo-License-Key",
+      "value": "{{apiKey}}"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "Retry-After",
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "detail",
+        "message",
+        "error"
+      ]
+    },
+    "headers": {
+      "Accept": "application/json"
+    }
+  },
+  "operations": {
+    "schemas.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 5242880,
+      "title": "List Import Schemas",
+      "description": "List saved import schemas for the authenticated Dromo organization. GET /schemas/ returns a JSON array, wrapped as data.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/schemas/",
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "schemas.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "title": "Get Import Schema",
+      "description": "Get one saved import schema by id. GET /schemas/{id}/ returns a JSON object.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "description": "Saved import schema id."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/schemas/{{id}}/",
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "schemas.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Create Import Schema",
+      "description": "Create a saved import schema. POST /schemas/ sends a JSON body and returns the created schema.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "fields",
+          "settings"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 512,
+            "description": "Unique schema name within the organization."
+          },
+          "fields": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 128,
+            "description": "Field definitions. Each item needs key, type, and label.",
+            "items": {
+              "type": "object",
+              "additionalProperties": true,
+              "required": [
+                "key",
+                "type",
+                "label"
+              ],
+              "properties": {
+                "key": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 256
+                },
+                "type": {
+                  "type": [
+                    "string",
+                    "array"
+                  ],
+                  "minLength": 1
+                },
+                "label": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 512
+                }
+              }
+            }
+          },
+          "settings": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Import settings object stored with the schema."
+          },
+          "hooks": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Optional hook callbacks stored with the schema."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/schemas/",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "name": "{{name}}",
+          "fields": "{{fields}}",
+          "settings": "{{settings}}",
+          "hooks": "{{hooks}}"
+        },
+        "success": [
+          201
+        ],
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "schemas.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Update Import Schema",
+      "description": "Replace a saved import schema. PUT /schemas/{id}/ sends a JSON body and returns the updated schema.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "name",
+          "fields",
+          "settings"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "description": "Saved import schema id."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 512,
+            "description": "Unique schema name within the organization."
+          },
+          "fields": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 128,
+            "description": "Replacement field definitions. Each item needs key, type, and label.",
+            "items": {
+              "type": "object",
+              "additionalProperties": true,
+              "required": [
+                "key",
+                "type",
+                "label"
+              ],
+              "properties": {
+                "key": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 256
+                },
+                "type": {
+                  "type": [
+                    "string",
+                    "array"
+                  ],
+                  "minLength": 1
+                },
+                "label": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 512
+                }
+              }
+            }
+          },
+          "settings": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Replacement import settings object."
+          },
+          "hooks": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Optional replacement hook callbacks."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/schemas/{{id}}/",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "name": "{{name}}",
+          "fields": "{{fields}}",
+          "settings": "{{settings}}",
+          "hooks": "{{hooks}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "uploads.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 5242880,
+      "title": "List Uploads",
+      "description": "List completed uploads for the organization. GET /uploads/ returns a JSON object. Optional start and end are pagination indexes, not file bytes.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "start": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 10000,
+            "description": "Inclusive start index. Defaults to 0 when omitted."
+          },
+          "end": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 10000,
+            "description": "Exclusive end index. Defaults to 10000 when omitted."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/uploads/",
+        "query": {
+          "start": "{{start}}",
+          "end": "{{end}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "headless-imports.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Create Headless Import",
+      "description": "Create a headless import record. POST /headless/imports/ sends JSON and returns the import object, including any upload URL. This call does not upload file bytes.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schema_id"
+        ],
+        "anyOf": [
+          {
+            "required": [
+              "original_filename"
+            ]
+          },
+          {
+            "required": [
+              "initial_data"
+            ]
+          }
+        ],
+        "properties": {
+          "schema_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "description": "Saved schema id that defines the import."
+          },
+          "original_filename": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1024,
+            "description": "Original file name. Use this when a later upload will supply the file. Do not send file bytes here."
+          },
+          "initial_data": {
+            "type": "array",
+            "maxItems": 64,
+            "description": "JSON row objects to import instead of a file. Mutually exclusive with a file upload.",
+            "items": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/headless/imports/",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "schema_id": "{{schema_id}}",
+          "original_filename": "{{original_filename}}",
+          "initial_data": "{{initial_data}}"
+        },
+        "success": [
+          201
+        ],
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    }
+  }
+}

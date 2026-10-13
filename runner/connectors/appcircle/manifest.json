@@ -1,0 +1,628 @@
+{
+  "key": "appcircle",
+  "name": "Appcircle",
+  "version": "0.1.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "developer-tools"
+  ],
+  "auth": {
+    "type": "api_key",
+    "scopes": [],
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "Appcircle personal access token",
+          "required": true,
+          "secret": true
+        }
+      ]
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "api.appcircle.io"
+    ]
+  },
+  "models": [
+    "distribution-profile",
+    "build-profile",
+    "bundle-identifier",
+    "organization",
+    "store-profile",
+    "app-version",
+    "variable-group",
+    "publish-activity"
+  ],
+  "http": {
+    "baseUrl": "https://api.appcircle.io",
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "Authorization",
+      "value": "Bearer {{apiKey}}"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "Retry-After",
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "message",
+        "error",
+        "title",
+        "detail"
+      ]
+    },
+    "headers": {
+      "Accept": "application/json"
+    }
+  },
+  "operations": {
+    "distribution.profiles.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 5242880,
+      "title": "List Distribution Profiles",
+      "description": "List distribution profiles for the authenticated organization. GET /distribution/v2/profiles. The string sort input is sent as the OpenAPI Sort query parameter.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Page number. Sent as the OpenAPI Page query parameter."
+          },
+          "size": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Page size. Sent as the OpenAPI Size query parameter."
+          },
+          "sort": {
+            "type": "string",
+            "description": "Sort expression such as name or -createDate. Sent as Sort."
+          },
+          "search": {
+            "type": "string",
+            "description": "Filter profiles by name."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/distribution/v2/profiles",
+        "success": [
+          200
+        ],
+        "query": {
+          "Page": "{{page}}",
+          "Size": "{{size}}",
+          "Sort": "{{sort}}",
+          "search": "{{search}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "report.distribute-sent.profiles.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 5242880,
+      "title": "List App Sharing Profile Names",
+      "description": "Get distinct profile names for the App Sharing report filter. GET /report/v2/distribute-sent/profiles. The body is a JSON array of strings.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "startDate": {
+            "type": "string",
+            "description": "Range start as an ISO-8601 date-time."
+          },
+          "endDate": {
+            "type": "string",
+            "description": "Range end as an ISO-8601 date-time."
+          },
+          "organizationId": {
+            "type": "string",
+            "description": "Organization id. Omitted when unset."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/report/v2/distribute-sent/profiles",
+        "success": [
+          200
+        ],
+        "query": {
+          "startDate": "{{startDate}}",
+          "endDate": "{{endDate}}",
+          "organizationId": "{{organizationId}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "report.publish-activity.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 5242880,
+      "title": "Get Publish Activity Report",
+      "description": "Retrieve the publish activity report. GET /report/v2/publish/activity. Query names match the report OpenAPI operation GetPublishActivityReportV2.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "Page": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Page number. Sent as the OpenAPI Page query parameter."
+          },
+          "Size": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Page size. Sent as the OpenAPI Size query parameter."
+          },
+          "Sort": {
+            "type": "string",
+            "description": "Sort field with an optional + or - prefix."
+          },
+          "email": {
+            "type": "string",
+            "description": "User email that performed the action."
+          },
+          "action": {
+            "type": "string",
+            "enum": [
+              "None",
+              "PublishflowSaved",
+              "PublishSaved",
+              "PublishStepSaved",
+              "PublishStepFailed",
+              "PublishStepSuccess",
+              "PublishRestarting",
+              "PublishArchived",
+              "PublishRestartingCancelled",
+              "PublishStopped",
+              "PublishSuccess",
+              "PublishSucceededWithoutArtifacts",
+              "PublishFailed",
+              "PublishStepStarting",
+              "PublishStepStarted",
+              "CancelPublishStep",
+              "PublishStepStartingCancelled",
+              "ProfileCreated",
+              "AppVersionUploaded",
+              "AppVersionCreated",
+              "ProfileDeleted",
+              "AppVersionDeleted",
+              "MetaDataFileDeleted",
+              "MetaDataFileDeleting",
+              "MetaDataFileDeletingCancelled",
+              "MetaDataImporting",
+              "MetaDataImportingCancelled",
+              "MetaDataImported",
+              "MetaDataUploading",
+              "MetaDataUpdated",
+              "MetaDataUploaded",
+              "MetaDataUploadingCancelled",
+              "ResignCreating",
+              "ResignCreated",
+              "ResignCreatingCancelled",
+              "ResignSuccess",
+              "ResignFailed",
+              "ResignCancelled",
+              "MarkedAsReleaseCandidate",
+              "UnMarkedReleaseCandidate",
+              "ReleaseNoteUpdated",
+              "AppInfoStoreUpdateFailed",
+              "AppInfoStoreUpdatePartiallyFailed",
+              "AppInfoStoreUpdateSucceeded",
+              "AppVersionRejected",
+              "ReviewSubmissionCancelled",
+              "ResignTimeOut",
+              "AppReleaseInformationUpdated",
+              "AppReleaseInformationUpdateFailed",
+              "StoreStatusChecked"
+            ],
+            "description": "Publish action enumeration from the report OpenAPI."
+          },
+          "endDate": {
+            "type": "string",
+            "description": "Inclusive range end as an ISO-8601 date-time."
+          },
+          "platform": {
+            "type": "string",
+            "enum": [
+              "unknown",
+              "ios",
+              "android"
+            ],
+            "description": "Platform filter."
+          },
+          "startDate": {
+            "type": "string",
+            "description": "Inclusive range start as an ISO-8601 date-time."
+          },
+          "profileName": {
+            "type": "string",
+            "description": "Profile name filter."
+          },
+          "organizationId": {
+            "type": "string",
+            "description": "Organization id filter."
+          },
+          "organizationName": {
+            "type": "string",
+            "description": "Organization name filter."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "pagination": {
+                "type": "object"
+              },
+              "data": {},
+              "summary": {}
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/report/v2/publish/activity",
+        "success": [
+          200
+        ],
+        "query": {
+          "Page": "{{Page}}",
+          "Size": "{{Size}}",
+          "Sort": "{{Sort}}",
+          "startDate": "{{startDate}}",
+          "endDate": "{{endDate}}",
+          "organizationName": "{{organizationName}}",
+          "email": "{{email}}",
+          "profileName": "{{profileName}}",
+          "platform": "{{platform}}",
+          "action": "{{action}}",
+          "organizationId": "{{organizationId}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "build.profiles.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 5242880,
+      "title": "List Build Profiles",
+      "description": "List build profiles for the authenticated organization. GET /build/v2/profiles.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/build/v2/profiles",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "bundle-identifiers.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 5242880,
+      "title": "List Bundle Identifiers",
+      "description": "List bundle identifiers. GET /signing-identity/v2/bundle-identifier. The body is a JSON array.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/signing-identity/v2/bundle-identifier",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "organizations.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 5242880,
+      "title": "List Organizations",
+      "description": "List organizations for the authenticated user. GET /identity/v1/organizations. The JSON body is an object with data, page, perPage, and total.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Page number. OpenAPI default is 1."
+          },
+          "perPage": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Page size. OpenAPI default is 200."
+          },
+          "search": {
+            "type": "string",
+            "description": "Filter organizations by name."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "data": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              },
+              "page": {
+                "type": "integer"
+              },
+              "perPage": {
+                "type": "integer"
+              },
+              "total": {
+                "type": "integer"
+              }
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/identity/v1/organizations",
+        "success": [
+          200
+        ],
+        "query": {
+          "page": "{{page}}",
+          "perPage": "{{perPage}}",
+          "search": "{{search}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "store.profiles.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 5242880,
+      "title": "List Store Profiles",
+      "description": "List Enterprise App Store profiles. GET /store/v2/profiles. The body is a JSON array.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/store/v2/profiles",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "build.variable-groups.rename": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 30000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 5242880,
+      "title": "Rename Variable Group",
+      "description": "Rename an environment variable group. PATCH /build/v2/variable-groups/{variableGroupId}. The new name is the OpenAPI query parameter name. This call sends no JSON body.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "variableGroupId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Variable group id."
+          },
+          "name": {
+            "type": "string",
+            "description": "New group name. Sent as the name query parameter."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "variableGroupId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        }
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/build/v2/variable-groups/{{variableGroupId}}",
+        "query": {
+          "name": "{{name}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "store.app-versions.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 5242880,
+      "title": "List Store Profile App Versions",
+      "description": "Get the enterprise store profile resource for a profile id, including its appVersions list. GET /store/v2/profiles/{profileId}/app-versions. Accept is application/json. Caller Accept and Authorization overrides are not forwarded.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "profileId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Enterprise store profile id."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "profileId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "appVersions": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/store/v2/profiles/{{profileId}}/app-versions",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    }
+  }
+}

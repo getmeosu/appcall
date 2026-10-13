@@ -1,0 +1,1268 @@
+{
+  "key": "bfl",
+  "name": "Black Forest Labs",
+  "version": "0.1.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "ai"
+  ],
+  "auth": {
+    "type": "api_key",
+    "scopes": [],
+    "setup": {
+      "mode": "api_key",
+      "docsUrl": "https://docs.bfl.ai",
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "Black Forest Labs API key",
+          "required": true,
+          "secret": true
+        }
+      ]
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "api.bfl.ai",
+      "api.eu.bfl.ai",
+      "api.us.bfl.ai"
+    ]
+  },
+  "models": [
+    "image",
+    "video",
+    "finetune",
+    "credit",
+    "generation"
+  ],
+  "http": {
+    "baseUrl": "https://api.bfl.ai",
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "x-key",
+      "value": "{{apiKey}}"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "Retry-After",
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "detail",
+        "message",
+        "error"
+      ]
+    },
+    "headers": {
+      "Accept": "application/json"
+    }
+  },
+  "operations": {
+    "images.deblur": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 30000,
+      "maxInputBytes": 26214400,
+      "maxResponseBytes": 26214400,
+      "title": "Deblur Image",
+      "description": "Submit a deblur task with POST /v1/flux-tools/deblur-v1. Returns the task id, polling URL, and quoted cost as JSON. It does not wait for or download the media.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "user": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "description": "Opaque end-user identifier. Do not send personal data."
+          },
+          "image": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 20000000,
+            "description": "Image to sharpen, as an HTTP(S) URL or base64. Authorized HTTP(S) URL or base64 media. The connector sends the string as JSON and does not download image or video bytes."
+          },
+          "seed": {
+            "type": "integer",
+            "description": "Optional deterministic seed."
+          },
+          "safety_tolerance": {
+            "type": "integer",
+            "description": "Moderation tolerance from 0 (strictest) to 7. The route may reject levels above its approved ceiling.",
+            "minimum": 0,
+            "maximum": 7
+          },
+          "output_format": {
+            "type": "string",
+            "enum": [
+              "jpeg",
+              "png",
+              "webp"
+            ],
+            "description": "Generated image format."
+          }
+        },
+        "required": [
+          "image"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/flux-tools/deblur-v1",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "user": "{{user}}",
+          "image": "{{image}}",
+          "seed": "{{seed}}",
+          "safety_tolerance": "{{safety_tolerance}}",
+          "output_format": "{{output_format}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "videos.edit": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 30000,
+      "maxInputBytes": 26214400,
+      "maxResponseBytes": 26214400,
+      "title": "Edit Video",
+      "description": "Submit a prompt-directed video edit with POST /v1/flux-tools/video-edit-v1. Returns the task id, polling URL, and quoted cost as JSON. It does not wait for or download the media.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "user": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "description": "Opaque end-user identifier. Do not send personal data."
+          },
+          "video": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 20000000,
+            "description": "Source video as an HTTP(S) URL or base64 MP4. Authorized HTTP(S) URL or base64 media. The connector sends the string as JSON and does not download image or video bytes."
+          },
+          "prompt": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096,
+            "description": "Edit instruction for the source video."
+          },
+          "safety_tolerance": {
+            "type": "integer",
+            "description": "Moderation tolerance from 0 (strictest) to 7. The route may reject levels above its approved ceiling.",
+            "minimum": 0,
+            "maximum": 7
+          }
+        },
+        "required": [
+          "video",
+          "prompt"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/flux-tools/video-edit-v1",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "user": "{{user}}",
+          "video": "{{video}}",
+          "prompt": "{{prompt}}",
+          "safety_tolerance": "{{safety_tolerance}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "images.erase": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 30000,
+      "maxInputBytes": 26214400,
+      "maxResponseBytes": 26214400,
+      "title": "Erase Image Object",
+      "description": "Submit an object-removal task with POST /v1/flux-tools/erase-v1. White mask pixels are removed. Returns the task id, polling URL, and quoted cost as JSON. It does not wait for or download the media.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "user": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "description": "Opaque end-user identifier. Do not send personal data."
+          },
+          "image": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 20000000,
+            "description": "Image to edit, as an HTTP(S) URL or base64. Authorized HTTP(S) URL or base64 media. The connector sends the string as JSON and does not download image or video bytes."
+          },
+          "mask": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 20000000,
+            "description": "Same-size black-and-white mask as an HTTP(S) URL or base64. Authorized HTTP(S) URL or base64 media. The connector sends the string as JSON and does not download image or video bytes."
+          },
+          "dilate_pixels": {
+            "type": "integer",
+            "description": "Pixels by which to expand the white mask. Maximum 25.",
+            "minimum": 0,
+            "maximum": 25
+          },
+          "seed": {
+            "type": "integer",
+            "description": "Optional deterministic seed."
+          },
+          "safety_tolerance": {
+            "type": "integer",
+            "description": "Moderation tolerance from 0 (strictest) to 7. The route may reject levels above its approved ceiling.",
+            "minimum": 0,
+            "maximum": 7
+          },
+          "output_format": {
+            "type": "string",
+            "enum": [
+              "jpeg",
+              "png",
+              "webp"
+            ],
+            "description": "Generated image format."
+          }
+        },
+        "required": [
+          "image",
+          "mask"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/flux-tools/erase-v1",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "user": "{{user}}",
+          "image": "{{image}}",
+          "mask": "{{mask}}",
+          "dilate_pixels": "{{dilate_pixels}}",
+          "seed": "{{seed}}",
+          "safety_tolerance": "{{safety_tolerance}}",
+          "output_format": "{{output_format}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "images.generateFinetuned": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 30000,
+      "maxInputBytes": 26214400,
+      "maxResponseBytes": 26214400,
+      "title": "Generate Fine-Tuned Image",
+      "description": "Submit a FLUX 1.1 [pro] ultra fine-tuned generation with POST /v1/flux-pro-1.1-ultra-finetuned. Returns the task id, polling URL, and quoted cost as JSON. It does not wait for or download the media.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "finetune_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 512,
+            "description": "LoRA name. For a shared LoRA use org-id/lora-name."
+          },
+          "finetune_strength": {
+            "type": "number",
+            "description": "LoRA influence from 0 to 2. 1 is full influence.",
+            "minimum": 0,
+            "maximum": 2
+          },
+          "prompt": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 10000,
+            "description": "Text description of the image to generate."
+          },
+          "seed": {
+            "type": "integer",
+            "description": "Optional deterministic seed."
+          },
+          "aspect_ratio": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 16,
+            "description": "Output aspect ratio between 21:9 and 9:21."
+          },
+          "safety_tolerance": {
+            "type": "integer",
+            "description": "Moderation tolerance from 0 (strictest) to 6.",
+            "minimum": 0,
+            "maximum": 6
+          },
+          "output_format": {
+            "type": "string",
+            "enum": [
+              "jpeg",
+              "png",
+              "webp"
+            ],
+            "description": "Generated image format."
+          },
+          "image_prompt": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 20000000,
+            "description": "Optional base64 image used to guide the result. Authorized HTTP(S) URL or base64 media. The connector sends the string as JSON and does not download image or video bytes."
+          },
+          "image_prompt_strength": {
+            "type": "number",
+            "description": "Blend strength of image_prompt relative to the text prompt.",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "prompt_upsampling": {
+            "type": "boolean",
+            "description": "Allow BFL to expand the prompt."
+          }
+        },
+        "required": [
+          "finetune_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/flux-pro-1.1-ultra-finetuned",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "finetune_id": "{{finetune_id}}",
+          "finetune_strength": "{{finetune_strength}}",
+          "prompt": "{{prompt}}",
+          "seed": "{{seed}}",
+          "aspect_ratio": "{{aspect_ratio}}",
+          "safety_tolerance": "{{safety_tolerance}}",
+          "output_format": "{{output_format}}",
+          "image_prompt": "{{image_prompt}}",
+          "image_prompt_strength": "{{image_prompt_strength}}",
+          "prompt_upsampling": "{{prompt_upsampling}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "images.generateOrEdit": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 30000,
+      "maxInputBytes": 26214400,
+      "maxResponseBytes": 26214400,
+      "title": "Generate or Edit Image",
+      "description": "Submit a FLUX 3 image generation or reference edit with POST /v1/flux-3-image. Returns the task id, polling URL, and quoted cost as JSON. It does not wait for or download the media.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "prompt": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 10000,
+            "description": "Description of the image or the edits to make."
+          },
+          "images": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 10,
+            "description": "Optional reference images, each an HTTP(S) URL or base64 string. Omit for text-only generation.",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 20000000,
+              "description": "One reference image."
+            }
+          },
+          "aspect_ratio": {
+            "type": "string",
+            "enum": [
+              "auto",
+              "21:9",
+              "2:1",
+              "16:9",
+              "3:2",
+              "7:5",
+              "4:3",
+              "5:4",
+              "1:1",
+              "4:5",
+              "3:4",
+              "5:7",
+              "2:3",
+              "9:16",
+              "1:2",
+              "9:21"
+            ],
+            "description": "Output aspect ratio. auto follows the prompt or the first reference when possible."
+          },
+          "resolution": {
+            "type": "string",
+            "enum": [
+              "768sq",
+              "1k",
+              "1.5k",
+              "2k",
+              "4k"
+            ],
+            "description": "Equal-pixel-area output tier."
+          },
+          "safety_tolerance": {
+            "type": "integer",
+            "description": "Moderation tolerance from 0 (strictest) to 7. The route may reject levels above its approved ceiling.",
+            "minimum": 0,
+            "maximum": 7
+          },
+          "grounding": {
+            "type": "boolean",
+            "description": "Allow external web and image search grounding."
+          }
+        },
+        "required": [
+          "prompt"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/flux-3-image",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "prompt": "{{prompt}}",
+          "images": "{{images}}",
+          "aspect_ratio": "{{aspect_ratio}}",
+          "resolution": "{{resolution}}",
+          "safety_tolerance": "{{safety_tolerance}}",
+          "grounding": "{{grounding}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "videos.generate": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 30000,
+      "maxInputBytes": 26214400,
+      "maxResponseBytes": 26214400,
+      "title": "Generate Video",
+      "description": "Submit one FLUX 3 video task with POST /v1/flux-3-video. mode is the body discriminator: t2v, i2v, v2v, or draft_enhance. Returns the task id, polling URL, and quoted cost as JSON. It does not wait for or download the media.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "mode": {
+            "type": "string",
+            "enum": [
+              "t2v",
+              "i2v",
+              "v2v",
+              "draft_enhance"
+            ],
+            "description": "Video workflow. t2v is text-to-video, i2v animates keyframes, v2v continues start_video, and draft_enhance renders draft_cache."
+          },
+          "prompt": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 10000,
+            "description": "Video description. Required except for draft_enhance."
+          },
+          "aspect_ratio": {
+            "type": "string",
+            "enum": [
+              "auto",
+              "21:9",
+              "2:1",
+              "16:9",
+              "4:3",
+              "1:1",
+              "3:4",
+              "9:16",
+              "9:21"
+            ],
+            "description": "Output aspect ratio for text, image, and continue modes."
+          },
+          "duration": {
+            "description": "Whole output seconds, or auto. Text and image modes allow 5-20. continue (v2v) allows 5-15. Not used for draft_enhance.",
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 5,
+                "maximum": 20
+              },
+              {
+                "type": "string",
+                "const": "auto"
+              }
+            ]
+          },
+          "resolution": {
+            "type": "string",
+            "enum": [
+              "hd",
+              "fhd",
+              "qhd",
+              "uhd"
+            ],
+            "description": "Output resolution tier. Draft mode requires hd."
+          },
+          "generate_audio": {
+            "type": "boolean",
+            "description": "Generate synchronized audio for text, image, and continue modes."
+          },
+          "safety_tolerance": {
+            "type": "integer",
+            "description": "Moderation tolerance from 0 (strictest) to 7. The route may reject levels above its approved ceiling.",
+            "minimum": 0,
+            "maximum": 7
+          },
+          "draft": {
+            "type": "boolean",
+            "description": "Generate a preview and return a draft_cache URL. Requires resolution hd."
+          },
+          "user": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "description": "Opaque end-user identifier. Do not send personal data."
+          },
+          "keyframes": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 10,
+            "description": "Required for i2v. Plain image strings, or [seconds, image] pairs.",
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 20000000,
+                  "description": "Keyframe image URL or base64."
+                },
+                {
+                  "type": "array",
+                  "minItems": 2,
+                  "maxItems": 2,
+                  "items": {
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 20000000,
+                        "description": "Keyframe image URL or base64."
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          },
+          "draft_cache": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 20000000,
+            "description": "Base64 .bin bundle or still-valid HTTPS URL from a prior draft. Required for draft_enhance."
+          },
+          "start_video": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 20000000,
+            "description": "HTTP(S) URL or base64 MP4 to continue. Required for v2v. Authorized HTTP(S) URL or base64 media. The connector sends the string as JSON and does not download image or video bytes."
+          }
+        },
+        "required": [
+          "mode"
+        ],
+        "anyOf": [
+          {
+            "required": [
+              "mode",
+              "prompt"
+            ],
+            "properties": {
+              "mode": {
+                "const": "t2v"
+              }
+            }
+          },
+          {
+            "required": [
+              "mode",
+              "prompt",
+              "keyframes"
+            ],
+            "properties": {
+              "mode": {
+                "const": "i2v"
+              }
+            }
+          },
+          {
+            "required": [
+              "mode",
+              "prompt",
+              "start_video"
+            ],
+            "properties": {
+              "mode": {
+                "const": "v2v"
+              }
+            }
+          },
+          {
+            "required": [
+              "mode",
+              "draft_cache"
+            ],
+            "properties": {
+              "mode": {
+                "const": "draft_enhance"
+              }
+            }
+          }
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/flux-3-video",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "mode": "{{mode}}",
+          "prompt": "{{prompt}}",
+          "aspect_ratio": "{{aspect_ratio}}",
+          "duration": "{{duration}}",
+          "resolution": "{{resolution}}",
+          "generate_audio": "{{generate_audio}}",
+          "safety_tolerance": "{{safety_tolerance}}",
+          "draft": "{{draft}}",
+          "user": "{{user}}",
+          "keyframes": "{{keyframes}}",
+          "draft_cache": "{{draft_cache}}",
+          "start_video": "{{start_video}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "credits.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "title": "Get Credit Balance",
+      "description": "Read the connected project's credit balance with GET /v1/credits.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {},
+        "required": []
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/credits",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "finetunes.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "title": "Get Fine-Tune",
+      "description": "Read one fine-tune with GET /v1/finetune_details. An absent or inaccessible fine-tune is reported as not found.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "finetune_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 512,
+            "description": "Fine-tune name or id returned by List Fine-Tunes."
+          }
+        },
+        "required": [
+          "finetune_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/finetune_details",
+        "success": [
+          200
+        ],
+        "query": {
+          "finetune_id": "{{finetune_id}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "generations.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "title": "Get Generation Result",
+      "description": "Read one asynchronous task with GET /v1/get_result?id= on api.bfl.ai. Pass the task id. A caller-supplied polling URL is not followed.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "Task id returned by a BFL submission."
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/get_result",
+        "success": [
+          200
+        ],
+        "query": {
+          "id": "{{id}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "finetunes.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "title": "List Fine-Tunes",
+      "description": "List fine-tunes for the connected project with GET /v1/my_finetunes.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {},
+        "required": []
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/my_finetunes",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "images.outpaint": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 30000,
+      "maxInputBytes": 26214400,
+      "maxResponseBytes": 26214400,
+      "title": "Outpaint Image",
+      "description": "Expand an image onto a larger canvas with POST /v1/flux-tools/outpainting-v1. mode high or fast is a body field on this single route. Returns the task id, polling URL, and quoted cost as JSON. It does not wait for or download the media.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "user": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "description": "Opaque end-user identifier. Do not send personal data."
+          },
+          "input_image": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 20000000,
+            "description": "Source image as base64, or an HTTP(S) URL in high mode. Authorized HTTP(S) URL or base64 media. The connector sends the string as JSON and does not download image or video bytes."
+          },
+          "width": {
+            "type": "integer",
+            "description": "Target canvas width in pixels. Width times height must not exceed 4194304.",
+            "minimum": 64,
+            "maximum": 65536
+          },
+          "height": {
+            "type": "integer",
+            "description": "Target canvas height in pixels. Width times height must not exceed 4194304.",
+            "minimum": 64,
+            "maximum": 65536
+          },
+          "auto_crop": {
+            "type": "boolean",
+            "description": "Crop source pixels outside the canvas instead of failing."
+          },
+          "safety_tolerance": {
+            "type": "integer",
+            "description": "Moderation tolerance from 0 (strictest) to 7. The route may reject levels above its approved ceiling.",
+            "minimum": 0,
+            "maximum": 7
+          },
+          "output_format": {
+            "type": "string",
+            "enum": [
+              "jpeg",
+              "png",
+              "webp"
+            ],
+            "description": "Generated image format."
+          },
+          "prompt": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 10000,
+            "description": "Optional text guidance for the expanded region."
+          },
+          "reference_offset_x": {
+            "type": "integer",
+            "description": "Left offset of the source on the canvas. Negative values are allowed."
+          },
+          "reference_offset_y": {
+            "type": "integer",
+            "description": "Top offset of the source on the canvas. Negative values are allowed."
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "high",
+              "fast"
+            ],
+            "description": "high favors fidelity and accepts URLs. fast is lower latency and requires base64."
+          },
+          "disable_pup": {
+            "type": "boolean",
+            "description": "Skip image-aware prompt expansion. Composio calls this disable_prompt_upsampling."
+          }
+        },
+        "required": [
+          "input_image",
+          "width",
+          "height"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/flux-tools/outpainting-v1",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "user": "{{user}}",
+          "input_image": "{{input_image}}",
+          "width": "{{width}}",
+          "height": "{{height}}",
+          "auto_crop": "{{auto_crop}}",
+          "safety_tolerance": "{{safety_tolerance}}",
+          "output_format": "{{output_format}}",
+          "prompt": "{{prompt}}",
+          "reference_offset_x": "{{reference_offset_x}}",
+          "reference_offset_y": "{{reference_offset_y}}",
+          "mode": "{{mode}}",
+          "disable_pup": "{{disable_pup}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "videos.upscale": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 30000,
+      "maxInputBytes": 26214400,
+      "maxResponseBytes": 26214400,
+      "title": "Upscale Video",
+      "description": "Submit a video upscale with POST /v1/flux-tools/video-upscale-v1. Only the first 20 seconds are processed. Returns the task id, polling URL, and quoted cost as JSON. It does not wait for or download the media.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "user": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "description": "Opaque end-user identifier. Do not send personal data."
+          },
+          "input_video": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 20000000,
+            "description": "Source video as an HTTP(S) URL or base64 MP4 up to the connector input budget. Authorized HTTP(S) URL or base64 media. The connector sends the string as JSON and does not download image or video bytes."
+          },
+          "prompt": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 10000,
+            "description": "Optional content description. Empty or omitted is a neutral upscale."
+          },
+          "creativity": {
+            "type": "integer",
+            "enum": [
+              0,
+              1
+            ],
+            "description": "0 preserves the source. 1 allows creative detail enhancement."
+          },
+          "upscale_factor": {
+            "type": "number",
+            "description": "Scale factor from 1.5 to 3. Output keeps the source aspect ratio.",
+            "minimum": 1.5,
+            "maximum": 3
+          },
+          "safety_tolerance": {
+            "type": "integer",
+            "description": "Moderation tolerance from 0 (strictest) to 7. The route may reject levels above its approved ceiling.",
+            "minimum": 0,
+            "maximum": 7
+          }
+        },
+        "required": [
+          "input_video"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/flux-tools/video-upscale-v1",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "user": "{{user}}",
+          "input_video": "{{input_video}}",
+          "prompt": "{{prompt}}",
+          "creativity": "{{creativity}}",
+          "upscale_factor": "{{upscale_factor}}",
+          "safety_tolerance": "{{safety_tolerance}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "images.tryOn": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 30000,
+      "maxInputBytes": 26214400,
+      "maxResponseBytes": 26214400,
+      "title": "Virtual Try-On",
+      "description": "Submit a virtual try-on with POST /v1/flux-tools/vto-v2, the documented current route. v1 is the same JSON shape on a superseded path and is not selected. Returns the task id, polling URL, and quoted cost as JSON. It does not wait for or download the media.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "user": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "description": "Opaque end-user identifier. Do not send personal data."
+          },
+          "prompt": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 10000,
+            "description": "Try-on instruction. person is image 1 and garment is image 2."
+          },
+          "person": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 20000000,
+            "description": "Person image as an HTTP(S) URL or base64. Composio calls this person_image. Authorized HTTP(S) URL or base64 media. The connector sends the string as JSON and does not download image or video bytes."
+          },
+          "garment": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 20000000,
+            "description": "Garment image as an HTTP(S) URL or base64. Composio calls this garment_image. Authorized HTTP(S) URL or base64 media. The connector sends the string as JSON and does not download image or video bytes."
+          },
+          "seed": {
+            "type": "integer",
+            "description": "Optional deterministic seed."
+          },
+          "safety_tolerance": {
+            "type": "integer",
+            "description": "Moderation tolerance from 0 (strictest) to 7. The route may reject levels above its approved ceiling.",
+            "minimum": 0,
+            "maximum": 7
+          },
+          "output_format": {
+            "type": "string",
+            "enum": [
+              "jpeg",
+              "png",
+              "webp"
+            ],
+            "description": "Generated image format."
+          }
+        },
+        "required": [
+          "prompt",
+          "person",
+          "garment"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/flux-tools/vto-v2",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "user": "{{user}}",
+          "prompt": "{{prompt}}",
+          "person": "{{person}}",
+          "garment": "{{garment}}",
+          "seed": "{{seed}}",
+          "safety_tolerance": "{{safety_tolerance}}",
+          "output_format": "{{output_format}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    }
+  }
+}

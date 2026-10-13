@@ -1,0 +1,351 @@
+{
+  "key": "appdrag",
+  "name": "AppDrag",
+  "version": "0.1.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "developer-tools"
+  ],
+  "auth": {
+    "type": "api_key",
+    "scopes": [],
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "AppDrag API key",
+          "required": true,
+          "secret": true
+        },
+        {
+          "key": "project",
+          "label": "AppDrag project name",
+          "required": true,
+          "secret": false
+        }
+      ]
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "{{project}}.appdrag.com"
+    ]
+  },
+  "models": [
+    "function"
+  ],
+  "http": {
+    "baseUrl": "https://{{project}}.appdrag.com",
+    "auth": {
+      "field": "apiKey",
+      "in": "query",
+      "name": "APIKey",
+      "value": "{{apiKey}}"
+    },
+    "headers": {
+      "Accept": "application/json"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "Retry-After",
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "error",
+        "logs",
+        "message"
+      ]
+    }
+  },
+  "operations": {
+    "functions.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Execute production function (GET)",
+      "description": "GET one published Cloud Backend function at https://{project}.appdrag.com/api/{folder}/{function}. Query parameters are the function inputs. APIKey is the documented query parameter. Management-URL fallbacks are not called.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "folder",
+          "function"
+        ],
+        "properties": {
+          "folder": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "function": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "query_params": {
+            "type": "object",
+            "maxProperties": 32,
+            "additionalProperties": {
+              "type": [
+                "string",
+                "number",
+                "boolean"
+              ]
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/{{folder}}/{{function}}",
+        "parameters": [
+          {
+            "wireName": "query_params",
+            "inputName": "query_params",
+            "in": "query",
+            "explode": true
+          }
+        ],
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "functions.post": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Execute function (POST)",
+      "description": "POST one Cloud Backend function on the documented project host. The parameter object is a JSON body. APIKey stays the query parameter.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "folder",
+          "function",
+          "parameters"
+        ],
+        "properties": {
+          "folder": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "function": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "parameters": {
+            "type": "object",
+            "maxProperties": 32,
+            "additionalProperties": {
+              "type": [
+                "string",
+                "number",
+                "boolean"
+              ]
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/api/{{folder}}/{{function}}",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{{parameters}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "functions.put": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Execute function (PUT)",
+      "description": "PUT one Cloud Backend function on the documented project host. Pass parameters as a JSON object, using {} when the function defines no extra inputs. APIKey stays the query parameter.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "folder",
+          "function",
+          "parameters"
+        ],
+        "properties": {
+          "folder": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "function": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "parameters": {
+            "type": "object",
+            "maxProperties": 32,
+            "additionalProperties": {
+              "type": [
+                "string",
+                "number",
+                "boolean"
+              ]
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/api/{{folder}}/{{function}}",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{{parameters}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "visual-sql.select": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Visual SQL select",
+      "description": "GET a Visual SQL SELECT function. AppDrag's visual-select walkthrough uses GET, and inputs are query parameters on /api/{folder}/{visualSelectFunction}.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "folder",
+          "visualSelectFunction"
+        ],
+        "properties": {
+          "folder": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "visualSelectFunction": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "params": {
+            "type": "object",
+            "maxProperties": 32,
+            "additionalProperties": {
+              "type": [
+                "string",
+                "number",
+                "boolean"
+              ]
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/{{folder}}/{{visualSelectFunction}}",
+        "parameters": [
+          {
+            "wireName": "params",
+            "inputName": "params",
+            "in": "query",
+            "explode": true
+          }
+        ],
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    }
+  }
+}

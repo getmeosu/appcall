@@ -1,0 +1,607 @@
+{
+  "key": "finnhub",
+  "name": "Finnhub",
+  "version": "0.1.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "analytics",
+    "finance"
+  ],
+  "auth": {
+    "type": "api_key",
+    "scopes": [],
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "Finnhub API key",
+          "required": true,
+          "secret": true
+        }
+      ]
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "finnhub.io"
+    ]
+  },
+  "models": [
+    "quote",
+    "company-profile",
+    "company-metric",
+    "market-status",
+    "financials-reported",
+    "earnings",
+    "filing",
+    "symbol"
+  ],
+  "http": {
+    "baseUrl": "https://finnhub.io/api/v1",
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "X-Finnhub-Token",
+      "value": "{{apiKey}}"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "Retry-After",
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "error",
+        "message"
+      ]
+    },
+    "headers": {
+      "Accept": "application/json"
+    }
+  },
+  "operations": {
+    "company-metrics.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 8192,
+      "maxResponseBytes": 5242880,
+      "title": "Get Company Financial Metrics",
+      "description": "Get current key ratios and annual or quarterly metric series for one company. Finnhub GET /stock/metric requires metric=all and returns both the metric object and the series object.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "symbol"
+        ],
+        "properties": {
+          "symbol": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 32,
+            "description": "Company ticker, such as AAPL."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/stock/metric",
+        "query": {
+          "symbol": "{{symbol}}",
+          "metric": "all"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "company-profile.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "title": "Get Company Profile",
+      "description": "Look up one company profile by exactly one ticker, ISIN, or CUSIP. Finnhub GET /stock/profile2 is a single route; symbol, isin, and cusip are mutually exclusive query parameters.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "symbol": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 32,
+            "description": "Company ticker, such as AAPL."
+          },
+          "isin": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 32,
+            "description": "Company ISIN. Provide exactly one identifier."
+          },
+          "cusip": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 32,
+            "description": "Company CUSIP. Provide exactly one identifier."
+          }
+        },
+        "oneOf": [
+          {
+            "required": [
+              "symbol"
+            ]
+          },
+          {
+            "required": [
+              "isin"
+            ]
+          },
+          {
+            "required": [
+              "cusip"
+            ]
+          }
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/stock/profile2",
+        "query": {
+          "symbol": "{{symbol}}",
+          "isin": "{{isin}}",
+          "cusip": "{{cusip}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "market-status.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "title": "Get Market Status",
+      "description": "Check whether an exchange is open and return its session, timezone, and holiday. Finnhub GET /stock/market-status.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "exchange"
+        ],
+        "properties": {
+          "exchange": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 16,
+            "description": "Finnhub exchange code, such as US."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/stock/market-status",
+        "query": {
+          "exchange": "{{exchange}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "quote.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "title": "Get Quote",
+      "description": "Get the latest price snapshot for one Finnhub symbol. Finnhub GET /quote returns JSON fields c, d, dp, h, l, o, pc, and t.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "symbol"
+        ],
+        "properties": {
+          "symbol": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 32,
+            "description": "Exact Finnhub symbol to quote."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/quote",
+        "query": {
+          "symbol": "{{symbol}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "financials-reported.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 8192,
+      "maxResponseBytes": 5242880,
+      "title": "Get Reported Financials",
+      "description": "Retrieve as-reported balance-sheet, cash-flow, and income-statement data for one company or filing. Finnhub GET /stock/financials-reported accepts exactly one of symbol, cik, or accessNumber, plus optional freq, from, and to.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "symbol": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 32,
+            "description": "Company ticker. Provide exactly one of symbol, cik, or accessNumber."
+          },
+          "cik": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 16,
+            "description": "SEC Central Index Key."
+          },
+          "accessNumber": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 32,
+            "description": "SEC accession number for one report."
+          },
+          "freq": {
+            "type": "string",
+            "enum": [
+              "annual",
+              "quarterly"
+            ],
+            "description": "Report frequency. Sent as Finnhub freq."
+          },
+          "from": {
+            "type": "string",
+            "minLength": 10,
+            "maxLength": 10,
+            "description": "Report end-date lower bound in YYYY-MM-DD format."
+          },
+          "to": {
+            "type": "string",
+            "minLength": 10,
+            "maxLength": 10,
+            "description": "Report end-date upper bound in YYYY-MM-DD format."
+          }
+        },
+        "oneOf": [
+          {
+            "required": [
+              "symbol"
+            ]
+          },
+          {
+            "required": [
+              "cik"
+            ]
+          },
+          {
+            "required": [
+              "accessNumber"
+            ]
+          }
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/stock/financials-reported",
+        "query": {
+          "symbol": "{{symbol}}",
+          "cik": "{{cik}}",
+          "accessNumber": "{{accessNumber}}",
+          "freq": "{{freq}}",
+          "from": "{{from}}",
+          "to": "{{to}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "earnings.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "title": "List Earnings Results",
+      "description": "List a company's actual versus estimated earnings and surprise values. Finnhub GET /stock/earnings returns a JSON array. limit is the upstream cap.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "symbol"
+        ],
+        "properties": {
+          "symbol": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 32,
+            "description": "Company ticker, such as AAPL."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Upstream result cap. Finnhub may ignore it; the free tier returns the last four quarters."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/stock/earnings",
+        "query": {
+          "symbol": "{{symbol}}",
+          "limit": "{{limit}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "filings.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 8192,
+      "maxResponseBytes": 5242880,
+      "title": "List SEC Filings",
+      "description": "List SEC filing metadata. Finnhub GET /stock/filings returns a JSON array and accepts exactly one of symbol, cik, or accessNumber, plus optional form, from, and to.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "symbol": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 32,
+            "description": "Company ticker. Provide exactly one of symbol, cik, or accessNumber."
+          },
+          "cik": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 16,
+            "description": "SEC Central Index Key."
+          },
+          "accessNumber": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 32,
+            "description": "SEC accession number for one filing."
+          },
+          "form": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 32,
+            "description": "SEC form filter, such as 10-K or NT 10-K."
+          },
+          "from": {
+            "type": "string",
+            "minLength": 10,
+            "maxLength": 10,
+            "description": "Filing-date lower bound in YYYY-MM-DD format."
+          },
+          "to": {
+            "type": "string",
+            "minLength": 10,
+            "maxLength": 10,
+            "description": "Filing-date upper bound in YYYY-MM-DD format."
+          }
+        },
+        "oneOf": [
+          {
+            "required": [
+              "symbol"
+            ]
+          },
+          {
+            "required": [
+              "cik"
+            ]
+          },
+          {
+            "required": [
+              "accessNumber"
+            ]
+          }
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/stock/filings",
+        "query": {
+          "symbol": "{{symbol}}",
+          "form": "{{form}}",
+          "from": "{{from}}",
+          "to": "{{to}}",
+          "cik": "{{cik}}",
+          "accessNumber": "{{accessNumber}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "symbols.search": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "title": "Search Symbols",
+      "description": "Find tradable symbols by ticker, company name, ISIN, or CUSIP. Finnhub GET /search accepts q and an optional exchange. It has no server-side result cap.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "query"
+        ],
+        "properties": {
+          "query": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "description": "Ticker, company name, ISIN, or CUSIP. Sent as Finnhub q."
+          },
+          "exchange": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 16,
+            "description": "Optional Finnhub exchange code."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/search",
+        "query": {
+          "q": "{{query}}",
+          "exchange": "{{exchange}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    }
+  }
+}

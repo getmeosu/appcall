@@ -1,0 +1,604 @@
+{
+  "key": "edworking",
+  "name": "Edworking",
+  "version": "0.1.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "project-management",
+    "productivity"
+  ],
+  "auth": {
+    "type": "api_key",
+    "scopes": [],
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "Edworking API token",
+          "required": true,
+          "secret": true
+        }
+      ]
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "gateway.edworking.com"
+    ]
+  },
+  "models": [
+    "project",
+    "project-state",
+    "task",
+    "message"
+  ],
+  "http": {
+    "baseUrl": "https://gateway.edworking.com",
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "Authorization",
+      "value": "Bearer {{apiKey}}"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "Retry-After",
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "errors.0.message",
+        "message"
+      ],
+      "bodyErrorPaths": [
+        "errors"
+      ]
+    },
+    "headers": {
+      "Accept": "application/json",
+      "Content-Type": "application/json"
+    }
+  },
+  "operations": {
+    "tasks.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Create Task",
+      "description": "Create a named task in an Edworking project with apiCreateTask. Sends only projectId and name, the fields EDWORKING_CREATE_TASK requires. Optional description, deadline, state, and file ids are not sent, so an omitted value is not coerced to null. Requires tasks:write.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "projectId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Project ID in which to create the task."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500,
+            "description": "Task name, 1 to 500 characters."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "projectId",
+          "name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "task"
+        ],
+        "properties": {
+          "task": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/",
+        "success": [
+          200
+        ],
+        "body": {
+          "query": "mutation ApiCreateTask($projectId: ID!, $name: String!) { apiCreateTask(projectId: $projectId, name: $name) { id name projectId stateProjectId createdAt updatedAt deadline project { id name } stateProject { id value } users { id firstname lastname profileImg } } }",
+          "variables": {
+            "projectId": "{{projectId}}",
+            "name": "{{name}}"
+          }
+        },
+        "result": {
+          "task": "{{response.data.apiCreateTask}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "tasks.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get Task",
+      "description": "Get one task with apiTask, including its project, state, and assignees. The scoped ApiTask type does not include time entries. The result data object is the GraphQL data payload, so apiTask stays null when the task is missing or inaccessible. Requires tasks:read.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "taskId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "ID of the task to retrieve."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "taskId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/",
+        "success": [
+          200
+        ],
+        "body": {
+          "query": "query ApiTask($id: ID!) { apiTask(id: $id) { id name projectId stateProjectId createdAt updatedAt deadline project { id name } stateProject { id value } users { id firstname lastname profileImg } } }",
+          "variables": {
+            "id": "{{taskId}}"
+          }
+        },
+        "result": {
+          "data": "{{response.data}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "tasks.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List Tasks",
+      "description": "List tasks with apiTasks. Omit projectId to list every task visible to the token. Pagination is the documented after/limit cursor, not a zero-based offset. Omitted limit defaults to 50 and omitted order defaults to ID_ASC inside the document. Requires tasks:read.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "projectId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Project ID filter. Omit to list tasks visible to the token."
+          },
+          "after": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Cursor. Pass the last returned ID. This is not a numeric offset."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Page size from 1 to 100. Default 50 when omitted."
+          },
+          "order": {
+            "type": "string",
+            "enum": [
+              "ID_ASC",
+              "CREATED_DESC",
+              "UPDATED_DESC"
+            ],
+            "description": "ApiOrder. Default ID_ASC when omitted."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "tasks"
+        ],
+        "properties": {
+          "tasks": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/",
+        "success": [
+          200
+        ],
+        "body": {
+          "query": "query ApiTasks($projectId: ID, $after: ID, $limit: Int = 50, $order: ApiOrder = ID_ASC) { apiTasks(projectId: $projectId, after: $after, limit: $limit, order: $order) { id name projectId stateProjectId createdAt updatedAt deadline project { id name } stateProject { id value } users { id firstname lastname profileImg } } }",
+          "variables": {
+            "projectId": "{{projectId}}",
+            "after": "{{after}}",
+            "limit": "{{limit}}",
+            "order": "{{order}}"
+          }
+        },
+        "result": {
+          "tasks": "{{response.data.apiTasks}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "tasks.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Update Task",
+      "description": "Rename one task with apiRenameTask. The scoped name-only mutation does not take projectId. apiUpdateTask is not used: an omitted deadline variable would be sent as null and clear the due date. Name is 1 to 500 characters. Requires tasks:write.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "taskId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "ID of the task to rename."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500,
+            "description": "New task name, 1 to 500 characters."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "taskId",
+          "name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "task"
+        ],
+        "properties": {
+          "task": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/",
+        "success": [
+          200
+        ],
+        "body": {
+          "query": "mutation ApiRenameTask($id: ID!, $name: String!) { apiRenameTask(id: $id, name: $name) { id name projectId stateProjectId createdAt updatedAt deadline project { id name } stateProject { id value } users { id firstname lastname profileImg } } }",
+          "variables": {
+            "id": "{{taskId}}",
+            "name": "{{name}}"
+          }
+        },
+        "result": {
+          "task": "{{response.data.apiRenameTask}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "messages.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List Messages",
+      "description": "List messages in one project chat with apiMessages. chat.kind is fixed to project, so this does not select task, private, or meeting-room chats. Pagination is after/limit, not the zero-based offset older clients used. The file field is not selected, so files:read is not required. Requires messages:read.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "projectId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Project ID whose project chat to list."
+          },
+          "after": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Cursor. Pass the last returned ID. This is not a numeric offset."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Page size from 1 to 100. Default 50 when omitted."
+          },
+          "order": {
+            "type": "string",
+            "enum": [
+              "ID_ASC",
+              "CREATED_DESC",
+              "UPDATED_DESC"
+            ],
+            "description": "ApiOrder. Default ID_ASC when omitted."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "projectId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "messages"
+        ],
+        "properties": {
+          "messages": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/",
+        "success": [
+          200
+        ],
+        "body": {
+          "query": "query ApiMessages($projectId: ID!, $after: ID, $limit: Int = 50, $order: ApiOrder = ID_ASC) { apiMessages(chat: { id: $projectId, kind: \"project\" }, after: $after, limit: $limit, order: $order) { id body type authorId parentId createdAt updatedAt author { id firstname lastname profileImg } } }",
+          "variables": {
+            "projectId": "{{projectId}}",
+            "after": "{{after}}",
+            "limit": "{{limit}}",
+            "order": "{{order}}"
+          }
+        },
+        "result": {
+          "messages": "{{response.data.apiMessages}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "messages.send": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Send Message",
+      "description": "Send text to a project chat with apiSendMessage. chat.kind is fixed to project. Body is 1 to 20,000 characters after the provider trims it. This call does not delete or edit the message. Requires messages:write.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "projectId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Project ID that receives the message."
+          },
+          "body": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 20000,
+            "description": "Message text, 1 to 20,000 characters."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "projectId",
+          "body"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "message"
+        ],
+        "properties": {
+          "message": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/",
+        "success": [
+          200
+        ],
+        "body": {
+          "query": "mutation ApiSendMessage($projectId: ID!, $body: String!) { apiSendMessage(chat: { id: $projectId, kind: \"project\" }, body: $body) { id body authorId createdAt } }",
+          "variables": {
+            "projectId": "{{projectId}}",
+            "body": "{{body}}"
+          }
+        },
+        "result": {
+          "message": "{{response.data.apiSendMessage}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "projects.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List Projects",
+      "description": "List accessible, non-deleted projects with apiProjects. Omitted limit defaults to 50 and omitted order defaults to ID_ASC. Pass the last ID as after to read the next page. Requires projects:read.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "after": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Cursor. Pass the last returned ID. This is not a numeric offset."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Page size from 1 to 100. Default 50 when omitted."
+          },
+          "order": {
+            "type": "string",
+            "enum": [
+              "ID_ASC",
+              "CREATED_DESC",
+              "UPDATED_DESC"
+            ],
+            "description": "ApiOrder. Default ID_ASC when omitted."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "projects"
+        ],
+        "properties": {
+          "projects": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/",
+        "success": [
+          200
+        ],
+        "body": {
+          "query": "query ApiProjects($after: ID, $limit: Int = 50, $order: ApiOrder = ID_ASC) { apiProjects(after: $after, limit: $limit, order: $order) { id name createdAt updatedAt } }",
+          "variables": {
+            "after": "{{after}}",
+            "limit": "{{limit}}",
+            "order": "{{order}}"
+          }
+        },
+        "result": {
+          "projects": "{{response.data.apiProjects}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "project-states.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List Project States",
+      "description": "List statuses for one project with apiProjectStates, in position order. The query has no order argument. Requires projects:read.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "projectId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Project ID whose workflow states to list."
+          },
+          "after": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Cursor. Pass the last returned ID. This is not a numeric offset."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Page size from 1 to 100. Default 50 when omitted."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "projectId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "states"
+        ],
+        "properties": {
+          "states": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/",
+        "success": [
+          200
+        ],
+        "body": {
+          "query": "query ApiProjectStates($projectId: ID!, $after: ID, $limit: Int = 50) { apiProjectStates(projectId: $projectId, after: $after, limit: $limit) { id value } }",
+          "variables": {
+            "projectId": "{{projectId}}",
+            "after": "{{after}}",
+            "limit": "{{limit}}"
+          }
+        },
+        "result": {
+          "states": "{{response.data.apiProjectStates}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    }
+  }
+}

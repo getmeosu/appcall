@@ -1,0 +1,535 @@
+{
+  "key": "castingwords",
+  "name": "CastingWords",
+  "version": "0.1.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "transcription",
+    "productivity"
+  ],
+  "auth": {
+    "type": "api_key",
+    "scopes": [],
+    "setup": {
+      "mode": "api_key",
+      "docsUrl": "https://castingwords.com/docs/developer/SimpleAPI.html",
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "CastingWords API key",
+          "required": true,
+          "secret": true
+        }
+      ]
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "castingwords.com"
+    ]
+  },
+  "models": [
+    "balance",
+    "audiofile",
+    "order",
+    "webhook"
+  ],
+  "http": {
+    "baseUrl": "https://castingwords.com/store/API4",
+    "auth": {
+      "field": "apiKey",
+      "in": "query",
+      "name": "api_key",
+      "value": "{{apiKey}}"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after",
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "message",
+        "error",
+        "error_message"
+      ]
+    },
+    "headers": {
+      "Accept": "application/json"
+    }
+  },
+  "operations": {
+    "healthcheck": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 5000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "title": "Get Prepay Balance",
+      "description": "Retrieve the CastingWords prepay balance in USD with GET /prepay_balance. An empty input also validates the API key.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "balance"
+            ],
+            "properties": {
+              "balance": {
+                "type": [
+                  "string",
+                  "number"
+                ],
+                "description": "Current prepay balance in USD."
+              }
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/prepay_balance",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "transcription.status": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "title": "Get Audiofile Details",
+      "description": "Get CastingWords audiofile details, including statename, with GET /audiofile/{audiofileId}. This is the documented JSON status read, not the transcript file download.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "audiofileId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "CastingWords audiofile id."
+          }
+        },
+        "required": [
+          "audiofileId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "Audiofile detail object returned by GET /audiofile/{id}."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/audiofile/{{audiofileId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "orders.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 60000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Order Transcript",
+      "description": "Create a CastingWords transcription order with POST /order_url. The media URL is a query parameter on castingwords.com. This connector does not fetch that URL.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "url": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2048,
+            "description": "Publicly accessible media URL CastingWords downloads. Sent only as the url query parameter."
+          },
+          "sku": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 8,
+            "description": "One or more SKU codes applied to the URL. Repeated as sku query parameters.",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 32
+            }
+          },
+          "name": {
+            "type": "array",
+            "maxItems": 20,
+            "description": "Speaker names. Repeated as name query parameters.",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 120
+            }
+          },
+          "notes": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000,
+            "description": "Notes for the transcriber."
+          },
+          "test": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 16,
+            "description": "When \"1\", creates a test order that is not transcribed or charged."
+          }
+        },
+        "required": [
+          "url",
+          "sku"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": [
+              "audiofiles",
+              "order",
+              "message"
+            ],
+            "properties": {
+              "audiofiles": {
+                "type": "array",
+                "items": {
+                  "type": "integer"
+                },
+                "description": "Audiofile ids created for the order."
+              },
+              "order": {
+                "type": "string",
+                "description": "Order id."
+              },
+              "message": {
+                "type": "string",
+                "description": "Human-readable success or failure message."
+              },
+              "hold": {
+                "type": "string",
+                "description": "Present only when the order was accepted but held. Currently billing."
+              }
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/order_url",
+        "success": [
+          200
+        ],
+        "query": {
+          "url": "{{url}}",
+          "sku": "{{sku}}",
+          "name": "{{name}}",
+          "notes": "{{notes}}",
+          "test": "{{test}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "audiofiles.upgrade": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 8192,
+      "maxResponseBytes": 65536,
+      "title": "Order Upgrades",
+      "description": "Order upgrade SKUs for one audiofile with POST /audiofile/{audiofileId}/upgrade. SKUs are repeated sku query parameters.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "audiofileId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "CastingWords audiofile id."
+          },
+          "sku": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 6,
+            "description": "Upgrade SKUs to order.",
+            "items": {
+              "type": "string",
+              "enum": [
+                "DIFFQ2",
+                "TSTMP1",
+                "CAPTION1",
+                "EDIT01",
+                "UPGRD1",
+                "UPGRD2",
+                "UPGRD3"
+              ]
+            }
+          },
+          "test": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 16,
+            "description": "Official test flag. The store API examples send \"1\". Valid with audiofile ids 100 and 101 where the docs limit test mode."
+          }
+        },
+        "required": [
+          "audiofileId",
+          "sku"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "description": "Upstream JSON value. The store API documents a JSON success body but not a fixed field list."
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/audiofile/{{audiofileId}}/upgrade",
+        "success": [
+          200
+        ],
+        "query": {
+          "sku": "{{sku}}",
+          "test": "{{test}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "audiofiles.refund": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "title": "Cancel and Refund Audio File",
+      "description": "Cancel an audiofile and refund it when no transcription work has started, with POST /audiofile/{audiofileId}/refund.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "audiofileId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "CastingWords audiofile id."
+          },
+          "test": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 16,
+            "description": "Official test flag. The store API examples send \"1\". Valid with audiofile ids 100 and 101 where the docs limit test mode."
+          }
+        },
+        "required": [
+          "audiofileId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "description": "Upstream JSON value. The store API documents a JSON success body but not a fixed field list."
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/audiofile/{{audiofileId}}/refund",
+        "success": [
+          200
+        ],
+        "query": {
+          "test": "{{test}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "webhooks.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "title": "Get Registered Webhook URL",
+      "description": "Read the webhook URL registered for this CastingWords account with GET /webhook.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "description": "Upstream JSON value. The store API documents a JSON success body but not a fixed field list."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/webhook",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "webhooks.register": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 8192,
+      "maxResponseBytes": 65536,
+      "title": "Register Webhook",
+      "description": "Register the account webhook with POST /webhook. The callback URL is the webhook query parameter. This connector does not call that URL.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "webhook": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2048,
+            "description": "HTTP or HTTPS callback CastingWords will POST. Sent only as the webhook query parameter."
+          }
+        },
+        "required": [
+          "webhook"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "description": "Upstream JSON value. The store API documents a JSON success body but not a fixed field list."
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/webhook",
+        "success": [
+          200
+        ],
+        "query": {
+          "webhook": "{{webhook}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "webhooks.test": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "title": "Test Webhook Call",
+      "description": "Ask CastingWords to POST one test webhook event with POST /webhook/test/{event}.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "event": {
+            "type": "string",
+            "enum": [
+              "TRANSCRIPT_COMPLETE",
+              "DIFFICULT_AUDIO",
+              "REFUND_ISSUED",
+              "ORDER_ON_HOLD"
+            ],
+            "description": "Webhook event to test."
+          }
+        },
+        "required": [
+          "event"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "description": "Upstream JSON value. The store API documents a JSON success body but not a fixed field list."
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/webhook/test/{{event}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    }
+  }
+}

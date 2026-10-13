@@ -1,0 +1,398 @@
+{
+  "key": "brain-graph",
+  "name": "BrainGraph",
+  "version": "0.1.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "artificial-intelligence"
+  ],
+  "auth": {
+    "type": "api_key",
+    "scopes": [],
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "BrainGraph API key",
+          "required": true,
+          "secret": true
+        }
+      ]
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "itsbraingraph.ai"
+    ]
+  },
+  "models": [
+    "brain",
+    "document",
+    "entity"
+  ],
+  "http": {
+    "baseUrl": "https://itsbraingraph.ai",
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "X-API-Key",
+      "value": "{{apiKey}}"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "Retry-After",
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "message",
+        "error"
+      ]
+    },
+    "headers": {
+      "Accept": "application/json"
+    }
+  },
+  "operations": {
+    "documents.progress": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 5242880,
+      "title": "Get document progress",
+      "description": "Get transcription, processing, and analysis status for one BrainGraph document.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "documentId"
+        ],
+        "properties": {
+          "documentId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Document id returned by a BrainGraph upload or ingestion call."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/documents/{{documentId}}/progress",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "documents.ingest-url": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Ingest web page",
+      "description": "Fetch a public web page and queue it for BrainGraph ingestion.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "url"
+        ],
+        "properties": {
+          "url": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2048,
+            "description": "Public HTTP or HTTPS page URL. Private and loopback addresses are rejected."
+          },
+          "notes": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4000,
+            "description": "Optional context for extraction and later retrieval."
+          },
+          "conversationDate": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 40,
+            "description": "Optional ISO 8601 date associated with the page."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/api/documents/url",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "url": "{{url}}",
+          "notes": "{{notes}}",
+          "conversationDate": "{{conversationDate}}"
+        },
+        "success": [
+          201
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "brains.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "title": "List brains",
+      "description": "List knowledge brains on the connected BrainGraph account and identify the default brain.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/brains",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "documents.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 5242880,
+      "title": "List documents",
+      "description": "List BrainGraph documents newest first. The public API pages with offset, not a cursor.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "query": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500,
+            "description": "Case-insensitive substring matched against filenames and notes."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Maximum documents in this page. The provider default is 20."
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Documents to skip. The provider default is 0."
+          },
+          "includeFailed": {
+            "type": "boolean",
+            "description": "Include documents whose ingestion failed."
+          },
+          "brainIds": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000,
+            "description": "Comma-separated brain ids. Omit to list documents across all brains."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/brain/documents",
+        "query": {
+          "query": "{{query}}",
+          "limit": "{{limit}}",
+          "offset": "{{offset}}",
+          "includeFailed": "{{includeFailed}}",
+          "brainIds": "{{brainIds}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "entities.resolve": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "title": "Resolve entity",
+      "description": "Resolve an entity name to a canonical BrainGraph record. Ambiguous and not-found results are JSON, not HTTP errors.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500,
+            "description": "Entity name to resolve, such as a person, organization, project, or concept."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/brain/entity/resolve",
+        "query": {
+          "name": "{{name}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "brain.search": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Search brain",
+      "description": "Search facts in the BrainGraph knowledge graph with a natural-language question.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "query"
+        ],
+        "properties": {
+          "query": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000,
+            "description": "Natural-language question or topic."
+          },
+          "numResults": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 50,
+            "description": "Maximum matching facts to return. The provider default is 10."
+          },
+          "brainIds": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 50,
+            "description": "Brain ids to search. Omit to search all brains.",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            }
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/api/brain/search",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "query": "{{query}}",
+          "numResults": "{{numResults}}",
+          "brainIds": "{{brainIds}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    }
+  }
+}

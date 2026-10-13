@@ -1,0 +1,786 @@
+{
+  "key": "carsxe",
+  "name": "CarsXE",
+  "version": "0.1.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "automotive"
+  ],
+  "auth": {
+    "type": "api_key",
+    "scopes": [],
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "CarsXE API key",
+          "required": true,
+          "secret": true
+        }
+      ]
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "api.carsxe.com"
+    ]
+  },
+  "models": [
+    "vehicle",
+    "plate",
+    "recall",
+    "image",
+    "obd"
+  ],
+  "http": {
+    "baseUrl": "https://api.carsxe.com",
+    "auth": {
+      "field": "apiKey",
+      "in": "query",
+      "name": "key",
+      "value": "{{apiKey}}"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "Retry-After",
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "message",
+        "error"
+      ]
+    },
+    "headers": {
+      "Accept": "application/json"
+    }
+  },
+  "operations": {
+    "history.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 8192,
+      "maxResponseBytes": 5242880,
+      "title": "Get Vehicle History",
+      "description": "Retrieve title, brand, junk/salvage, insurance, VIN-change, and historical title records for one VIN. GET /history returns a JSON object. format is pinned to json.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "vin": {
+            "type": "string",
+            "minLength": 17,
+            "maxLength": 17,
+            "description": "Exact 17-character vehicle identification number."
+          }
+        },
+        "required": [
+          "vin"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "JSON object returned by CarsXE."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/history",
+        "success": [
+          200
+        ],
+        "query": {
+          "vin": "{{vin}}",
+          "format": "json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "redactResponseKeys": [
+        "key"
+      ]
+    },
+    "images.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 8192,
+      "maxResponseBytes": 5242880,
+      "title": "Get Vehicle Images",
+      "description": "Find up to 10 vehicle photo records by make and model. GET /images returns JSON metadata and image links, not image bytes. format is pinned to json. angle is front, side, or back. photoType is valid only with year and trim. validate is the provider quality flag.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "make": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120,
+            "description": "Vehicle manufacturer."
+          },
+          "model": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120,
+            "description": "Vehicle model."
+          },
+          "year": {
+            "type": "string",
+            "minLength": 4,
+            "maxLength": 4,
+            "description": "Four-digit model year filter."
+          },
+          "trim": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120,
+            "description": "Trim filter."
+          },
+          "color": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120,
+            "description": "Preferred vehicle color."
+          },
+          "transparent": {
+            "type": "boolean",
+            "description": "Prefer images with transparent backgrounds. Omit to use the provider default."
+          },
+          "angle": {
+            "type": "string",
+            "enum": [
+              "front",
+              "side",
+              "back"
+            ],
+            "description": "Viewing angle. CarsXE documents front, side, or back."
+          },
+          "photoType": {
+            "type": "string",
+            "enum": [
+              "interior",
+              "exterior",
+              "engine"
+            ],
+            "description": "Photo category. CarsXE requires year and trim in addition to make and model."
+          },
+          "size": {
+            "type": "string",
+            "enum": [
+              "Small",
+              "Medium",
+              "Large",
+              "Wallpaper",
+              "All"
+            ],
+            "description": "Requested image size. Values are case-sensitive."
+          },
+          "license": {
+            "type": "string",
+            "enum": [
+              "Public",
+              "Share",
+              "ShareCommercially",
+              "Modify",
+              "ModifyCommercially"
+            ],
+            "description": "Usage-rights preset. Values are case-sensitive and do not grant a license."
+          },
+          "validate": {
+            "type": "boolean",
+            "description": "Apply CarsXE quality validation. Omit to use the provider default."
+          }
+        },
+        "required": [
+          "make",
+          "model"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "JSON object returned by CarsXE."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/images",
+        "success": [
+          200
+        ],
+        "query": {
+          "make": "{{make}}",
+          "model": "{{model}}",
+          "year": "{{year}}",
+          "trim": "{{trim}}",
+          "color": "{{color}}",
+          "transparent": "{{transparent}}",
+          "angle": "{{angle}}",
+          "photoType": "{{photoType}}",
+          "size": "{{size}}",
+          "license": "{{license}}",
+          "validate": "{{validate}}",
+          "format": "json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "redactResponseKeys": [
+        "key"
+      ]
+    },
+    "lien-theft.check": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 8192,
+      "maxResponseBytes": 5242880,
+      "title": "Check Lien and Theft Records",
+      "description": "Retrieve reportable US lien and theft events for one VIN. GET /v1/lien-theft returns a JSON object. A no-data provider response is not proof that the vehicle is clear.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "vin": {
+            "type": "string",
+            "minLength": 17,
+            "maxLength": 17,
+            "description": "Exact 17-character vehicle identification number."
+          }
+        },
+        "required": [
+          "vin"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "JSON object returned by CarsXE."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/lien-theft",
+        "success": [
+          200
+        ],
+        "query": {
+          "vin": "{{vin}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "redactResponseKeys": [
+        "key"
+      ]
+    },
+    "market-value.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 8192,
+      "maxResponseBytes": 5242880,
+      "title": "Get Vehicle Market Value",
+      "description": "Estimate wholesale, retail, and trade-in values for one VIN with the current v2 valuation. GET /v2/marketvalue returns a JSON object. Optional state, mileage, and condition adjust the result.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "vin": {
+            "type": "string",
+            "minLength": 17,
+            "maxLength": 17,
+            "description": "Exact 17-character vehicle identification number."
+          },
+          "state": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 2,
+            "description": "US state abbreviation for regional adjustment."
+          },
+          "mileage": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Current non-negative odometer reading used for adjustment."
+          },
+          "condition": {
+            "type": "string",
+            "enum": [
+              "excellent",
+              "clean",
+              "average",
+              "rough"
+            ],
+            "description": "Vehicle condition used to select the valuation bucket."
+          }
+        },
+        "required": [
+          "vin"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "JSON object returned by CarsXE."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/marketvalue",
+        "success": [
+          200
+        ],
+        "query": {
+          "vin": "{{vin}}",
+          "state": "{{state}}",
+          "mileage": "{{mileage}}",
+          "condition": "{{condition}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "redactResponseKeys": [
+        "key"
+      ]
+    },
+    "obd.decode": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 8192,
+      "maxResponseBytes": 5242880,
+      "title": "Decode OBD Code",
+      "description": "Translate one OBD-II diagnostic trouble code into a readable diagnosis. GET /obdcodesdecoder returns a JSON object.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 16,
+            "description": "OBD-II diagnostic trouble code to decode."
+          }
+        },
+        "required": [
+          "code"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "JSON object returned by CarsXE."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/obdcodesdecoder",
+        "success": [
+          200
+        ],
+        "query": {
+          "code": "{{code}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "redactResponseKeys": [
+        "key"
+      ]
+    },
+    "plates.decode": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 8192,
+      "maxResponseBytes": 5242880,
+      "title": "Decode License Plate",
+      "description": "Look up vehicle identity from a license plate with the current global v2 decoder. GET /v2/platedecoder returns a JSON object. country is an ISO 3166-1 alpha-2 code. state is required for AU and CA. For US, state is optional. district is required for Pakistan Khyber-Pakhtunkhwa. require_vin is supported only for Spain and consumes two units.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "plate": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 20,
+            "description": "License plate text exactly as displayed, without added separators."
+          },
+          "country": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 2,
+            "description": "ISO 3166-1 alpha-2 country code."
+          },
+          "state": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 10,
+            "description": "State or regional code."
+          },
+          "district": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80,
+            "description": "District required for Pakistan Khyber-Pakhtunkhwa registrations."
+          },
+          "require_vin": {
+            "type": "boolean",
+            "description": "For Spain only, require a VIN in the result. This consumes two CarsXE units."
+          }
+        },
+        "required": [
+          "plate"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "JSON object returned by CarsXE."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/platedecoder",
+        "success": [
+          200
+        ],
+        "query": {
+          "plate": "{{plate}}",
+          "country": "{{country}}",
+          "state": "{{state}}",
+          "district": "{{district}}",
+          "require_vin": "{{require_vin}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "redactResponseKeys": [
+        "key"
+      ]
+    },
+    "plates.recognize": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 60000,
+      "maxInputBytes": 8192,
+      "maxResponseBytes": 1048576,
+      "title": "Recognize License Plate",
+      "description": "Analyze one publicly accessible image and return license-plate candidates, regions, confidence, and bounding boxes. POST /platerecognition sends a JSON body to api.carsxe.com and returns a JSON object. The image URL is a body field, not the request host. Image bytes are not accepted.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "image_url": {
+            "type": "string",
+            "minLength": 8,
+            "maxLength": 2048,
+            "description": "Publicly accessible HTTPS URL of an image containing a vehicle or license plate."
+          }
+        },
+        "required": [
+          "image_url"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "JSON object returned by CarsXE."
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/platerecognition",
+        "success": [
+          200
+        ],
+        "body": {
+          "image_url": "{{image_url}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "redactResponseKeys": [
+        "key"
+      ]
+    },
+    "recalls-batch.submit": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 5242880,
+      "title": "Submit Recall Batch",
+      "description": "Create one asynchronous recall-check batch for 1 to 10000 VIN entries. POST /v1/recalls-batch/submit sends JSON {vins} and returns 202 JSON. This call does not poll. csv, csvUrl, and webhookUrl are not accepted.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "vins": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 10000,
+            "description": "VINs to check. Each item must contain exactly 17 characters. CarsXE normalizes and deduplicates the list.",
+            "items": {
+              "type": "string",
+              "minLength": 17,
+              "maxLength": 17
+            }
+          }
+        },
+        "required": [
+          "vins"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "JSON object returned by CarsXE."
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/recalls-batch/submit",
+        "success": [
+          202
+        ],
+        "body": {
+          "vins": "{{vins}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "redactResponseKeys": [
+        "key"
+      ]
+    },
+    "specs.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 8192,
+      "maxResponseBytes": 5242880,
+      "title": "Get Vehicle Specifications",
+      "description": "Decode a 17-character VIN into identity, specifications, equipment, colors, and warranty data. GET /specs returns a JSON object. International decoding is the provider default. Set deepdata to 1 for extended data, or disableIntVINDecoding to 1 to turn the international fallback off. format is pinned to json.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "vin": {
+            "type": "string",
+            "minLength": 17,
+            "maxLength": 17,
+            "description": "Exact 17-character vehicle identification number."
+          },
+          "deepdata": {
+            "type": "string",
+            "enum": [
+              "1"
+            ],
+            "description": "Set to 1 to fetch extended-source data. CarsXE documents this flag as deepdata=1."
+          },
+          "disableIntVINDecoding": {
+            "type": "string",
+            "enum": [
+              "1"
+            ],
+            "description": "Set to 1 to disable the automatic international VIN-decoding fallback."
+          }
+        },
+        "required": [
+          "vin"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "JSON object returned by CarsXE."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/specs",
+        "success": [
+          200
+        ],
+        "query": {
+          "vin": "{{vin}}",
+          "deepdata": "{{deepdata}}",
+          "disableIntVINDecoding": "{{disableIntVINDecoding}}",
+          "format": "json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "redactResponseKeys": [
+        "key"
+      ]
+    },
+    "ymm.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 8192,
+      "maxResponseBytes": 5242880,
+      "title": "Get Year Make Model Data",
+      "description": "Look up detailed vehicle and trim information by year, make, and model without a VIN. GET /v1/ymm returns a JSON object of bounded trim summaries. Set allTrimOptions to 1 to return every matching trim instead of only the best match.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "year": {
+            "type": "integer",
+            "minimum": 1900,
+            "maximum": 2100,
+            "description": "Model year from 1900 through the current model year plus one."
+          },
+          "make": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120,
+            "description": "Vehicle manufacturer."
+          },
+          "model": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120,
+            "description": "Vehicle model."
+          },
+          "trim": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120,
+            "description": "Optional fuzzy-matched trim hint."
+          },
+          "allTrimOptions": {
+            "type": "string",
+            "enum": [
+              "1"
+            ],
+            "description": "Set to 1 to return concise summaries of every matching trim."
+          }
+        },
+        "required": [
+          "year",
+          "make",
+          "model"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "JSON object returned by CarsXE."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/ymm",
+        "success": [
+          200
+        ],
+        "query": {
+          "year": "{{year}}",
+          "make": "{{make}}",
+          "model": "{{model}}",
+          "trim": "{{trim}}",
+          "allTrimOptions": "{{allTrimOptions}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "redactResponseKeys": [
+        "key"
+      ]
+    }
+  }
+}

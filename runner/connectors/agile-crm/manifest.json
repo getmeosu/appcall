@@ -1,0 +1,774 @@
+{
+  "key": "agile-crm",
+  "name": "Agile CRM",
+  "version": "0.1.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "crm"
+  ],
+  "auth": {
+    "type": "api_key",
+    "scopes": [],
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "domain",
+          "label": "Agile CRM subdomain",
+          "description": "Subdomain only, for example acme in acme.agilecrm.com. Do not include a scheme, path, port, or dot.",
+          "required": true,
+          "secret": false
+        },
+        {
+          "key": "email",
+          "label": "Agile CRM account email",
+          "description": "Email used as the HTTP Basic username.",
+          "required": true,
+          "secret": false
+        },
+        {
+          "key": "apiKey",
+          "label": "Agile CRM REST API key",
+          "description": "REST client API key used as the HTTP Basic password.",
+          "required": true,
+          "secret": true
+        }
+      ]
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "{{domain}}.agilecrm.com"
+    ]
+  },
+  "models": [
+    "contact",
+    "company",
+    "deal"
+  ],
+  "http": {
+    "baseUrl": "https://{{domain}}.agilecrm.com/dev",
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "Authorization",
+      "basic": {
+        "username": "{{email}}",
+        "password": "{{apiKey}}"
+      }
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "Retry-After",
+      "retryAfterKind": "seconds",
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "message",
+        "error",
+        "error_message"
+      ]
+    },
+    "headers": {
+      "Accept": "application/json"
+    }
+  },
+  "operations": {
+    "contacts.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 2097152,
+      "title": "Create contact or company",
+      "description": "Create a person or company with POST /dev/api/contacts. resource_type is sent as type. Names, email, phone, and custom fields are sent in the properties array because that is the Agile CRM JSON body.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "resource_type": {
+            "type": "string",
+            "enum": [
+              "PERSON",
+              "COMPANY"
+            ],
+            "description": "PERSON for a contact or COMPANY for a company. Sent as type."
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "description": "Tags. Agile CRM documents these for people; omit them when unused."
+          },
+          "lead_score": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Initial lead score."
+          },
+          "star_value": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 5,
+            "description": "Star rating from 0 to 5."
+          },
+          "contact_company_id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Company id to associate with a person."
+          },
+          "properties": {
+            "type": "array",
+            "minItems": 1,
+            "description": "Agile CRM properties array. A person name is SYSTEM first_name. A company name is SYSTEM name. Email and phone are SYSTEM properties, usually subtype work. Custom fields use type CUSTOM.",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "name",
+                "value"
+              ],
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Agile CRM property name, such as first_name, name, email, or a custom field name."
+                },
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "SYSTEM",
+                    "CUSTOM"
+                  ],
+                  "description": "SYSTEM for built-in fields and CUSTOM for tenant fields."
+                },
+                "subtype": {
+                  "type": "string",
+                  "description": "Optional subtype. Work email and phone use work."
+                },
+                "value": {
+                  "type": [
+                    "string",
+                    "number"
+                  ],
+                  "description": "Property value. Dates are Unix epoch numbers."
+                }
+              }
+            }
+          }
+        },
+        "required": [
+          "resource_type",
+          "properties"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/api/contacts",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "type": "{{resource_type}}",
+          "star_value": "{{star_value}}",
+          "lead_score": "{{lead_score}}",
+          "tags": "{{tags}}",
+          "contact_company_id": "{{contact_company_id}}",
+          "properties": "{{properties}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "deals.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 2097152,
+      "title": "Create deal",
+      "description": "Create a deal with POST /dev/api/opportunity. custom_fields is sent as custom_data. Omitted optional fields are not sent.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Deal name."
+          },
+          "owner_id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Agile CRM user id that will own the deal."
+          },
+          "milestone": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Exact case-sensitive milestone name."
+          },
+          "close_date": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Expected close time as Unix epoch seconds."
+          },
+          "contact_ids": {
+            "type": "array",
+            "description": "Person or company ids to associate. Sent as contact_ids.",
+            "items": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                {
+                  "type": "string",
+                  "minLength": 1
+                }
+              ]
+            }
+          },
+          "description": {
+            "type": "string",
+            "description": "Deal description."
+          },
+          "pipeline_id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Pipeline id. Omit to use the tenant default."
+          },
+          "probability": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100,
+            "description": "Win probability from 0 to 100."
+          },
+          "custom_fields": {
+            "type": "array",
+            "description": "Deal custom-field values. Sent to Agile CRM as custom_data.",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "name",
+                "value"
+              ],
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "value": {
+                  "type": [
+                    "string",
+                    "number"
+                  ]
+                }
+              }
+            }
+          },
+          "expected_value": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1000000000000,
+            "description": "Expected monetary value, up to 1,000,000,000,000."
+          }
+        },
+        "required": [
+          "name",
+          "expected_value"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/api/opportunity",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "name": "{{name}}",
+          "expected_value": "{{expected_value}}",
+          "probability": "{{probability}}",
+          "close_date": "{{close_date}}",
+          "milestone": "{{milestone}}",
+          "contact_ids": "{{contact_ids}}",
+          "custom_data": "{{custom_fields}}",
+          "owner_id": "{{owner_id}}",
+          "description": "{{description}}",
+          "pipeline_id": "{{pipeline_id}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "contacts.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "title": "Get contact or company",
+      "description": "Get one person or company by numeric id with GET /dev/api/contacts/{id}. A missing record is HTTP 204 and is not treated as success.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "resource_id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Numeric id of the person or company."
+          }
+        },
+        "required": [
+          "resource_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/contacts/{{resource_id}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "deals.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "title": "Get deal",
+      "description": "Get one deal by numeric id with GET /dev/api/opportunity/{id}. A missing deal is HTTP 204 and is not treated as success.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "deal_id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Numeric id of the deal."
+          }
+        },
+        "required": [
+          "deal_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/opportunity/{{deal_id}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "contacts.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 8192,
+      "maxResponseBytes": 5242880,
+      "title": "List contacts",
+      "description": "List one creation-ordered page of contacts with GET /dev/api/contacts. page_size and cursor are optional query parameters. The next cursor, when present, is on the last array element.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "cursor": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Opaque cursor from the last contact of the previous page."
+          },
+          "page_size": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Maximum contacts to request. Agile CRM documents no upper bound."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/contacts",
+        "success": [
+          200
+        ],
+        "query": {
+          "page_size": "{{page_size}}",
+          "cursor": "{{cursor}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "deals.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 8192,
+      "maxResponseBytes": 5242880,
+      "title": "List deals",
+      "description": "List one creation-ordered page of deals with GET /dev/api/opportunity. page_size and cursor are optional query parameters. The next cursor, when present, is on the last array element.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "cursor": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Opaque cursor from the last deal of the previous page."
+          },
+          "page_size": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Maximum deals to request. Agile CRM documents no upper bound."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/opportunity",
+        "success": [
+          200
+        ],
+        "query": {
+          "page_size": "{{page_size}}",
+          "cursor": "{{cursor}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "contacts.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 2097152,
+      "title": "Update contact or company",
+      "description": "Add or replace selected properties with PUT /dev/api/contacts/edit-properties. resource_id is sent as id. Properties omitted from the array are left unchanged. This route does not update lead score, stars, or tags.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "resource_id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Numeric id of the person or company. Sent as id."
+          },
+          "properties": {
+            "type": "array",
+            "minItems": 1,
+            "description": "Agile CRM properties array. A person name is SYSTEM first_name. A company name is SYSTEM name. Email and phone are SYSTEM properties, usually subtype work. Custom fields use type CUSTOM.",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "name",
+                "value"
+              ],
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Agile CRM property name, such as first_name, name, email, or a custom field name."
+                },
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "SYSTEM",
+                    "CUSTOM"
+                  ],
+                  "description": "SYSTEM for built-in fields and CUSTOM for tenant fields."
+                },
+                "subtype": {
+                  "type": "string",
+                  "description": "Optional subtype. Work email and phone use work."
+                },
+                "value": {
+                  "type": [
+                    "string",
+                    "number"
+                  ],
+                  "description": "Property value. Dates are Unix epoch numbers."
+                }
+              }
+            }
+          }
+        },
+        "required": [
+          "resource_id",
+          "properties"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/api/contacts/edit-properties",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "id": "{{resource_id}}",
+          "properties": "{{properties}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "deals.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 2097152,
+      "title": "Update deal",
+      "description": "Partially update a deal with PUT /dev/api/opportunity/partial-update. deal_id is sent as id. Omitted fields are not sent. custom_fields replaces custom_data when supplied. Supplied contact_ids are sent; this route does not remove associations.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "deal_id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Numeric id of the deal. Sent as id."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Replacement deal name."
+          },
+          "milestone": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Replacement exact case-sensitive milestone name."
+          },
+          "close_date": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Replacement expected close time as Unix epoch seconds."
+          },
+          "contact_ids": {
+            "type": "array",
+            "description": "Person or company ids to associate. Sent as contact_ids.",
+            "items": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                {
+                  "type": "string",
+                  "minLength": 1
+                }
+              ]
+            }
+          },
+          "description": {
+            "type": "string",
+            "description": "Replacement deal description."
+          },
+          "pipeline_id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Replacement pipeline id."
+          },
+          "probability": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100,
+            "description": "Replacement win probability from 0 to 100."
+          },
+          "custom_fields": {
+            "type": "array",
+            "description": "Deal custom-field values. Sent to Agile CRM as custom_data.",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "name",
+                "value"
+              ],
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "value": {
+                  "type": [
+                    "string",
+                    "number"
+                  ]
+                }
+              }
+            }
+          },
+          "expected_value": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1000000000000,
+            "description": "Replacement expected monetary value, up to 1,000,000,000,000."
+          }
+        },
+        "required": [
+          "deal_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/api/opportunity/partial-update",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "id": "{{deal_id}}",
+          "name": "{{name}}",
+          "expected_value": "{{expected_value}}",
+          "probability": "{{probability}}",
+          "close_date": "{{close_date}}",
+          "milestone": "{{milestone}}",
+          "contact_ids": "{{contact_ids}}",
+          "description": "{{description}}",
+          "pipeline_id": "{{pipeline_id}}",
+          "custom_data": "{{custom_fields}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    }
+  }
+}

@@ -1,0 +1,639 @@
+{
+  "key": "builtwith",
+  "name": "BuiltWith",
+  "version": "0.1.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "dev-tools",
+    "utility"
+  ],
+  "auth": {
+    "type": "api_key",
+    "scopes": [],
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "BuiltWith API key",
+          "required": true,
+          "secret": true
+        }
+      ]
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "api.builtwith.com"
+    ]
+  },
+  "models": [
+    "account",
+    "domain",
+    "technology",
+    "list",
+    "product",
+    "recommendation",
+    "redirect",
+    "social",
+    "financial"
+  ],
+  "http": {
+    "baseUrl": "https://api.builtwith.com",
+    "auth": {
+      "field": "apiKey",
+      "in": "query",
+      "name": "KEY",
+      "value": "{{apiKey}}"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "Retry-After",
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "Errors.0.Message",
+        "errors.0.message",
+        "Message",
+        "message",
+        "error"
+      ],
+      "bodyErrorPaths": [
+        "Errors",
+        "errors"
+      ]
+    },
+    "headers": {
+      "Accept": "application/json"
+    }
+  },
+  "operations": {
+    "healthcheck": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 5000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "title": "Healthcheck",
+      "description": "Validate the BuiltWith API key with the zero-credit WhoAmI GET /whoamiv1/api.json. This is not a Composio tool.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/whoamiv1/api.json",
+        "query": {},
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "domain.lookup": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Domain API Lookup",
+      "description": "Retrieve current and historical technology information for a domain. GET /v26/api.json sends LOOKUP and the documented yes-flags NOPII, TRUST, HIDEDL, NOATTR, NOMETA, HIDETEXT, and LIVEONLY. BuiltWith does not document a NOLIVE parameter.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "lookup": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2048
+          },
+          "nopii": {
+            "type": "string",
+            "enum": [
+              "yes"
+            ]
+          },
+          "trust": {
+            "type": "string",
+            "enum": [
+              "yes"
+            ]
+          },
+          "hidedl": {
+            "type": "string",
+            "enum": [
+              "yes"
+            ]
+          },
+          "noattr": {
+            "type": "string",
+            "enum": [
+              "yes"
+            ]
+          },
+          "nometa": {
+            "type": "string",
+            "enum": [
+              "yes"
+            ]
+          },
+          "hidetext": {
+            "type": "string",
+            "enum": [
+              "yes"
+            ]
+          },
+          "liveonly": {
+            "type": "string",
+            "enum": [
+              "yes"
+            ]
+          }
+        },
+        "required": [
+          "lookup"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v26/api.json",
+        "query": {
+          "LOOKUP": "{{lookup}}",
+          "NOPII": "{{nopii}}",
+          "TRUST": "{{trust}}",
+          "HIDEDL": "{{hidedl}}",
+          "NOATTR": "{{noattr}}",
+          "NOMETA": "{{nometa}}",
+          "HIDETEXT": "{{hidetext}}",
+          "LIVEONLY": "{{liveonly}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "financial.lookup": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Financial API Lookup",
+      "description": "Fetch US SEC or UK Companies House financials for a domain. GET /financial1/api.json with LOOKUP.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "lookup": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 253
+          }
+        },
+        "required": [
+          "lookup"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/financial1/api.json",
+        "query": {
+          "LOOKUP": "{{lookup}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "free.lookup": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Free API Lookup",
+      "description": "Read last-updated dates and technology group counts for a root domain. GET /free1/api.json with LOOKUP.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "lookup": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 253
+          }
+        },
+        "required": [
+          "lookup"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/free1/api.json",
+        "query": {
+          "LOOKUP": "{{lookup}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "lists.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 10485760,
+      "title": "Lists API Get List",
+      "description": "List websites using a technology. GET /lists13/api.json sends TECH and the optional META, COUNTRY, SINCE, OFFSET, and ALL parameters. ALL and SINCE cannot be combined.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "tech": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "all": {
+            "type": "string",
+            "enum": [
+              "yes"
+            ]
+          },
+          "meta": {
+            "type": "string",
+            "enum": [
+              "yes"
+            ]
+          },
+          "since": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "offset": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 512
+          },
+          "country": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 80
+          }
+        },
+        "required": [
+          "tech"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/lists13/api.json",
+        "query": {
+          "TECH": "{{tech}}",
+          "ALL": "{{all}}",
+          "META": "{{meta}}",
+          "SINCE": "{{since}}",
+          "OFFSET": "{{offset}}",
+          "COUNTRY": "{{country}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "mcp.lookup": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "MCP API Lookup",
+      "description": "Deprecated live technology lookup for one root domain. GET /v26/api.json with LOOKUP and LIVEONLY=yes. This is not the MCP registry search, which requires SEARCH or CATEGORY.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "domain": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 253
+          }
+        },
+        "required": [
+          "domain"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v26/api.json",
+        "query": {
+          "LOOKUP": "{{domain}}",
+          "LIVEONLY": "yes"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "product.lookup": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Product API Lookup",
+      "description": "Find shops selling a product, or pass QUERY as dom:<domain>. GET /productv1/api.json with optional PAGE and LIMIT.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "query": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 500
+          }
+        },
+        "required": [
+          "query"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/productv1/api.json",
+        "query": {
+          "QUERY": "{{query}}",
+          "PAGE": "{{page}}",
+          "LIMIT": "{{limit}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "recommendations.lookup": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Recommendations API Lookup",
+      "description": "List websites with similar technology profiles. GET /rec1/api.json with LOOKUP. The JSON body is an array and is returned under data.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "lookup": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2048
+          }
+        },
+        "required": [
+          "lookup"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/rec1/api.json",
+        "query": {
+          "LOOKUP": "{{lookup}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "redirects.lookup": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Redirects API Lookup",
+      "description": "Retrieve live and historical inbound and outbound redirects for a root domain. GET /redirect1/api.json with LOOKUP.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "lookup": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 253
+          }
+        },
+        "required": [
+          "lookup"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/redirect1/api.json",
+        "query": {
+          "LOOKUP": "{{lookup}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "social.lookup": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Social API Lookup",
+      "description": "Map a social profile identifier to root domains. GET /social1/api.json sends LOOKUP to api.builtwith.com. The identifier is not requested as a URL.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "lookup": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2048
+          }
+        },
+        "required": [
+          "lookup"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/social1/api.json",
+        "query": {
+          "LOOKUP": "{{lookup}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    }
+  }
+}

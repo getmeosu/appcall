@@ -1,0 +1,204 @@
+{
+  "key": "amcards",
+  "name": "AMCards",
+  "version": "0.1.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "marketing-automation"
+  ],
+  "auth": {
+    "type": "api_key",
+    "scopes": [],
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "AMCards access token",
+          "required": true,
+          "secret": true
+        }
+      ]
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "amcards.com"
+    ]
+  },
+  "models": [
+    "card",
+    "contact"
+  ],
+  "http": {
+    "baseUrl": "https://amcards.com/.api/v1",
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "Authorization",
+      "value": "Bearer {{apiKey}}"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "Retry-After",
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "error",
+        "error_message"
+      ]
+    },
+    "headers": {
+      "Accept": "application/json"
+    }
+  },
+  "operations": {
+    "cards.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 1048576,
+      "title": "List cards",
+      "description": "List cards for the authenticated AMCards account. skip is sent as offset.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Maximum number of records to return."
+          },
+          "skip": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Number of records to skip. Sent as the offset query parameter."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": [
+              "meta",
+              "objects"
+            ],
+            "properties": {
+              "meta": {
+                "type": "object"
+              },
+              "objects": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/card/",
+        "query": {
+          "limit": "{{limit}}",
+          "offset": "{{skip}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "contacts.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 1048576,
+      "title": "List contacts",
+      "description": "List contacts for the authenticated AMCards account. skip is sent as offset. first_name and last_name are exact filters. email is sent as the email_address field.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Maximum number of records to return."
+          },
+          "skip": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Number of records to skip. Sent as the offset query parameter."
+          },
+          "first_name": {
+            "type": "string",
+            "description": "Exact first_name filter."
+          },
+          "last_name": {
+            "type": "string",
+            "description": "Exact last_name filter."
+          },
+          "email": {
+            "type": "string",
+            "description": "Contact email. Sent as the email_address query field."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": [
+              "meta",
+              "objects"
+            ],
+            "properties": {
+              "meta": {
+                "type": "object"
+              },
+              "objects": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/contact/",
+        "query": {
+          "limit": "{{limit}}",
+          "offset": "{{skip}}",
+          "first_name": "{{first_name}}",
+          "last_name": "{{last_name}}",
+          "email_address": "{{email}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    }
+  }
+}

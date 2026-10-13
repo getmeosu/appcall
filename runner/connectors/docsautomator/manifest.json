@@ -1,0 +1,763 @@
+{
+  "key": "docsautomator",
+  "name": "DocsAutomator",
+  "version": "0.1.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "documents"
+  ],
+  "auth": {
+    "type": "api_key",
+    "scopes": [],
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "DocsAutomator API key",
+          "required": true,
+          "secret": true
+        }
+      ]
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "api.docsautomator.co"
+    ]
+  },
+  "models": [
+    "automation",
+    "signing-session",
+    "queue"
+  ],
+  "http": {
+    "baseUrl": "https://api.docsautomator.co",
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "Authorization",
+      "value": "Bearer {{apiKey}}"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "Retry-After",
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "error"
+      ]
+    },
+    "headers": {
+      "Accept": "application/json"
+    }
+  },
+  "operations": {
+    "automations.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 5242880,
+      "title": "List Automations",
+      "description": "List DocsAutomator automations in the workspace.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": [
+              "automations"
+            ],
+            "properties": {
+              "automations": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/automations",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "automations.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "title": "Get Automation",
+      "description": "Get one DocsAutomator automation. Official docs require automationId or docId on GET /automation.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "automationId": {
+            "type": "string",
+            "description": "Automation ID. Either automationId or docId is required.",
+            "minLength": 1
+          },
+          "docId": {
+            "type": "string",
+            "description": "Alternative automation ID. Either automationId or docId is required.",
+            "minLength": 1
+          }
+        },
+        "anyOf": [
+          {
+            "required": [
+              "automationId"
+            ]
+          },
+          {
+            "required": [
+              "docId"
+            ]
+          }
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": [
+              "automation"
+            ],
+            "properties": {
+              "automation": {
+                "type": "object"
+              }
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/automation",
+        "query": {
+          "automationId": "{{automationId}}",
+          "docId": "{{docId}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "automations.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Create Automation",
+      "description": "Create a DocsAutomator automation from a data source and an optional Google Doc template URL. PDF template bytes are not accepted.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "title",
+          "dataSourceName"
+        ],
+        "properties": {
+          "title": {
+            "type": "string",
+            "description": "Name for the automation.",
+            "minLength": 1
+          },
+          "dataSourceName": {
+            "type": "string",
+            "enum": [
+              "Airtable",
+              "API",
+              "ClickUp",
+              "Glide",
+              "Google Sheets",
+              "Make",
+              "n8n",
+              "Noloco",
+              "SmartSuite",
+              "Zapier"
+            ],
+            "description": "Data source type published by POST /createAutomation."
+          },
+          "docTemplateLink": {
+            "type": "string",
+            "description": "Google Doc template URL stored on the automation. It is a JSON body field, not the request URL.",
+            "minLength": 1
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": [
+              "message",
+              "newAutomation"
+            ],
+            "properties": {
+              "message": {
+                "type": "string"
+              },
+              "newAutomation": {
+                "type": "object"
+              }
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/createAutomation",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "title": "{{title}}",
+          "dataSourceName": "{{dataSourceName}}",
+          "docTemplateLink": "{{docTemplateLink}}"
+        },
+        "success": [
+          201
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "automations.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Update Automation",
+      "description": "Update one DocsAutomator automation. Only fields included in the JSON body are changed.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "docId"
+        ],
+        "properties": {
+          "docId": {
+            "type": "string",
+            "description": "Automation ID to update. Sent as the docId query parameter.",
+            "minLength": 1
+          },
+          "title": {
+            "type": "string",
+            "description": "Automation name.",
+            "minLength": 1
+          },
+          "docTemplateLink": {
+            "type": "string",
+            "description": "Google Doc template URL stored on the automation. It is a JSON body field, not the request URL.",
+            "minLength": 1
+          },
+          "newDocumentNameField": {
+            "type": "string",
+            "description": "Field name or formula for generated document names.",
+            "minLength": 1
+          },
+          "isActive": {
+            "type": "boolean",
+            "description": "Whether the automation is active."
+          },
+          "saveGoogleDoc": {
+            "type": "boolean",
+            "description": "Save a Google Doc copy alongside the PDF."
+          },
+          "googleDocDestinationFolderUrl": {
+            "type": "string",
+            "description": "Google Drive folder URL stored on the automation. It is a JSON body field, not the request URL.",
+            "minLength": 1
+          },
+          "locale": {
+            "type": "string",
+            "description": "Locale for date and number formatting, such as en-us or de-de.",
+            "minLength": 1
+          },
+          "formatNumbersWithLocale": {
+            "type": "boolean",
+            "description": "Format numbers using the automation locale."
+          },
+          "pdfExpiration": {
+            "type": "string",
+            "enum": [
+              "never",
+              "immediate",
+              "oneday",
+              "threedays",
+              "oneweek",
+              "twoweeks",
+              "onemonth",
+              "threemonths",
+              "sixmonths",
+              "oneyear"
+            ],
+            "description": "PDF retention period from the DocsAutomator OpenAPI enum."
+          },
+          "imageOptions": {
+            "type": "object",
+            "additionalProperties": false,
+            "description": "Image compression options stored on the automation.",
+            "properties": {
+              "quality": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 100,
+                "description": "Image quality from 1 to 100."
+              },
+              "maxWidth": {
+                "type": "integer",
+                "minimum": 1,
+                "description": "Maximum image width in pixels."
+              }
+            }
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": [
+              "message",
+              "updatedAutomation"
+            ],
+            "properties": {
+              "message": {
+                "type": "string"
+              },
+              "updatedAutomation": {
+                "type": "object"
+              }
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/updateAutomation",
+        "query": {
+          "docId": "{{docId}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "title": "{{title}}",
+          "docTemplateLink": "{{docTemplateLink}}",
+          "newDocumentNameField": "{{newDocumentNameField}}",
+          "isActive": "{{isActive}}",
+          "saveGoogleDoc": "{{saveGoogleDoc}}",
+          "googleDocDestinationFolderUrl": "{{googleDocDestinationFolderUrl}}",
+          "locale": "{{locale}}",
+          "formatNumbersWithLocale": "{{formatNumbersWithLocale}}",
+          "pdfExpiration": "{{pdfExpiration}}",
+          "imageOptions": "{{imageOptions}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "automations.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 30000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "title": "Delete Automation",
+      "description": "Permanently delete one DocsAutomator automation and its settings.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "docId"
+        ],
+        "properties": {
+          "docId": {
+            "type": "string",
+            "description": "Automation ID to delete. Sent as the docId query parameter.",
+            "minLength": 1
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": [
+              "message"
+            ],
+            "properties": {
+              "message": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/deleteAutomation",
+        "query": {
+          "docId": "{{docId}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "automations.duplicate": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 30000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "title": "Duplicate Automation",
+      "description": "Copy one DocsAutomator automation. The API appends ' COPY' to the title.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "automationId"
+        ],
+        "properties": {
+          "automationId": {
+            "type": "string",
+            "description": "Automation ID to duplicate. Sent as the automationId query parameter.",
+            "minLength": 1
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": [
+              "newAutomationId"
+            ],
+            "properties": {
+              "newAutomationId": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/duplicateAutomation",
+        "query": {
+          "automationId": "{{automationId}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "queue.stats": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "title": "Get Queue Statistics",
+      "description": "Read document-generation queue counts for the DocsAutomator workspace.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": [
+              "waiting",
+              "active",
+              "completed",
+              "failed",
+              "delayed"
+            ],
+            "properties": {
+              "waiting": {
+                "type": "integer"
+              },
+              "active": {
+                "type": "integer"
+              },
+              "completed": {
+                "type": "integer"
+              },
+              "failed": {
+                "type": "integer"
+              },
+              "delayed": {
+                "type": "integer"
+              }
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/queue/stats",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "signing-sessions.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 8192,
+      "maxResponseBytes": 5242880,
+      "title": "List Signing Sessions",
+      "description": "List DocsAutomator signing sessions, optionally filtered by status or signer email.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "in_progress",
+              "completed",
+              "declined",
+              "cancelled"
+            ],
+            "description": "Filter by session status."
+          },
+          "email": {
+            "type": "string",
+            "description": "Filter by signer email. Partial and case-insensitive.",
+            "minLength": 1
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Page number."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 250,
+            "description": "Results per page. Maximum 250."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": [
+              "sessions",
+              "pagination"
+            ],
+            "properties": {
+              "sessions": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              },
+              "pagination": {
+                "type": "object",
+                "properties": {
+                  "page": {
+                    "type": "integer"
+                  },
+                  "limit": {
+                    "type": "integer"
+                  },
+                  "total": {
+                    "type": "integer"
+                  },
+                  "pages": {
+                    "type": "integer"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/esign/sessions",
+        "query": {
+          "status": "{{status}}",
+          "email": "{{email}}",
+          "page": "{{page}}",
+          "limit": "{{limit}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "email.send-test": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 30000,
+      "maxInputBytes": 8192,
+      "maxResponseBytes": 65536,
+      "title": "Send Test Email",
+      "description": "Send a DocsAutomator test email. The response is JSON; the sample PDF stays on the email and is not returned as bytes.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "automationId",
+          "recipient"
+        ],
+        "properties": {
+          "automationId": {
+            "type": "string",
+            "description": "Automation whose email configuration is tested.",
+            "minLength": 1
+          },
+          "recipient": {
+            "type": "string",
+            "description": "Email address that receives the test message.",
+            "minLength": 1
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": [
+              "success",
+              "message",
+              "rateLimit"
+            ],
+            "properties": {
+              "success": {
+                "type": "boolean"
+              },
+              "message": {
+                "type": "string"
+              },
+              "rateLimit": {
+                "type": "object",
+                "properties": {
+                  "remaining": {
+                    "type": "integer"
+                  },
+                  "resetAt": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/sendTestEmail",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "automationId": "{{automationId}}",
+          "recipient": "{{recipient}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    }
+  }
+}
