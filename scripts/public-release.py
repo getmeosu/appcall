@@ -107,6 +107,8 @@ def allowed(path):
         if p.suffix == '.ts':
             return True
         return False
+    if path.startswith('scripts/parity/'):
+        return bool(re.fullmatch(r'scripts/parity/[a-z0-9_]+\.(?:py|json)', path))
     if path.startswith('third_party/licenses/'):
         return p.name in {'LICENSE', 'NOTICE', 'COPYING'} or p.suffix == '.txt'
     return len(p.parts) > 1 and p.suffix in SOURCE_SUFFIXES.get(p.parts[0], set())

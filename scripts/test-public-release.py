@@ -91,6 +91,47 @@ class ReleaseGateTests(unittest.TestCase):
         self.assertIn(('scripts/connector-gen/openconnector/recipes/coda/notes.txt', 'path-not-allowed'), denied)
         self.assertIn(('scripts/connector-gen/openconnector/unknown.json', 'path-not-allowed'), denied)
         self.assertIn(('third_party/openconnector-source/snapshot.json', 'path-not-allowed'), denied)
+
+    def test_parity_tooling_scripts_and_aliases_are_allowlisted_without_widening(self):
+        self.legal()
+        positive = (
+            'scripts/parity/fetch_composio_index.py',
+            'scripts/parity/build_map.py',
+            'scripts/parity/validate_coverage.py',
+            'scripts/parity/aliases.json',
+            'scripts/parity/test_fetch_composio_index.py',
+            'scripts/parity/test_build_map.py',
+            'scripts/parity/test_validate_coverage.py',
+        )
+        for path in positive:
+            self.put(path, '{}\n' if path.endswith('.json') else 'print("parity tooling")\n')
+        hidden = (
+            'scripts/parity/sub/dir.py',
+            'scripts/parity/notes.md',
+            'scripts/parity/UPPER.py',
+            'scripts/parity/notes.txt',
+            'scripts/parity/map.json.bak',
+            'scripts/parity/.hidden.py',
+        )
+        for path in hidden:
+            self.put(path, 'private\n')
+        result = self.run_gate('check')
+        self.assertEqual(result.returncode, 1)
+        denied = {(entry['path'], entry['rule']) for entry in json.loads(result.stdout)['errors']}
+        for path in positive:
+            self.assertNotIn((path, 'path-not-allowed'), denied)
+        for path in hidden:
+            self.assertIn((path, 'path-not-allowed'), denied)
+        destination = Path(self.temp.name).resolve() / 'export'
+        exported = self.run_gate('export', '--destination', str(destination))
+        self.assertEqual(exported.returncode, 0, exported.stdout)
+        manifest = json.loads((destination / 'PUBLIC-RELEASE-MANIFEST.json').read_text())
+        for path in positive:
+            self.assertTrue((destination / path).is_file(), path)
+            self.assertIn(path, manifest['files'])
+        for path in hidden:
+            self.assertFalse((destination / path).exists(), path)
+
     def test_smoke_safety_fixture_is_allowlisted_without_widening_scripts(self):
         self.legal()
         fixture = 'scripts/test-smoke-prod.sh'

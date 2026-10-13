@@ -115,3 +115,17 @@ docker-down: ## Stop production containers, preserving volumes
 .PHONY: smoke-prod
 smoke-prod: ## Build and probe the production topology with throwaway data
 	./scripts/smoke-prod.sh
+
+.PHONY: parity
+parity: ## Fetch the Composio index, build parity maps, and validate coverage
+	python3 scripts/parity/fetch_composio_index.py
+	python3 scripts/parity/build_map.py
+	python3 scripts/parity/validate_coverage.py
+
+.PHONY: parity-check
+parity-check: ## Validate checked-in Composio coverage artifacts
+	python3 scripts/parity/validate_coverage.py
+
+.PHONY: parity-check-strict
+parity-check-strict: ## Validate coverage with legacy advisories treated as failures
+	python3 scripts/parity/validate_coverage.py --strict
