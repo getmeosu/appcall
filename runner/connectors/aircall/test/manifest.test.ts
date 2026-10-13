@@ -19,7 +19,8 @@ it("declares bounded action schemas with titles and descriptions", () => {
     expect(op.kind).toBe("action");
     expect(op.inputSchema.type).toBe("object");
     expect(op.outputSchema.type).toBe("object");
-    expect(op.sideEffect).toBe(key.includes(".delete") ? "destructive" : /create|update|comment/.test(key) ? "write" : "read");
+    const method = op.request.method;
+    expect(op.sideEffect).toBe(method === "DELETE" ? "destructive" : method === "GET" ? "read" : "write");
     expect(op.enforceOutputSchema).toBe(true);
     expect(op.validationMode).toBe("strict-generated");
     expect(op.responseFormat).toBe("json");
