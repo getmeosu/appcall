@@ -1,7 +1,14 @@
 import { describe, expect, it } from "bun:test";
+import { compileDeclarativeConnector } from "../../../bun/src/declarative/compile";
 import manifest from "../manifest.json";
+import COMPOSIO_TOOLS from "./composio-cover.json";
 
 const operations = manifest.operations as Record<string, Record<string, unknown>>;
+const compiled = compileDeclarativeConnector(manifest as never);
+
+function requestOf(key: string): Record<string, unknown> {
+  return operations[key]!.request as Record<string, unknown>;
+}
 
 const ACTION_KEYS = [
   "healthcheck",
@@ -34,7 +41,7 @@ describe("pipedrive manifest", () => {
   it("declares the connector identity the control plane keys on", () => {
     expect(manifest.key).toBe("pipedrive");
     expect(manifest.name).toBe("Pipedrive");
-    expect(manifest.version).toBe("0.4.0");
+    expect(manifest.version).toBe("0.4.1");
     expect(manifest.runtime).toBe("bun");
     expect(manifest.visibility).toBe("public");
     expect(manifest.categories).toEqual(["crm"]);
@@ -42,7 +49,9 @@ describe("pipedrive manifest", () => {
   });
 
   it("keeps token auth on api.pipedrive.com", () => {
+    expect(Object.keys(manifest.auth).sort()).toEqual(["scopes", "setup", "type"]);
     expect(manifest.auth.type).toBe("api_key");
+    expect(manifest.auth.scopes).toEqual([]);
     expect(manifest.auth.setup.mode).toBe("api_key");
     expect(manifest.auth.setup.fields.map((field: { key: string }) => field.key)).toEqual(["apiKey"]);
     expect(manifest.http.baseUrl).toBe("https://api.pipedrive.com");
@@ -50,6 +59,12 @@ describe("pipedrive manifest", () => {
     expect(manifest.http.auth.field).toBe("apiKey");
     expect(manifest.http.auth.in).toBe("header");
     expect(manifest.http.auth.name).toBe("x-api-token");
+    expect(manifest.http.auth.value).toBe("{{apiKey}}");
+    expect(manifest.provenance.source).toEqual({
+      url: "https://github.com/oomol-lab/open-connector",
+      revision: "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
+    });
+    expect(() => compileDeclarativeConnector(manifest as never)).not.toThrow();
   });
 
   it("keeps the original operations and stays within the official HTTP ceiling", () => {
@@ -62,7 +77,19 @@ describe("pipedrive manifest", () => {
       .sort();
     expect(webhooks).toEqual([...WEBHOOK_KEYS].sort());
     expect(Object.keys(operations).length).toBeGreaterThan(ACTION_KEYS.length + WEBHOOK_KEYS.length);
-    expect(Object.keys(operations).length).toBeLessThanOrEqual(403);
+    expect(Object.keys(operations).length).toBe(405);
+    expect(operations["oauth.create"]).toBeDefined();
+    expect(operations["oauth.create-token"]).toBeDefined();
+    expect(requestOf("organizations.list-beta")).toMatchObject({
+      method: "GET",
+      path: "/api/v1/organizations/collection",
+    });
+    expect(requestOf("persons.list-beta")).toMatchObject({
+      method: "GET",
+      path: "/api/v1/persons/collection",
+    });
+    expect(operations["organizations.list-beta"]!.request).not.toHaveProperty("body");
+    expect(operations["persons.list-beta"]!.request).not.toHaveProperty("body");
   });
 
   it("gives every action the limits and tool schema the MCP gateway requires", () => {
@@ -73,8 +100,9 @@ describe("pipedrive manifest", () => {
       const operation = operations[key]!;
       expect(operation.kind, key).toBe("action");
       expect(operation.timeoutMs as number, key).toBeGreaterThan(0);
+      expect(operation.timeoutMs as number, key).toBeLessThanOrEqual(300000);
       expect(operation.maxInputBytes as number, key).toBeGreaterThan(0);
-      expect(operation.maxResponseBytes as number, key).toBeGreaterThan(0);
+      expect(operation.maxResponseBytes as number, key).toBeGreaterThanOrEqual(operation.maxInputBytes as number);
       expect(String(operation.title ?? "").length, key).toBeGreaterThan(0);
       expect(String(operation.description ?? "").length, key).toBeGreaterThan(0);
       expect((operation.inputSchema as Record<string, unknown>).type, key).toBe("object");
@@ -140,6 +168,7 @@ describe("pipedrive manifest", () => {
     for (const key of WEBHOOK_KEYS) {
       const operation = operations[key]!;
       expect(operation.kind, key).toBe("webhook");
+      expect(operation.sideEffect, key).toBe("read");
       expect(operation.timeoutMs, key).toBe(30000);
       expect(operation.maxInputBytes, key).toBe(1048576);
       expect(operation.maxResponseBytes, key).toBe(1048576);
@@ -148,6 +177,49 @@ describe("pipedrive manifest", () => {
       expect(operation.request, `${key} must not declare a request`).toBeUndefined();
       expect(operation.effectPolicy, `${key} must not declare effectPolicy`).toBeUndefined();
       expect(operation.reconcile, `${key} must not declare reconcile`).toBeUndefined();
+    }
+  });
+
+  it("puts a body Content-Type only when a body is set and keeps GET body-less", () => {
+    for (const [key, operation] of Object.entries(operations)) {
+      if (operation.kind !== "action") continue;
+      const request = operation.request as Record<string, unknown>;
+      const method = String(request.method);
+      const headers = (request.headers as Record<string, string> | undefined) ?? {};
+      if (request.body !== undefined) {
+        const encoding = request.bodyEncoding;
+        expect(headers["Content-Type"], key).toBe(
+          encoding === "form" ? "application/x-www-form-urlencoded" : "application/json",
+        );
+      } else {
+        expect(headers["Content-Type"], key).toBeUndefined();
+      }
+      if (method === "GET") expect(request.body, key).toBeUndefined();
+    }
+  });
+
+  it("covers mapped Composio Pipedrive tools and the two collection GETs", () => {
+    expect(Object.keys(COMPOSIO_TOOLS).length).toBeGreaterThan(390);
+    for (const [slug, key] of Object.entries(COMPOSIO_TOOLS)) {
+      expect(operations[key], slug).toBeDefined();
+      if (operations[key]!.kind === "action") {
+        expect(requestOf(key), slug).toBeDefined();
+        expect(compiled.actions[key], slug).toBeTypeOf("function");
+      }
+    }
+    expect(COMPOSIO_TOOLS["PIPEDRIVE_GET_ALL_ORGANIZATIONS_BETA"]).toBe("organizations.list-beta");
+    expect(COMPOSIO_TOOLS["PIPEDRIVE_GET_ALL_PERSONS_BETA"]).toBe("persons.list-beta");
+    expect(requestOf("webhooks.list")).toMatchObject({ method: "GET", path: "/v1/webhooks" });
+    expect(operations["webhooks.list"]!.sideEffect).toBe("read");
+    for (const dropped of [
+      "files.create",
+      "files.get-download",
+      "persons.create-picture",
+      "call-logs.create-recordings",
+      "products.create-images",
+      "products.update-images",
+    ]) {
+      expect(operations[dropped], dropped).toBeUndefined();
     }
   });
 

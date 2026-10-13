@@ -6,6 +6,47 @@ import { actions } from "../src/actions";
 const operations = manifest.operations as Record<string, Record<string, unknown>>;
 const ORIGIN_OPS = ["healthcheck", "contacts.list", "contacts.get", "sequences.list", "sequences.get"] as const;
 
+// ops the pinned recipe has real provenance for
+const PINNED_OPS = [
+  "contact_lists.list",
+  "contacts.clear_opt_out",
+  "contacts.create",
+  "contacts.delete",
+  "contacts.get",
+  "contacts.list",
+  "contacts.move_to_sequence",
+  "contacts.search",
+  "contacts.set_status",
+  "contacts.statuses",
+  "contacts.update",
+  "email_accounts.connect_gmail",
+  "email_accounts.connect_office365",
+  "email_accounts.delete",
+  "email_accounts.list",
+  "email_accounts.list_disconnected",
+  "email_accounts.update",
+  "healthcheck",
+  "schedules.delete",
+  "sequences.archive",
+  "sequences.contacts.remove",
+  "sequences.contacts.remove_bulk",
+  "sequences.contacts.state",
+  "sequences.delete",
+  "sequences.get",
+  "sequences.list",
+  "sequences.pause",
+  "sequences.start",
+  "sequences.steps.create",
+  "sequences.steps.get",
+  "sequences.steps.list",
+  "ulid.generate",
+  "users.list"
+] as const;
+// ops this branch added from the provider's live API; no pinned action id exists
+const DEEPENED_OPS = [
+  "email_accounts.v1.save"
+] as const;
+
 const COMPOSIO_TOOLS: Record<string, string> = {
   REPLY_IO_ADD_CONTACT_TO_SEQUENCE: "contacts.move_to_sequence",
   REPLY_IO_ARCHIVE_SEQUENCE: "sequences.archive",
@@ -57,7 +98,7 @@ function requestOf(key: string): Record<string, unknown> {
 describe("reply-io manifest", () => {
   test("has bounded hosts, origin auth, and compiles", () => {
     expect(manifest.key).toBe("reply-io");
-    expect(manifest.version).toBe("0.2.0");
+    expect(manifest.version).toBe("0.2.1");
     expect(manifest.network.allowedHosts).toEqual(["api.reply.io"]);
     expect(manifest.http.baseUrl).toBe("https://api.reply.io");
     expect(manifest.http.auth.name).toBe("Authorization");
@@ -85,7 +126,7 @@ describe("reply-io manifest", () => {
   test("covers every mapped Composio Reply.io tool with a real handler", () => {
     expect(Object.keys(COMPOSIO_TOOLS)).toHaveLength(32);
     expect(HOLES).toHaveLength(1);
-    expect(Object.keys(operations).length).toBe(33);
+    expect(Object.keys(operations).length).toBe(34);
     for (const [slug, key] of Object.entries(COMPOSIO_TOOLS)) {
       expect(operations[key], slug).toBeDefined();
       if (!LOCAL_OPS.has(key)) expect(requestOf(key), slug).toBeDefined();
@@ -202,7 +243,21 @@ describe("reply-io manifest", () => {
       method: "POST",
       path: "/v3/email-accounts/filter",
     });
-    expect(requestOf("email_accounts.update").path).toBe("/v3/email-accounts/{{id}}");
+    expect(requestOf("email_accounts.update")).toEqual({
+      method: "PATCH",
+      path: "/v3/email-accounts/{{id}}",
+      success: [200],
+      headers: { "Content-Type": "application/json" },
+      body: {
+        connection: "{{connection}}",
+        safety: "{{safety}}",
+        signature: "{{signature}}",
+        optOut: "{{optOut}}",
+        rampUp: "{{rampUp}}",
+        tags: "{{tags}}",
+      },
+    });
+    expect(requestOf("email_accounts.update").baseUrl).toBeUndefined();
     expect(requestOf("email_accounts.delete").path).toBe("/v3/email-accounts/{{id}}");
     expect(requestOf("contact_lists.list").path).toBe("/v3/contact-lists");
     expect(requestOf("schedules.delete").path).toBe("/v3/schedules/{{id}}");
@@ -235,13 +290,113 @@ describe("reply-io manifest", () => {
     }
   });
 
-  test("keeps recipe operations equal to runner operations", async () => {
-    const recipe = await Bun.file(new URL("../../../../scripts/connector-gen/openconnector/recipes/reply_io/recipe.json", import.meta.url)).json();
-    expect(Object.keys(recipe.manifest.operations).sort()).toEqual(Object.keys(operations).sort());
-    expect([...recipe.selection.operations].sort()).toEqual(Object.keys(operations).sort());
-    expect(Object.keys(recipe.operationSources).sort()).toEqual(Object.keys(operations).sort());
-    expect(recipe.manifest.operations).toEqual(operations);
+  test("saves a legacy custom SMTP mailbox with POST /v1/EmailAccounts", () => {
+    const save = operations["email_accounts.v1.save"]!;
+    const update = operations["email_accounts.update"]!;
+    expect(save.timeoutMs).toBe(update.timeoutMs);
+    expect(save.maxInputBytes).toBe(update.maxInputBytes);
+    expect(save.maxResponseBytes).toBe(update.maxResponseBytes);
+    expect(save.responseFormat).toBe("json");
+    expect(save.validationMode).toBe("strict-generated");
+    expect(save.enforceOutputSchema).toBe(true);
+    expect(save.sideEffect).toBe("write");
+    const request = save.request as {
+      method: string;
+      path: string;
+      baseUrl?: string;
+      success: number[];
+      headers: Record<string, string>;
+      body: Record<string, string>;
+    };
+    expect(request).toEqual({
+      method: "POST",
+      path: "/v1/EmailAccounts",
+      success: [200, 201],
+      headers: { "Content-Type": "application/json" },
+      body: {
+        Email: "{{email}}",
+        "Daily Limit": "{{dailyLimit}}",
+        SenderName: "{{senderName}}",
+        SmtpHost: "{{smtpHost}}",
+        SmtpPort: "{{smtpPort}}",
+        SmtpPassword: "{{smtpPassword}}",
+        SmtpSsl: "{{smtpSsl}}",
+        ImapHost: "{{imapHost}}",
+        ImapPort: "{{imapPort}}",
+        ImapPassword: "{{imapPassword}}",
+        ImapSsl: "{{imapSsl}}",
+      },
+    });
+    expect(request.baseUrl).toBeUndefined();
+    const schema = save.inputSchema as {
+      type: string;
+      additionalProperties: boolean;
+      required: string[];
+      properties: Record<string, { type: string }>;
+    };
+    expect(schema.type).toBe("object");
+    expect(schema.additionalProperties).toBe(true);
+    expect(schema.required).toEqual([
+      "email",
+      "dailyLimit",
+      "senderName",
+      "smtpHost",
+      "smtpPort",
+      "smtpPassword",
+      "imapHost",
+      "imapPort",
+      "imapPassword",
+    ]);
+    expect(Object.keys(schema.properties)).toEqual([
+      "email",
+      "dailyLimit",
+      "senderName",
+      "smtpHost",
+      "smtpPort",
+      "smtpPassword",
+      "smtpSsl",
+      "imapHost",
+      "imapPort",
+      "imapPassword",
+      "imapSsl",
+    ]);
+    expect(schema.properties.dailyLimit.type).toBe("integer");
+    expect(schema.properties.smtpPort.type).toBe("integer");
+    expect(schema.properties.imapPort.type).toBe("integer");
+    expect(schema.properties.smtpSsl.type).toBe("boolean");
+    expect(schema.properties.imapSsl.type).toBe("boolean");
+    expect(schema.properties).not.toHaveProperty("Daily Limit");
+    const output = save.outputSchema as {
+      type: string;
+      additionalProperties: boolean;
+      required: string[];
+      properties: { data: { type: string; additionalProperties: boolean; properties: { id: { type: string } }; required: string[] } };
+    };
+    expect(output.type).toBe("object");
+    expect(output.additionalProperties).toBe(false);
+    expect(output.required).toEqual(["data"]);
+    expect(output.properties.data).toEqual({
+      type: "object",
+      properties: { id: { type: "integer" } },
+      additionalProperties: true,
+      required: ["id"],
+    });
+  });
+
+  test("mirrors the deepened v1 save in the recipe and keeps provenance mappings pinned", async () => {
+    const recipePath = "scripts/connector-gen/openconnector/recipes/reply_io/recipe.json";
+    const recipe = await Bun.file(recipePath).json();
+    const runnerOps = Object.keys(operations).sort();
+    const recipeOps = Object.keys(recipe.manifest.operations).sort();
     expect(recipe.manifest.version).toBe("0.2.0");
+    expect(runnerOps).toEqual(recipeOps);
+    expect([...recipe.selection.operations].sort()).toEqual(PINNED_OPS);
+    expect(Object.keys(recipe.operationSources).sort()).toEqual(PINNED_OPS);
+    const absentFromRecipe = runnerOps.filter((key) => !Object.hasOwn(recipe.operationSources, key));
+    expect(absentFromRecipe).toEqual(DEEPENED_OPS);
+    for (const key of recipeOps) {
+      expect(operations[key], key).toEqual(recipe.manifest.operations[key]);
+    }
     expect(recipe.source.revision).toBe("33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a");
     for (const operation of Object.values(recipe.manifest.operations) as Array<Record<string, unknown>>) {
       if (operation.kind === "webhook") expect(operation.sideEffect).toBe("read");

@@ -923,201 +923,11 @@
       }
     },
     "operations": {
-      "healthcheck": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
-        "sideEffect": "read",
-        "title": "Healthcheck",
-        "description": "Read-only Healthcheck.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {},
-          "additionalProperties": false
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "GET",
-          "path": "/contacts",
-          "success": [
-            200
-          ],
-          "query": {
-            "limit": "1"
-          }
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "contacts.list": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
-        "sideEffect": "read",
-        "title": "List contacts",
-        "description": "Retrieve a paginated list of contacts with optional filtering.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "limit": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 250
-            },
-            "after": {
-              "type": "string",
-              "minLength": 1
-            },
-            "before": {
-              "type": "string",
-              "minLength": 1
-            },
-            "email": {
-              "type": "string",
-              "minLength": 1
-            },
-            "phone": {
-              "type": "string",
-              "minLength": 1
-            },
-            "tag": {
-              "type": "string",
-              "minLength": 1
-            },
-            "status": {
-              "type": "string",
-              "enum": [
-                "subscribed",
-                "nonSubscribed",
-                "unsubscribed"
-              ]
-            },
-            "segmentID": {
-              "type": [
-                "string",
-                "integer"
-              ]
-            },
-            "sort": {
-              "type": "string",
-              "enum": [
-                "createdAt",
-                "updatedAt"
-              ]
-            },
-            "direction": {
-              "type": "string",
-              "enum": [
-                "asc",
-                "desc"
-              ]
-            },
-            "updatedAtFrom": {
-              "type": "string",
-              "minLength": 1
-            }
-          },
-          "additionalProperties": false
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "GET",
-          "path": "/contacts",
-          "success": [
-            200
-          ],
-          "query": {
-            "limit": "{{limit}}",
-            "after": "{{after}}",
-            "before": "{{before}}",
-            "email": "{{email}}",
-            "phone": "{{phone}}",
-            "tag": "{{tag}}",
-            "status": "{{status}}",
-            "segmentID": "{{segmentID}}",
-            "sort": "{{sort}}",
-            "direction": "{{direction}}",
-            "updatedAtFrom": "{{updatedAtFrom}}"
-          }
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "contacts.get": {
-        "kind": "action",
-        "sideEffect": "read",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "title": "Get a contact",
-        "description": "Retrieve one Omnisend contact by id.",
-        "inputSchema": {
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
-            "contactId": {
-              "type": "string",
-              "minLength": 1
-            }
-          },
-          "required": [
-            "contactId"
-          ]
-        },
-        "request": {
-          "method": "GET",
-          "path": "/contacts/{{contactId}}",
-          "success": [
-            200
-          ]
-        }
-      },
-      "contacts.create": {
+      "batches.create": {
         "kind": "action",
         "sideEffect": "write",
         "timeoutMs": 15000,
-        "maxInputBytes": 65536,
+        "maxInputBytes": 524288,
         "maxResponseBytes": 5242880,
         "enforceOutputSchema": true,
         "validationMode": "strict-generated",
@@ -1134,126 +944,69 @@
           },
           "additionalProperties": false
         },
-        "title": "Create or update a contact",
-        "description": "Create a contact or upsert by email identifier. Returns 201 for creates and 200 for updates.",
+        "title": "Create a batch",
+        "description": "Create a new batch operation for multiple items.",
         "inputSchema": {
           "type": "object",
           "additionalProperties": false,
           "properties": {
-            "identifiers": {
-              "type": "array",
-              "minItems": 1,
-              "items": {
-                "type": "object",
-                "additionalProperties": false,
-                "properties": {
-                  "id": {
-                    "type": "string",
-                    "minLength": 1
-                  },
-                  "type": {
-                    "type": "string",
-                    "enum": [
-                      "email",
-                      "phone"
-                    ]
-                  },
-                  "channels": {
-                    "type": "object"
-                  }
-                },
-                "required": [
-                  "id",
-                  "type"
-                ]
-              }
-            },
-            "firstName": {
-              "type": "string",
-              "minLength": 1
-            },
-            "lastName": {
-              "type": "string",
-              "minLength": 1
-            },
-            "tags": {
+            "items": {
               "type": "array",
               "items": {
-                "type": "string",
-                "minLength": 1
+                "type": "object"
               }
             },
-            "city": {
-              "type": "string",
-              "minLength": 1
-            },
-            "gender": {
+            "method": {
               "type": "string",
               "enum": [
-                "m",
-                "f"
+                "POST",
+                "PUT"
               ]
             },
-            "address": {
+            "eventID": {
               "type": "string",
               "minLength": 1
             },
-            "country": {
+            "endpoint": {
+              "type": "string",
+              "enum": [
+                "contacts",
+                "orders",
+                "products",
+                "events",
+                "categories"
+              ]
+            },
+            "origin": {
               "type": "string",
               "minLength": 1
-            },
-            "birthdate": {
-              "type": "string",
-              "minLength": 1
-            },
-            "postalCode": {
-              "type": "string",
-              "minLength": 1
-            },
-            "countryCode": {
-              "type": "string",
-              "minLength": 1
-            },
-            "state": {
-              "type": "string",
-              "minLength": 1
-            },
-            "customProperties": {
-              "type": "object"
             }
           },
           "required": [
-            "identifiers"
+            "items",
+            "method",
+            "endpoint"
           ]
         },
         "request": {
           "method": "POST",
-          "path": "/contacts",
+          "path": "/batches",
+          "success": [
+            200,
+            201
+          ],
           "headers": {
             "Content-Type": "application/json"
           },
           "body": {
-            "identifiers": "{{identifiers}}",
-            "firstName": "{{firstName}}",
-            "lastName": "{{lastName}}",
-            "tags": "{{tags}}",
-            "city": "{{city}}",
-            "gender": "{{gender}}",
-            "address": "{{address}}",
-            "country": "{{country}}",
-            "birthdate": "{{birthdate}}",
-            "postalCode": "{{postalCode}}",
-            "countryCode": "{{countryCode}}",
-            "state": "{{state}}",
-            "customProperties": "{{customProperties}}"
-          },
-          "success": [
-            200,
-            201
-          ]
+            "items": "{{items}}",
+            "method": "{{method}}",
+            "endpoint": "{{endpoint}}",
+            "origin": "{{origin}}"
+          }
         }
       },
-      "contacts.update": {
+      "batches.create.v3": {
         "kind": "action",
         "sideEffect": "write",
         "timeoutMs": 15000,
@@ -1274,196 +1027,57 @@
           },
           "additionalProperties": false
         },
-        "title": "Update a contact",
-        "description": "Patch an Omnisend contact by id.",
+        "title": "Create a v3 batch",
+        "description": "Create a batch with POST /batches on Omnisend API v3. Item objects are free-form for the chosen endpoint.",
         "inputSchema": {
           "type": "object",
           "additionalProperties": false,
           "properties": {
-            "contactId": {
-              "type": "string",
-              "minLength": 1
+            "method": {
+              "type": "string"
             },
-            "firstName": {
-              "type": "string",
-              "minLength": 1
-            },
-            "lastName": {
-              "type": "string",
-              "minLength": 1
-            },
-            "tags": {
-              "type": "array",
-              "items": {
-                "type": "string",
-                "minLength": 1
-              }
-            },
-            "city": {
-              "type": "string",
-              "minLength": 1
-            },
-            "gender": {
+            "endpoint": {
               "type": "string",
               "enum": [
-                "m",
-                "f"
+                "contacts",
+                "orders",
+                "products",
+                "events",
+                "categories"
               ]
             },
-            "address": {
-              "type": "string",
-              "minLength": 1
+            "eventID": {
+              "type": "string"
             },
-            "country": {
-              "type": "string",
-              "minLength": 1
-            },
-            "birthdate": {
-              "type": "string",
-              "minLength": 1
-            },
-            "postalCode": {
-              "type": "string",
-              "minLength": 1
-            },
-            "countryCode": {
-              "type": "string",
-              "minLength": 1
-            },
-            "state": {
-              "type": "string",
-              "minLength": 1
-            },
-            "customProperties": {
-              "type": "object"
-            },
-            "body": {
-              "type": "object"
-            },
-            "identifiers": {
+            "items": {
               "type": "array",
-              "minItems": 1,
               "items": {
                 "type": "object",
-                "additionalProperties": false,
-                "properties": {
-                  "id": {
-                    "type": "string",
-                    "minLength": 1
-                  },
-                  "type": {
-                    "type": "string",
-                    "enum": [
-                      "email",
-                      "phone"
-                    ]
-                  },
-                  "channels": {
-                    "type": "object"
-                  }
-                },
-                "required": [
-                  "id",
-                  "type"
-                ]
+                "additionalProperties": true
               }
-            }
-          },
-          "required": [
-            "contactId"
-          ]
-        },
-        "request": {
-          "method": "PATCH",
-          "path": "/contacts/{{contactId}}",
-          "headers": {
-            "Content-Type": "application/json"
-          },
-          "body": {
-            "firstName": "{{firstName}}",
-            "lastName": "{{lastName}}",
-            "tags": "{{tags}}",
-            "city": "{{city}}",
-            "gender": "{{gender}}",
-            "address": "{{address}}",
-            "country": "{{country}}",
-            "birthdate": "{{birthdate}}",
-            "postalCode": "{{postalCode}}",
-            "countryCode": "{{countryCode}}",
-            "state": "{{state}}",
-            "customProperties": "{{customProperties}}",
-            "identifiers": "{{identifiers}}"
-          },
-          "success": [
-            200
-          ]
-        }
-      },
-      "products.list": {
-        "kind": "action",
-        "sideEffect": "read",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "title": "List products",
-        "description": "List catalog products with offset pagination.",
-        "inputSchema": {
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
-            "limit": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 250
-            },
-            "offset": {
-              "type": "integer",
-              "minimum": 0
-            },
-            "sort": {
-              "type": "string",
-              "enum": [
-                "date",
-                "updatedAt",
-                "createdAt"
-              ]
-            },
-            "titleContains": {
-              "type": "string",
-              "minLength": 1
             }
           }
         },
         "request": {
-          "method": "GET",
-          "path": "/products",
-          "query": {
-            "limit": "{{limit}}",
-            "offset": "{{offset}}",
-            "sort": "{{sort}}",
-            "titleContains": "{{titleContains}}"
-          },
+          "method": "POST",
+          "path": "/batches",
           "success": [
             200
-          ]
+          ],
+          "baseUrl": "https://api.omnisend.com/v3",
+          "headers": {
+            "Content-Type": "application/json",
+            "X-API-KEY": "{{apiKey}}"
+          },
+          "body": {
+            "method": "{{method}}",
+            "endpoint": "{{endpoint}}",
+            "eventID": "{{eventID}}",
+            "items": "{{items}}"
+          }
         }
       },
-      "products.get": {
+      "batches.get": {
         "kind": "action",
         "sideEffect": "read",
         "timeoutMs": 15000,
@@ -1484,32 +1098,32 @@
           },
           "additionalProperties": false
         },
-        "title": "Get a product",
-        "description": "Retrieve one catalog product by id.",
+        "title": "Get batch information",
+        "description": "Retrieve information about a specific batch by ID.",
         "inputSchema": {
           "type": "object",
           "additionalProperties": false,
           "properties": {
-            "productId": {
+            "batchId": {
               "type": "string",
               "minLength": 1
             }
           },
           "required": [
-            "productId"
+            "batchId"
           ]
         },
         "request": {
           "method": "GET",
-          "path": "/products/{{productId}}",
+          "path": "/batches/{{batchId}}",
           "success": [
             200
           ]
         }
       },
-      "products.create": {
+      "batches.get.v3": {
         "kind": "action",
-        "sideEffect": "write",
+        "sideEffect": "read",
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
         "maxResponseBytes": 5242880,
@@ -1528,227 +1142,318 @@
           },
           "additionalProperties": false
         },
-        "title": "Create a product",
-        "description": "Create a catalog product with at least one variant.",
+        "title": "Get a v3 batch",
+        "description": "Retrieve one batch with GET /batches/{batchID} on Omnisend API v3.",
         "inputSchema": {
           "type": "object",
           "additionalProperties": false,
           "properties": {
-            "id": {
+            "batchID": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "batchID"
+          ]
+        },
+        "request": {
+          "method": "GET",
+          "path": "/batches/{{batchID}}",
+          "success": [
+            200
+          ],
+          "baseUrl": "https://api.omnisend.com/v3",
+          "headers": {
+            "X-API-KEY": "{{apiKey}}"
+          }
+        }
+      },
+      "batches.items.get": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "title": "Get a batch item",
+        "description": "Retrieve a specific item within a batch by batchID and itemID.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "itemID": {
               "type": "string",
               "minLength": 1
             },
-            "title": {
+            "batchID": {
               "type": "string",
               "minLength": 1
+            }
+          },
+          "required": [
+            "itemID",
+            "batchID"
+          ]
+        },
+        "request": {
+          "method": "GET",
+          "path": "/batches/{{batchID}}/items/{{itemID}}",
+          "success": [
+            200
+          ],
+          "baseUrl": "https://api.omnisend.com/v3",
+          "headers": {
+            "X-API-KEY": "{{apiKey}}"
+          }
+        }
+      },
+      "batches.items.list": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "title": "Get batch items",
+        "description": "Retrieve processed items of a specific batch by ID.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "batchId": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "batchId"
+          ]
+        },
+        "request": {
+          "method": "GET",
+          "path": "/batches/{{batchId}}/items",
+          "success": [
+            200
+          ]
+        }
+      },
+      "batches.items.list.v3": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "title": "List v3 batch items",
+        "description": "List processed items with GET /batches/{batchID}/items on Omnisend API v3.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "batchID": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "batchID"
+          ]
+        },
+        "request": {
+          "method": "GET",
+          "path": "/batches/{{batchID}}/items",
+          "success": [
+            200
+          ],
+          "baseUrl": "https://api.omnisend.com/v3",
+          "headers": {
+            "X-API-KEY": "{{apiKey}}"
+          }
+        }
+      },
+      "batches.list": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "title": "List batches",
+        "description": "Retrieve a list of batch operations.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "endpoint": {
+              "type": "string",
+              "enum": [
+                "contacts",
+                "orders",
+                "products",
+                "events",
+                "categories"
+              ]
+            }
+          },
+          "required": [
+            "endpoint"
+          ]
+        },
+        "request": {
+          "method": "GET",
+          "path": "/batches",
+          "success": [
+            200
+          ],
+          "query": {
+            "endpoint": "{{endpoint}}"
+          }
+        }
+      },
+      "batches.list.v3": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "title": "List v3 batches",
+        "description": "List batches with GET /batches on Omnisend API v3. The endpoint query is required.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "offset": {
+              "type": "integer",
+              "minimum": 0
             },
-            "currency": {
-              "type": "string",
-              "minLength": 1
-            },
-            "url": {
-              "type": "string",
-              "minLength": 1
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 250
             },
             "status": {
               "type": "string",
               "enum": [
-                "inStock",
-                "outOfStock",
-                "notAvailable"
+                "pending",
+                "inProgress",
+                "finished",
+                "stopped"
               ]
             },
-            "variants": {
-              "type": "array",
-              "minItems": 1,
-              "items": {
-                "type": "object",
-                "additionalProperties": false,
-                "properties": {
-                  "id": {
-                    "type": "string",
-                    "minLength": 1
-                  },
-                  "title": {
-                    "type": "string",
-                    "minLength": 1
-                  },
-                  "url": {
-                    "type": "string",
-                    "minLength": 1
-                  },
-                  "price": {
-                    "type": "number"
-                  },
-                  "sku": {
-                    "type": "string",
-                    "minLength": 1
-                  },
-                  "status": {
-                    "type": "string",
-                    "enum": [
-                      "inStock",
-                      "outOfStock",
-                      "notAvailable"
-                    ]
-                  },
-                  "defaultImageUrl": {
-                    "type": "string",
-                    "minLength": 1
-                  },
-                  "description": {
-                    "type": "string",
-                    "minLength": 1
-                  },
-                  "images": {
-                    "type": "array",
-                    "items": {
-                      "type": "string",
-                      "minLength": 1
-                    }
-                  },
-                  "strikeThroughPrice": {
-                    "type": "number"
-                  }
-                },
-                "required": [
-                  "id",
-                  "title",
-                  "url",
-                  "price"
-                ]
-              }
+            "dateFrom": {
+              "type": "string"
             },
-            "tags": {
-              "type": "array",
-              "items": {
-                "type": "string",
-                "minLength": 1
-              }
+            "dateTo": {
+              "type": "string"
             },
-            "type": {
+            "endpoint": {
               "type": "string",
-              "minLength": 1
-            },
-            "images": {
-              "type": "array",
-              "items": {
-                "type": "string",
-                "minLength": 1
-              }
-            },
-            "vendor": {
-              "type": "string",
-              "minLength": 1
-            },
-            "createdAt": {
-              "type": "string",
-              "minLength": 1
-            },
-            "updatedAt": {
-              "type": "string",
-              "minLength": 1
-            },
-            "categoryIDs": {
-              "type": "array",
-              "items": {
-                "type": "string",
-                "minLength": 1
-              }
-            },
-            "description": {
-              "type": "string",
-              "minLength": 1
-            },
-            "defaultImageUrl": {
-              "type": "string",
-              "minLength": 1
+              "enum": [
+                "contacts",
+                "orders",
+                "products",
+                "events",
+                "categories"
+              ]
             }
           },
           "required": [
-            "id",
-            "title",
-            "currency",
-            "url",
-            "status",
-            "variants"
+            "endpoint"
           ]
         },
         "request": {
-          "method": "POST",
-          "path": "/products",
-          "headers": {
-            "Content-Type": "application/json"
-          },
-          "body": {
-            "id": "{{id}}",
-            "url": "{{url}}",
-            "tags": "{{tags}}",
-            "type": "{{type}}",
-            "title": "{{title}}",
-            "images": "{{images}}",
-            "status": "{{status}}",
-            "vendor": "{{vendor}}",
-            "currency": "{{currency}}",
-            "variants": "{{variants}}",
-            "createdAt": "{{createdAt}}",
-            "updatedAt": "{{updatedAt}}",
-            "categoryIDs": "{{categoryIDs}}",
-            "description": "{{description}}",
-            "defaultImageUrl": "{{defaultImageUrl}}"
-          },
+          "method": "GET",
+          "path": "/batches",
           "success": [
-            200,
-            201
-          ]
-        }
-      },
-      "products.delete": {
-        "kind": "action",
-        "sideEffect": "destructive",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
+            200
           ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
+          "baseUrl": "https://api.omnisend.com/v3",
+          "headers": {
+            "X-API-KEY": "{{apiKey}}"
           },
-          "additionalProperties": false
-        },
-        "title": "Delete a product",
-        "description": "Delete a catalog product by id.",
-        "inputSchema": {
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
-            "productId": {
-              "type": "string",
-              "minLength": 1
-            }
-          },
-          "required": [
-            "productId"
-          ]
-        },
-        "request": {
-          "method": "DELETE",
-          "path": "/products/{{productId}}",
-          "success": [
-            200,
-            204
-          ]
+          "query": {
+            "offset": "{{offset}}",
+            "limit": "{{limit}}",
+            "status": "{{status}}",
+            "dateFrom": "{{dateFrom}}",
+            "dateTo": "{{dateTo}}",
+            "endpoint": "{{endpoint}}"
+          }
         }
       },
-      "productCategories.list": {
+      "brands.current": {
         "kind": "action",
         "sideEffect": "read",
         "timeoutMs": 15000,
@@ -1769,41 +1474,22 @@
           },
           "additionalProperties": false
         },
-        "title": "List product categories",
-        "description": "List catalog product categories.",
+        "title": "Get current brand",
+        "description": "Retrieve the brand bound to the API key.",
         "inputSchema": {
           "type": "object",
           "additionalProperties": false,
-          "properties": {
-            "limit": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 250
-            },
-            "offset": {
-              "type": "integer",
-              "minimum": 0
-            },
-            "sort": {
-              "type": "string",
-              "minLength": 1
-            }
-          }
+          "properties": {}
         },
         "request": {
           "method": "GET",
-          "path": "/product-categories",
-          "query": {
-            "limit": "{{limit}}",
-            "offset": "{{offset}}",
-            "sort": "{{sort}}"
-          },
+          "path": "/brands/current",
           "success": [
             200
           ]
         }
       },
-      "productCategories.get": {
+      "campaigns.get": {
         "kind": "action",
         "sideEffect": "read",
         "timeoutMs": 15000,
@@ -1824,24 +1510,24 @@
           },
           "additionalProperties": false
         },
-        "title": "Get a product category",
-        "description": "Retrieve one product category by id.",
+        "title": "Get a campaign",
+        "description": "Retrieve one campaign by id.",
         "inputSchema": {
           "type": "object",
           "additionalProperties": false,
           "properties": {
-            "categoryId": {
+            "campaignId": {
               "type": "string",
               "minLength": 1
             }
           },
           "required": [
-            "categoryId"
+            "campaignId"
           ]
         },
         "request": {
           "method": "GET",
-          "path": "/product-categories/{{categoryId}}",
+          "path": "/campaigns/{{campaignId}}",
           "success": [
             200
           ]
@@ -1943,7 +1629,7 @@
           ]
         }
       },
-      "campaigns.get": {
+      "campaigns.list.v3": {
         "kind": "action",
         "sideEffect": "read",
         "timeoutMs": 15000,
@@ -1964,963 +1650,51 @@
           },
           "additionalProperties": false
         },
-        "title": "Get a campaign",
-        "description": "Retrieve one campaign by id.",
+        "title": "List v3 campaigns",
+        "description": "List campaigns with GET /campaigns on Omnisend API v3.",
         "inputSchema": {
           "type": "object",
           "additionalProperties": false,
           "properties": {
-            "campaignId": {
-              "type": "string",
-              "minLength": 1
-            }
-          },
-          "required": [
-            "campaignId"
-          ]
-        },
-        "request": {
-          "method": "GET",
-          "path": "/campaigns/{{campaignId}}",
-          "success": [
-            200
-          ]
-        }
-      },
-      "segments.list": {
-        "kind": "action",
-        "sideEffect": "read",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "title": "List segments",
-        "description": "List audience segments with cursor pagination.",
-        "inputSchema": {
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
-            "limit": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 250
-            },
-            "after": {
-              "type": "string",
-              "minLength": 1
-            }
-          }
-        },
-        "request": {
-          "method": "GET",
-          "path": "/segments",
-          "query": {
-            "limit": "{{limit}}",
-            "after": "{{after}}"
-          },
-          "success": [
-            200
-          ]
-        }
-      },
-      "segments.get": {
-        "kind": "action",
-        "sideEffect": "read",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "title": "Get a segment",
-        "description": "Retrieve one audience segment by id.",
-        "inputSchema": {
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
-            "segmentId": {
-              "type": "string",
-              "minLength": 1
-            }
-          },
-          "required": [
-            "segmentId"
-          ]
-        },
-        "request": {
-          "method": "GET",
-          "path": "/segments/{{segmentId}}",
-          "success": [
-            200
-          ]
-        }
-      },
-      "events.create": {
-        "kind": "action",
-        "sideEffect": "write",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "title": "Send a customer event",
-        "description": "Send a customer event to Omnisend. Events can trigger automations and track customer behavior.",
-        "inputSchema": {
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
-            "eventName": {
-              "type": "string",
-              "minLength": 1
-            },
-            "origin": {
-              "type": "string",
-              "minLength": 1
-            },
-            "eventID": {
-              "type": "string",
-              "minLength": 1
-            },
-            "contact": {
-              "type": "object"
-            },
-            "properties": {
-              "type": "object"
-            },
-            "eventTime": {
-              "type": "string",
-              "minLength": 1
-            },
-            "eventVersion": {
-              "type": "string",
-              "minLength": 1
-            }
-          },
-          "required": [
-            "eventName",
-            "origin"
-          ]
-        },
-        "request": {
-          "method": "POST",
-          "path": "/events",
-          "headers": {
-            "Content-Type": "application/json"
-          },
-          "body": {
-            "eventName": "{{eventName}}",
-            "origin": "{{origin}}",
-            "eventID": "{{eventID}}",
-            "contact": "{{contact}}",
-            "properties": "{{properties}}",
-            "eventTime": "{{eventTime}}",
-            "eventVersion": "{{eventVersion}}"
-          },
-          "success": [
-            202
-          ]
-        }
-      },
-      "brands.current": {
-        "kind": "action",
-        "sideEffect": "read",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "title": "Get current brand",
-        "description": "Retrieve the brand bound to the API key.",
-        "inputSchema": {
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {}
-        },
-        "request": {
-          "method": "GET",
-          "path": "/brands/current",
-          "success": [
-            200
-          ]
-        }
-      },
-      "productCategories.create": {
-        "kind": "action",
-        "sideEffect": "write",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "title": "Create a product category",
-        "description": "Create a new product category in the Omnisend catalog.",
-        "inputSchema": {
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
-            "title": {
-              "type": "string",
-              "minLength": 1
-            },
-            "categoryID": {
-              "type": "string",
-              "minLength": 1
-            }
-          },
-          "required": [
-            "title",
-            "categoryID"
-          ]
-        },
-        "request": {
-          "method": "POST",
-          "path": "/product-categories",
-          "success": [
-            200,
-            201
-          ],
-          "headers": {
-            "Content-Type": "application/json"
-          },
-          "body": {
-            "title": "{{title}}",
-            "categoryID": "{{categoryID}}"
-          }
-        }
-      },
-      "productCategories.delete": {
-        "kind": "action",
-        "sideEffect": "destructive",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "title": "Delete a product category",
-        "description": "Remove a product category from Omnisend by its ID.",
-        "inputSchema": {
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
-            "categoryId": {
-              "type": "string",
-              "minLength": 1
-            }
-          },
-          "required": [
-            "categoryId"
-          ]
-        },
-        "request": {
-          "method": "DELETE",
-          "path": "/product-categories/{{categoryId}}",
-          "success": [
-            200,
-            204
-          ]
-        }
-      },
-      "productCategories.update": {
-        "kind": "action",
-        "sideEffect": "write",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "title": "Update a product category",
-        "description": "Update an existing product category title in Omnisend.",
-        "inputSchema": {
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
-            "title": {
-              "type": "string",
-              "minLength": 1
-            },
-            "categoryID": {
-              "type": "string",
-              "minLength": 1
-            }
-          },
-          "required": [
-            "title",
-            "categoryID"
-          ]
-        },
-        "request": {
-          "method": "PATCH",
-          "path": "/product-categories/{{categoryID}}",
-          "success": [
-            200
-          ],
-          "headers": {
-            "Content-Type": "application/json"
-          },
-          "body": {
-            "title": "{{title}}"
-          }
-        }
-      },
-      "products.replace": {
-        "kind": "action",
-        "sideEffect": "write",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "title": "Replace a product",
-        "description": "Replace an existing product in the Omnisend catalog.",
-        "inputSchema": {
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
-            "id": {
-              "type": "string",
-              "minLength": 1
-            },
-            "url": {
-              "type": "string",
-              "minLength": 1
-            },
-            "tags": {
-              "type": "array",
-              "items": {
-                "type": "string",
-                "minLength": 1
-              }
-            },
-            "type": {
-              "type": "string",
-              "minLength": 1
-            },
-            "title": {
-              "type": "string",
-              "minLength": 1
-            },
-            "images": {
-              "type": "array",
-              "items": {
-                "type": "string",
-                "minLength": 1
-              }
-            },
             "status": {
               "type": "string",
               "enum": [
-                "inStock",
-                "outOfStock",
-                "notAvailable"
+                "draft",
+                "paused",
+                "scheduled",
+                "inProgress",
+                "sent"
               ]
             },
-            "vendor": {
-              "type": "string",
-              "minLength": 1
+            "type": {
+              "type": "string"
             },
-            "currency": {
-              "type": "string",
-              "minLength": 1
+            "offset": {
+              "type": "integer",
+              "minimum": 0
             },
-            "variants": {
-              "type": "array",
-              "minItems": 1,
-              "items": {
-                "type": "object",
-                "additionalProperties": false,
-                "properties": {
-                  "id": {
-                    "type": "string",
-                    "minLength": 1
-                  },
-                  "title": {
-                    "type": "string",
-                    "minLength": 1
-                  },
-                  "url": {
-                    "type": "string",
-                    "minLength": 1
-                  },
-                  "price": {
-                    "type": "number"
-                  },
-                  "sku": {
-                    "type": "string",
-                    "minLength": 1
-                  },
-                  "status": {
-                    "type": "string",
-                    "enum": [
-                      "inStock",
-                      "outOfStock",
-                      "notAvailable"
-                    ]
-                  },
-                  "defaultImageUrl": {
-                    "type": "string",
-                    "minLength": 1
-                  },
-                  "description": {
-                    "type": "string",
-                    "minLength": 1
-                  },
-                  "images": {
-                    "type": "array",
-                    "items": {
-                      "type": "string",
-                      "minLength": 1
-                    }
-                  },
-                  "strikeThroughPrice": {
-                    "type": "number"
-                  }
-                },
-                "required": [
-                  "id",
-                  "title",
-                  "url",
-                  "price"
-                ]
-              }
-            },
-            "createdAt": {
-              "type": "string",
-              "minLength": 1
-            },
-            "updatedAt": {
-              "type": "string",
-              "minLength": 1
-            },
-            "categoryIDs": {
-              "type": "array",
-              "items": {
-                "type": "string",
-                "minLength": 1
-              }
-            },
-            "description": {
-              "type": "string",
-              "minLength": 1
-            },
-            "defaultImageUrl": {
-              "type": "string",
-              "minLength": 1
-            },
-            "product_id": {
-              "type": "string",
-              "minLength": 1
-            },
-            "created_at": {
-              "type": "string",
-              "minLength": 1
-            },
-            "updated_at": {
-              "type": "string",
-              "minLength": 1
-            },
-            "category_ids": {
-              "type": "array",
-              "items": {
-                "type": "string",
-                "minLength": 1
-              }
-            },
-            "default_image_url": {
-              "type": "string",
-              "minLength": 1
-            }
-          },
-          "required": [
-            "product_id",
-            "id",
-            "url",
-            "title",
-            "status",
-            "currency",
-            "variants"
-          ]
-        },
-        "request": {
-          "method": "PUT",
-          "path": "/products/{{product_id}}",
-          "success": [
-            200
-          ],
-          "headers": {
-            "Content-Type": "application/json"
-          },
-          "body": {
-            "id": "{{id}}",
-            "url": "{{url}}",
-            "tags": "{{tags}}",
-            "type": "{{type}}",
-            "title": "{{title}}",
-            "images": "{{images}}",
-            "status": "{{status}}",
-            "vendor": "{{vendor}}",
-            "currency": "{{currency}}",
-            "variants": "{{variants}}",
-            "createdAt": "{{createdAt}}",
-            "updatedAt": "{{updatedAt}}",
-            "categoryIDs": "{{categoryIDs}}",
-            "description": "{{description}}",
-            "defaultImageUrl": "{{defaultImageUrl}}"
-          }
-        }
-      },
-      "events.list": {
-        "kind": "action",
-        "sideEffect": "read",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "title": "List events",
-        "description": "Retrieve custom event metadata created in Omnisend.",
-        "inputSchema": {
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
-            "category": {
-              "type": "string",
-              "enum": [
-                "automations",
-                "events",
-                "segments"
-              ]
-            },
-            "events": {
-              "type": "array",
-              "items": {
-                "type": "string",
-                "minLength": 1
-              }
-            },
-            "origins": {
-              "type": "array",
-              "items": {
-                "type": "string",
-                "minLength": 1
-              }
-            },
-            "includeProperties": {
-              "type": "boolean"
-            },
-            "excludeCustomEvents": {
-              "type": "boolean"
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 5000
             }
           }
-        },
-        "request": {
-          "method": "POST",
-          "path": "/event-metadata/query",
-          "success": [
-            200
-          ],
-          "headers": {
-            "Content-Type": "application/json"
-          },
-          "body": {
-            "category": "events",
-            "events": "{{events}}",
-            "origins": "{{origins}}",
-            "includeProperties": "{{includeProperties}}",
-            "excludeCustomEvents": "{{excludeCustomEvents}}"
-          }
-        }
-      },
-      "batches.create": {
-        "kind": "action",
-        "sideEffect": "write",
-        "timeoutMs": 15000,
-        "maxInputBytes": 524288,
-        "maxResponseBytes": 5242880,
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "title": "Create a batch",
-        "description": "Create a new batch operation for multiple items.",
-        "inputSchema": {
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
-            "items": {
-              "type": "array",
-              "items": {
-                "type": "object"
-              }
-            },
-            "method": {
-              "type": "string",
-              "enum": [
-                "POST",
-                "PUT"
-              ]
-            },
-            "eventID": {
-              "type": "string",
-              "minLength": 1
-            },
-            "endpoint": {
-              "type": "string",
-              "enum": [
-                "contacts",
-                "orders",
-                "products",
-                "events",
-                "categories"
-              ]
-            },
-            "origin": {
-              "type": "string",
-              "minLength": 1
-            }
-          },
-          "required": [
-            "items",
-            "method",
-            "endpoint"
-          ]
-        },
-        "request": {
-          "method": "POST",
-          "path": "/batches",
-          "success": [
-            200,
-            201
-          ],
-          "headers": {
-            "Content-Type": "application/json"
-          },
-          "body": {
-            "items": "{{items}}",
-            "method": "{{method}}",
-            "endpoint": "{{endpoint}}",
-            "origin": "{{origin}}"
-          }
-        }
-      },
-      "batches.list": {
-        "kind": "action",
-        "sideEffect": "read",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "title": "List batches",
-        "description": "Retrieve a list of batch operations.",
-        "inputSchema": {
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
-            "endpoint": {
-              "type": "string",
-              "enum": [
-                "contacts",
-                "orders",
-                "products",
-                "events",
-                "categories"
-              ]
-            }
-          },
-          "required": [
-            "endpoint"
-          ]
         },
         "request": {
           "method": "GET",
-          "path": "/batches",
-          "success": [
-            200
-          ],
-          "query": {
-            "endpoint": "{{endpoint}}"
-          }
-        }
-      },
-      "batches.get": {
-        "kind": "action",
-        "sideEffect": "read",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "title": "Get batch information",
-        "description": "Retrieve information about a specific batch by ID.",
-        "inputSchema": {
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
-            "batchId": {
-              "type": "string",
-              "minLength": 1
-            }
-          },
-          "required": [
-            "batchId"
-          ]
-        },
-        "request": {
-          "method": "GET",
-          "path": "/batches/{{batchId}}",
-          "success": [
-            200
-          ]
-        }
-      },
-      "batches.items.list": {
-        "kind": "action",
-        "sideEffect": "read",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "title": "Get batch items",
-        "description": "Retrieve processed items of a specific batch by ID.",
-        "inputSchema": {
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
-            "batchId": {
-              "type": "string",
-              "minLength": 1
-            }
-          },
-          "required": [
-            "batchId"
-          ]
-        },
-        "request": {
-          "method": "GET",
-          "path": "/batches/{{batchId}}/items",
-          "success": [
-            200
-          ]
-        }
-      },
-      "batches.items.get": {
-        "kind": "action",
-        "sideEffect": "read",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "title": "Get a batch item",
-        "description": "Retrieve a specific item within a batch by batchID and itemID.",
-        "inputSchema": {
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
-            "itemID": {
-              "type": "string",
-              "minLength": 1
-            },
-            "batchID": {
-              "type": "string",
-              "minLength": 1
-            }
-          },
-          "required": [
-            "itemID",
-            "batchID"
-          ]
-        },
-        "request": {
-          "method": "GET",
-          "path": "/batches/{{batchID}}/items/{{itemID}}",
+          "path": "/campaigns",
           "success": [
             200
           ],
           "baseUrl": "https://api.omnisend.com/v3",
           "headers": {
             "X-API-KEY": "{{apiKey}}"
+          },
+          "query": {
+            "status": "{{status}}",
+            "type": "{{type}}",
+            "offset": "{{offset}}",
+            "limit": "{{limit}}"
           }
         }
       },
@@ -3023,6 +1797,103 @@
           "baseUrl": "https://api.omnisend.com/v3"
         }
       },
+      "carts.delete": {
+        "kind": "action",
+        "sideEffect": "destructive",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "title": "Delete a cart",
+        "description": "Delete a cart from Omnisend by its ID (v3 API).",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "cartID": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "cartID"
+          ]
+        },
+        "request": {
+          "method": "DELETE",
+          "path": "/carts/{{cartID}}",
+          "success": [
+            200,
+            204
+          ],
+          "baseUrl": "https://api.omnisend.com/v3",
+          "headers": {
+            "X-API-KEY": "{{apiKey}}"
+          }
+        }
+      },
+      "carts.get": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "title": "Get a cart",
+        "description": "Retrieve a specific cart by ID from Omnisend v3 API.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "cartID": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "cartID"
+          ]
+        },
+        "request": {
+          "method": "GET",
+          "path": "/carts/{{cartID}}",
+          "success": [
+            200
+          ],
+          "baseUrl": "https://api.omnisend.com/v3",
+          "headers": {
+            "X-API-KEY": "{{apiKey}}"
+          }
+        }
+      },
       "carts.list": {
         "kind": "action",
         "sideEffect": "read",
@@ -3116,262 +1987,6 @@
             "updatedTo": "{{updatedTo}}",
             "updatedFrom": "{{updatedFrom}}"
           },
-          "baseUrl": "https://api.omnisend.com/v3",
-          "headers": {
-            "X-API-KEY": "{{apiKey}}"
-          }
-        }
-      },
-      "carts.get": {
-        "kind": "action",
-        "sideEffect": "read",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "title": "Get a cart",
-        "description": "Retrieve a specific cart by ID from Omnisend v3 API.",
-        "inputSchema": {
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
-            "cartID": {
-              "type": "string",
-              "minLength": 1
-            }
-          },
-          "required": [
-            "cartID"
-          ]
-        },
-        "request": {
-          "method": "GET",
-          "path": "/carts/{{cartID}}",
-          "success": [
-            200
-          ],
-          "baseUrl": "https://api.omnisend.com/v3",
-          "headers": {
-            "X-API-KEY": "{{apiKey}}"
-          }
-        }
-      },
-      "carts.replace": {
-        "kind": "action",
-        "sideEffect": "write",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "title": "Replace a cart",
-        "description": "Replace an existing cart in Omnisend using the v3 API.",
-        "inputSchema": {
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
-            "cartID": {
-              "type": "string",
-              "minLength": 1
-            },
-            "cartSum": {
-              "type": "integer"
-            },
-            "currency": {
-              "type": "string",
-              "minLength": 1
-            },
-            "products": {
-              "type": "array",
-              "items": {
-                "type": "object"
-              }
-            },
-            "createdAt": {
-              "type": "string",
-              "minLength": 1
-            },
-            "updatedAt": {
-              "type": "string",
-              "minLength": 1
-            },
-            "cartRecoveryUrl": {
-              "type": "string",
-              "minLength": 1
-            }
-          },
-          "required": [
-            "cartID",
-            "cartSum",
-            "currency",
-            "products"
-          ]
-        },
-        "request": {
-          "method": "PUT",
-          "path": "/carts/{{cartID}}",
-          "success": [
-            200
-          ],
-          "headers": {
-            "Content-Type": "application/json",
-            "X-API-KEY": "{{apiKey}}"
-          },
-          "body": {
-            "cartSum": "{{cartSum}}",
-            "currency": "{{currency}}",
-            "products": "{{products}}",
-            "createdAt": "{{createdAt}}",
-            "updatedAt": "{{updatedAt}}",
-            "cartRecoveryUrl": "{{cartRecoveryUrl}}"
-          },
-          "baseUrl": "https://api.omnisend.com/v3"
-        }
-      },
-      "carts.update": {
-        "kind": "action",
-        "sideEffect": "write",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "title": "Update a cart",
-        "description": "Partially update a cart in Omnisend (v3 API).",
-        "inputSchema": {
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
-            "cartID": {
-              "type": "string",
-              "minLength": 1
-            },
-            "cartSum": {
-              "type": "integer"
-            },
-            "currency": {
-              "type": "string",
-              "minLength": 1
-            },
-            "products": {
-              "type": "array",
-              "items": {
-                "type": "object"
-              }
-            },
-            "cartRecoveryUrl": {
-              "type": "string",
-              "minLength": 1
-            }
-          },
-          "required": [
-            "cartID",
-            "cartSum",
-            "currency"
-          ]
-        },
-        "request": {
-          "method": "PATCH",
-          "path": "/carts/{{cartID}}",
-          "success": [
-            200
-          ],
-          "headers": {
-            "Content-Type": "application/json",
-            "X-API-KEY": "{{apiKey}}"
-          },
-          "body": {
-            "cartSum": "{{cartSum}}",
-            "currency": "{{currency}}",
-            "products": "{{products}}",
-            "cartRecoveryUrl": "{{cartRecoveryUrl}}"
-          },
-          "baseUrl": "https://api.omnisend.com/v3"
-        }
-      },
-      "carts.delete": {
-        "kind": "action",
-        "sideEffect": "destructive",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "title": "Delete a cart",
-        "description": "Delete a cart from Omnisend by its ID (v3 API).",
-        "inputSchema": {
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
-            "cartID": {
-              "type": "string",
-              "minLength": 1
-            }
-          },
-          "required": [
-            "cartID"
-          ]
-        },
-        "request": {
-          "method": "DELETE",
-          "path": "/carts/{{cartID}}",
-          "success": [
-            200,
-            204
-          ],
           "baseUrl": "https://api.omnisend.com/v3",
           "headers": {
             "X-API-KEY": "{{apiKey}}"
@@ -3497,6 +2112,60 @@
             "currency": "{{currency}}"
           },
           "baseUrl": "https://api.omnisend.com/v3"
+        }
+      },
+      "carts.products.remove": {
+        "kind": "action",
+        "sideEffect": "destructive",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "title": "Remove a cart product",
+        "description": "Remove a product from a cart in Omnisend.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "cart_id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "cart_product_id": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "cart_id",
+            "cart_product_id"
+          ]
+        },
+        "request": {
+          "method": "DELETE",
+          "path": "/carts/{{cart_id}}/products/{{cart_product_id}}",
+          "success": [
+            200,
+            204
+          ],
+          "baseUrl": "https://api.omnisend.com/v3",
+          "headers": {
+            "X-API-KEY": "{{apiKey}}"
+          }
         }
       },
       "carts.products.replace": {
@@ -3734,7 +2403,225 @@
           "baseUrl": "https://api.omnisend.com/v3"
         }
       },
-      "carts.products.remove": {
+      "carts.replace": {
+        "kind": "action",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "title": "Replace a cart",
+        "description": "Replace an existing cart in Omnisend using the v3 API.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "cartID": {
+              "type": "string",
+              "minLength": 1
+            },
+            "cartSum": {
+              "type": "integer"
+            },
+            "currency": {
+              "type": "string",
+              "minLength": 1
+            },
+            "products": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            },
+            "createdAt": {
+              "type": "string",
+              "minLength": 1
+            },
+            "updatedAt": {
+              "type": "string",
+              "minLength": 1
+            },
+            "cartRecoveryUrl": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "cartID",
+            "cartSum",
+            "currency",
+            "products"
+          ]
+        },
+        "request": {
+          "method": "PUT",
+          "path": "/carts/{{cartID}}",
+          "success": [
+            200
+          ],
+          "headers": {
+            "Content-Type": "application/json",
+            "X-API-KEY": "{{apiKey}}"
+          },
+          "body": {
+            "cartSum": "{{cartSum}}",
+            "currency": "{{currency}}",
+            "products": "{{products}}",
+            "createdAt": "{{createdAt}}",
+            "updatedAt": "{{updatedAt}}",
+            "cartRecoveryUrl": "{{cartRecoveryUrl}}"
+          },
+          "baseUrl": "https://api.omnisend.com/v3"
+        }
+      },
+      "carts.update": {
+        "kind": "action",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "title": "Update a cart",
+        "description": "Partially update a cart in Omnisend (v3 API).",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "cartID": {
+              "type": "string",
+              "minLength": 1
+            },
+            "cartSum": {
+              "type": "integer"
+            },
+            "currency": {
+              "type": "string",
+              "minLength": 1
+            },
+            "products": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            },
+            "cartRecoveryUrl": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "cartID",
+            "cartSum",
+            "currency"
+          ]
+        },
+        "request": {
+          "method": "PATCH",
+          "path": "/carts/{{cartID}}",
+          "success": [
+            200
+          ],
+          "headers": {
+            "Content-Type": "application/json",
+            "X-API-KEY": "{{apiKey}}"
+          },
+          "body": {
+            "cartSum": "{{cartSum}}",
+            "currency": "{{currency}}",
+            "products": "{{products}}",
+            "cartRecoveryUrl": "{{cartRecoveryUrl}}"
+          },
+          "baseUrl": "https://api.omnisend.com/v3"
+        }
+      },
+      "categories.create": {
+        "kind": "action",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "title": "Create a category",
+        "description": "Create a catalog category with Omnisend API v3 POST /categories.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "title": {
+              "type": "string",
+              "minLength": 1
+            },
+            "categoryID": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "title",
+            "categoryID"
+          ]
+        },
+        "request": {
+          "method": "POST",
+          "path": "/categories",
+          "success": [
+            200,
+            201
+          ],
+          "baseUrl": "https://api.omnisend.com/v3",
+          "headers": {
+            "Content-Type": "application/json",
+            "X-API-KEY": "{{apiKey}}"
+          },
+          "body": {
+            "title": "{{title}}",
+            "categoryID": "{{categoryID}}"
+          }
+        }
+      },
+      "categories.delete": {
         "kind": "action",
         "sideEffect": "destructive",
         "timeoutMs": 15000,
@@ -3755,29 +2642,24 @@
           },
           "additionalProperties": false
         },
-        "title": "Remove a cart product",
-        "description": "Remove a product from a cart in Omnisend.",
+        "title": "Delete a category",
+        "description": "Delete a catalog category with Omnisend API v3 DELETE /categories/{categoryID}.",
         "inputSchema": {
           "type": "object",
           "additionalProperties": false,
           "properties": {
-            "cart_id": {
-              "type": "string",
-              "minLength": 1
-            },
-            "cart_product_id": {
+            "categoryID": {
               "type": "string",
               "minLength": 1
             }
           },
           "required": [
-            "cart_id",
-            "cart_product_id"
+            "categoryID"
           ]
         },
         "request": {
           "method": "DELETE",
-          "path": "/carts/{{cart_id}}/products/{{cart_product_id}}",
+          "path": "/categories/{{categoryID}}",
           "success": [
             200,
             204
@@ -3787,6 +2669,979 @@
             "X-API-KEY": "{{apiKey}}"
           }
         }
+      },
+      "categories.get": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "title": "Get a category",
+        "description": "Retrieve one catalog category from Omnisend API v3 GET /categories/{categoryID}.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "categoryID": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "categoryID"
+          ]
+        },
+        "request": {
+          "method": "GET",
+          "path": "/categories/{{categoryID}}",
+          "success": [
+            200
+          ],
+          "baseUrl": "https://api.omnisend.com/v3",
+          "headers": {
+            "X-API-KEY": "{{apiKey}}"
+          }
+        }
+      },
+      "categories.list": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "title": "List categories",
+        "description": "List catalog categories from Omnisend API v3 GET /categories.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 250
+            },
+            "offset": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        },
+        "request": {
+          "method": "GET",
+          "path": "/categories",
+          "query": {
+            "limit": "{{limit}}",
+            "offset": "{{offset}}"
+          },
+          "success": [
+            200
+          ],
+          "baseUrl": "https://api.omnisend.com/v3",
+          "headers": {
+            "X-API-KEY": "{{apiKey}}"
+          }
+        }
+      },
+      "categories.replace": {
+        "kind": "action",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "title": "Replace a category",
+        "description": "Replace a catalog category title with Omnisend API v3 PUT /categories/{categoryID}.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "title": {
+              "type": "string",
+              "minLength": 1
+            },
+            "categoryID": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "title",
+            "categoryID"
+          ]
+        },
+        "request": {
+          "method": "PUT",
+          "path": "/categories/{{categoryID}}",
+          "success": [
+            200
+          ],
+          "baseUrl": "https://api.omnisend.com/v3",
+          "headers": {
+            "Content-Type": "application/json",
+            "X-API-KEY": "{{apiKey}}"
+          },
+          "body": {
+            "title": "{{title}}"
+          }
+        }
+      },
+      "contacts.create": {
+        "kind": "action",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "title": "Create or update a contact",
+        "description": "Create a contact or upsert by email identifier. Returns 201 for creates and 200 for updates.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "identifiers": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "email",
+                      "phone"
+                    ]
+                  },
+                  "channels": {
+                    "type": "object"
+                  }
+                },
+                "required": [
+                  "id",
+                  "type"
+                ]
+              }
+            },
+            "firstName": {
+              "type": "string",
+              "minLength": 1
+            },
+            "lastName": {
+              "type": "string",
+              "minLength": 1
+            },
+            "tags": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "city": {
+              "type": "string",
+              "minLength": 1
+            },
+            "gender": {
+              "type": "string",
+              "enum": [
+                "m",
+                "f"
+              ]
+            },
+            "address": {
+              "type": "string",
+              "minLength": 1
+            },
+            "country": {
+              "type": "string",
+              "minLength": 1
+            },
+            "birthdate": {
+              "type": "string",
+              "minLength": 1
+            },
+            "postalCode": {
+              "type": "string",
+              "minLength": 1
+            },
+            "countryCode": {
+              "type": "string",
+              "minLength": 1
+            },
+            "state": {
+              "type": "string",
+              "minLength": 1
+            },
+            "customProperties": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "identifiers"
+          ]
+        },
+        "request": {
+          "method": "POST",
+          "path": "/contacts",
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "identifiers": "{{identifiers}}",
+            "firstName": "{{firstName}}",
+            "lastName": "{{lastName}}",
+            "tags": "{{tags}}",
+            "city": "{{city}}",
+            "gender": "{{gender}}",
+            "address": "{{address}}",
+            "country": "{{country}}",
+            "birthdate": "{{birthdate}}",
+            "postalCode": "{{postalCode}}",
+            "countryCode": "{{countryCode}}",
+            "state": "{{state}}",
+            "customProperties": "{{customProperties}}"
+          },
+          "success": [
+            200,
+            201
+          ]
+        }
+      },
+      "contacts.get": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "title": "Get a contact",
+        "description": "Retrieve one Omnisend contact by id.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "contactId": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "contactId"
+          ]
+        },
+        "request": {
+          "method": "GET",
+          "path": "/contacts/{{contactId}}",
+          "success": [
+            200
+          ]
+        }
+      },
+      "contacts.list": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "read",
+        "title": "List contacts",
+        "description": "Retrieve a paginated list of contacts with optional filtering.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 250
+            },
+            "after": {
+              "type": "string",
+              "minLength": 1
+            },
+            "before": {
+              "type": "string",
+              "minLength": 1
+            },
+            "email": {
+              "type": "string",
+              "minLength": 1
+            },
+            "phone": {
+              "type": "string",
+              "minLength": 1
+            },
+            "tag": {
+              "type": "string",
+              "minLength": 1
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "subscribed",
+                "nonSubscribed",
+                "unsubscribed"
+              ]
+            },
+            "segmentID": {
+              "type": [
+                "string",
+                "integer"
+              ]
+            },
+            "sort": {
+              "type": "string",
+              "enum": [
+                "createdAt",
+                "updatedAt"
+              ]
+            },
+            "direction": {
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ]
+            },
+            "updatedAtFrom": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/contacts",
+          "success": [
+            200
+          ],
+          "query": {
+            "limit": "{{limit}}",
+            "after": "{{after}}",
+            "before": "{{before}}",
+            "email": "{{email}}",
+            "phone": "{{phone}}",
+            "tag": "{{tag}}",
+            "status": "{{status}}",
+            "segmentID": "{{segmentID}}",
+            "sort": "{{sort}}",
+            "direction": "{{direction}}",
+            "updatedAtFrom": "{{updatedAtFrom}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "contacts.update": {
+        "kind": "action",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "title": "Update a contact",
+        "description": "Patch an Omnisend contact by id.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "contactId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "firstName": {
+              "type": "string",
+              "minLength": 1
+            },
+            "lastName": {
+              "type": "string",
+              "minLength": 1
+            },
+            "tags": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "city": {
+              "type": "string",
+              "minLength": 1
+            },
+            "gender": {
+              "type": "string",
+              "enum": [
+                "m",
+                "f"
+              ]
+            },
+            "address": {
+              "type": "string",
+              "minLength": 1
+            },
+            "country": {
+              "type": "string",
+              "minLength": 1
+            },
+            "birthdate": {
+              "type": "string",
+              "minLength": 1
+            },
+            "postalCode": {
+              "type": "string",
+              "minLength": 1
+            },
+            "countryCode": {
+              "type": "string",
+              "minLength": 1
+            },
+            "state": {
+              "type": "string",
+              "minLength": 1
+            },
+            "customProperties": {
+              "type": "object"
+            },
+            "body": {
+              "type": "object"
+            },
+            "identifiers": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "email",
+                      "phone"
+                    ]
+                  },
+                  "channels": {
+                    "type": "object"
+                  }
+                },
+                "required": [
+                  "id",
+                  "type"
+                ]
+              }
+            }
+          },
+          "required": [
+            "contactId"
+          ]
+        },
+        "request": {
+          "method": "PATCH",
+          "path": "/contacts/{{contactId}}",
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "firstName": "{{firstName}}",
+            "lastName": "{{lastName}}",
+            "tags": "{{tags}}",
+            "city": "{{city}}",
+            "gender": "{{gender}}",
+            "address": "{{address}}",
+            "country": "{{country}}",
+            "birthdate": "{{birthdate}}",
+            "postalCode": "{{postalCode}}",
+            "countryCode": "{{countryCode}}",
+            "state": "{{state}}",
+            "customProperties": "{{customProperties}}",
+            "identifiers": "{{identifiers}}"
+          },
+          "success": [
+            200
+          ]
+        }
+      },
+      "contacts.update.v3": {
+        "kind": "action",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "title": "Update a v3 contact",
+        "description": "Patch a contact with PATCH /contacts/{contactID} on Omnisend API v3.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "contactID": {
+              "type": "string",
+              "minLength": 1
+            },
+            "identifiers": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  },
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "email",
+                      "phone"
+                    ]
+                  },
+                  "channels": {
+                    "type": "object"
+                  },
+                  "consent": {
+                    "type": "object"
+                  }
+                },
+                "required": [
+                  "id",
+                  "type",
+                  "channels"
+                ]
+              }
+            },
+            "firstName": {
+              "type": "string"
+            },
+            "lastName": {
+              "type": "string"
+            },
+            "tags": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "country": {
+              "type": "string"
+            },
+            "countryCode": {
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 2
+            },
+            "state": {
+              "type": "string"
+            },
+            "city": {
+              "type": "string"
+            },
+            "address": {
+              "type": "string"
+            },
+            "postalCode": {
+              "type": "string"
+            },
+            "gender": {
+              "type": "string",
+              "enum": [
+                "m",
+                "f"
+              ]
+            },
+            "birthdate": {
+              "type": "string"
+            },
+            "customProperties": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "contactID",
+            "identifiers"
+          ]
+        },
+        "request": {
+          "method": "PATCH",
+          "path": "/contacts/{{contactID}}",
+          "success": [
+            200
+          ],
+          "baseUrl": "https://api.omnisend.com/v3",
+          "headers": {
+            "Content-Type": "application/json",
+            "X-API-KEY": "{{apiKey}}"
+          },
+          "body": {
+            "identifiers": "{{identifiers}}",
+            "firstName": "{{firstName}}",
+            "lastName": "{{lastName}}",
+            "tags": "{{tags}}",
+            "country": "{{country}}",
+            "countryCode": "{{countryCode}}",
+            "state": "{{state}}",
+            "city": "{{city}}",
+            "address": "{{address}}",
+            "postalCode": "{{postalCode}}",
+            "gender": "{{gender}}",
+            "birthdate": "{{birthdate}}",
+            "customProperties": "{{customProperties}}"
+          }
+        }
+      },
+      "events.create": {
+        "kind": "action",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "title": "Send a customer event",
+        "description": "Send a customer event to Omnisend. Events can trigger automations and track customer behavior.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "eventName": {
+              "type": "string",
+              "minLength": 1
+            },
+            "origin": {
+              "type": "string",
+              "minLength": 1
+            },
+            "eventID": {
+              "type": "string",
+              "minLength": 1
+            },
+            "contact": {
+              "type": "object"
+            },
+            "properties": {
+              "type": "object"
+            },
+            "eventTime": {
+              "type": "string",
+              "minLength": 1
+            },
+            "eventVersion": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "eventName",
+            "origin"
+          ]
+        },
+        "request": {
+          "method": "POST",
+          "path": "/events",
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "eventName": "{{eventName}}",
+            "origin": "{{origin}}",
+            "eventID": "{{eventID}}",
+            "contact": "{{contact}}",
+            "properties": "{{properties}}",
+            "eventTime": "{{eventTime}}",
+            "eventVersion": "{{eventVersion}}"
+          },
+          "success": [
+            202
+          ]
+        }
+      },
+      "events.definitions.list": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        },
+        "title": "List custom event definitions",
+        "description": "List custom events created in Omnisend with GET /events on API v3. The response body is a JSON array.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/events",
+          "success": [
+            200
+          ],
+          "baseUrl": "https://api.omnisend.com/v3",
+          "headers": {
+            "X-API-KEY": "{{apiKey}}"
+          }
+        }
+      },
+      "events.list": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "title": "List events",
+        "description": "Retrieve custom event metadata created in Omnisend.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "category": {
+              "type": "string",
+              "enum": [
+                "automations",
+                "events",
+                "segments"
+              ]
+            },
+            "events": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "origins": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "includeProperties": {
+              "type": "boolean"
+            },
+            "excludeCustomEvents": {
+              "type": "boolean"
+            }
+          }
+        },
+        "request": {
+          "method": "POST",
+          "path": "/event-metadata/query",
+          "success": [
+            200
+          ],
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "category": "events",
+            "events": "{{events}}",
+            "origins": "{{origins}}",
+            "includeProperties": "{{includeProperties}}",
+            "excludeCustomEvents": "{{excludeCustomEvents}}"
+          }
+        }
+      },
+      "healthcheck": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "read",
+        "title": "Healthcheck",
+        "description": "Read-only Healthcheck.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/contacts",
+          "success": [
+            200
+          ],
+          "query": {
+            "limit": "1"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
       },
       "orders.create": {
         "kind": "action",
@@ -4016,6 +3871,55 @@
             "canceledDate": "{{canceledDate}}"
           },
           "baseUrl": "https://api.omnisend.com/v3"
+        }
+      },
+      "orders.delete": {
+        "kind": "action",
+        "sideEffect": "destructive",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "title": "Delete an order",
+        "description": "Delete an order from Omnisend by its ID.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "orderID": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "orderID"
+          ]
+        },
+        "request": {
+          "method": "DELETE",
+          "path": "/orders/{{orderID}}",
+          "success": [
+            200,
+            204
+          ],
+          "baseUrl": "https://api.omnisend.com/v3",
+          "headers": {
+            "X-API-KEY": "{{apiKey}}"
+          }
         }
       },
       "orders.get": {
@@ -4386,158 +4290,7 @@
           "baseUrl": "https://api.omnisend.com/v3"
         }
       },
-      "orders.delete": {
-        "kind": "action",
-        "sideEffect": "destructive",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "title": "Delete an order",
-        "description": "Delete an order from Omnisend by its ID.",
-        "inputSchema": {
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
-            "orderID": {
-              "type": "string",
-              "minLength": 1
-            }
-          },
-          "required": [
-            "orderID"
-          ]
-        },
-        "request": {
-          "method": "DELETE",
-          "path": "/orders/{{orderID}}",
-          "success": [
-            200,
-            204
-          ],
-          "baseUrl": "https://api.omnisend.com/v3",
-          "headers": {
-            "X-API-KEY": "{{apiKey}}"
-          }
-        }
-      },
-      "categories.list": {
-        "kind": "action",
-        "sideEffect": "read",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "title": "List categories",
-        "description": "List catalog categories from Omnisend API v3 GET /categories.",
-        "inputSchema": {
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
-            "limit": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 250
-            },
-            "offset": {
-              "type": "integer",
-              "minimum": 0
-            }
-          }
-        },
-        "request": {
-          "method": "GET",
-          "path": "/categories",
-          "query": {
-            "limit": "{{limit}}",
-            "offset": "{{offset}}"
-          },
-          "success": [
-            200
-          ],
-          "baseUrl": "https://api.omnisend.com/v3",
-          "headers": {
-            "X-API-KEY": "{{apiKey}}"
-          }
-        }
-      },
-      "categories.get": {
-        "kind": "action",
-        "sideEffect": "read",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "title": "Get a category",
-        "description": "Retrieve one catalog category from Omnisend API v3 GET /categories/{categoryID}.",
-        "inputSchema": {
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
-            "categoryID": {
-              "type": "string",
-              "minLength": 1
-            }
-          },
-          "required": [
-            "categoryID"
-          ]
-        },
-        "request": {
-          "method": "GET",
-          "path": "/categories/{{categoryID}}",
-          "success": [
-            200
-          ],
-          "baseUrl": "https://api.omnisend.com/v3",
-          "headers": {
-            "X-API-KEY": "{{apiKey}}"
-          }
-        }
-      },
-      "categories.create": {
+      "productCategories.create": {
         "kind": "action",
         "sideEffect": "write",
         "timeoutMs": 15000,
@@ -4558,8 +4311,8 @@
           },
           "additionalProperties": false
         },
-        "title": "Create a category",
-        "description": "Create a catalog category with Omnisend API v3 POST /categories.",
+        "title": "Create a product category",
+        "description": "Create a new product category in the Omnisend catalog.",
         "inputSchema": {
           "type": "object",
           "additionalProperties": false,
@@ -4580,15 +4333,13 @@
         },
         "request": {
           "method": "POST",
-          "path": "/categories",
+          "path": "/product-categories",
           "success": [
             200,
             201
           ],
-          "baseUrl": "https://api.omnisend.com/v3",
           "headers": {
-            "Content-Type": "application/json",
-            "X-API-KEY": "{{apiKey}}"
+            "Content-Type": "application/json"
           },
           "body": {
             "title": "{{title}}",
@@ -4596,64 +4347,7 @@
           }
         }
       },
-      "categories.replace": {
-        "kind": "action",
-        "sideEffect": "write",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "title": "Replace a category",
-        "description": "Replace a catalog category title with Omnisend API v3 PUT /categories/{categoryID}.",
-        "inputSchema": {
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
-            "title": {
-              "type": "string",
-              "minLength": 1
-            },
-            "categoryID": {
-              "type": "string",
-              "minLength": 1
-            }
-          },
-          "required": [
-            "title",
-            "categoryID"
-          ]
-        },
-        "request": {
-          "method": "PUT",
-          "path": "/categories/{{categoryID}}",
-          "success": [
-            200
-          ],
-          "baseUrl": "https://api.omnisend.com/v3",
-          "headers": {
-            "Content-Type": "application/json",
-            "X-API-KEY": "{{apiKey}}"
-          },
-          "body": {
-            "title": "{{title}}"
-          }
-        }
-      },
-      "categories.delete": {
+      "productCategories.delete": {
         "kind": "action",
         "sideEffect": "destructive",
         "timeoutMs": 15000,
@@ -4674,32 +4368,844 @@
           },
           "additionalProperties": false
         },
-        "title": "Delete a category",
-        "description": "Delete a catalog category with Omnisend API v3 DELETE /categories/{categoryID}.",
+        "title": "Delete a product category",
+        "description": "Remove a product category from Omnisend by its ID.",
         "inputSchema": {
           "type": "object",
           "additionalProperties": false,
           "properties": {
+            "categoryId": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "categoryId"
+          ]
+        },
+        "request": {
+          "method": "DELETE",
+          "path": "/product-categories/{{categoryId}}",
+          "success": [
+            200,
+            204
+          ]
+        }
+      },
+      "productCategories.get": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "title": "Get a product category",
+        "description": "Retrieve one product category by id.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "categoryId": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "categoryId"
+          ]
+        },
+        "request": {
+          "method": "GET",
+          "path": "/product-categories/{{categoryId}}",
+          "success": [
+            200
+          ]
+        }
+      },
+      "productCategories.list": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "title": "List product categories",
+        "description": "List catalog product categories.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 250
+            },
+            "offset": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "sort": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        "request": {
+          "method": "GET",
+          "path": "/product-categories",
+          "query": {
+            "limit": "{{limit}}",
+            "offset": "{{offset}}",
+            "sort": "{{sort}}"
+          },
+          "success": [
+            200
+          ]
+        }
+      },
+      "productCategories.update": {
+        "kind": "action",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "title": "Update a product category",
+        "description": "Update an existing product category title in Omnisend.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "title": {
+              "type": "string",
+              "minLength": 1
+            },
             "categoryID": {
               "type": "string",
               "minLength": 1
             }
           },
           "required": [
+            "title",
             "categoryID"
           ]
         },
         "request": {
+          "method": "PATCH",
+          "path": "/product-categories/{{categoryID}}",
+          "success": [
+            200
+          ],
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "title": "{{title}}"
+          }
+        }
+      },
+      "products.create": {
+        "kind": "action",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "title": "Create a product",
+        "description": "Create a catalog product with at least one variant.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "title": {
+              "type": "string",
+              "minLength": 1
+            },
+            "currency": {
+              "type": "string",
+              "minLength": 1
+            },
+            "url": {
+              "type": "string",
+              "minLength": 1
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "inStock",
+                "outOfStock",
+                "notAvailable"
+              ]
+            },
+            "variants": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "title": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "url": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "price": {
+                    "type": "number"
+                  },
+                  "sku": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "inStock",
+                      "outOfStock",
+                      "notAvailable"
+                    ]
+                  },
+                  "defaultImageUrl": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "description": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "images": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  },
+                  "strikeThroughPrice": {
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "id",
+                  "title",
+                  "url",
+                  "price"
+                ]
+              }
+            },
+            "tags": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "type": {
+              "type": "string",
+              "minLength": 1
+            },
+            "images": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "vendor": {
+              "type": "string",
+              "minLength": 1
+            },
+            "createdAt": {
+              "type": "string",
+              "minLength": 1
+            },
+            "updatedAt": {
+              "type": "string",
+              "minLength": 1
+            },
+            "categoryIDs": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "description": {
+              "type": "string",
+              "minLength": 1
+            },
+            "defaultImageUrl": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "id",
+            "title",
+            "currency",
+            "url",
+            "status",
+            "variants"
+          ]
+        },
+        "request": {
+          "method": "POST",
+          "path": "/products",
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "id": "{{id}}",
+            "url": "{{url}}",
+            "tags": "{{tags}}",
+            "type": "{{type}}",
+            "title": "{{title}}",
+            "images": "{{images}}",
+            "status": "{{status}}",
+            "vendor": "{{vendor}}",
+            "currency": "{{currency}}",
+            "variants": "{{variants}}",
+            "createdAt": "{{createdAt}}",
+            "updatedAt": "{{updatedAt}}",
+            "categoryIDs": "{{categoryIDs}}",
+            "description": "{{description}}",
+            "defaultImageUrl": "{{defaultImageUrl}}"
+          },
+          "success": [
+            200,
+            201
+          ]
+        }
+      },
+      "products.delete": {
+        "kind": "action",
+        "sideEffect": "destructive",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "title": "Delete a product",
+        "description": "Delete a catalog product by id.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "productId": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "productId"
+          ]
+        },
+        "request": {
           "method": "DELETE",
-          "path": "/categories/{{categoryID}}",
+          "path": "/products/{{productId}}",
           "success": [
             200,
             204
+          ]
+        }
+      },
+      "products.get": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
           ],
-          "baseUrl": "https://api.omnisend.com/v3",
-          "headers": {
-            "X-API-KEY": "{{apiKey}}"
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "title": "Get a product",
+        "description": "Retrieve one catalog product by id.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "productId": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "productId"
+          ]
+        },
+        "request": {
+          "method": "GET",
+          "path": "/products/{{productId}}",
+          "success": [
+            200
+          ]
+        }
+      },
+      "products.list": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "title": "List products",
+        "description": "List catalog products with offset pagination.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 250
+            },
+            "offset": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "sort": {
+              "type": "string",
+              "enum": [
+                "date",
+                "updatedAt",
+                "createdAt"
+              ]
+            },
+            "titleContains": {
+              "type": "string",
+              "minLength": 1
+            }
           }
+        },
+        "request": {
+          "method": "GET",
+          "path": "/products",
+          "query": {
+            "limit": "{{limit}}",
+            "offset": "{{offset}}",
+            "sort": "{{sort}}",
+            "titleContains": "{{titleContains}}"
+          },
+          "success": [
+            200
+          ]
+        }
+      },
+      "products.replace": {
+        "kind": "action",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "title": "Replace a product",
+        "description": "Replace an existing product in the Omnisend catalog.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "url": {
+              "type": "string",
+              "minLength": 1
+            },
+            "tags": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "type": {
+              "type": "string",
+              "minLength": 1
+            },
+            "title": {
+              "type": "string",
+              "minLength": 1
+            },
+            "images": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "inStock",
+                "outOfStock",
+                "notAvailable"
+              ]
+            },
+            "vendor": {
+              "type": "string",
+              "minLength": 1
+            },
+            "currency": {
+              "type": "string",
+              "minLength": 1
+            },
+            "variants": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "title": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "url": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "price": {
+                    "type": "number"
+                  },
+                  "sku": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "inStock",
+                      "outOfStock",
+                      "notAvailable"
+                    ]
+                  },
+                  "defaultImageUrl": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "description": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "images": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  },
+                  "strikeThroughPrice": {
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "id",
+                  "title",
+                  "url",
+                  "price"
+                ]
+              }
+            },
+            "createdAt": {
+              "type": "string",
+              "minLength": 1
+            },
+            "updatedAt": {
+              "type": "string",
+              "minLength": 1
+            },
+            "categoryIDs": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "description": {
+              "type": "string",
+              "minLength": 1
+            },
+            "defaultImageUrl": {
+              "type": "string",
+              "minLength": 1
+            },
+            "product_id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "created_at": {
+              "type": "string",
+              "minLength": 1
+            },
+            "updated_at": {
+              "type": "string",
+              "minLength": 1
+            },
+            "category_ids": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "default_image_url": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "product_id",
+            "id",
+            "url",
+            "title",
+            "status",
+            "currency",
+            "variants"
+          ]
+        },
+        "request": {
+          "method": "PUT",
+          "path": "/products/{{product_id}}",
+          "success": [
+            200
+          ],
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "id": "{{id}}",
+            "url": "{{url}}",
+            "tags": "{{tags}}",
+            "type": "{{type}}",
+            "title": "{{title}}",
+            "images": "{{images}}",
+            "status": "{{status}}",
+            "vendor": "{{vendor}}",
+            "currency": "{{currency}}",
+            "variants": "{{variants}}",
+            "createdAt": "{{createdAt}}",
+            "updatedAt": "{{updatedAt}}",
+            "categoryIDs": "{{categoryIDs}}",
+            "description": "{{description}}",
+            "defaultImageUrl": "{{defaultImageUrl}}"
+          }
+        }
+      },
+      "segments.get": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "title": "Get a segment",
+        "description": "Retrieve one audience segment by id.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "segmentId": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "segmentId"
+          ]
+        },
+        "request": {
+          "method": "GET",
+          "path": "/segments/{{segmentId}}",
+          "success": [
+            200
+          ]
+        }
+      },
+      "segments.list": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "title": "List segments",
+        "description": "List audience segments with cursor pagination.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 250
+            },
+            "after": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        "request": {
+          "method": "GET",
+          "path": "/segments",
+          "query": {
+            "limit": "{{limit}}",
+            "after": "{{after}}"
+          },
+          "success": [
+            200
+          ]
         }
       }
     },

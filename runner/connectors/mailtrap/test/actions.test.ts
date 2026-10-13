@@ -24,7 +24,7 @@ const mock = (body: unknown, status = 200, contentType = "application/json") => 
 
 describe("mailtrap declarative connector", () => {
   it("compiles every Composio tool plus origin inventory", () => {
-    expect(Object.keys(actions).length).toBe(53);
+    expect(Object.keys(actions).length).toBe(92);
     expect(actions.healthcheck).toBeDefined();
     expect(actions["accounts.list"]).toBeDefined();
     expect(actions["sandboxes.list"]).toBeDefined();

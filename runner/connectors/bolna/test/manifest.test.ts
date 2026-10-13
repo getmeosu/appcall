@@ -1,13 +1,12 @@
 import { describe, expect, test } from "bun:test";
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
+import { existsSync, readFileSync } from "node:fs";
 import manifest from "../manifest.json";
 import { compileDeclarativeConnector } from "../../../bun/src/declarative/compile";
 
+const recipePath = "scripts/connector-gen/openconnector/recipes/bolna/recipe.json";
+
 const operations = manifest.operations as Record<string, Record<string, unknown>>;
-const recipe = JSON.parse(
-  readFileSync(join(import.meta.dir, "../../../../scripts/connector-gen/openconnector/recipes/bolna/recipe.json"), "utf8"),
-) as {
+const recipe = JSON.parse(readFileSync(recipePath, "utf8")) as {
   selection: { operations: string[] };
   operationSources: Record<string, { sourceRefs: string[] }>;
   source: { spans: Record<string, unknown> };
@@ -21,6 +20,112 @@ const ORIGIN_OPS = [
   "executions.list",
   "executions.get",
 ] as const;
+
+// ops the pinned recipe has real provenance for
+const PINNED_OPS = [
+  "agents.copy",
+  "agents.create",
+  "agents.create_template",
+  "agents.delete",
+  "agents.get",
+  "agents.get_v1",
+  "agents.import",
+  "agents.list",
+  "agents.list_paginated",
+  "agents.patch_v1",
+  "agents.stop_calls",
+  "agents.update",
+  "batches.create",
+  "batches.delete",
+  "batches.executions.list",
+  "batches.get",
+  "batches.list",
+  "batches.schedule",
+  "batches.stop",
+  "calls.create",
+  "executions.agent.get",
+  "executions.get",
+  "executions.list",
+  "healthcheck",
+  "inbound.setup",
+  "knowledgebases.create",
+  "knowledgebases.delete",
+  "knowledgebases.get",
+  "knowledgebases.list",
+  "phone_numbers.list",
+  "phone_numbers.search",
+  "providers.add",
+  "providers.list",
+  "providers.remove",
+  "users.me",
+  "voices.list",
+];
+
+// ops this branch added from the provider's live API; no pinned action id exists
+const DEEPENED_OPS = [
+  "agents.patch",
+  "calls.stop",
+  "dispositions.bulk",
+  "dispositions.create",
+  "dispositions.delete",
+  "dispositions.get",
+  "dispositions.list",
+  "dispositions.test",
+  "dispositions.update",
+  "executions.log",
+  "extraction_categories.create",
+  "extraction_categories.delete",
+  "extraction_categories.list",
+  "extraction_categories.update",
+  "inbound.unlink",
+  "phone_numbers.buy",
+  "phone_numbers.delete",
+  "sip_trunks.create",
+  "sip_trunks.delete",
+  "sip_trunks.get",
+  "sip_trunks.list",
+  "sip_trunks.numbers.add",
+  "sip_trunks.numbers.list",
+  "sip_trunks.numbers.remove",
+  "sip_trunks.update",
+  "sub_accounts.create",
+  "sub_accounts.delete",
+  "sub_accounts.list",
+  "sub_accounts.update",
+  "sub_accounts.usage.get",
+  "sub_accounts.usage.list",
+  "user.models.add",
+  "user.models.delete",
+  "user.models.list",
+  "violations.list",
+  "voices.providers.list",
+  "workflow_campaigns.abort",
+  "workflow_campaigns.create",
+  "workflow_campaigns.entries.list",
+  "workflow_campaigns.entries.upload",
+  "workflow_campaigns.executions.list",
+  "workflow_campaigns.get",
+  "workflow_campaigns.list",
+  "workflow_campaigns.pause",
+  "workflow_campaigns.report",
+  "workflow_campaigns.resume",
+  "workflow_campaigns.start",
+  "workflow_executions.cancel",
+  "workflow_executions.get",
+  "workflow_executions.webhook.resend",
+  "workflow_node_types.list",
+  "workflows.create",
+  "workflows.draft.get",
+  "workflows.draft.save",
+  "workflows.get",
+  "workflows.list",
+  "workflows.publish",
+  "workflows.run",
+  "workflows.update",
+  "workflows.validate",
+  "workflows.version.get",
+  "workflows.webhook.test",
+];
 
 const COMPOSIO_TOOLS: Record<string, string> = {
   BOLNA_ADD_PROVIDER: "providers.add",
@@ -68,9 +173,9 @@ function requestOf(key: string): Record<string, unknown> {
 }
 
 describe("bolna manifest", () => {
-  test("keeps origin identity, auth, and version 0.2.0", () => {
+  test("keeps origin identity and auth and bumps version to 0.2.1", () => {
     expect(manifest.key).toBe("bolna");
-    expect(manifest.version).toBe("0.2.0");
+    expect(manifest.version).toBe("0.2.1");
     expect(manifest.network.allowedHosts).toEqual(["api.bolna.ai"]);
     expect(manifest.http.baseUrl).toBe("https://api.bolna.ai");
     expect(manifest.http.auth).toMatchObject({
@@ -100,7 +205,7 @@ describe("bolna manifest", () => {
 
   test("covers every Composio Bolna tool with a real HTTP operation", () => {
     expect(Object.keys(COMPOSIO_TOOLS)).toHaveLength(35);
-    expect(Object.keys(operations)).toHaveLength(36);
+    expect(Object.keys(operations)).toHaveLength(98);
     for (const [slug, key] of Object.entries(COMPOSIO_TOOLS)) {
       expect(operations[key], slug).toBeDefined();
       if (HANDWRITTEN.has(key)) {
@@ -214,17 +319,76 @@ describe("bolna manifest", () => {
     }
   });
 
-  test("recipe operations match the runner manifest and reuse existing spans", () => {
+  test("recipe mirrors the deepened operations; provenance mappings stay pinned", () => {
+    expect(existsSync(recipePath)).toBe(true);
     expect(recipe.manifest.version).toBe("0.2.0");
     const runnerOps = Object.keys(operations).sort();
-    expect(Object.keys(recipe.manifest.operations).sort()).toEqual(runnerOps);
-    expect([...recipe.selection.operations].sort()).toEqual(runnerOps);
-    expect(Object.keys(recipe.operationSources).sort()).toEqual(runnerOps);
+    const recipeOps = Object.keys(recipe.manifest.operations).sort();
+    expect(recipeOps).toHaveLength(98);
+    expect(runnerOps).toEqual(recipeOps);
+    expect(runnerOps.filter((key) => !Object.hasOwn(recipe.operationSources, key))).toEqual(DEEPENED_OPS);
+    expect(Object.keys(recipe.operationSources).sort()).toEqual(PINNED_OPS);
+    expect([...recipe.selection.operations].sort()).toEqual(PINNED_OPS);
     for (const [opKey, mapping] of Object.entries(recipe.operationSources)) {
       expect(mapping.sourceRefs.length, opKey).toBeGreaterThan(0);
       for (const ref of mapping.sourceRefs) {
         expect(recipe.source.spans[ref], `${opKey} sourceRef ${ref}`).toBeDefined();
       }
     }
+    for (const key of recipeOps) {
+      const runner = operations[key]!;
+      const recipeOp = recipe.manifest.operations[key] as Record<string, unknown>;
+      if (key === "batches.create" || key === "knowledgebases.create") {
+        expect(runner.maxResponseBytes).toBe(key === "batches.create" ? 6291456 : 8388608);
+        expect(recipeOp.maxResponseBytes).toBe(5242880);
+        const { maxResponseBytes: _runnerLimit, ...runnerRest } = runner;
+        const { maxResponseBytes: _recipeLimit, ...recipeRest } = recipeOp;
+        expect(runnerRest).toEqual(recipeRest);
+        continue;
+      }
+      expect(runner, key).toEqual(recipeOp);
+    }
+  });
+
+  test("adds documented JSON routes with sibling limits and no host change", () => {
+    const sibling = operations["users.me"]!;
+    expect(DEEPENED_OPS).toHaveLength(62);
+    for (const key of DEEPENED_OPS) {
+      const operation = operations[key]!;
+      const request = operation.request as {
+        method: string;
+        path: string;
+        success: number[];
+        baseUrl?: string;
+        body?: unknown;
+        headers?: Record<string, string>;
+      };
+      expect(operation.timeoutMs, key).toBe(sibling.timeoutMs);
+      expect(operation.maxInputBytes, key).toBe(sibling.maxInputBytes);
+      expect(operation.maxResponseBytes, key).toBe(sibling.maxResponseBytes);
+      expect(operation.responseFormat, key).toBe("json");
+      expect(operation.validationMode, key).toBe("strict-generated");
+      expect(operation.enforceOutputSchema, key).toBe(true);
+      expect((operation.outputSchema as { type?: string }).type, key).toBe("object");
+      expect(request.baseUrl, key).toBeUndefined();
+      expect(request.success.length, key).toBeGreaterThan(0);
+      expect(request.path.startsWith("/"), key).toBe(true);
+      if (request.method === "GET" || request.method === "DELETE") {
+        expect(request.body, key).toBeUndefined();
+        expect(request.headers?.["Content-Type"], key).toBeUndefined();
+      } else if (request.body !== undefined) {
+        expect(request.headers?.["Content-Type"], key).toBe("application/json");
+      } else {
+        expect(request.headers?.["Content-Type"], key).toBeUndefined();
+      }
+    }
+    expect(manifest.http.baseUrl).toBe("https://api.bolna.ai");
+    expect(manifest.network.allowedHosts).toEqual(["api.bolna.ai"]);
+    expect(manifest.http.auth).toMatchObject({
+      field: "apiKey",
+      in: "header",
+      name: "Authorization",
+      value: "Bearer {{apiKey}}",
+    });
   });
 });

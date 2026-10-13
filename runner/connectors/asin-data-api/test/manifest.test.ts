@@ -2,7 +2,7 @@ import { expect, it } from "bun:test";
 import manifest from "../manifest.json";
 
 it("declares bounded action schemas with titles and descriptions", () => {
-  expect(manifest.version).toBe("0.2.0");
+  expect(manifest.version).toBe("0.2.1");
   expect(manifest.http?.auth.field).toBe("apiKey");
   expect(manifest.network?.allowedHosts).toEqual(["api.asindataapi.com"]);
   for (const [key, op] of Object.entries(manifest.operations) as [string, any][]) {
@@ -24,4 +24,21 @@ it("declares bounded action schemas with titles and descriptions", () => {
     expect(op.validationMode).toBe("strict-generated");
     expect(op.responseFormat).toBe("json");
   }
+});
+
+it("adds the documented JSON destination update and not a body-less collection clear", () => {
+  const operations = manifest.operations as Record<string, any>;
+  expect(Object.keys(operations)).toHaveLength(23);
+  const update = operations["destinations.update"];
+  expect(update.request).toMatchObject({
+    method: "PUT",
+    path: "/destinations/{{destination_id}}",
+    headers: { "Content-Type": "application/json" },
+    success: [200],
+  });
+  expect(update.request.body.enabled).toBe("{{enabled}}");
+  expect(update.request.body.name).toBe("{{name}}");
+  expect(operations["collection-requests.clear"]).toBeUndefined();
+  const paths = Object.values(operations).map((op) => op.request?.path);
+  expect(paths).not.toContain("/collections/{{collection_id}}/requests");
 });

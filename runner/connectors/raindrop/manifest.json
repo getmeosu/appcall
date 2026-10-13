@@ -1,7 +1,7 @@
 {
   "key": "raindrop",
   "name": "Raindrop.io",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "runtime": "bun",
   "visibility": "public",
   "categories": [
@@ -1185,6 +1185,272 @@
         "success": [
           200
         ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "raindrops.createMany": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Create many raindrops",
+      "description": "Create up to 100 Raindrop.io bookmarks via POST /raindrops. The JSON body field is items.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 100,
+            "description": "Raindrop objects to create. Each object uses the create-single-raindrop JSON fields. Maximum 100.",
+            "items": {
+              "type": "object",
+              "properties": {
+                "link": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Bookmark URL."
+                },
+                "title": {
+                  "type": "string",
+                  "description": "Bookmark title."
+                },
+                "excerpt": {
+                  "type": "string",
+                  "description": "Bookmark description."
+                },
+                "note": {
+                  "type": "string",
+                  "description": "Personal note."
+                },
+                "tags": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "Tags to assign."
+                },
+                "important": {
+                  "type": "boolean",
+                  "description": "Mark as favorite."
+                },
+                "cover": {
+                  "type": "string",
+                  "description": "Cover URL."
+                },
+                "type": {
+                  "type": "string",
+                  "description": "link, article, image, video, document, or audio."
+                },
+                "order": {
+                  "type": "number",
+                  "description": "Sort order, ascending."
+                },
+                "created": {
+                  "type": "string",
+                  "description": "Creation timestamp."
+                },
+                "lastUpdate": {
+                  "type": "string",
+                  "description": "Update timestamp."
+                },
+                "pleaseParse": {
+                  "type": "object",
+                  "properties": {},
+                  "additionalProperties": false,
+                  "description": "Empty object to parse metadata in the background."
+                },
+                "collection": {
+                  "type": "object",
+                  "properties": {
+                    "$id": {
+                      "type": "integer",
+                      "description": "Destination collection ID."
+                    }
+                  },
+                  "required": [
+                    "$id"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Destination collection."
+                },
+                "media": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "link": {
+                        "type": "string"
+                      }
+                    },
+                    "additionalProperties": false
+                  },
+                  "description": "Media items as {link}."
+                },
+                "highlights": {
+                  "type": "array",
+                  "description": "Highlights to store with the bookmark."
+                },
+                "reminder": {
+                  "type": "object",
+                  "description": "Reminder settings."
+                }
+              },
+              "additionalProperties": false,
+              "required": [
+                "link"
+              ]
+            }
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "items"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/raindrops",
+        "success": [
+          200
+        ],
+        "body": {
+          "items": "{{items}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "raindrops.updateMany": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Update many raindrops",
+      "description": "Update Raindrop.io bookmarks in one collection via PUT /raindrops/{collectionId}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "collectionId": {
+            "type": "integer",
+            "description": "Collection to update. -1 is Unsorted and -99 is Trash. Update does not support 0."
+          },
+          "nested": {
+            "type": "boolean",
+            "description": "Also update bookmarks in nested child collections."
+          },
+          "search": {
+            "type": "string",
+            "description": "Search expression that limits which bookmarks are updated."
+          },
+          "ids": {
+            "type": "array",
+            "items": {
+              "type": "integer"
+            },
+            "description": "Exact raindrop IDs to update."
+          },
+          "important": {
+            "type": "boolean",
+            "description": "True marks favorites. False clears favorites."
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Tags to append. An empty array removes all tags."
+          },
+          "media": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "link": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": false
+            },
+            "description": "Media items to append. An empty array removes all media."
+          },
+          "cover": {
+            "type": "string",
+            "description": "Cover URL. Use <screenshot> to request screenshots."
+          },
+          "collection": {
+            "type": "object",
+            "properties": {
+              "$id": {
+                "type": "integer",
+                "description": "Collection ID to move the bookmarks into."
+              }
+            },
+            "required": [
+              "$id"
+            ],
+            "additionalProperties": false,
+            "description": "Move matching bookmarks to this collection."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "collectionId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/raindrops/{{collectionId}}",
+        "query": {
+          "nested": "{{nested}}",
+          "search": "{{search}}"
+        },
+        "success": [
+          200
+        ],
+        "body": {
+          "ids": "{{ids}}",
+          "important": "{{important}}",
+          "tags": "{{tags}}",
+          "media": "{{media}}",
+          "cover": "{{cover}}",
+          "collection": "{{collection}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
       },
       "enforceOutputSchema": true,
       "validationMode": "strict-generated",

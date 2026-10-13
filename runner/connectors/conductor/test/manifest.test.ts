@@ -7,6 +7,31 @@ import COMPOSIO_TOOLS from "./composio-cover.json";
 
 const operations = manifest.operations as Record<string, Record<string, unknown>>;
 
+// ops the pinned recipe has real provenance for
+const PINNED_OPS = [
+  "healthcheck",
+  "me.get",
+  "messages.create",
+  "messages.get",
+  "messages.list",
+  "projects.get",
+  "projects.list",
+  "sessions.cancel",
+  "sessions.create",
+  "sessions.get",
+  "sessions.list",
+  "sessions.rename",
+  "transcripts.query",
+  "workspaces.change_state",
+  "workspaces.create",
+  "workspaces.get",
+  "workspaces.list",
+  "workspaces.rename",
+];
+
+// ops this branch added from the provider's live API; no pinned action id exists
+const DEEPENED_OPS = ["workspaces.listForProject"];
+
 const compiled = compileDeclarativeConnector(manifest as never);
 
 function requestOf(key: string): Record<string, unknown> {
@@ -55,7 +80,7 @@ function deepEqual(a: unknown, b: unknown): boolean {
 describe("conductor manifest", () => {
   test("has bounded host, bearer auth, version, and compiles", () => {
     expect(manifest.key).toBe("conductor");
-    expect(manifest.version).toBe("0.2.0");
+    expect(manifest.version).toBe("0.2.1");
     expect(manifest.runtime).toBe("bun");
     expect(manifest.categories).toEqual(["dev-tools"]);
     expect(manifest.network.allowedHosts).toEqual(["api.conductor.build"]);
@@ -68,7 +93,7 @@ describe("conductor manifest", () => {
 
   test("covers every Composio Conductor tool with a real request", () => {
     expect(Object.keys(COMPOSIO_TOOLS)).toHaveLength(17);
-    expect(Object.keys(operations).length).toBe(18);
+    expect(Object.keys(operations).length).toBe(19);
     for (const [slug, key] of Object.entries(COMPOSIO_TOOLS)) {
       expect(operations[key], slug).toBeDefined();
       expect(requestOf(key), slug).toBeDefined();
@@ -133,6 +158,33 @@ describe("conductor manifest", () => {
     expect(requestOf("projects.list").path).toBe("/v0/projects");
     expect(requestOf("projects.get").path).toBe("/v0/projects/{{projectId}}");
     expect(requestOf("workspaces.list").path).toBe("/v0/workspaces");
+    const projectWorkspaces = operations["workspaces.listForProject"]!;
+    const listed = operations["workspaces.list"]!;
+    expect(requestOf("workspaces.listForProject")).toEqual({
+      method: "GET",
+      path: "/v0/projects/{{projectId}}/workspaces",
+      success: [200],
+      query: { limit: "{{limit}}", offset: "{{offset}}", channel: "{{channel}}" },
+    });
+    expect(projectWorkspaces.sideEffect).toBe("read");
+    const schema = projectWorkspaces.inputSchema as {
+      additionalProperties?: boolean;
+      required?: string[];
+      properties?: Record<string, unknown>;
+    };
+    expect(schema.additionalProperties).toBe(false);
+    expect(schema.required).toEqual(["projectId"]);
+    expect(Object.keys(schema.properties ?? {}).sort()).toEqual(["channel", "limit", "offset", "projectId"]);
+    expect(schema.properties?.limit).toEqual((listed.inputSchema as { properties: Record<string, unknown> }).properties.limit);
+    expect(schema.properties?.offset).toEqual((listed.inputSchema as { properties: Record<string, unknown> }).properties.offset);
+    expect(schema.properties?.channel).toEqual((listed.inputSchema as { properties: Record<string, unknown> }).properties.channel);
+    expect(projectWorkspaces.outputSchema).toEqual(listed.outputSchema);
+    expect(projectWorkspaces.timeoutMs).toBe(15000);
+    expect(projectWorkspaces.maxInputBytes).toBe(65536);
+    expect(projectWorkspaces.maxResponseBytes).toBe(5242880);
+    expect(projectWorkspaces.validationMode).toBe(listed.validationMode);
+    expect(projectWorkspaces.responseFormat).toBe("json");
+    expect(projectWorkspaces.enforceOutputSchema).toBe(listed.enforceOutputSchema);
     expect(requestOf("workspaces.get").path).toBe("/v0/workspaces/{{workspaceId}}");
     expect(requestOf("workspaces.create").path).toBe("/v0/workspaces");
     expect(requestOf("workspaces.rename").path).toBe("/v0/workspaces/{{workspaceId}}/rename");
@@ -148,11 +200,19 @@ describe("conductor manifest", () => {
     expect(requestOf("transcripts.query").path).toBe("/v0/sql");
   });
 
-  test("recipe operations equal runner operations", async () => {
+  test("recipe mirrors the deepened operations; provenance mappings stay pinned", async () => {
     const recipe = await Bun.file(new URL("../../../../scripts/connector-gen/openconnector/recipes/conductor/recipe.json", import.meta.url)).json();
-    expect(Object.keys(recipe.manifest.operations).sort()).toEqual(Object.keys(operations).sort());
-    expect([...recipe.selection.operations].sort()).toEqual(Object.keys(operations).sort());
+    const recipeOps = Object.keys(recipe.manifest.operations).sort();
+    const runnerOps = Object.keys(operations).sort();
     expect(recipe.manifest.version).toBe("0.2.0");
+    expect(recipeOps).toHaveLength(19);
+    expect(runnerOps).toEqual(recipeOps);
+    expect(runnerOps.filter((key) => !Object.hasOwn(recipe.operationSources, key))).toEqual(DEEPENED_OPS);
+    expect(Object.keys(recipe.operationSources).sort()).toEqual(PINNED_OPS);
+    expect([...recipe.selection.operations].sort()).toEqual(PINNED_OPS);
+    for (const key of recipeOps) {
+      expect(operations[key], key).toEqual(recipe.manifest.operations[key]);
+    }
   });
 });
 
@@ -202,6 +262,29 @@ describe("conductor compiled handlers", () => {
     expect(health.requests[0]!.method).toBe("GET");
     const me = await invoke("me.get", {}, () => jsonResponse({ userId: "user_1", authMethod: "api-key" }));
     expect(new URL(me.requests[0]!.url).href).toBe("https://api.conductor.build/me");
+  });
+
+  test("workspaces.listForProject is a body-less project-scoped read", async () => {
+    const bare = await invoke("workspaces.listForProject", { projectId: "proj_1" }, () => jsonResponse({ data: [], offset: 0, hasMore: false }));
+    expect(bare.requests[0]!.method).toBe("GET");
+    expect(new URL(bare.requests[0]!.url).href).toBe("https://api.conductor.build/v0/projects/proj_1/workspaces");
+    expect(bare.requests[0]!.headers.get("content-type")).toBeNull();
+    const filtered = await invoke(
+      "workspaces.listForProject",
+      { projectId: "proj_1", limit: 10, offset: 20, channel: "beta" },
+      () => jsonResponse({ data: [], offset: 20, hasMore: false }),
+    );
+    const url = new URL(filtered.requests[0]!.url);
+    expect(url.pathname).toBe("/v0/projects/proj_1/workspaces");
+    expect(url.searchParams.get("limit")).toBe("10");
+    expect(url.searchParams.get("offset")).toBe("20");
+    expect(url.searchParams.get("channel")).toBe("beta");
+    expect(url.searchParams.has("creator")).toBe(false);
+    expect(url.searchParams.has("state")).toBe(false);
+    expect(url.searchParams.has("repo")).toBe(false);
+    expect(url.searchParams.has("name")).toBe(false);
+    expect(url.searchParams.has("since")).toBe(false);
+    expect(url.searchParams.has("includeArchived")).toBe(false);
   });
 
   test("optional query params are omitted when unset and encoded when set", async () => {

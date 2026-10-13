@@ -1011,47 +1011,6 @@
       ]
     },
     "operations": {
-      "healthcheck": {
-        "kind": "action",
-        "sideEffect": "read",
-        "timeoutMs": 5000,
-        "maxInputBytes": 4096,
-        "maxResponseBytes": 65536,
-        "title": "Healthcheck",
-        "description": "Validate the Browser Use API key by reading account billing.",
-        "inputSchema": {
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {}
-        },
-        "outputSchema": {
-          "type": "object",
-          "additionalProperties": false,
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": [
-                "object",
-                "array",
-                "null"
-              ]
-            }
-          }
-        },
-        "request": {
-          "method": "GET",
-          "path": "/billing/account",
-          "success": [
-            200
-          ],
-          "baseUrl": "https://api.browser-use.com/api/v3"
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
       "billing.account.get": {
         "kind": "action",
         "sideEffect": "read",
@@ -1093,26 +1052,100 @@
         "validationMode": "strict-generated",
         "responseFormat": "json"
       },
-      "sessions.list": {
+      "browsers.create": {
         "kind": "action",
-        "sideEffect": "read",
-        "timeoutMs": 15000,
+        "sideEffect": "write",
+        "timeoutMs": 30000,
         "maxInputBytes": 65536,
         "maxResponseBytes": 5242880,
-        "title": "List sessions",
-        "description": "List conversation sessions with each session's latest run and busy or idle status, one page at a time.",
+        "title": "Create browser session",
+        "description": "Launch a paid managed browser for direct CDP control; time is prepaid and unused time is refunded when the browser is stopped.",
         "inputSchema": {
           "type": "object",
           "additionalProperties": false,
           "properties": {
-            "limit": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 100
-            },
-            "cursor": {
+            "profileId": {
               "type": "string",
               "minLength": 1
+            },
+            "proxyCountryCode": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "metadata": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            },
+            "timeout": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 240
+            },
+            "browserScreenWidth": {
+              "type": "integer",
+              "minimum": 320,
+              "maximum": 6144
+            },
+            "browserScreenHeight": {
+              "type": "integer",
+              "minimum": 320,
+              "maximum": 3456
+            },
+            "allowResizing": {
+              "type": "boolean"
+            },
+            "pdfRendererEnabled": {
+              "type": "boolean"
+            },
+            "solveCaptchas": {
+              "type": "boolean"
+            },
+            "customProxy": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "host",
+                "port"
+              ],
+              "properties": {
+                "host": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "port": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 65535
+                },
+                "username": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "password": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "ignoreCertErrors": {
+                  "type": "boolean"
+                }
+              }
+            },
+            "enableRecording": {
+              "type": "boolean"
+            },
+            "extensionIds": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
             }
           }
         },
@@ -1133,28 +1166,107 @@
           }
         },
         "request": {
-          "method": "GET",
-          "path": "/sessions",
+          "method": "POST",
+          "path": "/browsers",
           "success": [
-            200
+            200,
+            201
           ],
-          "query": {
-            "limit": "{{limit}}",
-            "cursor": "{{cursor}}"
+          "body": {
+            "profileId": "{{profileId}}",
+            "proxyCountryCode": "{{proxyCountryCode}}",
+            "metadata": "{{metadata}}",
+            "timeout": "{{timeout}}",
+            "browserScreenWidth": "{{browserScreenWidth}}",
+            "browserScreenHeight": "{{browserScreenHeight}}",
+            "allowResizing": "{{allowResizing}}",
+            "pdfRendererEnabled": "{{pdfRendererEnabled}}",
+            "solveCaptchas": "{{solveCaptchas}}",
+            "customProxy": "{{customProxy}}",
+            "enableRecording": "{{enableRecording}}",
+            "extensionIds": "{{extensionIds}}"
+          },
+          "headers": {
+            "Content-Type": "application/json"
           }
         },
         "enforceOutputSchema": true,
         "validationMode": "strict-generated",
         "responseFormat": "json"
       },
-      "sessions.get": {
+      "browsers.downloads.list": {
         "kind": "action",
         "sideEffect": "read",
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
         "maxResponseBytes": 5242880,
-        "title": "Get session",
-        "description": "Get one conversation session's latest-run summary and busy or idle status.",
+        "title": "List browser downloads",
+        "description": "List one page of files downloaded by a managed browser, optionally including presigned URLs that expire after 15 minutes.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "sessionId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            },
+            "cursor": {
+              "type": "string",
+              "minLength": 1
+            },
+            "includeUrls": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "sessionId"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": [
+                "object",
+                "array",
+                "null"
+              ]
+            }
+          }
+        },
+        "request": {
+          "method": "GET",
+          "path": "/browsers/{{sessionId}}/downloads",
+          "success": [
+            200
+          ],
+          "query": {
+            "limit": "{{limit}}",
+            "cursor": "{{cursor}}",
+            "includeUrls": "{{includeUrls}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "browsers.get": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Get browser session",
+        "description": "Get a managed browser's status, control URLs, costs, metadata, and recording state.",
         "inputSchema": {
           "type": "object",
           "additionalProperties": false,
@@ -1186,7 +1298,7 @@
         },
         "request": {
           "method": "GET",
-          "path": "/sessions/{{sessionId}}",
+          "path": "/browsers/{{sessionId}}",
           "success": [
             200
           ]
@@ -1195,14 +1307,88 @@
         "validationMode": "strict-generated",
         "responseFormat": "json"
       },
-      "sessions.update": {
+      "browsers.list": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "List browser sessions",
+        "description": "List managed browser sessions with status, metadata, and agent-session filters, one page at a time.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "cursor": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "active",
+                "stopped"
+              ]
+            },
+            "metadata": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "pageSize": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            },
+            "agentSessionId": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        "outputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": [
+                "object",
+                "array",
+                "null"
+              ]
+            }
+          }
+        },
+        "request": {
+          "method": "GET",
+          "path": "/browsers",
+          "success": [
+            200
+          ],
+          "query": {
+            "pageNumber": "{{cursor}}",
+            "filterBy": "{{status}}",
+            "metadata": "{{metadata}}",
+            "pageSize": "{{pageSize}}",
+            "agentSessionId": "{{agentSessionId}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "browsers.stop": {
         "kind": "action",
         "sideEffect": "write",
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
         "maxResponseBytes": 5242880,
-        "title": "Update session",
-        "description": "Rename a conversation session.",
+        "title": "Stop browser session",
+        "description": "Stop a managed browser session and refund unused prepaid time subject to the one-minute minimum charge.",
         "inputSchema": {
           "type": "object",
           "additionalProperties": false,
@@ -1210,15 +1396,10 @@
             "sessionId": {
               "type": "string",
               "minLength": 1
-            },
-            "title": {
-              "type": "string",
-              "minLength": 1
             }
           },
           "required": [
-            "sessionId",
-            "title"
+            "sessionId"
           ]
         },
         "outputSchema": {
@@ -1239,12 +1420,12 @@
         },
         "request": {
           "method": "PATCH",
-          "path": "/sessions/{{sessionId}}",
+          "path": "/browsers/{{sessionId}}",
           "success": [
             200
           ],
           "body": {
-            "title": "{{title}}"
+            "action": "stop"
           },
           "headers": {
             "Content-Type": "application/json"
@@ -1254,25 +1435,266 @@
         "validationMode": "strict-generated",
         "responseFormat": "json"
       },
-      "sessions.delete": {
+      "extensions.get": {
         "kind": "action",
-        "sideEffect": "destructive",
+        "sideEffect": "read",
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
         "maxResponseBytes": 5242880,
-        "title": "Delete session",
-        "description": "Soft-delete a conversation session and cancel its active run and pending messages.",
+        "title": "Get extension",
+        "description": "Get an uploaded extension by its ID.",
         "inputSchema": {
           "type": "object",
           "additionalProperties": false,
           "properties": {
-            "sessionId": {
+            "extensionId": {
               "type": "string",
               "minLength": 1
             }
           },
           "required": [
-            "sessionId"
+            "extensionId"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "version": {
+                  "type": "string"
+                },
+                "createdAt": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "name",
+                "version",
+                "createdAt"
+              ]
+            }
+          }
+        },
+        "request": {
+          "method": "GET",
+          "path": "/extensions/{{extensionId}}",
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "extensions.list": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "List extensions",
+        "description": "List the extensions uploaded to this project.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "pageSize": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            },
+            "pageNumber": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        },
+        "outputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "items": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "name": {
+                        "type": "string"
+                      },
+                      "version": {
+                        "type": "string"
+                      },
+                      "createdAt": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "name",
+                      "version",
+                      "createdAt"
+                    ]
+                  }
+                },
+                "totalItems": {
+                  "type": "integer"
+                },
+                "pageNumber": {
+                  "type": "integer"
+                },
+                "pageSize": {
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "items",
+                "totalItems",
+                "pageNumber",
+                "pageSize"
+              ]
+            }
+          }
+        },
+        "request": {
+          "method": "GET",
+          "path": "/extensions",
+          "success": [
+            200
+          ],
+          "query": {
+            "pageSize": "{{pageSize}}",
+            "pageNumber": "{{pageNumber}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "healthcheck": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 5000,
+        "maxInputBytes": 4096,
+        "maxResponseBytes": 65536,
+        "title": "Healthcheck",
+        "description": "Validate the Browser Use API key by reading account billing.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {}
+        },
+        "outputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": [
+                "object",
+                "array",
+                "null"
+              ]
+            }
+          }
+        },
+        "request": {
+          "method": "GET",
+          "path": "/billing/account",
+          "success": [
+            200
+          ],
+          "baseUrl": "https://api.browser-use.com/api/v3"
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "integrations.categories.list": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "List integration categories",
+        "description": "List the category names used to organize Browser Use integration providers.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {}
+        },
+        "outputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": [
+                "object",
+                "array",
+                "null"
+              ]
+            }
+          }
+        },
+        "request": {
+          "method": "GET",
+          "path": "/integrations/categories",
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "integrations.disconnect": {
+        "kind": "action",
+        "sideEffect": "destructive",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Disconnect integration",
+        "description": "Disconnect a downstream provider from the Browser Use project, revoking its availability to future runs.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "provider": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "provider"
           ]
         },
         "outputSchema": {
@@ -1293,7 +1715,265 @@
         },
         "request": {
           "method": "DELETE",
-          "path": "/sessions/{{sessionId}}",
+          "path": "/integrations/{{provider}}",
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "integrations.list": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "List integrations",
+        "description": "Search Browser Use integration providers and filter by popularity or project connection status, one page at a time.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "limit": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "offset": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "search": {
+              "type": "string"
+            },
+            "popularOnly": {
+              "type": "boolean"
+            },
+            "connectedOnly": {
+              "type": "boolean"
+            }
+          }
+        },
+        "outputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": [
+                "object",
+                "array",
+                "null"
+              ]
+            }
+          }
+        },
+        "request": {
+          "method": "GET",
+          "path": "/integrations",
+          "success": [
+            200
+          ],
+          "query": {
+            "limit": "{{limit}}",
+            "offset": "{{offset}}",
+            "search": "{{search}}",
+            "popular_only": "{{popularOnly}}",
+            "connected_only": "{{connectedOnly}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "integrations.status.get": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Get integration status",
+        "description": "Check whether one downstream integration provider is connected to the Browser Use project.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "provider": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "provider"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": [
+                "object",
+                "array",
+                "null"
+              ]
+            }
+          }
+        },
+        "request": {
+          "method": "GET",
+          "path": "/integrations/{{provider}}/status",
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "paymentMethods.list": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "List run payment methods",
+        "description": "Return AgentCard wallets that browser runs can use for payments.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {}
+        },
+        "outputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": [
+                "object",
+                "array",
+                "null"
+              ]
+            }
+          }
+        },
+        "request": {
+          "method": "GET",
+          "path": "/agentcard/wallets",
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "profiles.create": {
+        "kind": "action",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Create browser profile",
+        "description": "Create a persistent browser profile for reusable cookies and browser state.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "name": {
+              "type": "string",
+              "minLength": 1
+            },
+            "userId": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        "outputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": [
+                "object",
+                "array",
+                "null"
+              ]
+            }
+          }
+        },
+        "request": {
+          "method": "POST",
+          "path": "/profiles",
+          "success": [
+            200,
+            201
+          ],
+          "body": {
+            "name": "{{name}}",
+            "userId": "{{userId}}"
+          },
+          "headers": {
+            "Content-Type": "application/json"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "profiles.delete": {
+        "kind": "action",
+        "sideEffect": "destructive",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Delete browser profile",
+        "description": "Permanently delete a persistent browser profile and its configuration.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "profileId": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "profileId"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": [
+                "object",
+                "array",
+                "null"
+              ]
+            }
+          }
+        },
+        "request": {
+          "method": "DELETE",
+          "path": "/profiles/{{profileId}}",
           "success": [
             204
           ]
@@ -1302,25 +1982,25 @@
         "validationMode": "strict-generated",
         "responseFormat": "json"
       },
-      "sessions.feedback.get": {
+      "profiles.get": {
         "kind": "action",
         "sideEffect": "read",
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
         "maxResponseBytes": 5242880,
-        "title": "Get session feedback",
-        "description": "Get all feedback votes recorded for a conversation session.",
+        "title": "Get browser profile",
+        "description": "Get one persistent browser profile's metadata and observed cookie domains.",
         "inputSchema": {
           "type": "object",
           "additionalProperties": false,
           "properties": {
-            "sessionId": {
+            "profileId": {
               "type": "string",
               "minLength": 1
             }
           },
           "required": [
-            "sessionId"
+            "profileId"
           ]
         },
         "outputSchema": {
@@ -1341,7 +2021,7 @@
         },
         "request": {
           "method": "GET",
-          "path": "/sessions/{{sessionId}}/feedback",
+          "path": "/profiles/{{profileId}}",
           "success": [
             200
           ]
@@ -1350,41 +2030,232 @@
         "validationMode": "strict-generated",
         "responseFormat": "json"
       },
-      "sessions.feedback.set": {
+      "profiles.list": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "List browser profiles",
+        "description": "List or search persistent browser profiles one page at a time.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "query": {
+              "type": "string",
+              "minLength": 1
+            },
+            "cursor": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "pageSize": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          }
+        },
+        "outputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": [
+                "object",
+                "array",
+                "null"
+              ]
+            }
+          }
+        },
+        "request": {
+          "method": "GET",
+          "path": "/profiles",
+          "success": [
+            200
+          ],
+          "query": {
+            "query": "{{query}}",
+            "pageNumber": "{{cursor}}",
+            "pageSize": "{{pageSize}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "profiles.update": {
         "kind": "action",
         "sideEffect": "write",
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
         "maxResponseBytes": 5242880,
-        "title": "Set session feedback",
-        "description": "Set or replace feedback for one session chat item.",
+        "title": "Update browser profile",
+        "description": "Update a persistent browser profile's name, user identifier, or both.",
         "inputSchema": {
           "type": "object",
           "additionalProperties": false,
           "properties": {
-            "sessionId": {
+            "profileId": {
               "type": "string",
               "minLength": 1
             },
-            "itemId": {
+            "name": {
               "type": "string",
               "minLength": 1
             },
-            "feedbackType": {
-              "type": "string",
-              "enum": [
-                "up",
-                "down"
-              ]
-            },
-            "comment": {
+            "userId": {
               "type": "string",
               "minLength": 1
             }
           },
           "required": [
-            "sessionId",
-            "itemId"
+            "profileId"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": [
+                "object",
+                "array",
+                "null"
+              ]
+            }
+          }
+        },
+        "request": {
+          "method": "PATCH",
+          "path": "/profiles/{{profileId}}",
+          "success": [
+            200
+          ],
+          "body": {
+            "name": "{{name}}",
+            "userId": "{{userId}}"
+          },
+          "headers": {
+            "Content-Type": "application/json"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "runs.attachments.list": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "List run attachments",
+        "description": "List metadata for the upload files attached to a run.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "runId": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "runId"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "attachments": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "name": {
+                        "type": "string"
+                      },
+                      "contentType": {
+                        "type": "string"
+                      },
+                      "sizeBytes": {
+                        "type": "integer"
+                      },
+                      "status": {
+                        "type": "string",
+                        "enum": [
+                          "pending",
+                          "uploaded"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "name",
+                      "contentType",
+                      "sizeBytes",
+                      "status"
+                    ]
+                  }
+                }
+              },
+              "required": [
+                "attachments"
+              ]
+            }
+          }
+        },
+        "request": {
+          "method": "GET",
+          "path": "/runs/{{runId}}/attachments",
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "runs.cancel": {
+        "kind": "action",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Cancel run",
+        "description": "Idempotently cancel an in-flight browser-agent run.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "runId": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "runId"
           ]
         },
         "outputSchema": {
@@ -1405,351 +2276,14 @@
         },
         "request": {
           "method": "POST",
-          "path": "/sessions/{{sessionId}}/feedback",
+          "path": "/runs/{{runId}}/cancel",
           "success": [
             200
           ],
-          "body": {
-            "itemId": "{{itemId}}",
-            "feedbackType": "{{feedbackType}}",
-            "comment": "{{comment}}"
-          },
+          "body": {},
           "headers": {
             "Content-Type": "application/json"
           }
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "sessions.share.get": {
-        "kind": "action",
-        "sideEffect": "read",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "title": "Get session share",
-        "description": "Get a session's current or inactive public share-link state without changing its exposure.",
-        "inputSchema": {
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
-            "sessionId": {
-              "type": "string",
-              "minLength": 1
-            }
-          },
-          "required": [
-            "sessionId"
-          ]
-        },
-        "outputSchema": {
-          "type": "object",
-          "additionalProperties": false,
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": [
-                "object",
-                "array",
-                "null"
-              ]
-            }
-          }
-        },
-        "request": {
-          "method": "GET",
-          "path": "/sessions/{{sessionId}}/share",
-          "success": [
-            200
-          ]
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "sessions.share.set": {
-        "kind": "action",
-        "sideEffect": "write",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "title": "Set session sharing",
-        "description": "Enable or disable a session's stable public share link via PUT /sessions/{sessionId}/share.",
-        "inputSchema": {
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
-            "sessionId": {
-              "type": "string",
-              "minLength": 1
-            },
-            "isActive": {
-              "type": "boolean"
-            }
-          },
-          "required": [
-            "sessionId",
-            "isActive"
-          ]
-        },
-        "outputSchema": {
-          "type": "object",
-          "additionalProperties": false,
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": [
-                "object",
-                "array",
-                "null"
-              ]
-            }
-          }
-        },
-        "request": {
-          "method": "PUT",
-          "path": "/sessions/{{sessionId}}/share",
-          "success": [
-            200
-          ],
-          "body": {
-            "isActive": "{{isActive}}"
-          },
-          "headers": {
-            "Content-Type": "application/json"
-          }
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "sessions.queue.create": {
-        "kind": "action",
-        "sideEffect": "write",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "title": "Queue session message",
-        "description": "Queue a follow-up for a conversation session, optionally interrupting its active run.",
-        "inputSchema": {
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
-            "sessionId": {
-              "type": "string",
-              "minLength": 1
-            },
-            "text": {
-              "type": "string",
-              "minLength": 1
-            },
-            "interrupt": {
-              "type": "boolean"
-            },
-            "attachedFileIds": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
-            },
-            "deduplicationKey": {
-              "type": "string",
-              "minLength": 1
-            }
-          },
-          "required": [
-            "sessionId",
-            "text"
-          ]
-        },
-        "outputSchema": {
-          "type": "object",
-          "additionalProperties": false,
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": [
-                "object",
-                "array",
-                "null"
-              ]
-            }
-          }
-        },
-        "request": {
-          "method": "POST",
-          "path": "/sessions/{{sessionId}}/queue",
-          "success": [
-            200
-          ],
-          "body": {
-            "text": "{{text}}",
-            "interrupt": "{{interrupt}}",
-            "attachedFileIds": "{{attachedFileIds}}"
-          },
-          "headers": {
-            "Content-Type": "application/json",
-            "X-V4-Queue-Deduplicate": "{{deduplicationKey}}"
-          }
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "sessions.queue.list": {
-        "kind": "action",
-        "sideEffect": "read",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "title": "List session queue",
-        "description": "List pending and recently delivered messages for a conversation session.",
-        "inputSchema": {
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
-            "sessionId": {
-              "type": "string",
-              "minLength": 1
-            }
-          },
-          "required": [
-            "sessionId"
-          ]
-        },
-        "outputSchema": {
-          "type": "object",
-          "additionalProperties": false,
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": [
-                "object",
-                "array",
-                "null"
-              ]
-            }
-          }
-        },
-        "request": {
-          "method": "GET",
-          "path": "/sessions/{{sessionId}}/queue",
-          "success": [
-            200
-          ]
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "sessions.queue.get": {
-        "kind": "action",
-        "sideEffect": "read",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "title": "Get queued message",
-        "description": "Get one queued session message, including its terminal handoff state.",
-        "inputSchema": {
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
-            "sessionId": {
-              "type": "string",
-              "minLength": 1
-            },
-            "messageId": {
-              "type": "integer"
-            }
-          },
-          "required": [
-            "sessionId",
-            "messageId"
-          ]
-        },
-        "outputSchema": {
-          "type": "object",
-          "additionalProperties": false,
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": [
-                "object",
-                "array",
-                "null"
-              ]
-            }
-          }
-        },
-        "request": {
-          "method": "GET",
-          "path": "/sessions/{{sessionId}}/queue/{{messageId}}",
-          "success": [
-            200
-          ]
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "sessions.queue.cancel": {
-        "kind": "action",
-        "sideEffect": "destructive",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "title": "Cancel queued message",
-        "description": "Cancel a queued session message while it is still pending.",
-        "inputSchema": {
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
-            "sessionId": {
-              "type": "string",
-              "minLength": 1
-            },
-            "messageId": {
-              "type": "integer"
-            }
-          },
-          "required": [
-            "sessionId",
-            "messageId"
-          ]
-        },
-        "outputSchema": {
-          "type": "object",
-          "additionalProperties": false,
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": [
-                "object",
-                "array",
-                "null"
-              ]
-            }
-          }
-        },
-        "request": {
-          "method": "DELETE",
-          "path": "/sessions/{{sessionId}}/queue/{{messageId}}",
-          "success": [
-            200
-          ]
         },
         "enforceOutputSchema": true,
         "validationMode": "strict-generated",
@@ -1985,212 +2519,6 @@
         "validationMode": "strict-generated",
         "responseFormat": "json"
       },
-      "runs.list": {
-        "kind": "action",
-        "sideEffect": "read",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "title": "List runs",
-        "description": "List browser-agent runs, optionally restricted to one conversation session, one page at a time.",
-        "inputSchema": {
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
-            "limit": {
-              "type": "integer",
-              "minimum": 1
-            },
-            "cursor": {
-              "type": "string",
-              "minLength": 1
-            },
-            "sessionId": {
-              "type": "string",
-              "minLength": 1
-            }
-          }
-        },
-        "outputSchema": {
-          "type": "object",
-          "additionalProperties": false,
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": [
-                "object",
-                "array",
-                "null"
-              ]
-            }
-          }
-        },
-        "request": {
-          "method": "GET",
-          "path": "/runs",
-          "success": [
-            200
-          ],
-          "query": {
-            "limit": "{{limit}}",
-            "cursor": "{{cursor}}",
-            "sessionId": "{{sessionId}}"
-          }
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "runs.get": {
-        "kind": "action",
-        "sideEffect": "read",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "title": "Get run",
-        "description": "Get a run's full result and usage.",
-        "inputSchema": {
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
-            "runId": {
-              "type": "string",
-              "minLength": 1
-            }
-          },
-          "required": [
-            "runId"
-          ]
-        },
-        "outputSchema": {
-          "type": "object",
-          "additionalProperties": false,
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": [
-                "object",
-                "array",
-                "null"
-              ]
-            }
-          }
-        },
-        "request": {
-          "method": "GET",
-          "path": "/runs/{{runId}}",
-          "success": [
-            200
-          ]
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "runs.status.get": {
-        "kind": "action",
-        "sideEffect": "read",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "title": "Get run status",
-        "description": "Read a run's lightweight indexed status for caller-controlled polling.",
-        "inputSchema": {
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
-            "runId": {
-              "type": "string",
-              "minLength": 1
-            }
-          },
-          "required": [
-            "runId"
-          ]
-        },
-        "outputSchema": {
-          "type": "object",
-          "additionalProperties": false,
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": [
-                "object",
-                "array",
-                "null"
-              ]
-            }
-          }
-        },
-        "request": {
-          "method": "GET",
-          "path": "/runs/{{runId}}/status",
-          "success": [
-            200
-          ]
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "runs.cancel": {
-        "kind": "action",
-        "sideEffect": "write",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "title": "Cancel run",
-        "description": "Idempotently cancel an in-flight browser-agent run.",
-        "inputSchema": {
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
-            "runId": {
-              "type": "string",
-              "minLength": 1
-            }
-          },
-          "required": [
-            "runId"
-          ]
-        },
-        "outputSchema": {
-          "type": "object",
-          "additionalProperties": false,
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": [
-                "object",
-                "array",
-                "null"
-              ]
-            }
-          }
-        },
-        "request": {
-          "method": "POST",
-          "path": "/runs/{{runId}}/cancel",
-          "success": [
-            200
-          ],
-          "body": {},
-          "headers": {
-            "Content-Type": "application/json"
-          }
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
       "runs.events.list": {
         "kind": "action",
         "sideEffect": "read",
@@ -2257,102 +2585,26 @@
         "validationMode": "strict-generated",
         "responseFormat": "json"
       },
-      "browsers.create": {
+      "runs.get": {
         "kind": "action",
-        "sideEffect": "write",
-        "timeoutMs": 30000,
+        "sideEffect": "read",
+        "timeoutMs": 15000,
         "maxInputBytes": 65536,
         "maxResponseBytes": 5242880,
-        "title": "Create browser session",
-        "description": "Launch a paid managed browser for direct CDP control; time is prepaid and unused time is refunded when the browser is stopped.",
+        "title": "Get run",
+        "description": "Get a run's full result and usage.",
         "inputSchema": {
           "type": "object",
           "additionalProperties": false,
           "properties": {
-            "profileId": {
+            "runId": {
               "type": "string",
               "minLength": 1
-            },
-            "proxyCountryCode": {
-              "type": [
-                "string",
-                "null"
-              ]
-            },
-            "metadata": {
-              "type": "object",
-              "additionalProperties": {
-                "type": "string"
-              }
-            },
-            "timeout": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 240
-            },
-            "browserScreenWidth": {
-              "type": "integer",
-              "minimum": 320,
-              "maximum": 6144
-            },
-            "browserScreenHeight": {
-              "type": "integer",
-              "minimum": 320,
-              "maximum": 3456
-            },
-            "allowResizing": {
-              "type": "boolean"
-            },
-            "pdfRendererEnabled": {
-              "type": "boolean"
-            },
-            "solveCaptchas": {
-              "type": "boolean"
-            },
-            "customProxy": {
-              "type": "object",
-              "additionalProperties": false,
-              "required": [
-                "host",
-                "port"
-              ],
-              "properties": {
-                "host": {
-                  "type": "string",
-                  "minLength": 1
-                },
-                "port": {
-                  "type": "integer",
-                  "minimum": 1,
-                  "maximum": 65535
-                },
-                "username": {
-                  "type": [
-                    "string",
-                    "null"
-                  ]
-                },
-                "password": {
-                  "type": [
-                    "string",
-                    "null"
-                  ]
-                },
-                "ignoreCertErrors": {
-                  "type": "boolean"
-                }
-              }
-            },
-            "enableRecording": {
-              "type": "boolean"
-            },
-            "extensionIds": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
             }
-          }
+          },
+          "required": [
+            "runId"
+          ]
         },
         "outputSchema": {
           "type": "object",
@@ -2371,242 +2623,41 @@
           }
         },
         "request": {
-          "method": "POST",
-          "path": "/browsers",
+          "method": "GET",
+          "path": "/runs/{{runId}}",
           "success": [
-            200,
-            201
-          ],
-          "body": {
-            "profileId": "{{profileId}}",
-            "proxyCountryCode": "{{proxyCountryCode}}",
-            "metadata": "{{metadata}}",
-            "timeout": "{{timeout}}",
-            "browserScreenWidth": "{{browserScreenWidth}}",
-            "browserScreenHeight": "{{browserScreenHeight}}",
-            "allowResizing": "{{allowResizing}}",
-            "pdfRendererEnabled": "{{pdfRendererEnabled}}",
-            "solveCaptchas": "{{solveCaptchas}}",
-            "customProxy": "{{customProxy}}",
-            "enableRecording": "{{enableRecording}}",
-            "extensionIds": "{{extensionIds}}"
-          },
-          "headers": {
-            "Content-Type": "application/json"
-          }
+            200
+          ]
         },
         "enforceOutputSchema": true,
         "validationMode": "strict-generated",
         "responseFormat": "json"
       },
-      "browsers.list": {
+      "runs.list": {
         "kind": "action",
         "sideEffect": "read",
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
         "maxResponseBytes": 5242880,
-        "title": "List browser sessions",
-        "description": "List managed browser sessions with status, metadata, and agent-session filters, one page at a time.",
+        "title": "List runs",
+        "description": "List browser-agent runs, optionally restricted to one conversation session, one page at a time.",
         "inputSchema": {
           "type": "object",
           "additionalProperties": false,
           "properties": {
-            "cursor": {
+            "limit": {
               "type": "integer",
               "minimum": 1
             },
-            "status": {
-              "type": "string",
-              "enum": [
-                "active",
-                "stopped"
-              ]
-            },
-            "metadata": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
-            },
-            "pageSize": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 100
-            },
-            "agentSessionId": {
-              "type": "string",
-              "minLength": 1
-            }
-          }
-        },
-        "outputSchema": {
-          "type": "object",
-          "additionalProperties": false,
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": [
-                "object",
-                "array",
-                "null"
-              ]
-            }
-          }
-        },
-        "request": {
-          "method": "GET",
-          "path": "/browsers",
-          "success": [
-            200
-          ],
-          "query": {
-            "pageNumber": "{{cursor}}",
-            "filterBy": "{{status}}",
-            "metadata": "{{metadata}}",
-            "pageSize": "{{pageSize}}",
-            "agentSessionId": "{{agentSessionId}}"
-          }
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "browsers.get": {
-        "kind": "action",
-        "sideEffect": "read",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "title": "Get browser session",
-        "description": "Get a managed browser's status, control URLs, costs, metadata, and recording state.",
-        "inputSchema": {
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
-            "sessionId": {
-              "type": "string",
-              "minLength": 1
-            }
-          },
-          "required": [
-            "sessionId"
-          ]
-        },
-        "outputSchema": {
-          "type": "object",
-          "additionalProperties": false,
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": [
-                "object",
-                "array",
-                "null"
-              ]
-            }
-          }
-        },
-        "request": {
-          "method": "GET",
-          "path": "/browsers/{{sessionId}}",
-          "success": [
-            200
-          ]
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "browsers.stop": {
-        "kind": "action",
-        "sideEffect": "write",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "title": "Stop browser session",
-        "description": "Stop a managed browser session and refund unused prepaid time subject to the one-minute minimum charge.",
-        "inputSchema": {
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
-            "sessionId": {
-              "type": "string",
-              "minLength": 1
-            }
-          },
-          "required": [
-            "sessionId"
-          ]
-        },
-        "outputSchema": {
-          "type": "object",
-          "additionalProperties": false,
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": [
-                "object",
-                "array",
-                "null"
-              ]
-            }
-          }
-        },
-        "request": {
-          "method": "PATCH",
-          "path": "/browsers/{{sessionId}}",
-          "success": [
-            200
-          ],
-          "body": {
-            "action": "stop"
-          },
-          "headers": {
-            "Content-Type": "application/json"
-          }
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "browsers.downloads.list": {
-        "kind": "action",
-        "sideEffect": "read",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "title": "List browser downloads",
-        "description": "List one page of files downloaded by a managed browser, optionally including presigned URLs that expire after 15 minutes.",
-        "inputSchema": {
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
-            "sessionId": {
-              "type": "string",
-              "minLength": 1
-            },
-            "limit": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 100
-            },
             "cursor": {
               "type": "string",
               "minLength": 1
             },
-            "includeUrls": {
-              "type": "boolean"
+            "sessionId": {
+              "type": "string",
+              "minLength": 1
             }
-          },
-          "required": [
-            "sessionId"
-          ]
+          }
         },
         "outputSchema": {
           "type": "object",
@@ -2626,155 +2677,39 @@
         },
         "request": {
           "method": "GET",
-          "path": "/browsers/{{sessionId}}/downloads",
+          "path": "/runs",
           "success": [
             200
           ],
           "query": {
             "limit": "{{limit}}",
             "cursor": "{{cursor}}",
-            "includeUrls": "{{includeUrls}}"
+            "sessionId": "{{sessionId}}"
           }
         },
         "enforceOutputSchema": true,
         "validationMode": "strict-generated",
         "responseFormat": "json"
       },
-      "profiles.create": {
-        "kind": "action",
-        "sideEffect": "write",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "title": "Create browser profile",
-        "description": "Create a persistent browser profile for reusable cookies and browser state.",
-        "inputSchema": {
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
-            "name": {
-              "type": "string",
-              "minLength": 1
-            },
-            "userId": {
-              "type": "string",
-              "minLength": 1
-            }
-          }
-        },
-        "outputSchema": {
-          "type": "object",
-          "additionalProperties": false,
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": [
-                "object",
-                "array",
-                "null"
-              ]
-            }
-          }
-        },
-        "request": {
-          "method": "POST",
-          "path": "/profiles",
-          "success": [
-            200,
-            201
-          ],
-          "body": {
-            "name": "{{name}}",
-            "userId": "{{userId}}"
-          },
-          "headers": {
-            "Content-Type": "application/json"
-          }
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "profiles.list": {
+      "runs.status.get": {
         "kind": "action",
         "sideEffect": "read",
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
         "maxResponseBytes": 5242880,
-        "title": "List browser profiles",
-        "description": "List or search persistent browser profiles one page at a time.",
+        "title": "Get run status",
+        "description": "Read a run's lightweight indexed status for caller-controlled polling.",
         "inputSchema": {
           "type": "object",
           "additionalProperties": false,
           "properties": {
-            "query": {
-              "type": "string",
-              "minLength": 1
-            },
-            "cursor": {
-              "type": "integer",
-              "minimum": 1
-            },
-            "pageSize": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 100
-            }
-          }
-        },
-        "outputSchema": {
-          "type": "object",
-          "additionalProperties": false,
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": [
-                "object",
-                "array",
-                "null"
-              ]
-            }
-          }
-        },
-        "request": {
-          "method": "GET",
-          "path": "/profiles",
-          "success": [
-            200
-          ],
-          "query": {
-            "query": "{{query}}",
-            "pageNumber": "{{cursor}}",
-            "pageSize": "{{pageSize}}"
-          }
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "profiles.get": {
-        "kind": "action",
-        "sideEffect": "read",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "title": "Get browser profile",
-        "description": "Get one persistent browser profile's metadata and observed cookie domains.",
-        "inputSchema": {
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
-            "profileId": {
+            "runId": {
               "type": "string",
               "minLength": 1
             }
           },
           "required": [
-            "profileId"
+            "runId"
           ]
         },
         "outputSchema": {
@@ -2795,7 +2730,7 @@
         },
         "request": {
           "method": "GET",
-          "path": "/profiles/{{profileId}}",
+          "path": "/runs/{{runId}}/status",
           "success": [
             200
           ]
@@ -2804,33 +2739,25 @@
         "validationMode": "strict-generated",
         "responseFormat": "json"
       },
-      "profiles.update": {
+      "sessions.cost.get": {
         "kind": "action",
-        "sideEffect": "write",
+        "sideEffect": "read",
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
         "maxResponseBytes": 5242880,
-        "title": "Update browser profile",
-        "description": "Update a persistent browser profile's name, user identifier, or both.",
+        "title": "Get session cost",
+        "description": "Everything this session has cost so far, split by source.",
         "inputSchema": {
           "type": "object",
           "additionalProperties": false,
           "properties": {
-            "profileId": {
-              "type": "string",
-              "minLength": 1
-            },
-            "name": {
-              "type": "string",
-              "minLength": 1
-            },
-            "userId": {
+            "sessionId": {
               "type": "string",
               "minLength": 1
             }
           },
           "required": [
-            "profileId"
+            "sessionId"
           ]
         },
         "outputSchema": {
@@ -2841,51 +2768,77 @@
           ],
           "properties": {
             "data": {
-              "type": [
-                "object",
-                "array",
-                "null"
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "sessionId": {
+                  "type": "string"
+                },
+                "numRuns": {
+                  "type": "integer"
+                },
+                "llmCostUsd": {
+                  "type": "string"
+                },
+                "searchCostUsd": {
+                  "type": "string"
+                },
+                "browserCostUsd": {
+                  "type": "string"
+                },
+                "proxyCostUsd": {
+                  "type": "string"
+                },
+                "proxyUsedMb": {
+                  "type": "string"
+                },
+                "totalCostUsd": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "sessionId",
+                "numRuns",
+                "llmCostUsd",
+                "searchCostUsd",
+                "browserCostUsd",
+                "proxyCostUsd",
+                "proxyUsedMb",
+                "totalCostUsd"
               ]
             }
           }
         },
         "request": {
-          "method": "PATCH",
-          "path": "/profiles/{{profileId}}",
+          "method": "GET",
+          "path": "/sessions/{{sessionId}}/cost",
           "success": [
             200
-          ],
-          "body": {
-            "name": "{{name}}",
-            "userId": "{{userId}}"
-          },
-          "headers": {
-            "Content-Type": "application/json"
-          }
+          ]
         },
         "enforceOutputSchema": true,
         "validationMode": "strict-generated",
         "responseFormat": "json"
       },
-      "profiles.delete": {
+      "sessions.delete": {
         "kind": "action",
         "sideEffect": "destructive",
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
         "maxResponseBytes": 5242880,
-        "title": "Delete browser profile",
-        "description": "Permanently delete a persistent browser profile and its configuration.",
+        "title": "Delete session",
+        "description": "Soft-delete a conversation session and cancel its active run and pending messages.",
         "inputSchema": {
           "type": "object",
           "additionalProperties": false,
           "properties": {
-            "profileId": {
+            "sessionId": {
               "type": "string",
               "minLength": 1
             }
           },
           "required": [
-            "profileId"
+            "sessionId"
           ]
         },
         "outputSchema": {
@@ -2906,7 +2859,737 @@
         },
         "request": {
           "method": "DELETE",
-          "path": "/profiles/{{profileId}}",
+          "path": "/sessions/{{sessionId}}",
+          "success": [
+            204
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "sessions.feedback.get": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Get session feedback",
+        "description": "Get all feedback votes recorded for a conversation session.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "sessionId": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "sessionId"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": [
+                "object",
+                "array",
+                "null"
+              ]
+            }
+          }
+        },
+        "request": {
+          "method": "GET",
+          "path": "/sessions/{{sessionId}}/feedback",
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "sessions.feedback.set": {
+        "kind": "action",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Set session feedback",
+        "description": "Set or replace feedback for one session chat item.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "sessionId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "itemId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "feedbackType": {
+              "type": "string",
+              "enum": [
+                "up",
+                "down"
+              ]
+            },
+            "comment": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "sessionId",
+            "itemId"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": [
+                "object",
+                "array",
+                "null"
+              ]
+            }
+          }
+        },
+        "request": {
+          "method": "POST",
+          "path": "/sessions/{{sessionId}}/feedback",
+          "success": [
+            200
+          ],
+          "body": {
+            "itemId": "{{itemId}}",
+            "feedbackType": "{{feedbackType}}",
+            "comment": "{{comment}}"
+          },
+          "headers": {
+            "Content-Type": "application/json"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "sessions.get": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Get session",
+        "description": "Get one conversation session's latest-run summary and busy or idle status.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "sessionId": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "sessionId"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": [
+                "object",
+                "array",
+                "null"
+              ]
+            }
+          }
+        },
+        "request": {
+          "method": "GET",
+          "path": "/sessions/{{sessionId}}",
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "sessions.list": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "List sessions",
+        "description": "List conversation sessions with each session's latest run and busy or idle status, one page at a time.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            },
+            "cursor": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        "outputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": [
+                "object",
+                "array",
+                "null"
+              ]
+            }
+          }
+        },
+        "request": {
+          "method": "GET",
+          "path": "/sessions",
+          "success": [
+            200
+          ],
+          "query": {
+            "limit": "{{limit}}",
+            "cursor": "{{cursor}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "sessions.queue.cancel": {
+        "kind": "action",
+        "sideEffect": "destructive",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Cancel queued message",
+        "description": "Cancel a queued session message while it is still pending.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "sessionId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "messageId": {
+              "type": "integer"
+            }
+          },
+          "required": [
+            "sessionId",
+            "messageId"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": [
+                "object",
+                "array",
+                "null"
+              ]
+            }
+          }
+        },
+        "request": {
+          "method": "DELETE",
+          "path": "/sessions/{{sessionId}}/queue/{{messageId}}",
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "sessions.queue.create": {
+        "kind": "action",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Queue session message",
+        "description": "Queue a follow-up for a conversation session, optionally interrupting its active run.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "sessionId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "text": {
+              "type": "string",
+              "minLength": 1
+            },
+            "interrupt": {
+              "type": "boolean"
+            },
+            "attachedFileIds": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "deduplicationKey": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "sessionId",
+            "text"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": [
+                "object",
+                "array",
+                "null"
+              ]
+            }
+          }
+        },
+        "request": {
+          "method": "POST",
+          "path": "/sessions/{{sessionId}}/queue",
+          "success": [
+            200
+          ],
+          "body": {
+            "text": "{{text}}",
+            "interrupt": "{{interrupt}}",
+            "attachedFileIds": "{{attachedFileIds}}"
+          },
+          "headers": {
+            "Content-Type": "application/json",
+            "X-V4-Queue-Deduplicate": "{{deduplicationKey}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "sessions.queue.get": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Get queued message",
+        "description": "Get one queued session message, including its terminal handoff state.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "sessionId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "messageId": {
+              "type": "integer"
+            }
+          },
+          "required": [
+            "sessionId",
+            "messageId"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": [
+                "object",
+                "array",
+                "null"
+              ]
+            }
+          }
+        },
+        "request": {
+          "method": "GET",
+          "path": "/sessions/{{sessionId}}/queue/{{messageId}}",
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "sessions.queue.list": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "List session queue",
+        "description": "List pending and recently delivered messages for a conversation session.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "sessionId": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "sessionId"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": [
+                "object",
+                "array",
+                "null"
+              ]
+            }
+          }
+        },
+        "request": {
+          "method": "GET",
+          "path": "/sessions/{{sessionId}}/queue",
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "sessions.share.get": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Get session share",
+        "description": "Get a session's current or inactive public share-link state without changing its exposure.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "sessionId": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "sessionId"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": [
+                "object",
+                "array",
+                "null"
+              ]
+            }
+          }
+        },
+        "request": {
+          "method": "GET",
+          "path": "/sessions/{{sessionId}}/share",
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "sessions.share.set": {
+        "kind": "action",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Set session sharing",
+        "description": "Enable or disable a session's stable public share link via PUT /sessions/{sessionId}/share.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "sessionId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "isActive": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "sessionId",
+            "isActive"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": [
+                "object",
+                "array",
+                "null"
+              ]
+            }
+          }
+        },
+        "request": {
+          "method": "PUT",
+          "path": "/sessions/{{sessionId}}/share",
+          "success": [
+            200
+          ],
+          "body": {
+            "isActive": "{{isActive}}"
+          },
+          "headers": {
+            "Content-Type": "application/json"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "sessions.update": {
+        "kind": "action",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Update session",
+        "description": "Rename a conversation session.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "sessionId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "title": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "sessionId",
+            "title"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": [
+                "object",
+                "array",
+                "null"
+              ]
+            }
+          }
+        },
+        "request": {
+          "method": "PATCH",
+          "path": "/sessions/{{sessionId}}",
+          "success": [
+            200
+          ],
+          "body": {
+            "title": "{{title}}"
+          },
+          "headers": {
+            "Content-Type": "application/json"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "stripeLink.get": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Get Stripe Link status",
+        "description": "The project's active Stripe Link wallet connection, if any.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {}
+        },
+        "outputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "isConnected": {
+                  "type": "boolean"
+                },
+                "connectionId": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "linkEmail": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "mode": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "enum": [
+                    "test",
+                    "live",
+                    null
+                  ]
+                }
+              },
+              "required": [
+                "isConnected"
+              ]
+            }
+          }
+        },
+        "request": {
+          "method": "GET",
+          "path": "/stripe-link",
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "workspaces.archive": {
+        "kind": "action",
+        "sideEffect": "destructive",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Archive workspace",
+        "description": "Archive a workspace so it is no longer readable through the workspace API.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "workspaceId": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "workspaceId"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": [
+                "object",
+                "array",
+                "null"
+              ]
+            }
+          }
+        },
+        "request": {
+          "method": "DELETE",
+          "path": "/workspaces/{{workspaceId}}",
           "success": [
             204
           ]
@@ -2966,62 +3649,14 @@
         "validationMode": "strict-generated",
         "responseFormat": "json"
       },
-      "workspaces.get": {
+      "workspaces.files.delete": {
         "kind": "action",
-        "sideEffect": "read",
+        "sideEffect": "destructive",
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
         "maxResponseBytes": 5242880,
-        "title": "Get workspace",
-        "description": "Get workspace metadata.",
-        "inputSchema": {
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
-            "workspaceId": {
-              "type": "string",
-              "minLength": 1
-            }
-          },
-          "required": [
-            "workspaceId"
-          ]
-        },
-        "outputSchema": {
-          "type": "object",
-          "additionalProperties": false,
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": [
-                "object",
-                "array",
-                "null"
-              ]
-            }
-          }
-        },
-        "request": {
-          "method": "GET",
-          "path": "/workspaces/{{workspaceId}}",
-          "success": [
-            200
-          ]
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "workspaces.update": {
-        "kind": "action",
-        "sideEffect": "write",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "title": "Update workspace",
-        "description": "Rename a workspace.",
+        "title": "Delete workspace file",
+        "description": "Permanently delete one exact relative file path from a workspace.",
         "inputSchema": {
           "type": "object",
           "additionalProperties": false,
@@ -3030,67 +3665,14 @@
               "type": "string",
               "minLength": 1
             },
-            "name": {
+            "path": {
               "type": "string",
               "minLength": 1
             }
           },
           "required": [
-            "workspaceId"
-          ]
-        },
-        "outputSchema": {
-          "type": "object",
-          "additionalProperties": false,
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": [
-                "object",
-                "array",
-                "null"
-              ]
-            }
-          }
-        },
-        "request": {
-          "method": "PATCH",
-          "path": "/workspaces/{{workspaceId}}",
-          "success": [
-            200
-          ],
-          "body": {
-            "name": "{{name}}"
-          },
-          "headers": {
-            "Content-Type": "application/json"
-          }
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "workspaces.archive": {
-        "kind": "action",
-        "sideEffect": "destructive",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "title": "Archive workspace",
-        "description": "Archive a workspace so it is no longer readable through the workspace API.",
-        "inputSchema": {
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
-            "workspaceId": {
-              "type": "string",
-              "minLength": 1
-            }
-          },
-          "required": [
-            "workspaceId"
+            "workspaceId",
+            "path"
           ]
         },
         "outputSchema": {
@@ -3111,10 +3693,13 @@
         },
         "request": {
           "method": "DELETE",
-          "path": "/workspaces/{{workspaceId}}",
+          "path": "/workspaces/{{workspaceId}}/files",
           "success": [
             204
-          ]
+          ],
+          "query": {
+            "path": "{{path}}"
+          }
         },
         "enforceOutputSchema": true,
         "validationMode": "strict-generated",
@@ -3196,14 +3781,121 @@
         "validationMode": "strict-generated",
         "responseFormat": "json"
       },
-      "workspaces.files.delete": {
+      "workspaces.get": {
         "kind": "action",
-        "sideEffect": "destructive",
+        "sideEffect": "read",
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
         "maxResponseBytes": 5242880,
-        "title": "Delete workspace file",
-        "description": "Permanently delete one exact relative file path from a workspace.",
+        "title": "Get workspace",
+        "description": "Get workspace metadata.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "workspaceId": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "workspaceId"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": [
+                "object",
+                "array",
+                "null"
+              ]
+            }
+          }
+        },
+        "request": {
+          "method": "GET",
+          "path": "/workspaces/{{workspaceId}}",
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "workspaces.size.get": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Get workspace size",
+        "description": "Return current storage usage and the plan-specific workspace quota.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "workspaceId": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "workspaceId"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "usedBytes": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "maxBytes": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              },
+              "required": [
+                "usedBytes",
+                "maxBytes"
+              ]
+            }
+          }
+        },
+        "request": {
+          "method": "GET",
+          "path": "/workspaces/{{workspaceId}}/size",
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "workspaces.update": {
+        "kind": "action",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Update workspace",
+        "description": "Rename a workspace.",
         "inputSchema": {
           "type": "object",
           "additionalProperties": false,
@@ -3212,14 +3904,13 @@
               "type": "string",
               "minLength": 1
             },
-            "path": {
+            "name": {
               "type": "string",
               "minLength": 1
             }
           },
           "required": [
-            "workspaceId",
-            "path"
+            "workspaceId"
           ]
         },
         "outputSchema": {
@@ -3239,255 +3930,17 @@
           }
         },
         "request": {
-          "method": "DELETE",
-          "path": "/workspaces/{{workspaceId}}/files",
-          "success": [
-            204
-          ],
-          "query": {
-            "path": "{{path}}"
-          }
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "integrations.list": {
-        "kind": "action",
-        "sideEffect": "read",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "title": "List integrations",
-        "description": "Search Browser Use integration providers and filter by popularity or project connection status, one page at a time.",
-        "inputSchema": {
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
-            "limit": {
-              "type": "integer",
-              "minimum": 1
-            },
-            "offset": {
-              "type": "integer",
-              "minimum": 0
-            },
-            "search": {
-              "type": "string"
-            },
-            "popularOnly": {
-              "type": "boolean"
-            },
-            "connectedOnly": {
-              "type": "boolean"
-            }
-          }
-        },
-        "outputSchema": {
-          "type": "object",
-          "additionalProperties": false,
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": [
-                "object",
-                "array",
-                "null"
-              ]
-            }
-          }
-        },
-        "request": {
-          "method": "GET",
-          "path": "/integrations",
+          "method": "PATCH",
+          "path": "/workspaces/{{workspaceId}}",
           "success": [
             200
           ],
-          "query": {
-            "limit": "{{limit}}",
-            "offset": "{{offset}}",
-            "search": "{{search}}",
-            "popular_only": "{{popularOnly}}",
-            "connected_only": "{{connectedOnly}}"
-          }
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "integrations.categories.list": {
-        "kind": "action",
-        "sideEffect": "read",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "title": "List integration categories",
-        "description": "List the category names used to organize Browser Use integration providers.",
-        "inputSchema": {
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {}
-        },
-        "outputSchema": {
-          "type": "object",
-          "additionalProperties": false,
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": [
-                "object",
-                "array",
-                "null"
-              ]
-            }
-          }
-        },
-        "request": {
-          "method": "GET",
-          "path": "/integrations/categories",
-          "success": [
-            200
-          ]
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "integrations.status.get": {
-        "kind": "action",
-        "sideEffect": "read",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "title": "Get integration status",
-        "description": "Check whether one downstream integration provider is connected to the Browser Use project.",
-        "inputSchema": {
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
-            "provider": {
-              "type": "string",
-              "minLength": 1
-            }
+          "body": {
+            "name": "{{name}}"
           },
-          "required": [
-            "provider"
-          ]
-        },
-        "outputSchema": {
-          "type": "object",
-          "additionalProperties": false,
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": [
-                "object",
-                "array",
-                "null"
-              ]
-            }
+          "headers": {
+            "Content-Type": "application/json"
           }
-        },
-        "request": {
-          "method": "GET",
-          "path": "/integrations/{{provider}}/status",
-          "success": [
-            200
-          ]
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "integrations.disconnect": {
-        "kind": "action",
-        "sideEffect": "destructive",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "title": "Disconnect integration",
-        "description": "Disconnect a downstream provider from the Browser Use project, revoking its availability to future runs.",
-        "inputSchema": {
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
-            "provider": {
-              "type": "string",
-              "minLength": 1
-            }
-          },
-          "required": [
-            "provider"
-          ]
-        },
-        "outputSchema": {
-          "type": "object",
-          "additionalProperties": false,
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": [
-                "object",
-                "array",
-                "null"
-              ]
-            }
-          }
-        },
-        "request": {
-          "method": "DELETE",
-          "path": "/integrations/{{provider}}",
-          "success": [
-            200
-          ]
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "paymentMethods.list": {
-        "kind": "action",
-        "sideEffect": "read",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "title": "List run payment methods",
-        "description": "Return AgentCard wallets that browser runs can use for payments.",
-        "inputSchema": {
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {}
-        },
-        "outputSchema": {
-          "type": "object",
-          "additionalProperties": false,
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": [
-                "object",
-                "array",
-                "null"
-              ]
-            }
-          }
-        },
-        "request": {
-          "method": "GET",
-          "path": "/agentcard/wallets",
-          "success": [
-            200
-          ]
         },
         "enforceOutputSchema": true,
         "validationMode": "strict-generated",

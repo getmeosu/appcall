@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { loadFixtureCases, runCandidateFixtures } from "../../../../scripts/connector-gen/openconnector/recipe-fixtures";
+import { loadFixtureCases, runCandidateFixtures } from "./recipe-fixtures";
 import { compileDeclarativeConnector } from "../../../bun/src/declarative/compile";
 import manifest from "../manifest.json";
 

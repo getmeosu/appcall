@@ -5,6 +5,7 @@ import userFixture from "../fixtures/responses/user.json";
 import incidentGetFixture from "../fixtures/responses/incident-get.json";
 import incidentsListFixture from "../fixtures/responses/incidents-list.json";
 import servicesListFixture from "../fixtures/responses/services-list.json";
+import revocationStatusFixture from "../fixtures/responses/oauth-delegations-revocation-requests-status.json";
 
 const { actions } = compileDeclarativeConnector(manifest as never);
 
@@ -326,6 +327,40 @@ describe("composio tools outside the REST OpenAPI dump", () => {
     expect(calls[0]!.url).toBe("https://mcp.pagerduty.com/mcp");
     expect(header(calls, "Accept")).toBe("application/json, text/event-stream");
     expect(JSON.parse(String(calls[0]!.init?.body))).toEqual({ jsonrpc: "2.0", id: 1, method: "tools/list" });
+  });
+});
+
+describe("oauth delegations revocation request status", () => {
+  it("GETs the deprecated status route with no body and no Content-Type", async () => {
+    const { calls, fetchFn } = mock(revocationStatusFixture);
+    const result = await actions["oauth-delegations.get-revocation-requests-status"]!({
+      apiKey: "token",
+      fetch: fetchFn,
+    }) as Record<string, unknown>;
+    expect(calls[0]!.url).toBe("https://api.pagerduty.com/oauth_delegations/revocation_requests/status");
+    expect(calls[0]!.init?.method).toBe("GET");
+    expect(calls[0]!.init?.body).toBeUndefined();
+    const headers = calls[0]!.init?.headers as Record<string, string>;
+    expect(headers.Accept).toBe("application/vnd.pagerduty+json;version=2");
+    expect(headers.Authorization).toBe("Token token=token");
+    expect(headers["Content-Type"]).toBeUndefined();
+    expect(headers["content-type"]).toBeUndefined();
+    expect(result.data).toEqual(revocationStatusFixture);
+  });
+
+  it("sends optional requested_at_end as a query date-time", async () => {
+    const { calls, fetchFn } = mock(revocationStatusFixture);
+    await actions["oauth-delegations.get-revocation-requests-status"]!({
+      apiKey: "token",
+      requested_at_end: "2026-10-12T00:00:00Z",
+      fetch: fetchFn,
+    });
+    const url = new URL(calls[0]!.url);
+    expect(url.origin).toBe("https://api.pagerduty.com");
+    expect(url.pathname).toBe("/oauth_delegations/revocation_requests/status");
+    expect(url.searchParams.get("requested_at_end")).toBe("2026-10-12T00:00:00Z");
+    expect(calls[0]!.init?.body).toBeUndefined();
+    expect((calls[0]!.init?.headers as Record<string, string>)["Content-Type"]).toBeUndefined();
   });
 });
 

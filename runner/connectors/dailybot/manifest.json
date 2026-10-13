@@ -1,7 +1,7 @@
 {
   "key": "dailybot",
   "name": "Dailybot",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "runtime": "bun",
   "visibility": "public",
   "categories": [
@@ -1169,6 +1169,438 @@
         ],
         "query": {
           "type": "{{type}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "DAILYBOT_CREATE_CHECKIN": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create check-in",
+      "description": "Create a Dailybot check-in from a template with POST /v1/checkins/. This is not POST /v1/checkins/create/.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Check-in name."
+          },
+          "template": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Template UUID from GET /v1/templates/."
+          },
+          "members_uuids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "minItems": 1,
+            "description": "User UUIDs to add as members."
+          },
+          "teams_uuids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "minItems": 1,
+            "description": "Team UUIDs whose members will be added."
+          },
+          "frequency_type": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Schedule type, for example daily or weekly."
+          },
+          "frequency": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Frequency, for example every_day, two, or four."
+          },
+          "frequency_on_days": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 6
+            },
+            "minItems": 1,
+            "description": "Days of the week, 0=Monday through 6=Sunday."
+          }
+        },
+        "required": [
+          "name",
+          "template"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/checkins/",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "success": [
+          201
+        ],
+        "body": {
+          "name": "{{name}}",
+          "template": "{{template}}",
+          "members_uuids": "{{members_uuids}}",
+          "teams_uuids": "{{teams_uuids}}",
+          "frequency_type": "{{frequency_type}}",
+          "frequency": "{{frequency}}",
+          "frequency_on_days": "{{frequency_on_days}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "DAILYBOT_FIND_WORKFLOW": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Find workflows",
+      "description": "List Dailybot workflows with GET /v1/workflows/. The call is body-less and does not set Content-Type.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "is_active": {
+            "type": "boolean",
+            "description": "Filter by active status."
+          },
+          "search": {
+            "type": "string",
+            "maxLength": 256,
+            "description": "Case-insensitive substring match on name."
+          },
+          "start_date": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Created on or after YYYY-MM-DD."
+          },
+          "end_date": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Created on or before YYYY-MM-DD."
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Page number, 1-indexed."
+          },
+          "page_size": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Items per page. Maximum 100."
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Offset-based pagination."
+          },
+          "labels": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Comma-separated Label UUIDs."
+          },
+          "featured": {
+            "type": "boolean",
+            "description": "Filter by the caller's private Featured state."
+          },
+          "prioritize_featured": {
+            "type": "boolean",
+            "description": "When true, Featured rows sort first."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/workflows/",
+        "query": {
+          "is_active": "{{is_active}}",
+          "search": "{{search}}",
+          "start_date": "{{start_date}}",
+          "end_date": "{{end_date}}",
+          "page": "{{page}}",
+          "page_size": "{{page_size}}",
+          "offset": "{{offset}}",
+          "labels": "{{labels}}",
+          "featured": "{{featured}}",
+          "prioritize_featured": "{{prioritize_featured}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "DAILYBOT_SEND_MESSAGE": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 5242880,
+      "title": "Send message",
+      "description": "Send a Dailybot bot message with POST /v1/send-message/. Provide message or messages, and at least one target.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Message text. Required unless messages is set."
+          },
+          "messages": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "additionalProperties": true
+            },
+            "description": "Platform-specific payloads. Required if message is omitted."
+          },
+          "image_url": {
+            "type": "string",
+            "minLength": 1,
+            "description": "HTTPS image URL to attach."
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Free-form metadata echoed in callbacks."
+          },
+          "target_users": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "description": "User UUIDs, emails, or external ids."
+          },
+          "target_channels": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "minLength": 1,
+                      "description": "Channel id."
+                    },
+                    "channel_type": {
+                      "type": "string",
+                      "description": "Optional channel type."
+                    },
+                    "thread": {
+                      "type": "string",
+                      "description": "Parent timestamp or id for a thread reply."
+                    }
+                  },
+                  "required": [
+                    "id"
+                  ],
+                  "additionalProperties": false
+                }
+              ]
+            },
+            "description": "Channel ids, or objects with id and optional channel_type and thread."
+          },
+          "target_teams": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "description": "Team UUIDs. Every member receives the message."
+          },
+          "skip_users_on_time_off": {
+            "type": "boolean",
+            "description": "Skip users flagged as out of office."
+          },
+          "bot_message_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Idempotency id. Re-POST within 72 hours to edit."
+          },
+          "thread_responses": {
+            "type": "array",
+            "maxItems": 10,
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "properties": {
+                "message": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "required": [
+                "message"
+              ],
+              "additionalProperties": false
+            },
+            "description": "Up to 10 replies under the same parent."
+          },
+          "send_as_user": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Slack-only admin override. User UUID."
+          },
+          "buttons": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 25,
+            "items": {
+              "type": "object",
+              "additionalProperties": true,
+              "description": "Button object. Nested callback, modal, and response fields follow the Dailybot button contract."
+            },
+            "description": "Up to 25 link or interactive buttons."
+          },
+          "platform_settings": {
+            "type": "object",
+            "properties": {
+              "bot_username": {
+                "type": "string",
+                "minLength": 1
+              },
+              "bot_icon_url": {
+                "type": "string",
+                "minLength": 1
+              },
+              "bot_icon_emoji": {
+                "type": "string",
+                "minLength": 1
+              },
+              "is_ephemeral": {
+                "type": "boolean"
+              }
+            },
+            "additionalProperties": false,
+            "description": "Slack identity and ephemeral overrides."
+          }
+        },
+        "required": [],
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "anyOf": [
+              {
+                "required": [
+                  "message"
+                ]
+              },
+              {
+                "required": [
+                  "messages"
+                ]
+              }
+            ]
+          },
+          {
+            "anyOf": [
+              {
+                "required": [
+                  "target_users"
+                ]
+              },
+              {
+                "required": [
+                  "target_channels"
+                ]
+              },
+              {
+                "required": [
+                  "target_teams"
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/send-message/",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "success": [
+          200
+        ],
+        "body": {
+          "message": "{{message}}",
+          "messages": "{{messages}}",
+          "image_url": "{{image_url}}",
+          "metadata": "{{metadata}}",
+          "target_users": "{{target_users}}",
+          "target_channels": "{{target_channels}}",
+          "target_teams": "{{target_teams}}",
+          "skip_users_on_time_off": "{{skip_users_on_time_off}}",
+          "bot_message_id": "{{bot_message_id}}",
+          "thread_responses": "{{thread_responses}}",
+          "send_as_user": "{{send_as_user}}",
+          "buttons": "{{buttons}}",
+          "platform_settings": "{{platform_settings}}"
         }
       },
       "enforceOutputSchema": true,

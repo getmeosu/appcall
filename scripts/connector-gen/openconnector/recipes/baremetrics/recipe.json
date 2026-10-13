@@ -498,14 +498,14 @@
       }
     },
     "operations": {
-      "healthcheck": {
-        "kind": "action",
-        "sideEffect": "read",
+      "BAREMETRICS_GET_ACCOUNT": {
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
         "maxResponseBytes": 5242880,
-        "title": "Healthcheck",
-        "description": "Validate the Baremetrics API key with GET /v1/sources.",
+        "kind": "action",
+        "sideEffect": "read",
+        "title": "Get account",
+        "description": "Read the Baremetrics account for the current API key via GET /v1/account.",
         "inputSchema": {
           "type": "object",
           "properties": {},
@@ -525,7 +525,7 @@
         },
         "request": {
           "method": "GET",
-          "path": "/v1/sources",
+          "path": "/v1/account",
           "success": [
             200
           ]
@@ -534,14 +534,14 @@
         "validationMode": "strict-generated",
         "responseFormat": "json"
       },
-      "sources.list": {
-        "kind": "action",
-        "sideEffect": "read",
+      "BAREMETRICS_GET_COHORTS": {
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
         "maxResponseBytes": 5242880,
-        "title": "List sources",
-        "description": "List Baremetrics sources available to the current API key.",
+        "kind": "action",
+        "sideEffect": "read",
+        "title": "Show cohorts",
+        "description": "Read Baremetrics cohort retention via GET /v1/metrics/cohorts. The documented 200 body is a JSON array.",
         "inputSchema": {
           "type": "object",
           "properties": {},
@@ -554,14 +554,14 @@
           ],
           "properties": {
             "data": {
-              "type": "object"
+              "type": "array"
             }
           },
           "additionalProperties": false
         },
         "request": {
           "method": "GET",
-          "path": "/v1/sources",
+          "path": "/v1/metrics/cohorts",
           "success": [
             200
           ]
@@ -570,25 +570,182 @@
         "validationMode": "strict-generated",
         "responseFormat": "json"
       },
-      "customers.list": {
-        "kind": "action",
-        "sideEffect": "read",
+      "BAREMETRICS_GET_METRIC_TREND": {
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
         "maxResponseBytes": 5242880,
-        "title": "List customers",
-        "description": "List customers for a Baremetrics source. sourceId is required and percent-encoded as one path segment.",
+        "kind": "action",
+        "sideEffect": "read",
+        "title": "Show metric trend",
+        "description": "Read one Baremetrics metric time series via GET /v1/metrics/{{metric}}.",
         "inputSchema": {
           "type": "object",
           "properties": {
-            "sourceId": {
+            "metric": {
               "type": "string",
-              "minLength": 1
+              "minLength": 1,
+              "enum": [
+                "active_customers",
+                "active_subscriptions",
+                "active_trials",
+                "arpu",
+                "arr",
+                "cancellations",
+                "churned_customers",
+                "converted_trials",
+                "coupons",
+                "downgrades",
+                "failed_charges",
+                "fees",
+                "ltv",
+                "mrr",
+                "mrr_growth_rate",
+                "net_revenue",
+                "net_revenue_churn",
+                "new_customers",
+                "new_subscriptions",
+                "new_trials",
+                "other_revenue",
+                "plan_quantities",
+                "quick_ratio",
+                "reactivations",
+                "refunds",
+                "revenue_churn",
+                "trial_conversion",
+                "trial_time_to_cancelation",
+                "trial_time_to_conversion",
+                "upgrades",
+                "user_churn"
+              ],
+              "description": "Documented Baremetrics Read API metric name."
+            },
+            "startDate": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Inclusive start date YYYY-MM-DD."
+            },
+            "endDate": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Inclusive end date YYYY-MM-DD."
+            },
+            "compareTo": {
+              "type": "integer",
+              "description": "Number of days ago to compare results to."
             }
           },
+          "additionalProperties": false,
           "required": [
-            "sourceId"
+            "metric",
+            "startDate",
+            "endDate"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
           ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/v1/metrics/{{metric}}",
+          "success": [
+            200
+          ],
+          "query": {
+            "start_date": "{{startDate}}",
+            "end_date": "{{endDate}}",
+            "compare_to": "{{compareTo}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "annotations.create": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "write",
+        "title": "Create annotation",
+        "description": "Create a Baremetrics chart annotation.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "metric": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Metric the annotation is attached to, such as mrr."
+            },
+            "annotation": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Annotation text."
+            },
+            "occurredAt": {
+              "type": "integer",
+              "description": "Unix timestamp for the annotation."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "metric",
+            "annotation",
+            "occurredAt"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "POST",
+          "path": "/v1/annotations",
+          "success": [
+            200,
+            201
+          ],
+          "body": {
+            "metric": "{{metric}}",
+            "annotation": "{{annotation}}",
+            "occurred_at": "{{occurredAt}}"
+          },
+          "headers": {
+            "Accept": "application/json",
+            "Content-Type": "application/json"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "annotations.list": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "read",
+        "title": "List annotations",
+        "description": "List Baremetrics chart annotations.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {},
           "additionalProperties": false
         },
         "outputSchema": {
@@ -605,7 +762,7 @@
         },
         "request": {
           "method": "GET",
-          "path": "/v1/{{sourceId}}/customers",
+          "path": "/v1/annotations",
           "success": [
             200
           ]
@@ -614,14 +771,14 @@
         "validationMode": "strict-generated",
         "responseFormat": "json"
       },
-      "customers.get": {
+      "charges.get": {
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
         "maxResponseBytes": 5242880,
         "kind": "action",
         "sideEffect": "read",
-        "title": "Get customer",
-        "description": "Retrieve one Baremetrics customer by source and oid.",
+        "title": "Get charge",
+        "description": "Retrieve one Baremetrics charge by source and oid.",
         "inputSchema": {
           "type": "object",
           "properties": {
@@ -633,7 +790,7 @@
             "oid": {
               "type": "string",
               "minLength": 1,
-              "description": "Customer object id (oid)."
+              "description": "Charge object id (oid)."
             }
           },
           "additionalProperties": false,
@@ -656,10 +813,69 @@
         },
         "request": {
           "method": "GET",
-          "path": "/v1/{{sourceId}}/customers/{{oid}}",
+          "path": "/v1/{{sourceId}}/charges/{{oid}}",
           "success": [
             200
           ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "charges.list": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "read",
+        "title": "List charges",
+        "description": "List charges for a Baremetrics source.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "sourceId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Baremetrics source identifier."
+            },
+            "customerOid": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Filter by customer oid."
+            },
+            "subscriptionOid": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Filter by subscription oid."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "sourceId"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/v1/{{sourceId}}/charges",
+          "success": [
+            200
+          ],
+          "query": {
+            "customer_oid": "{{customerOid}}",
+            "subscription_oid": "{{subscriptionOid}}"
+          }
         },
         "enforceOutputSchema": true,
         "validationMode": "strict-generated",
@@ -742,6 +958,153 @@
         "validationMode": "strict-generated",
         "responseFormat": "json"
       },
+      "customers.delete": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "destructive",
+        "title": "Delete customer",
+        "description": "Delete a Baremetrics customer that was created via the API.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "sourceId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Baremetrics source identifier."
+            },
+            "oid": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Customer object id (oid)."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "sourceId",
+            "oid"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "DELETE",
+          "path": "/v1/{{sourceId}}/customers/{{oid}}",
+          "success": [
+            200,
+            204
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "customers.get": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "read",
+        "title": "Get customer",
+        "description": "Retrieve one Baremetrics customer by source and oid.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "sourceId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Baremetrics source identifier."
+            },
+            "oid": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Customer object id (oid)."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "sourceId",
+            "oid"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/v1/{{sourceId}}/customers/{{oid}}",
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "customers.list": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "List customers",
+        "description": "List customers for a Baremetrics source. sourceId is required and percent-encoded as one path segment.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "sourceId": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "sourceId"
+          ],
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/v1/{{sourceId}}/customers",
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
       "customers.update": {
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
@@ -817,33 +1180,18 @@
         "validationMode": "strict-generated",
         "responseFormat": "json"
       },
-      "customers.delete": {
+      "healthcheck": {
+        "kind": "action",
+        "sideEffect": "read",
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
         "maxResponseBytes": 5242880,
-        "kind": "action",
-        "sideEffect": "destructive",
-        "title": "Delete customer",
-        "description": "Delete a Baremetrics customer that was created via the API.",
+        "title": "Healthcheck",
+        "description": "Validate the Baremetrics API key with GET /v1/sources.",
         "inputSchema": {
           "type": "object",
-          "properties": {
-            "sourceId": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Baremetrics source identifier."
-            },
-            "oid": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Customer object id (oid)."
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "sourceId",
-            "oid"
-          ]
+          "properties": {},
+          "additionalProperties": false
         },
         "outputSchema": {
           "type": "object",
@@ -858,37 +1206,42 @@
           "additionalProperties": false
         },
         "request": {
-          "method": "DELETE",
-          "path": "/v1/{{sourceId}}/customers/{{oid}}",
+          "method": "GET",
+          "path": "/v1/sources",
           "success": [
-            200,
-            204
+            200
           ]
         },
         "enforceOutputSchema": true,
         "validationMode": "strict-generated",
         "responseFormat": "json"
       },
-      "plans.list": {
+      "metrics.summary": {
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
         "maxResponseBytes": 5242880,
         "kind": "action",
         "sideEffect": "read",
-        "title": "List plans",
-        "description": "List plans for a Baremetrics source.",
+        "title": "Get metrics summary",
+        "description": "Read Baremetrics summary metrics for a date range.",
         "inputSchema": {
           "type": "object",
           "properties": {
-            "sourceId": {
+            "startDate": {
               "type": "string",
               "minLength": 1,
-              "description": "Baremetrics source identifier."
+              "description": "Inclusive start date YYYY-MM-DD."
+            },
+            "endDate": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Inclusive end date YYYY-MM-DD."
             }
           },
           "additionalProperties": false,
           "required": [
-            "sourceId"
+            "startDate",
+            "endDate"
           ]
         },
         "outputSchema": {
@@ -905,61 +1258,14 @@
         },
         "request": {
           "method": "GET",
-          "path": "/v1/{{sourceId}}/plans",
+          "path": "/v1/metrics",
           "success": [
             200
-          ]
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "plans.get": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
-        "sideEffect": "read",
-        "title": "Get plan",
-        "description": "Retrieve one Baremetrics plan by source and oid.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "sourceId": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Baremetrics source identifier."
-            },
-            "oid": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Plan object id (oid)."
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "sourceId",
-            "oid"
-          ]
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
           ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "GET",
-          "path": "/v1/{{sourceId}}/plans/{{oid}}",
-          "success": [
-            200
-          ]
+          "query": {
+            "start_date": "{{startDate}}",
+            "end_date": "{{endDate}}"
+          }
         },
         "enforceOutputSchema": true,
         "validationMode": "strict-generated",
@@ -1058,6 +1364,102 @@
         "validationMode": "strict-generated",
         "responseFormat": "json"
       },
+      "plans.get": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "read",
+        "title": "Get plan",
+        "description": "Retrieve one Baremetrics plan by source and oid.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "sourceId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Baremetrics source identifier."
+            },
+            "oid": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Plan object id (oid)."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "sourceId",
+            "oid"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/v1/{{sourceId}}/plans/{{oid}}",
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "plans.list": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "read",
+        "title": "List plans",
+        "description": "List plans for a Baremetrics source.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "sourceId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Baremetrics source identifier."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "sourceId"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/v1/{{sourceId}}/plans",
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
       "plans.update": {
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
@@ -1127,32 +1529,18 @@
         "validationMode": "strict-generated",
         "responseFormat": "json"
       },
-      "subscriptions.list": {
+      "sources.list": {
+        "kind": "action",
+        "sideEffect": "read",
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
         "maxResponseBytes": 5242880,
-        "kind": "action",
-        "sideEffect": "read",
-        "title": "List subscriptions",
-        "description": "List subscriptions for a Baremetrics source.",
+        "title": "List sources",
+        "description": "List Baremetrics sources available to the current API key.",
         "inputSchema": {
           "type": "object",
-          "properties": {
-            "sourceId": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Baremetrics source identifier."
-            },
-            "customerOid": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Filter by customer oid."
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "sourceId"
-          ]
+          "properties": {},
+          "additionalProperties": false
         },
         "outputSchema": {
           "type": "object",
@@ -1168,26 +1556,23 @@
         },
         "request": {
           "method": "GET",
-          "path": "/v1/{{sourceId}}/subscriptions",
+          "path": "/v1/sources",
           "success": [
             200
-          ],
-          "query": {
-            "customer_oid": "{{customerOid}}"
-          }
+          ]
         },
         "enforceOutputSchema": true,
         "validationMode": "strict-generated",
         "responseFormat": "json"
       },
-      "subscriptions.get": {
+      "subscriptions.cancel": {
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
         "maxResponseBytes": 5242880,
         "kind": "action",
-        "sideEffect": "read",
-        "title": "Get subscription",
-        "description": "Retrieve one Baremetrics subscription by source and oid.",
+        "sideEffect": "destructive",
+        "title": "Cancel subscription",
+        "description": "Cancel a Baremetrics subscription created via the API.",
         "inputSchema": {
           "type": "object",
           "properties": {
@@ -1221,10 +1606,11 @@
           "additionalProperties": false
         },
         "request": {
-          "method": "GET",
+          "method": "DELETE",
           "path": "/v1/{{sourceId}}/subscriptions/{{oid}}",
           "success": [
-            200
+            200,
+            204
           ]
         },
         "enforceOutputSchema": true,
@@ -1309,14 +1695,14 @@
         "validationMode": "strict-generated",
         "responseFormat": "json"
       },
-      "subscriptions.cancel": {
+      "subscriptions.get": {
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
         "maxResponseBytes": 5242880,
         "kind": "action",
-        "sideEffect": "destructive",
-        "title": "Cancel subscription",
-        "description": "Cancel a Baremetrics subscription created via the API.",
+        "sideEffect": "read",
+        "title": "Get subscription",
+        "description": "Retrieve one Baremetrics subscription by source and oid.",
         "inputSchema": {
           "type": "object",
           "properties": {
@@ -1350,25 +1736,24 @@
           "additionalProperties": false
         },
         "request": {
-          "method": "DELETE",
+          "method": "GET",
           "path": "/v1/{{sourceId}}/subscriptions/{{oid}}",
           "success": [
-            200,
-            204
+            200
           ]
         },
         "enforceOutputSchema": true,
         "validationMode": "strict-generated",
         "responseFormat": "json"
       },
-      "charges.list": {
+      "subscriptions.list": {
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
         "maxResponseBytes": 5242880,
         "kind": "action",
         "sideEffect": "read",
-        "title": "List charges",
-        "description": "List charges for a Baremetrics source.",
+        "title": "List subscriptions",
+        "description": "List subscriptions for a Baremetrics source.",
         "inputSchema": {
           "type": "object",
           "properties": {
@@ -1381,11 +1766,6 @@
               "type": "string",
               "minLength": 1,
               "description": "Filter by customer oid."
-            },
-            "subscriptionOid": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Filter by subscription oid."
             }
           },
           "additionalProperties": false,
@@ -1407,221 +1787,12 @@
         },
         "request": {
           "method": "GET",
-          "path": "/v1/{{sourceId}}/charges",
+          "path": "/v1/{{sourceId}}/subscriptions",
           "success": [
             200
           ],
           "query": {
-            "customer_oid": "{{customerOid}}",
-            "subscription_oid": "{{subscriptionOid}}"
-          }
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "charges.get": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
-        "sideEffect": "read",
-        "title": "Get charge",
-        "description": "Retrieve one Baremetrics charge by source and oid.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "sourceId": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Baremetrics source identifier."
-            },
-            "oid": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Charge object id (oid)."
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "sourceId",
-            "oid"
-          ]
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "GET",
-          "path": "/v1/{{sourceId}}/charges/{{oid}}",
-          "success": [
-            200
-          ]
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "annotations.list": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
-        "sideEffect": "read",
-        "title": "List annotations",
-        "description": "List Baremetrics chart annotations.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {},
-          "additionalProperties": false
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "GET",
-          "path": "/v1/annotations",
-          "success": [
-            200
-          ]
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "annotations.create": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
-        "sideEffect": "write",
-        "title": "Create annotation",
-        "description": "Create a Baremetrics chart annotation.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "metric": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Metric the annotation is attached to, such as mrr."
-            },
-            "annotation": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Annotation text."
-            },
-            "occurredAt": {
-              "type": "integer",
-              "description": "Unix timestamp for the annotation."
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "metric",
-            "annotation",
-            "occurredAt"
-          ]
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "POST",
-          "path": "/v1/annotations",
-          "success": [
-            200,
-            201
-          ],
-          "body": {
-            "metric": "{{metric}}",
-            "annotation": "{{annotation}}",
-            "occurred_at": "{{occurredAt}}"
-          },
-          "headers": {
-            "Accept": "application/json",
-            "Content-Type": "application/json"
-          }
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "metrics.summary": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
-        "sideEffect": "read",
-        "title": "Get metrics summary",
-        "description": "Read Baremetrics summary metrics for a date range.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "startDate": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Inclusive start date YYYY-MM-DD."
-            },
-            "endDate": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Inclusive end date YYYY-MM-DD."
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "startDate",
-            "endDate"
-          ]
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "GET",
-          "path": "/v1/metrics",
-          "success": [
-            200
-          ],
-          "query": {
-            "start_date": "{{startDate}}",
-            "end_date": "{{endDate}}"
+            "customer_oid": "{{customerOid}}"
           }
         },
         "enforceOutputSchema": true,

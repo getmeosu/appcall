@@ -592,16 +592,17 @@
       }
     },
     "operations": {
-      "healthcheck": {
+      "automations.list": {
         "kind": "action",
         "sideEffect": "read",
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
         "maxResponseBytes": 5242880,
-        "title": "Healthcheck",
-        "description": "Validate the token with GET /contacts?page=1 using SendFox default per_page=100.",
+        "title": "List automations",
+        "description": "List SendFox automations.",
         "inputSchema": {
           "type": "object",
+          "required": [],
           "properties": {},
           "additionalProperties": false
         },
@@ -619,19 +620,153 @@
         },
         "request": {
           "method": "GET",
-          "path": "/contacts",
+          "path": "/automations",
           "success": [
             200
-          ],
-          "query": {
-            "page": "1"
-          }
+          ]
         },
         "enforceOutputSchema": true,
         "validationMode": "strict-generated",
         "responseFormat": "json"
       },
-      "me.get": {
+      "campaigns.create": {
+        "kind": "action",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "title": "Create campaign",
+        "description": "Create a SendFox campaign as a draft.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "title": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Campaign title."
+            },
+            "subject": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Email subject."
+            },
+            "html": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Email HTML body."
+            },
+            "from_name": {
+              "type": "string",
+              "minLength": 1,
+              "description": "From name."
+            },
+            "from_email": {
+              "type": "string",
+              "minLength": 3,
+              "description": "From email."
+            },
+            "lists": {
+              "type": "array",
+              "description": "List ids to send to.",
+              "items": {
+                "type": "integer",
+                "minimum": 1
+              }
+            }
+          },
+          "required": [
+            "title",
+            "subject",
+            "html",
+            "from_name",
+            "from_email"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          }
+        },
+        "request": {
+          "method": "POST",
+          "path": "/campaigns",
+          "success": [
+            200,
+            201
+          ],
+          "body": {
+            "title": "{{title}}",
+            "subject": "{{subject}}",
+            "html": "{{html}}",
+            "from_name": "{{from_name}}",
+            "from_email": "{{from_email}}",
+            "lists": "{{lists}}"
+          },
+          "headers": {
+            "Accept": "application/json",
+            "Content-Type": "application/json"
+          }
+        }
+      },
+      "campaigns.delete": {
+        "kind": "action",
+        "sideEffect": "destructive",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "title": "Delete campaign",
+        "description": "Delete a draft SendFox campaign.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "campaign_id": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "SendFox campaign id."
+            }
+          },
+          "required": [
+            "campaign_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          }
+        },
+        "request": {
+          "method": "DELETE",
+          "path": "/campaigns/{{campaign_id}}",
+          "success": [
+            200,
+            201,
+            204
+          ]
+        }
+      },
+      "campaigns.get": {
         "kind": "action",
         "sideEffect": "read",
         "timeoutMs": 15000,
@@ -640,12 +775,21 @@
         "enforceOutputSchema": true,
         "validationMode": "strict-generated",
         "responseFormat": "json",
-        "title": "Get current user",
-        "description": "Get the authenticated SendFox user.",
+        "title": "Get campaign",
+        "description": "Get a SendFox campaign by ID.",
         "inputSchema": {
           "type": "object",
           "additionalProperties": false,
-          "properties": {}
+          "properties": {
+            "campaign_id": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "SendFox campaign id."
+            }
+          },
+          "required": [
+            "campaign_id"
+          ]
         },
         "outputSchema": {
           "type": "object",
@@ -661,39 +805,140 @@
         },
         "request": {
           "method": "GET",
-          "path": "/me",
+          "path": "/campaigns/{{campaign_id}}",
           "success": [
             200
           ]
         }
       },
-      "contacts.list": {
+      "campaigns.list": {
         "kind": "action",
         "sideEffect": "read",
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
         "maxResponseBytes": 5242880,
-        "title": "List contacts",
-        "description": "List SendFox contacts with caller-controlled filters and page.",
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "title": "List campaigns",
+        "description": "List SendFox campaigns.",
         "inputSchema": {
           "type": "object",
+          "additionalProperties": false,
           "properties": {
-            "query": {
-              "type": "string",
-              "minLength": 1
-            },
             "page": {
               "type": "integer",
-              "minimum": 1
+              "minimum": 1,
+              "description": "Page number."
+            }
+          }
+        },
+        "outputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          }
+        },
+        "request": {
+          "method": "GET",
+          "path": "/campaigns",
+          "success": [
+            200
+          ],
+          "query": {
+            "page": "{{page}}"
+          }
+        }
+      },
+      "campaigns.update": {
+        "kind": "action",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "title": "Update campaign",
+        "description": "Update a draft SendFox campaign.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "campaign_id": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "SendFox campaign id."
             },
-            "unsubscribed": {
-              "type": "boolean"
-            },
-            "email": {
+            "title": {
               "type": "string",
-              "minLength": 3
+              "minLength": 1,
+              "description": "Campaign title."
+            },
+            "subject": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Email subject."
+            },
+            "html": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Email HTML body."
             }
           },
+          "required": [
+            "campaign_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          }
+        },
+        "request": {
+          "method": "PATCH",
+          "path": "/campaigns/{{campaign_id}}",
+          "success": [
+            200,
+            201,
+            204
+          ],
+          "body": {
+            "title": "{{title}}",
+            "subject": "{{subject}}",
+            "html": "{{html}}"
+          },
+          "headers": {
+            "Accept": "application/json",
+            "Content-Type": "application/json"
+          }
+        }
+      },
+      "contactFields.list": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "List custom contact fields",
+        "description": "List SendFox custom contact fields.",
+        "inputSchema": {
+          "type": "object",
+          "required": [],
+          "properties": {},
           "additionalProperties": false
         },
         "outputSchema": {
@@ -710,13 +955,7 @@
         },
         "request": {
           "method": "GET",
-          "path": "/contacts",
-          "query": {
-            "query": "{{query}}",
-            "page": "{{page}}",
-            "unsubscribed": "{{unsubscribed}}",
-            "email": "{{email}}"
-          },
+          "path": "/contact-fields",
           "success": [
             200
           ]
@@ -725,29 +964,34 @@
         "validationMode": "strict-generated",
         "responseFormat": "json"
       },
-      "contacts.get": {
+      "contacts.activity.get": {
         "kind": "action",
         "sideEffect": "read",
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
         "maxResponseBytes": 5242880,
-        "title": "Get contact",
-        "description": "Get a SendFox contact by ID.",
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "title": "Get contact activity",
+        "description": "Get email activity for a SendFox contact.",
         "inputSchema": {
           "type": "object",
+          "additionalProperties": false,
           "properties": {
             "contact_id": {
               "type": "integer",
-              "minimum": 1
+              "minimum": 1,
+              "description": "SendFox contact id."
             }
           },
           "required": [
             "contact_id"
-          ],
-          "additionalProperties": false
+          ]
         },
         "outputSchema": {
           "type": "object",
+          "additionalProperties": false,
           "required": [
             "data"
           ],
@@ -755,19 +999,15 @@
             "data": {
               "type": "object"
             }
-          },
-          "additionalProperties": false
+          }
         },
         "request": {
           "method": "GET",
-          "path": "/contacts/{{contact_id}}",
+          "path": "/contacts/{{contact_id}}/activity",
           "success": [
             200
           ]
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
+        }
       },
       "contacts.create": {
         "kind": "action",
@@ -844,80 +1084,6 @@
           }
         }
       },
-      "contacts.update": {
-        "kind": "action",
-        "sideEffect": "write",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
-        "title": "Update contact",
-        "description": "Update a SendFox contact's name and list memberships.",
-        "inputSchema": {
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
-            "contact_id": {
-              "type": "integer",
-              "minimum": 1,
-              "description": "SendFox contact id."
-            },
-            "first_name": {
-              "type": "string",
-              "minLength": 1,
-              "description": "First name."
-            },
-            "last_name": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Last name."
-            },
-            "lists": {
-              "type": "array",
-              "description": "Replacement list ids.",
-              "items": {
-                "type": "integer",
-                "minimum": 1
-              }
-            }
-          },
-          "required": [
-            "contact_id"
-          ]
-        },
-        "outputSchema": {
-          "type": "object",
-          "additionalProperties": false,
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          }
-        },
-        "request": {
-          "method": "PATCH",
-          "path": "/contacts/{{contact_id}}",
-          "success": [
-            200,
-            201,
-            204
-          ],
-          "body": {
-            "first_name": "{{first_name}}",
-            "last_name": "{{last_name}}",
-            "lists": "{{lists}}"
-          },
-          "headers": {
-            "Accept": "application/json",
-            "Content-Type": "application/json"
-          }
-        }
-      },
       "contacts.delete": {
         "kind": "action",
         "sideEffect": "destructive",
@@ -965,34 +1131,29 @@
           ]
         }
       },
-      "contacts.activity.get": {
+      "contacts.get": {
         "kind": "action",
         "sideEffect": "read",
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
         "maxResponseBytes": 5242880,
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
-        "title": "Get contact activity",
-        "description": "Get email activity for a SendFox contact.",
+        "title": "Get contact",
+        "description": "Get a SendFox contact by ID.",
         "inputSchema": {
           "type": "object",
-          "additionalProperties": false,
           "properties": {
             "contact_id": {
               "type": "integer",
-              "minimum": 1,
-              "description": "SendFox contact id."
+              "minimum": 1
             }
           },
           "required": [
             "contact_id"
-          ]
+          ],
+          "additionalProperties": false
         },
         "outputSchema": {
           "type": "object",
-          "additionalProperties": false,
           "required": [
             "data"
           ],
@@ -1000,15 +1161,77 @@
             "data": {
               "type": "object"
             }
-          }
+          },
+          "additionalProperties": false
         },
         "request": {
           "method": "GET",
-          "path": "/contacts/{{contact_id}}/activity",
+          "path": "/contacts/{{contact_id}}",
           "success": [
             200
           ]
-        }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "contacts.list": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "List contacts",
+        "description": "List SendFox contacts with caller-controlled filters and page.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "query": {
+              "type": "string",
+              "minLength": 1
+            },
+            "page": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "unsubscribed": {
+              "type": "boolean"
+            },
+            "email": {
+              "type": "string",
+              "minLength": 3
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/contacts",
+          "query": {
+            "query": "{{query}}",
+            "page": "{{page}}",
+            "unsubscribed": "{{unsubscribed}}",
+            "email": "{{email}}"
+          },
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
       },
       "contacts.unsubscribe": {
         "kind": "action",
@@ -1109,100 +1332,7 @@
           }
         }
       },
-      "lists.list": {
-        "kind": "action",
-        "sideEffect": "read",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "title": "List contact lists",
-        "description": "List SendFox contact lists.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "query": {
-              "type": "string",
-              "minLength": 1
-            },
-            "page": {
-              "type": "integer",
-              "minimum": 1
-            }
-          },
-          "additionalProperties": false
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "GET",
-          "path": "/lists",
-          "query": {
-            "query": "{{query}}",
-            "page": "{{page}}"
-          },
-          "success": [
-            200
-          ]
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "lists.get": {
-        "kind": "action",
-        "sideEffect": "read",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "title": "Get contact list",
-        "description": "Get a SendFox contact list by ID.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "list_id": {
-              "type": "integer",
-              "minimum": 1
-            }
-          },
-          "required": [
-            "list_id"
-          ],
-          "additionalProperties": false
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "GET",
-          "path": "/lists/{{list_id}}",
-          "success": [
-            200
-          ]
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "lists.create": {
+      "contacts.update": {
         "kind": "action",
         "sideEffect": "write",
         "timeoutMs": 15000,
@@ -1211,80 +1341,38 @@
         "enforceOutputSchema": true,
         "validationMode": "strict-generated",
         "responseFormat": "json",
-        "title": "Create list",
-        "description": "Create a SendFox contact list.",
+        "title": "Update contact",
+        "description": "Update a SendFox contact's name and list memberships.",
         "inputSchema": {
           "type": "object",
           "additionalProperties": false,
           "properties": {
-            "name": {
-              "type": "string",
-              "minLength": 1,
-              "description": "List name."
-            }
-          },
-          "required": [
-            "name"
-          ]
-        },
-        "outputSchema": {
-          "type": "object",
-          "additionalProperties": false,
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          }
-        },
-        "request": {
-          "method": "POST",
-          "path": "/lists",
-          "success": [
-            200,
-            201,
-            204
-          ],
-          "body": {
-            "name": "{{name}}"
-          },
-          "headers": {
-            "Accept": "application/json",
-            "Content-Type": "application/json"
-          }
-        }
-      },
-      "lists.update": {
-        "kind": "action",
-        "sideEffect": "write",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
-        "title": "Update list",
-        "description": "Rename a SendFox contact list.",
-        "inputSchema": {
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
-            "list_id": {
+            "contact_id": {
               "type": "integer",
               "minimum": 1,
-              "description": "SendFox list id."
+              "description": "SendFox contact id."
             },
-            "name": {
+            "first_name": {
               "type": "string",
               "minLength": 1,
-              "description": "List name."
+              "description": "First name."
+            },
+            "last_name": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Last name."
+            },
+            "lists": {
+              "type": "array",
+              "description": "Replacement list ids.",
+              "items": {
+                "type": "integer",
+                "minimum": 1
+              }
             }
           },
           "required": [
-            "list_id",
-            "name"
+            "contact_id"
           ]
         },
         "outputSchema": {
@@ -1301,111 +1389,21 @@
         },
         "request": {
           "method": "PATCH",
-          "path": "/lists/{{list_id}}",
+          "path": "/contacts/{{contact_id}}",
           "success": [
             200,
             201,
             204
           ],
           "body": {
-            "name": "{{name}}"
+            "first_name": "{{first_name}}",
+            "last_name": "{{last_name}}",
+            "lists": "{{lists}}"
           },
           "headers": {
             "Accept": "application/json",
             "Content-Type": "application/json"
           }
-        }
-      },
-      "lists.delete": {
-        "kind": "action",
-        "sideEffect": "destructive",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
-        "title": "Delete list",
-        "description": "Delete a SendFox contact list.",
-        "inputSchema": {
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
-            "list_id": {
-              "type": "integer",
-              "minimum": 1,
-              "description": "SendFox list id."
-            }
-          },
-          "required": [
-            "list_id"
-          ]
-        },
-        "outputSchema": {
-          "type": "object",
-          "additionalProperties": false,
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          }
-        },
-        "request": {
-          "method": "DELETE",
-          "path": "/lists/{{list_id}}",
-          "success": [
-            200,
-            201,
-            204
-          ]
-        }
-      },
-      "lists.unsubscribes.list": {
-        "kind": "action",
-        "sideEffect": "read",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
-        "title": "List list unsubscribes",
-        "description": "List contacts who stopped a SendFox list.",
-        "inputSchema": {
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
-            "list_id": {
-              "type": "integer",
-              "minimum": 1,
-              "description": "SendFox list id."
-            }
-          },
-          "required": [
-            "list_id"
-          ]
-        },
-        "outputSchema": {
-          "type": "object",
-          "additionalProperties": false,
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          }
-        },
-        "request": {
-          "method": "GET",
-          "path": "/lists/{{list_id}}/unsubscribes",
-          "success": [
-            200
-          ]
         }
       },
       "contactsInList.list": {
@@ -1459,6 +1457,89 @@
           "success": [
             200
           ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "forms.list": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "List forms",
+        "description": "List SendFox forms.",
+        "inputSchema": {
+          "type": "object",
+          "required": [],
+          "properties": {
+            "query": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/forms",
+          "query": {
+            "query": "{{query}}"
+          },
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "healthcheck": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Healthcheck",
+        "description": "Validate the token with GET /contacts?page=1 using SendFox default per_page=100.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/contacts",
+          "success": [
+            200
+          ],
+          "query": {
+            "page": "1"
+          }
         },
         "enforceOutputSchema": true,
         "validationMode": "strict-generated",
@@ -1577,97 +1658,7 @@
           ]
         }
       },
-      "campaigns.list": {
-        "kind": "action",
-        "sideEffect": "read",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
-        "title": "List campaigns",
-        "description": "List SendFox campaigns.",
-        "inputSchema": {
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
-            "page": {
-              "type": "integer",
-              "minimum": 1,
-              "description": "Page number."
-            }
-          }
-        },
-        "outputSchema": {
-          "type": "object",
-          "additionalProperties": false,
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          }
-        },
-        "request": {
-          "method": "GET",
-          "path": "/campaigns",
-          "success": [
-            200
-          ],
-          "query": {
-            "page": "{{page}}"
-          }
-        }
-      },
-      "campaigns.get": {
-        "kind": "action",
-        "sideEffect": "read",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
-        "title": "Get campaign",
-        "description": "Get a SendFox campaign by ID.",
-        "inputSchema": {
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
-            "campaign_id": {
-              "type": "integer",
-              "minimum": 1,
-              "description": "SendFox campaign id."
-            }
-          },
-          "required": [
-            "campaign_id"
-          ]
-        },
-        "outputSchema": {
-          "type": "object",
-          "additionalProperties": false,
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          }
-        },
-        "request": {
-          "method": "GET",
-          "path": "/campaigns/{{campaign_id}}",
-          "success": [
-            200
-          ]
-        }
-      },
-      "campaigns.create": {
+      "lists.create": {
         "kind": "action",
         "sideEffect": "write",
         "timeoutMs": 15000,
@@ -1676,52 +1667,20 @@
         "enforceOutputSchema": true,
         "validationMode": "strict-generated",
         "responseFormat": "json",
-        "title": "Create campaign",
-        "description": "Create a SendFox campaign as a draft.",
+        "title": "Create list",
+        "description": "Create a SendFox contact list.",
         "inputSchema": {
           "type": "object",
           "additionalProperties": false,
           "properties": {
-            "title": {
+            "name": {
               "type": "string",
               "minLength": 1,
-              "description": "Campaign title."
-            },
-            "subject": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Email subject."
-            },
-            "html": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Email HTML body."
-            },
-            "from_name": {
-              "type": "string",
-              "minLength": 1,
-              "description": "From name."
-            },
-            "from_email": {
-              "type": "string",
-              "minLength": 3,
-              "description": "From email."
-            },
-            "lists": {
-              "type": "array",
-              "description": "List ids to send to.",
-              "items": {
-                "type": "integer",
-                "minimum": 1
-              }
+              "description": "List name."
             }
           },
           "required": [
-            "title",
-            "subject",
-            "html",
-            "from_name",
-            "from_email"
+            "name"
           ]
         },
         "outputSchema": {
@@ -1738,89 +1697,14 @@
         },
         "request": {
           "method": "POST",
-          "path": "/campaigns",
-          "success": [
-            200,
-            201
-          ],
-          "body": {
-            "title": "{{title}}",
-            "subject": "{{subject}}",
-            "html": "{{html}}",
-            "from_name": "{{from_name}}",
-            "from_email": "{{from_email}}",
-            "lists": "{{lists}}"
-          },
-          "headers": {
-            "Accept": "application/json",
-            "Content-Type": "application/json"
-          }
-        }
-      },
-      "campaigns.update": {
-        "kind": "action",
-        "sideEffect": "write",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
-        "title": "Update campaign",
-        "description": "Update a draft SendFox campaign.",
-        "inputSchema": {
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
-            "campaign_id": {
-              "type": "integer",
-              "minimum": 1,
-              "description": "SendFox campaign id."
-            },
-            "title": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Campaign title."
-            },
-            "subject": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Email subject."
-            },
-            "html": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Email HTML body."
-            }
-          },
-          "required": [
-            "campaign_id"
-          ]
-        },
-        "outputSchema": {
-          "type": "object",
-          "additionalProperties": false,
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          }
-        },
-        "request": {
-          "method": "PATCH",
-          "path": "/campaigns/{{campaign_id}}",
+          "path": "/lists",
           "success": [
             200,
             201,
             204
           ],
           "body": {
-            "title": "{{title}}",
-            "subject": "{{subject}}",
-            "html": "{{html}}"
+            "name": "{{name}}"
           },
           "headers": {
             "Accept": "application/json",
@@ -1828,7 +1712,7 @@
           }
         }
       },
-      "campaigns.delete": {
+      "lists.delete": {
         "kind": "action",
         "sideEffect": "destructive",
         "timeoutMs": 15000,
@@ -1837,20 +1721,20 @@
         "enforceOutputSchema": true,
         "validationMode": "strict-generated",
         "responseFormat": "json",
-        "title": "Delete campaign",
-        "description": "Delete a draft SendFox campaign.",
+        "title": "Delete list",
+        "description": "Delete a SendFox contact list.",
         "inputSchema": {
           "type": "object",
           "additionalProperties": false,
           "properties": {
-            "campaign_id": {
+            "list_id": {
               "type": "integer",
               "minimum": 1,
-              "description": "SendFox campaign id."
+              "description": "SendFox list id."
             }
           },
           "required": [
-            "campaign_id"
+            "list_id"
           ]
         },
         "outputSchema": {
@@ -1867,11 +1751,245 @@
         },
         "request": {
           "method": "DELETE",
-          "path": "/campaigns/{{campaign_id}}",
+          "path": "/lists/{{list_id}}",
           "success": [
             200,
             201,
             204
+          ]
+        }
+      },
+      "lists.get": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Get contact list",
+        "description": "Get a SendFox contact list by ID.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "list_id": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          "required": [
+            "list_id"
+          ],
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/lists/{{list_id}}",
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "lists.list": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "List contact lists",
+        "description": "List SendFox contact lists.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "query": {
+              "type": "string",
+              "minLength": 1
+            },
+            "page": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/lists",
+          "query": {
+            "query": "{{query}}",
+            "page": "{{page}}"
+          },
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "lists.unsubscribes.list": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "title": "List list unsubscribes",
+        "description": "List contacts who stopped a SendFox list.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "list_id": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "SendFox list id."
+            }
+          },
+          "required": [
+            "list_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          }
+        },
+        "request": {
+          "method": "GET",
+          "path": "/lists/{{list_id}}/unsubscribes",
+          "success": [
+            200
+          ]
+        }
+      },
+      "lists.update": {
+        "kind": "action",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "title": "Update list",
+        "description": "Rename a SendFox contact list.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "list_id": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "SendFox list id."
+            },
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "description": "List name."
+            }
+          },
+          "required": [
+            "list_id",
+            "name"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          }
+        },
+        "request": {
+          "method": "PATCH",
+          "path": "/lists/{{list_id}}",
+          "success": [
+            200,
+            201,
+            204
+          ],
+          "body": {
+            "name": "{{name}}"
+          },
+          "headers": {
+            "Accept": "application/json",
+            "Content-Type": "application/json"
+          }
+        }
+      },
+      "me.get": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "title": "Get current user",
+        "description": "Get the authenticated SendFox user.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {}
+        },
+        "outputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          }
+        },
+        "request": {
+          "method": "GET",
+          "path": "/me",
+          "success": [
+            200
           ]
         }
       }

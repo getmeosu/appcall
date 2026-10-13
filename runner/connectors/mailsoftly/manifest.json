@@ -1,7 +1,7 @@
 {
   "key": "mailsoftly",
   "name": "Mailsoftly",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "runtime": "bun",
   "visibility": "public",
   "categories": [
@@ -1202,6 +1202,478 @@
           200
         ],
         "query": {
+          "id": "{{id}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "contacts.addCustomField": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Add custom field to contact",
+      "description": "Set a custom field value on a Mailsoftly contact, creating the account field when it is missing.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "contact_id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Contact ID."
+          },
+          "custom_field_name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Custom field name."
+          },
+          "custom_field_value": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Custom field value."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "contact_id",
+          "custom_field_name",
+          "custom_field_value"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/add_custom_field_to_contact",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "contact_id": "{{contact_id}}",
+          "custom_field_name": "{{custom_field_name}}",
+          "custom_field_value": "{{custom_field_value}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "tags.assignMany": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Assign tags to contact",
+      "description": "Assign several Mailsoftly tags to one contact. Missing tags are created, and tags already on the contact are skipped.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "contact_id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Contact ID."
+          },
+          "tags": {
+            "type": "array",
+            "description": "Tags to assign. Each object requires tag_name and may set tag_color.",
+            "items": {
+              "type": "object",
+              "properties": {
+                "tag_name": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Tag name."
+                },
+                "tag_color": {
+                  "type": "string",
+                  "description": "Tag color."
+                }
+              },
+              "additionalProperties": false,
+              "required": [
+                "tag_name"
+              ]
+            }
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "contact_id",
+          "tags"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/assign_tags_to_contact",
+        "success": [
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "contact_id": "{{contact_id}}",
+          "tags": "{{tags}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "account.authenticate": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Authenticate account",
+      "description": "Validate the Mailsoftly API token and return the firm id and name. This call sends no request body.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/authentication",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "emails.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create email drafts",
+      "description": "Create one or more Mailsoftly email drafts as JSON. The body is HTML text, and attaches are public url and filename objects rather than a file upload.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "subject": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Email subject."
+          },
+          "body": {
+            "type": "string",
+            "description": "HTML body text stored inside the JSON payload."
+          },
+          "name": {
+            "type": "string",
+            "description": "Internal draft name."
+          },
+          "reply_to": {
+            "type": "string",
+            "description": "Reply-to address."
+          },
+          "sender_id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Team-member sender ID."
+          },
+          "email_sender_id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Connected mailbox or shared sender ID."
+          },
+          "contact_list_id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Existing contact list ID."
+          },
+          "recipients": {
+            "type": "array",
+            "description": "Recipient objects with email and optional names.",
+            "items": {
+              "type": "object",
+              "properties": {
+                "email": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Recipient email."
+                },
+                "first_name": {
+                  "type": "string",
+                  "description": "First name."
+                },
+                "last_name": {
+                  "type": "string",
+                  "description": "Last name."
+                }
+              },
+              "additionalProperties": false,
+              "required": [
+                "email"
+              ]
+            }
+          },
+          "attaches": {
+            "type": "array",
+            "description": "Public URL attachments. Each object has url and filename, not a file upload.",
+            "items": {
+              "type": "object",
+              "properties": {
+                "url": {
+                  "type": "string",
+                  "description": "Public HTTP or HTTPS URL of the file."
+                },
+                "filename": {
+                  "type": "string",
+                  "description": "Attachment file name."
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "mailLists": {
+            "type": "array",
+            "description": "Additional drafts. The wire key is mailLists. Each item is an object with the same draft fields.",
+            "items": {
+              "type": "object",
+              "properties": {
+                "subject": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Email subject."
+                },
+                "body": {
+                  "type": "string",
+                  "description": "HTML body text stored inside the JSON payload."
+                },
+                "name": {
+                  "type": "string",
+                  "description": "Internal draft name."
+                },
+                "reply_to": {
+                  "type": "string",
+                  "description": "Reply-to address."
+                },
+                "sender_id": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "description": "Team-member sender ID."
+                },
+                "email_sender_id": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "description": "Connected mailbox or shared sender ID."
+                },
+                "contact_list_id": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "description": "Existing contact list ID."
+                },
+                "recipients": {
+                  "type": "array",
+                  "description": "Recipient objects with email and optional names.",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "email": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "Recipient email."
+                      },
+                      "first_name": {
+                        "type": "string",
+                        "description": "First name."
+                      },
+                      "last_name": {
+                        "type": "string",
+                        "description": "Last name."
+                      }
+                    },
+                    "additionalProperties": false,
+                    "required": [
+                      "email"
+                    ]
+                  }
+                },
+                "attaches": {
+                  "type": "array",
+                  "description": "Public URL attachments. Each object has url and filename, not a file upload.",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "url": {
+                        "type": "string",
+                        "description": "Public HTTP or HTTPS URL of the file."
+                      },
+                      "filename": {
+                        "type": "string",
+                        "description": "Attachment file name."
+                      }
+                    },
+                    "additionalProperties": false
+                  }
+                },
+                "body_format": {
+                  "type": "string",
+                  "enum": [
+                    "content",
+                    "html"
+                  ],
+                  "description": "How body is stored: content for an HTML fragment, or html for a complete HTML email."
+                },
+                "template_id": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "description": "Saved template ID."
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "body_format": {
+            "type": "string",
+            "enum": [
+              "content",
+              "html"
+            ],
+            "description": "How body is stored: content for an HTML fragment, or html for a complete HTML email."
+          },
+          "template_id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Saved template ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "subject"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/create_emails",
+        "success": [
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "subject": "{{subject}}",
+          "body": "{{body}}",
+          "name": "{{name}}",
+          "reply_to": "{{reply_to}}",
+          "sender_id": "{{sender_id}}",
+          "email_sender_id": "{{email_sender_id}}",
+          "contact_list_id": "{{contact_list_id}}",
+          "recipients": "{{recipients}}",
+          "attaches": "{{attaches}}",
+          "mailLists": "{{mailLists}}",
+          "body_format": "{{body_format}}",
+          "template_id": "{{template_id}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "emails.send": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Send email draft",
+      "description": "Queue an existing Mailsoftly email draft for sending.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Email draft ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/send_email",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
           "id": "{{id}}"
         }
       },

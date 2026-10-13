@@ -1,9 +1,70 @@
 import { describe, expect, test } from "bun:test";
+import { existsSync, readFileSync } from "node:fs";
 import manifest from "../manifest.json";
 import { compileDeclarativeConnector } from "../../../bun/src/declarative/compile";
 
 const operations = manifest.operations as Record<string, Record<string, unknown>>;
 const original = ["healthcheck", "leads.list", "contacts.list", "pipelines.list", "users.list"] as const;
+
+// ops the pinned recipe has real provenance for; unchanged by this branch
+const PINNED_OPS = [
+  "ai.products.import",
+  "ai.sources.file.add",
+  "catalogs.list",
+  "companies.create",
+  "companies.get",
+  "companies.list",
+  "companies.update",
+  "contacts.create",
+  "contacts.get",
+  "contacts.list",
+  "contacts.update",
+  "conversations.list",
+  "custom_fields.get",
+  "custom_fields.list",
+  "entity_files.list",
+  "entity_links.list",
+  "entity_notes.list",
+  "entity_tags.list",
+  "event_types.list",
+  "events.get",
+  "events.list",
+  "field_groups.get",
+  "field_groups.list",
+  "files.delete",
+  "files.links.get",
+  "files.list",
+  "healthcheck",
+  "incoming_leads.list",
+  "incoming_leads.summary",
+  "leads.create",
+  "leads.get",
+  "leads.list",
+  "leads.update",
+  "loss_reasons.get",
+  "loss_reasons.list",
+  "notes.list",
+  "pipeline_stages.list",
+  "pipeline_statuses.get",
+  "pipelines.get",
+  "pipelines.list",
+  "roles.list",
+  "sources.list",
+  "tasks.create",
+  "tasks.get",
+  "tasks.list",
+  "tasks.update",
+  "templates.list",
+  "users.get",
+  "users.list",
+  "webhooks.list",
+  "website_buttons.list",
+  "widgets.get",
+  "widgets.list",
+];
+
+// ops this branch added from the provider's live API; no pinned action id exists
+const DEEPENED_OPS = ["ai.airewriter.products.import", "ai.airewriter.sources.file.add"];
 
 const COMPOSIO_TOOLS: Record<string, string> = {
   KOMMO_GET_ACCOUNT: "healthcheck",
@@ -11,7 +72,7 @@ const COMPOSIO_TOOLS: Record<string, string> = {
   KOMMO_LIST_CONTACTS: "contacts.list",
   KOMMO_LIST_LEADS_PIPELINES: "pipelines.list",
   KOMMO_LIST_USERS: "users.list",
-  KOMMO_ADD_AI_SOURCE_FILE: "ai.sources.file.add",
+  KOMMO_ADD_AI_SOURCE_FILE: "ai.airewriter.sources.file.add",
   KOMMO_CREATE_COMPANY: "companies.create",
   KOMMO_CREATE_CONTACT: "contacts.create",
   KOMMO_CREATE_LEAD: "leads.create",
@@ -31,7 +92,7 @@ const COMPOSIO_TOOLS: Record<string, string> = {
   KOMMO_GET_TASK: "tasks.get",
   KOMMO_GET_USER: "users.get",
   KOMMO_GET_WIDGET: "widgets.get",
-  KOMMO_IMPORT_PRODUCTS_TO_AI: "ai.products.import",
+  KOMMO_IMPORT_PRODUCTS_TO_AI: "ai.airewriter.products.import",
   KOMMO_LIST_CATALOGS: "catalogs.list",
   KOMMO_LIST_COMPANIES: "companies.list",
   KOMMO_LIST_CONVERSATIONS: "conversations.list",
@@ -64,7 +125,7 @@ const COMPOSIO_TOOLS: Record<string, string> = {
 describe("kommo manifest", () => {
   test("keeps origin auth, provenance, and the five live ops", () => {
     expect(manifest.key).toBe("kommo");
-    expect(manifest.version).toBe("0.2.0");
+    expect(manifest.version).toBe("0.2.1");
     expect(manifest.auth.type).toBe("api_key");
     expect(manifest.http.baseUrl).toBe("https://{{subdomain}}.kommo.com");
     expect(manifest.http.auth).toEqual({
@@ -84,7 +145,7 @@ describe("kommo manifest", () => {
 
   test("covers every Composio KOMMO tool with a real HTTP request", () => {
     expect(Object.keys(COMPOSIO_TOOLS)).toHaveLength(53);
-    expect(Object.keys(operations).length).toBe(53);
+    expect(Object.keys(operations).length).toBe(55);
     for (const [slug, key] of Object.entries(COMPOSIO_TOOLS)) {
       expect(operations[key], slug).toBeDefined();
       expect((operations[key] as { request?: unknown }).request, slug).toBeTruthy();
@@ -125,9 +186,120 @@ describe("kommo manifest", () => {
     }
   });
 
-  test("recipe operations equal runner operations", async () => {
-    const recipe = await Bun.file(new URL("../../../../scripts/connector-gen/openconnector/recipes/kommo/recipe.json", import.meta.url)).json();
-    expect(Object.keys(recipe.manifest.operations).sort()).toEqual(Object.keys(operations).sort());
-    expect([...recipe.selection.operations].sort()).toEqual(Object.keys(operations).sort());
+  test("recipe mirrors the deepened operations; provenance mappings stay pinned", () => {
+    const recipePath = "scripts/connector-gen/openconnector/recipes/kommo/recipe.json";
+    expect(existsSync(recipePath)).toBe(true);
+    const recipe = JSON.parse(readFileSync(recipePath, "utf8")) as {
+      selection: { operations: string[] };
+      operationSources: Record<string, unknown>;
+      manifest: { operations: Record<string, unknown>; version: string };
+    };
+    const runnerOps = Object.keys(operations).sort();
+    const recipeOps = Object.keys(recipe.manifest.operations).sort();
+    expect(recipe.manifest.version).toBe("0.2.0");
+    expect(runnerOps).toEqual(recipeOps);
+    expect([...recipe.selection.operations].sort()).toEqual(PINNED_OPS);
+    expect(Object.keys(recipe.operationSources).sort()).toEqual(PINNED_OPS);
+    expect(runnerOps.filter((key) => !Object.hasOwn(recipe.operationSources, key))).toEqual(DEEPENED_OPS);
+    for (const key of recipeOps) {
+      expect(operations[key], key).toEqual(recipe.manifest.operations[key]);
+    }
+    for (const key of DEEPENED_OPS) {
+      expect(recipe.operationSources[key], key).toBeUndefined();
+      expect(recipe.selection.operations, key).not.toContain(key);
+    }
+  });
+
+  test("adds the fixed-host airewriter file source and product import", () => {
+    const sibling = operations["ai.sources.file.add"]!;
+    const fileAdd = operations["ai.airewriter.sources.file.add"]!;
+    const productImport = operations["ai.airewriter.products.import"]!;
+    for (const operation of [fileAdd, productImport]) {
+      expect(operation.sideEffect).toBe("write");
+      expect(operation.timeoutMs).toBe(sibling.timeoutMs);
+      expect(operation.maxInputBytes).toBe(sibling.maxInputBytes);
+      expect(operation.maxResponseBytes).toBe(sibling.maxResponseBytes);
+      expect(operation.responseFormat).toBe(sibling.responseFormat);
+      expect(operation.validationMode).toBe(sibling.validationMode);
+      expect(operation.enforceOutputSchema).toBe(sibling.enforceOutputSchema);
+    }
+    expect(fileAdd.title).toBe("Add AI file source");
+    expect(productImport.title).toBe("Import CRM products to AI");
+    expect(fileAdd.request).toEqual({
+      method: "POST",
+      path: "/api/v2/sources/file",
+      success: [200],
+      baseUrl: "https://airewriter.kommo.com",
+      body: {
+        url: "{{url}}",
+        file_uuid: "{{fileUuid}}",
+        lang: "{{lang}}",
+        available_functions: "{{availableFunctions}}",
+        code: "{{code}}",
+      },
+      headers: { "Content-Type": "application/json" },
+      result: "{{response}}",
+    });
+    expect(productImport.request).toEqual({
+      method: "POST",
+      path: "/api/v2/agent/knowledges/products/import",
+      success: [201],
+      baseUrl: "https://airewriter.kommo.com",
+      result: "{{response}}",
+    });
+    expect(fileAdd.outputSchema).toEqual({
+      type: "object",
+      additionalProperties: true,
+      required: ["id", "name", "updated_at", "updated_by"],
+      properties: {
+        id: { type: "integer" },
+        name: { type: "string" },
+        updated_at: { type: "integer" },
+        updated_by: { type: "integer" },
+        code: { type: "string" },
+      },
+    });
+    expect(productImport.outputSchema).toEqual({
+      type: "object",
+      additionalProperties: false,
+      required: ["code", "status"],
+      properties: {
+        code: { type: "integer" },
+        status: { type: "string" },
+      },
+    });
+    const fileSchema = fileAdd.inputSchema as {
+      type: string;
+      additionalProperties: boolean;
+      required: string[];
+      properties: {
+        availableFunctions: { type: string; items: { type: string } };
+        url: { type: string };
+        fileUuid: { type: string };
+        lang: { type: string };
+        code: { type: string };
+      };
+    };
+    expect(fileSchema.type).toBe("object");
+    expect(fileSchema.additionalProperties).toBe(false);
+    expect(fileSchema.required).toEqual(["url", "fileUuid", "lang", "availableFunctions"]);
+    expect(fileSchema.properties.url.type).toBe("string");
+    expect(fileSchema.properties.fileUuid.type).toBe("string");
+    expect(fileSchema.properties.lang.type).toBe("string");
+    expect(fileSchema.properties.code.type).toBe("string");
+    expect(fileSchema.properties.availableFunctions.type).toBe("array");
+    expect(fileSchema.properties.availableFunctions.items.type).toBe("string");
+    const importSchema = productImport.inputSchema as {
+      type: string;
+      additionalProperties: boolean;
+      required?: string[];
+      properties: Record<string, unknown>;
+    };
+    expect(importSchema.type).toBe("object");
+    expect(importSchema.additionalProperties).toBe(false);
+    expect(importSchema.properties).toEqual({});
+    expect(importSchema.required).toBeUndefined();
+    expect(manifest.http.baseUrl).toBe("https://{{subdomain}}.kommo.com");
+    expect(manifest.network.allowedHosts).toEqual(["*.kommo.com"]);
   });
 });

@@ -1,7 +1,7 @@
 {
   "key": "goody",
   "name": "Goody",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "runtime": "bun",
   "visibility": "public",
   "categories": [
@@ -36,7 +36,8 @@
     "card",
     "collection",
     "payment_method",
-    "order_activity"
+    "order_activity",
+    "webhook"
   ],
   "http": {
     "baseUrl": "https://api.ongoody.com",
@@ -1194,6 +1195,64 @@
         },
         "success": [
           200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "webhooks.create": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Create webhook",
+      "description": "Create a Goody webhook endpoint that receives selected order events.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "minLength": 1
+          },
+          "events": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "url"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/webhooks",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "url": "{{url}}",
+          "events": "{{events}}"
+        },
+        "success": [
+          201
         ]
       },
       "enforceOutputSchema": true,

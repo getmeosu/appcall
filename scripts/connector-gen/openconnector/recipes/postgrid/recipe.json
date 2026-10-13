@@ -1071,46 +1071,7 @@
       ]
     },
     "operations": {
-      "healthcheck": {
-        "timeoutMs": 5000,
-        "maxInputBytes": 4096,
-        "maxResponseBytes": 65536,
-        "kind": "action",
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
-        "sideEffect": "read",
-        "title": "Healthcheck",
-        "description": "Validate the PostGrid Print & Mail API key by listing one template.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {},
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "GET",
-          "path": "/templates",
-          "success": [
-            200
-          ],
-          "query": {
-            "limit": 1
-          }
-        }
-      },
-      "contacts.list": {
+      "bank_accounts.create": {
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
         "maxResponseBytes": 5242880,
@@ -1130,42 +1091,93 @@
         "enforceOutputSchema": true,
         "validationMode": "strict-generated",
         "responseFormat": "json",
-        "sideEffect": "read",
-        "title": "List contacts",
-        "description": "List PostGrid Print & Mail contacts with optional skip, limit, and search.",
+        "sideEffect": "write",
+        "title": "Create bank account",
+        "description": "Create a bank account for print & mail cheque issuance.",
         "inputSchema": {
           "type": "object",
           "properties": {
-            "skip": {
-              "type": "integer",
-              "minimum": 0
-            },
-            "limit": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 100
-            },
-            "search": {
+            "bankName": {
               "type": "string",
-              "description": "Search query to filter contacts by name, address, email, or other fields"
+              "description": "Name of the bank"
+            },
+            "accountType": {
+              "type": "string",
+              "description": "Type of bank account",
+              "enum": [
+                "checking",
+                "savings"
+              ]
+            },
+            "contactEmail": {
+              "type": "string",
+              "description": "Contact email for the account"
+            },
+            "contactPhone": {
+              "type": "string",
+              "description": "Contact phone number"
+            },
+            "accountNumber": {
+              "type": "string",
+              "description": "Bank account number"
+            },
+            "routingNumber": {
+              "type": "string",
+              "description": "9-digit bank routing number"
+            },
+            "signatureText": {
+              "type": "string",
+              "description": "Signature text"
+            },
+            "signatureImage": {
+              "type": "string",
+              "description": "URL or file path for signature image"
+            },
+            "bankCountryCode": {
+              "type": "string",
+              "description": "Country code (ISO 3166-1 alpha-2)"
+            },
+            "accountHolderName": {
+              "type": "string",
+              "description": "Name of the bank account holder"
             }
           },
-          "additionalProperties": false
+          "additionalProperties": false,
+          "required": [
+            "bankName",
+            "accountType",
+            "contactEmail",
+            "accountNumber",
+            "routingNumber",
+            "bankCountryCode",
+            "accountHolderName"
+          ]
         },
         "request": {
-          "method": "GET",
-          "path": "/contacts",
+          "method": "POST",
+          "path": "/bank_accounts",
           "success": [
-            200
+            200,
+            201
           ],
-          "query": {
-            "skip": "{{skip}}",
-            "limit": "{{limit}}",
-            "search": "{{search}}"
+          "body": {
+            "bankName": "{{bankName}}",
+            "accountType": "{{accountType}}",
+            "contactEmail": "{{contactEmail}}",
+            "contactPhone": "{{contactPhone}}",
+            "accountNumber": "{{accountNumber}}",
+            "routingNumber": "{{routingNumber}}",
+            "signatureText": "{{signatureText}}",
+            "signatureImage": "{{signatureImage}}",
+            "bankCountryCode": "{{bankCountryCode}}",
+            "accountHolderName": "{{accountHolderName}}"
+          },
+          "headers": {
+            "Content-Type": "application/json"
           }
         }
       },
-      "contacts.get": {
+      "bank_accounts.delete": {
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
         "maxResponseBytes": 5242880,
@@ -1185,15 +1197,60 @@
         "enforceOutputSchema": true,
         "validationMode": "strict-generated",
         "responseFormat": "json",
-        "sideEffect": "read",
-        "title": "Get contact",
-        "description": "Retrieve one PostGrid Print & Mail contact by ID.",
+        "sideEffect": "destructive",
+        "title": "Delete bank account",
+        "description": "Delete a bank account by ID. Cannot be undone.",
         "inputSchema": {
           "type": "object",
           "properties": {
             "id": {
               "type": "string",
-              "description": "Unique identifier of the contact to retrieve",
+              "description": "Unique identifier of the bank account to delete",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "id"
+          ]
+        },
+        "request": {
+          "method": "DELETE",
+          "path": "/bank_accounts/{{id}}",
+          "success": [
+            200
+          ]
+        }
+      },
+      "bank_accounts.get": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "sideEffect": "read",
+        "title": "Get bank account",
+        "description": "Retrieve a bank account by ID.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "description": "Unique identifier of the bank account to retrieve",
               "minLength": 1
             }
           },
@@ -1204,13 +1261,13 @@
         },
         "request": {
           "method": "GET",
-          "path": "/contacts/{{id}}",
+          "path": "/bank_accounts/{{id}}",
           "success": [
             200
           ]
         }
       },
-      "templates.list": {
+      "bank_accounts.list": {
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
         "maxResponseBytes": 5242880,
@@ -1231,8 +1288,8 @@
         "validationMode": "strict-generated",
         "responseFormat": "json",
         "sideEffect": "read",
-        "title": "List templates",
-        "description": "List PostGrid Print & Mail templates with optional skip and limit.",
+        "title": "List bank accounts",
+        "description": "List bank accounts with optional pagination.",
         "inputSchema": {
           "type": "object",
           "properties": {
@@ -1250,7 +1307,7 @@
         },
         "request": {
           "method": "GET",
-          "path": "/templates",
+          "path": "/bank_accounts",
           "success": [
             200
           ],
@@ -1260,7 +1317,128 @@
           }
         }
       },
-      "templates.get": {
+      "boxes.cancel": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "sideEffect": "destructive",
+        "title": "Cancel box",
+        "description": "Cancel a pending box shipment by ID. Cannot be undone.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "description": "Unique identifier of the box to cancel",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "id"
+          ]
+        },
+        "request": {
+          "method": "DELETE",
+          "path": "/boxes/{{id}}",
+          "success": [
+            200
+          ]
+        }
+      },
+      "boxes.create": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "sideEffect": "write",
+        "title": "Create box",
+        "description": "Create a box mailing order containing cheques for a single destination.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "to": {
+              "type": [
+                "string",
+                "object"
+              ],
+              "description": "Contact ID or inline contact object for the recipient"
+            },
+            "from": {
+              "type": [
+                "string",
+                "object"
+              ],
+              "description": "Contact ID or inline contact object for the sender"
+            },
+            "cheques": {
+              "type": "array",
+              "description": "Cheque objects to include (minimum 1)",
+              "items": {},
+              "minItems": 1
+            },
+            "mailingClass": {
+              "type": "string",
+              "description": "Mailing class for delivery"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "to",
+            "from",
+            "cheques"
+          ]
+        },
+        "request": {
+          "method": "POST",
+          "path": "/boxes",
+          "success": [
+            200,
+            201
+          ],
+          "body": {
+            "to": "{{to}}",
+            "from": "{{from}}",
+            "cheques": "{{cheques}}",
+            "mailingClass": "{{mailingClass}}"
+          },
+          "headers": {
+            "Content-Type": "application/json"
+          }
+        }
+      },
+      "boxes.get": {
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
         "maxResponseBytes": 5242880,
@@ -1281,14 +1459,14 @@
         "validationMode": "strict-generated",
         "responseFormat": "json",
         "sideEffect": "read",
-        "title": "Get template",
-        "description": "Retrieve one PostGrid Print & Mail template by ID.",
+        "title": "Get box",
+        "description": "Retrieve a specific box order by ID.",
         "inputSchema": {
           "type": "object",
           "properties": {
             "id": {
               "type": "string",
-              "description": "Unique identifier of the template to retrieve",
+              "description": "Unique identifier of the box to retrieve",
               "minLength": 1
             }
           },
@@ -1299,7 +1477,489 @@
         },
         "request": {
           "method": "GET",
-          "path": "/templates/{{id}}",
+          "path": "/boxes/{{id}}",
+          "success": [
+            200
+          ]
+        }
+      },
+      "boxes.list": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "sideEffect": "read",
+        "title": "List boxes",
+        "description": "List box orders with optional pagination.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "skip": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/boxes",
+          "success": [
+            200
+          ],
+          "query": {
+            "skip": "{{skip}}",
+            "limit": "{{limit}}"
+          }
+        }
+      },
+      "boxes.progress": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "sideEffect": "write",
+        "title": "Progress test box",
+        "description": "Advance a test-mode box through processing stages for webhook testing.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "description": "The ID of the test box to progress",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "id"
+          ]
+        },
+        "request": {
+          "method": "POST",
+          "path": "/boxes/{{id}}/progressions",
+          "success": [
+            200
+          ]
+        }
+      },
+      "cheques.cancel": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "sideEffect": "destructive",
+        "title": "Cancel cheque",
+        "description": "Cancel a cheque that is still in ready status. Cannot be undone.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "description": "Unique identifier of the cheque to cancel",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "id"
+          ]
+        },
+        "request": {
+          "method": "DELETE",
+          "path": "/cheques/{{id}}",
+          "success": [
+            200
+          ]
+        }
+      },
+      "cheques.cancel_with_note": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "sideEffect": "destructive",
+        "title": "Cancel cheque with note",
+        "description": "Cancel a ready cheque and attach a cancellation note.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "description": "The ID of the cheque to cancel",
+              "minLength": 1
+            },
+            "note": {
+              "type": "string",
+              "description": "Cancellation note explaining the reason for cancellation"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "id",
+            "note"
+          ]
+        },
+        "request": {
+          "method": "POST",
+          "path": "/cheques/{{id}}/cancellation",
+          "success": [
+            200
+          ],
+          "body": {
+            "note": "{{note}}"
+          },
+          "headers": {
+            "Content-Type": "application/json"
+          }
+        }
+      },
+      "cheques.create": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "sideEffect": "write",
+        "title": "Create cheque",
+        "description": "Create a cheque order for physical cheque mailing.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "to": {
+              "type": "object",
+              "description": "Recipient contact details (payee)"
+            },
+            "fromAddress": {
+              "type": "object",
+              "description": "Sender contact details (payer), sent as PostGrid `from`"
+            },
+            "bankAccount": {
+              "type": "string",
+              "description": "Bank account ID for the cheque"
+            },
+            "amount": {
+              "type": "integer",
+              "description": "Cheque amount in cents. For example, 5000 = $50.00"
+            },
+            "number": {
+              "type": "integer",
+              "description": "Custom cheque number. If omitted, auto-increments."
+            },
+            "memo": {
+              "type": "string",
+              "description": "Memo line on the cheque"
+            },
+            "message": {
+              "type": "string",
+              "description": "HTML message to include above the cheque"
+            },
+            "metadata": {
+              "type": "object",
+              "description": "Custom key-value pairs for metadata"
+            },
+            "sendDate": {
+              "type": "string",
+              "description": "Scheduled send date in ISO 8601 format"
+            },
+            "extraService": {
+              "type": "string",
+              "description": "Extra service option"
+            },
+            "mailingClass": {
+              "type": "string",
+              "description": "Mailing class for delivery"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "to",
+            "fromAddress",
+            "bankAccount",
+            "amount"
+          ]
+        },
+        "request": {
+          "method": "POST",
+          "path": "/cheques",
+          "success": [
+            200,
+            201
+          ],
+          "body": {
+            "to": "{{to}}",
+            "from": "{{fromAddress}}",
+            "bankAccount": "{{bankAccount}}",
+            "amount": "{{amount}}",
+            "number": "{{number}}",
+            "memo": "{{memo}}",
+            "message": "{{message}}",
+            "metadata": "{{metadata}}",
+            "sendDate": "{{sendDate}}",
+            "extraService": "{{extraService}}",
+            "mailingClass": "{{mailingClass}}"
+          },
+          "headers": {
+            "Content-Type": "application/json"
+          }
+        }
+      },
+      "cheques.get": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "sideEffect": "read",
+        "title": "Get cheque",
+        "description": "Retrieve a specific cheque by ID.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "description": "Unique identifier of the cheque to retrieve",
+              "minLength": 1
+            },
+            "expand": {
+              "type": "array",
+              "description": "Nested resources to expand (e.g. bankAccount, template)",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "id"
+          ]
+        },
+        "request": {
+          "method": "GET",
+          "path": "/cheques/{{id}}",
+          "success": [
+            200
+          ],
+          "query": {
+            "expand": "{{expand}}"
+          }
+        }
+      },
+      "cheques.list": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "sideEffect": "read",
+        "title": "List cheques",
+        "description": "List cheques with optional filters and pagination.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "skip": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            },
+            "after": {
+              "type": "string",
+              "description": "Cursor for pagination. Fetch items after this cursor."
+            },
+            "count": {
+              "type": "integer",
+              "description": "Number of items to return per page. Maximum is 100.",
+              "minimum": 1,
+              "maximum": 100
+            },
+            "status": {
+              "type": "string",
+              "description": "Filter by cheque status",
+              "enum": [
+                "created",
+                "mailed",
+                "failed"
+              ]
+            },
+            "to_date": {
+              "type": "string",
+              "description": "ISO-8601 timestamp. Only return cheques created before this time."
+            },
+            "from_date": {
+              "type": "string",
+              "description": "ISO-8601 timestamp. Only return cheques created after this time."
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/cheques",
+          "success": [
+            200
+          ],
+          "query": {
+            "skip": "{{skip}}",
+            "limit": "{{limit}}",
+            "after": "{{after}}",
+            "count": "{{count}}",
+            "status": "{{status}}",
+            "to_date": "{{to_date}}",
+            "from_date": "{{from_date}}"
+          }
+        }
+      },
+      "cheques.progress": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "sideEffect": "write",
+        "title": "Progress test cheque",
+        "description": "Advance a test-mode cheque through processing stages for webhook testing.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "description": "Unique identifier of the test cheque to progress",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "id"
+          ]
+        },
+        "request": {
+          "method": "POST",
+          "path": "/cheques/{{id}}/progressions",
           "success": [
             200
           ]
@@ -1466,7 +2126,7 @@
           ]
         }
       },
-      "templates.create": {
+      "contacts.get": {
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
         "maxResponseBytes": 5242880,
@@ -1486,148 +2146,15 @@
         "enforceOutputSchema": true,
         "validationMode": "strict-generated",
         "responseFormat": "json",
-        "sideEffect": "write",
-        "title": "Create template",
-        "description": "Create a reusable HTML mail template with optional Handlebars placeholders.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "html": {
-              "type": "string",
-              "description": "HTML content of the template (supports Handlebars/Mustache syntax)"
-            },
-            "name": {
-              "type": "string",
-              "description": "Name of the template"
-            },
-            "description": {
-              "type": "string",
-              "description": "Description of the template"
-            },
-            "testRenderModel": {
-              "type": "object",
-              "description": "Data model used for testing the template rendering"
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "html",
-            "name"
-          ]
-        },
-        "request": {
-          "method": "POST",
-          "path": "/templates",
-          "success": [
-            200,
-            201
-          ],
-          "body": {
-            "html": "{{html}}",
-            "name": "{{name}}",
-            "description": "{{description}}",
-            "testRenderModel": "{{testRenderModel}}"
-          },
-          "headers": {
-            "Content-Type": "application/json"
-          }
-        }
-      },
-      "templates.update": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
-        "sideEffect": "write",
-        "title": "Update template",
-        "description": "Update an existing mail template's HTML, description, or metadata.",
+        "sideEffect": "read",
+        "title": "Get contact",
+        "description": "Retrieve one PostGrid Print & Mail contact by ID.",
         "inputSchema": {
           "type": "object",
           "properties": {
             "id": {
               "type": "string",
-              "description": "Unique identifier of the template to update",
-              "minLength": 1
-            },
-            "html": {
-              "type": "string",
-              "description": "Updated HTML content for the template"
-            },
-            "metadata": {
-              "type": "object",
-              "description": "Custom key-value pairs for organizing the template"
-            },
-            "description": {
-              "type": "string",
-              "description": "Updated description for the template"
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "id",
-            "html"
-          ]
-        },
-        "request": {
-          "method": "POST",
-          "path": "/templates/{{id}}",
-          "success": [
-            200
-          ],
-          "body": {
-            "html": "{{html}}",
-            "metadata": "{{metadata}}",
-            "description": "{{description}}"
-          },
-          "headers": {
-            "Content-Type": "application/json"
-          }
-        }
-      },
-      "templates.delete": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
-        "sideEffect": "destructive",
-        "title": "Delete template",
-        "description": "Delete a template by its ID. This cannot be undone.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "id": {
-              "type": "string",
-              "description": "Unique identifier of the template to delete",
+              "description": "Unique identifier of the contact to retrieve",
               "minLength": 1
             }
           },
@@ -1637,11 +2164,155 @@
           ]
         },
         "request": {
-          "method": "DELETE",
-          "path": "/templates/{{id}}",
+          "method": "GET",
+          "path": "/contacts/{{id}}",
           "success": [
             200
           ]
+        }
+      },
+      "contacts.list": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "sideEffect": "read",
+        "title": "List contacts",
+        "description": "List PostGrid Print & Mail contacts with optional skip, limit, and search.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "skip": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            },
+            "search": {
+              "type": "string",
+              "description": "Search query to filter contacts by name, address, email, or other fields"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/contacts",
+          "success": [
+            200
+          ],
+          "query": {
+            "skip": "{{skip}}",
+            "limit": "{{limit}}",
+            "search": "{{search}}"
+          }
+        }
+      },
+      "events.list": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "sideEffect": "read",
+        "title": "List webhook events",
+        "description": "List webhook events that have occurred, with optional pagination.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "skip": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/events",
+          "success": [
+            200
+          ],
+          "query": {
+            "skip": "{{skip}}",
+            "limit": "{{limit}}"
+          }
+        }
+      },
+      "healthcheck": {
+        "timeoutMs": 5000,
+        "maxInputBytes": 4096,
+        "maxResponseBytes": 65536,
+        "kind": "action",
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "sideEffect": "read",
+        "title": "Healthcheck",
+        "description": "Validate the PostGrid Print & Mail API key by listing one template.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/templates",
+          "success": [
+            200
+          ],
+          "query": {
+            "limit": 1
+          }
         }
       },
       "letters.create": {
@@ -1741,6 +2412,51 @@
           }
         }
       },
+      "letters.get": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "sideEffect": "read",
+        "title": "Get letter",
+        "description": "Retrieve a letter by ID.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "description": "Unique identifier of the letter to retrieve",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "id"
+          ]
+        },
+        "request": {
+          "method": "GET",
+          "path": "/letters/{{id}}",
+          "success": [
+            200
+          ]
+        }
+      },
       "letters.list": {
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
@@ -1816,7 +2532,7 @@
           }
         }
       },
-      "letters.get": {
+      "postal_statements.list": {
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
         "maxResponseBytes": 5242880,
@@ -1837,14 +2553,69 @@
         "validationMode": "strict-generated",
         "responseFormat": "json",
         "sideEffect": "read",
-        "title": "Get letter",
-        "description": "Retrieve a letter by ID.",
+        "title": "List postal statements",
+        "description": "List postal statements for billing and tracking.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "skip": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            },
+            "search": {
+              "type": "string",
+              "description": "Search query to filter postal statements"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/postal_statements",
+          "success": [
+            200
+          ],
+          "query": {
+            "skip": "{{skip}}",
+            "limit": "{{limit}}",
+            "search": "{{search}}"
+          }
+        }
+      },
+      "postcards.cancel": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "sideEffect": "destructive",
+        "title": "Cancel postcard",
+        "description": "Cancel a postcard order that is still in ready status. Cannot be undone.",
         "inputSchema": {
           "type": "object",
           "properties": {
             "id": {
               "type": "string",
-              "description": "Unique identifier of the letter to retrieve",
+              "description": "Unique identifier of the postcard to cancel",
               "minLength": 1
             }
           },
@@ -1854,11 +2625,67 @@
           ]
         },
         "request": {
-          "method": "GET",
-          "path": "/letters/{{id}}",
+          "method": "DELETE",
+          "path": "/postcards/{{id}}",
           "success": [
             200
           ]
+        }
+      },
+      "postcards.cancel_with_note": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "sideEffect": "destructive",
+        "title": "Cancel postcard with note",
+        "description": "Cancel a ready postcard and attach a cancellation note.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "description": "The postcard ID to cancel",
+              "minLength": 1
+            },
+            "note": {
+              "type": "string",
+              "description": "Cancellation note explaining why the postcard is being cancelled"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "id",
+            "note"
+          ]
+        },
+        "request": {
+          "method": "POST",
+          "path": "/postcards/{{id}}/cancellation",
+          "success": [
+            200
+          ],
+          "body": {
+            "note": "{{note}}"
+          },
+          "headers": {
+            "Content-Type": "application/json"
+          }
         }
       },
       "postcards.create": {
@@ -1973,6 +2800,51 @@
           }
         }
       },
+      "postcards.get": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "sideEffect": "read",
+        "title": "Get postcard",
+        "description": "Retrieve a specific postcard by ID.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "description": "Unique identifier of the postcard to retrieve",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "id"
+          ]
+        },
+        "request": {
+          "method": "GET",
+          "path": "/postcards/{{id}}",
+          "success": [
+            200
+          ]
+        }
+      },
       "postcards.list": {
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
@@ -2048,152 +2920,6 @@
           }
         }
       },
-      "postcards.get": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
-        "sideEffect": "read",
-        "title": "Get postcard",
-        "description": "Retrieve a specific postcard by ID.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "id": {
-              "type": "string",
-              "description": "Unique identifier of the postcard to retrieve",
-              "minLength": 1
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "id"
-          ]
-        },
-        "request": {
-          "method": "GET",
-          "path": "/postcards/{{id}}",
-          "success": [
-            200
-          ]
-        }
-      },
-      "postcards.cancel": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
-        "sideEffect": "destructive",
-        "title": "Cancel postcard",
-        "description": "Cancel a postcard order that is still in ready status. Cannot be undone.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "id": {
-              "type": "string",
-              "description": "Unique identifier of the postcard to cancel",
-              "minLength": 1
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "id"
-          ]
-        },
-        "request": {
-          "method": "DELETE",
-          "path": "/postcards/{{id}}",
-          "success": [
-            200
-          ]
-        }
-      },
-      "postcards.cancel_with_note": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
-        "sideEffect": "destructive",
-        "title": "Cancel postcard with note",
-        "description": "Cancel a ready postcard and attach a cancellation note.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "id": {
-              "type": "string",
-              "description": "The postcard ID to cancel",
-              "minLength": 1
-            },
-            "note": {
-              "type": "string",
-              "description": "Cancellation note explaining why the postcard is being cancelled"
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "id",
-            "note"
-          ]
-        },
-        "request": {
-          "method": "POST",
-          "path": "/postcards/{{id}}/cancellation",
-          "success": [
-            200
-          ],
-          "body": {
-            "note": "{{note}}"
-          },
-          "headers": {
-            "Content-Type": "application/json"
-          }
-        }
-      },
       "postcards.progress": {
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
@@ -2239,248 +2965,7 @@
           ]
         }
       },
-      "cheques.create": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
-        "sideEffect": "write",
-        "title": "Create cheque",
-        "description": "Create a cheque order for physical cheque mailing.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "to": {
-              "type": "object",
-              "description": "Recipient contact details (payee)"
-            },
-            "fromAddress": {
-              "type": "object",
-              "description": "Sender contact details (payer), sent as PostGrid `from`"
-            },
-            "bankAccount": {
-              "type": "string",
-              "description": "Bank account ID for the cheque"
-            },
-            "amount": {
-              "type": "integer",
-              "description": "Cheque amount in cents. For example, 5000 = $50.00"
-            },
-            "number": {
-              "type": "integer",
-              "description": "Custom cheque number. If omitted, auto-increments."
-            },
-            "memo": {
-              "type": "string",
-              "description": "Memo line on the cheque"
-            },
-            "message": {
-              "type": "string",
-              "description": "HTML message to include above the cheque"
-            },
-            "metadata": {
-              "type": "object",
-              "description": "Custom key-value pairs for metadata"
-            },
-            "sendDate": {
-              "type": "string",
-              "description": "Scheduled send date in ISO 8601 format"
-            },
-            "extraService": {
-              "type": "string",
-              "description": "Extra service option"
-            },
-            "mailingClass": {
-              "type": "string",
-              "description": "Mailing class for delivery"
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "to",
-            "fromAddress",
-            "bankAccount",
-            "amount"
-          ]
-        },
-        "request": {
-          "method": "POST",
-          "path": "/cheques",
-          "success": [
-            200,
-            201
-          ],
-          "body": {
-            "to": "{{to}}",
-            "from": "{{fromAddress}}",
-            "bankAccount": "{{bankAccount}}",
-            "amount": "{{amount}}",
-            "number": "{{number}}",
-            "memo": "{{memo}}",
-            "message": "{{message}}",
-            "metadata": "{{metadata}}",
-            "sendDate": "{{sendDate}}",
-            "extraService": "{{extraService}}",
-            "mailingClass": "{{mailingClass}}"
-          },
-          "headers": {
-            "Content-Type": "application/json"
-          }
-        }
-      },
-      "cheques.list": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
-        "sideEffect": "read",
-        "title": "List cheques",
-        "description": "List cheques with optional filters and pagination.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "skip": {
-              "type": "integer",
-              "minimum": 0
-            },
-            "limit": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 100
-            },
-            "after": {
-              "type": "string",
-              "description": "Cursor for pagination. Fetch items after this cursor."
-            },
-            "count": {
-              "type": "integer",
-              "description": "Number of items to return per page. Maximum is 100.",
-              "minimum": 1,
-              "maximum": 100
-            },
-            "status": {
-              "type": "string",
-              "description": "Filter by cheque status",
-              "enum": [
-                "created",
-                "mailed",
-                "failed"
-              ]
-            },
-            "to_date": {
-              "type": "string",
-              "description": "ISO-8601 timestamp. Only return cheques created before this time."
-            },
-            "from_date": {
-              "type": "string",
-              "description": "ISO-8601 timestamp. Only return cheques created after this time."
-            }
-          },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "GET",
-          "path": "/cheques",
-          "success": [
-            200
-          ],
-          "query": {
-            "skip": "{{skip}}",
-            "limit": "{{limit}}",
-            "after": "{{after}}",
-            "count": "{{count}}",
-            "status": "{{status}}",
-            "to_date": "{{to_date}}",
-            "from_date": "{{from_date}}"
-          }
-        }
-      },
-      "cheques.get": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
-        "sideEffect": "read",
-        "title": "Get cheque",
-        "description": "Retrieve a specific cheque by ID.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "id": {
-              "type": "string",
-              "description": "Unique identifier of the cheque to retrieve",
-              "minLength": 1
-            },
-            "expand": {
-              "type": "array",
-              "description": "Nested resources to expand (e.g. bankAccount, template)",
-              "items": {
-                "type": "string"
-              }
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "id"
-          ]
-        },
-        "request": {
-          "method": "GET",
-          "path": "/cheques/{{id}}",
-          "success": [
-            200
-          ],
-          "query": {
-            "expand": "{{expand}}"
-          }
-        }
-      },
-      "cheques.cancel": {
+      "return_envelope_orders.cancel": {
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
         "maxResponseBytes": 5242880,
@@ -2501,767 +2986,8 @@
         "validationMode": "strict-generated",
         "responseFormat": "json",
         "sideEffect": "destructive",
-        "title": "Cancel cheque",
-        "description": "Cancel a cheque that is still in ready status. Cannot be undone.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "id": {
-              "type": "string",
-              "description": "Unique identifier of the cheque to cancel",
-              "minLength": 1
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "id"
-          ]
-        },
-        "request": {
-          "method": "DELETE",
-          "path": "/cheques/{{id}}",
-          "success": [
-            200
-          ]
-        }
-      },
-      "cheques.cancel_with_note": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
-        "sideEffect": "destructive",
-        "title": "Cancel cheque with note",
-        "description": "Cancel a ready cheque and attach a cancellation note.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "id": {
-              "type": "string",
-              "description": "The ID of the cheque to cancel",
-              "minLength": 1
-            },
-            "note": {
-              "type": "string",
-              "description": "Cancellation note explaining the reason for cancellation"
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "id",
-            "note"
-          ]
-        },
-        "request": {
-          "method": "POST",
-          "path": "/cheques/{{id}}/cancellation",
-          "success": [
-            200
-          ],
-          "body": {
-            "note": "{{note}}"
-          },
-          "headers": {
-            "Content-Type": "application/json"
-          }
-        }
-      },
-      "cheques.progress": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
-        "sideEffect": "write",
-        "title": "Progress test cheque",
-        "description": "Advance a test-mode cheque through processing stages for webhook testing.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "id": {
-              "type": "string",
-              "description": "Unique identifier of the test cheque to progress",
-              "minLength": 1
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "id"
-          ]
-        },
-        "request": {
-          "method": "POST",
-          "path": "/cheques/{{id}}/progressions",
-          "success": [
-            200
-          ]
-        }
-      },
-      "boxes.create": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
-        "sideEffect": "write",
-        "title": "Create box",
-        "description": "Create a box mailing order containing cheques for a single destination.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "to": {
-              "type": [
-                "string",
-                "object"
-              ],
-              "description": "Contact ID or inline contact object for the recipient"
-            },
-            "from": {
-              "type": [
-                "string",
-                "object"
-              ],
-              "description": "Contact ID or inline contact object for the sender"
-            },
-            "cheques": {
-              "type": "array",
-              "description": "Cheque objects to include (minimum 1)",
-              "items": {},
-              "minItems": 1
-            },
-            "mailingClass": {
-              "type": "string",
-              "description": "Mailing class for delivery"
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "to",
-            "from",
-            "cheques"
-          ]
-        },
-        "request": {
-          "method": "POST",
-          "path": "/boxes",
-          "success": [
-            200,
-            201
-          ],
-          "body": {
-            "to": "{{to}}",
-            "from": "{{from}}",
-            "cheques": "{{cheques}}",
-            "mailingClass": "{{mailingClass}}"
-          },
-          "headers": {
-            "Content-Type": "application/json"
-          }
-        }
-      },
-      "boxes.list": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
-        "sideEffect": "read",
-        "title": "List boxes",
-        "description": "List box orders with optional pagination.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "skip": {
-              "type": "integer",
-              "minimum": 0
-            },
-            "limit": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 100
-            }
-          },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "GET",
-          "path": "/boxes",
-          "success": [
-            200
-          ],
-          "query": {
-            "skip": "{{skip}}",
-            "limit": "{{limit}}"
-          }
-        }
-      },
-      "boxes.get": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
-        "sideEffect": "read",
-        "title": "Get box",
-        "description": "Retrieve a specific box order by ID.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "id": {
-              "type": "string",
-              "description": "Unique identifier of the box to retrieve",
-              "minLength": 1
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "id"
-          ]
-        },
-        "request": {
-          "method": "GET",
-          "path": "/boxes/{{id}}",
-          "success": [
-            200
-          ]
-        }
-      },
-      "boxes.cancel": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
-        "sideEffect": "destructive",
-        "title": "Cancel box",
-        "description": "Cancel a pending box shipment by ID. Cannot be undone.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "id": {
-              "type": "string",
-              "description": "Unique identifier of the box to cancel",
-              "minLength": 1
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "id"
-          ]
-        },
-        "request": {
-          "method": "DELETE",
-          "path": "/boxes/{{id}}",
-          "success": [
-            200
-          ]
-        }
-      },
-      "boxes.progress": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
-        "sideEffect": "write",
-        "title": "Progress test box",
-        "description": "Advance a test-mode box through processing stages for webhook testing.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "id": {
-              "type": "string",
-              "description": "The ID of the test box to progress",
-              "minLength": 1
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "id"
-          ]
-        },
-        "request": {
-          "method": "POST",
-          "path": "/boxes/{{id}}/progressions",
-          "success": [
-            200
-          ]
-        }
-      },
-      "bank_accounts.create": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
-        "sideEffect": "write",
-        "title": "Create bank account",
-        "description": "Create a bank account for print & mail cheque issuance.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "bankName": {
-              "type": "string",
-              "description": "Name of the bank"
-            },
-            "accountType": {
-              "type": "string",
-              "description": "Type of bank account",
-              "enum": [
-                "checking",
-                "savings"
-              ]
-            },
-            "contactEmail": {
-              "type": "string",
-              "description": "Contact email for the account"
-            },
-            "contactPhone": {
-              "type": "string",
-              "description": "Contact phone number"
-            },
-            "accountNumber": {
-              "type": "string",
-              "description": "Bank account number"
-            },
-            "routingNumber": {
-              "type": "string",
-              "description": "9-digit bank routing number"
-            },
-            "signatureText": {
-              "type": "string",
-              "description": "Signature text"
-            },
-            "signatureImage": {
-              "type": "string",
-              "description": "URL or file path for signature image"
-            },
-            "bankCountryCode": {
-              "type": "string",
-              "description": "Country code (ISO 3166-1 alpha-2)"
-            },
-            "accountHolderName": {
-              "type": "string",
-              "description": "Name of the bank account holder"
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "bankName",
-            "accountType",
-            "contactEmail",
-            "accountNumber",
-            "routingNumber",
-            "bankCountryCode",
-            "accountHolderName"
-          ]
-        },
-        "request": {
-          "method": "POST",
-          "path": "/bank_accounts",
-          "success": [
-            200,
-            201
-          ],
-          "body": {
-            "bankName": "{{bankName}}",
-            "accountType": "{{accountType}}",
-            "contactEmail": "{{contactEmail}}",
-            "contactPhone": "{{contactPhone}}",
-            "accountNumber": "{{accountNumber}}",
-            "routingNumber": "{{routingNumber}}",
-            "signatureText": "{{signatureText}}",
-            "signatureImage": "{{signatureImage}}",
-            "bankCountryCode": "{{bankCountryCode}}",
-            "accountHolderName": "{{accountHolderName}}"
-          },
-          "headers": {
-            "Content-Type": "application/json"
-          }
-        }
-      },
-      "bank_accounts.list": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
-        "sideEffect": "read",
-        "title": "List bank accounts",
-        "description": "List bank accounts with optional pagination.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "skip": {
-              "type": "integer",
-              "minimum": 0
-            },
-            "limit": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 100
-            }
-          },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "GET",
-          "path": "/bank_accounts",
-          "success": [
-            200
-          ],
-          "query": {
-            "skip": "{{skip}}",
-            "limit": "{{limit}}"
-          }
-        }
-      },
-      "bank_accounts.get": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
-        "sideEffect": "read",
-        "title": "Get bank account",
-        "description": "Retrieve a bank account by ID.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "id": {
-              "type": "string",
-              "description": "Unique identifier of the bank account to retrieve",
-              "minLength": 1
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "id"
-          ]
-        },
-        "request": {
-          "method": "GET",
-          "path": "/bank_accounts/{{id}}",
-          "success": [
-            200
-          ]
-        }
-      },
-      "bank_accounts.delete": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
-        "sideEffect": "destructive",
-        "title": "Delete bank account",
-        "description": "Delete a bank account by ID. Cannot be undone.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "id": {
-              "type": "string",
-              "description": "Unique identifier of the bank account to delete",
-              "minLength": 1
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "id"
-          ]
-        },
-        "request": {
-          "method": "DELETE",
-          "path": "/bank_accounts/{{id}}",
-          "success": [
-            200
-          ]
-        }
-      },
-      "return_envelopes.create": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
-        "sideEffect": "write",
-        "title": "Create return envelope",
-        "description": "Create a return envelope (BRE) that recipients can mail back.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "to": {
-              "type": "object",
-              "description": "Return address where the envelope will be sent back to"
-            },
-            "description": {
-              "type": "string",
-              "description": "Optional description to identify the return envelope"
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "to"
-          ]
-        },
-        "request": {
-          "method": "POST",
-          "path": "/return_envelopes",
-          "success": [
-            200,
-            201
-          ],
-          "body": {
-            "to": "{{to}}",
-            "description": "{{description}}"
-          },
-          "headers": {
-            "Content-Type": "application/json"
-          }
-        }
-      },
-      "return_envelopes.list": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
-        "sideEffect": "read",
-        "title": "List return envelopes",
-        "description": "List return envelopes with optional pagination.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "skip": {
-              "type": "integer",
-              "minimum": 0
-            },
-            "limit": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 100
-            }
-          },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "GET",
-          "path": "/return_envelopes",
-          "success": [
-            200
-          ],
-          "query": {
-            "skip": "{{skip}}",
-            "limit": "{{limit}}"
-          }
-        }
-      },
-      "return_envelopes.get": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
-        "sideEffect": "read",
-        "title": "Get return envelope",
-        "description": "Retrieve a return envelope by ID.",
+        "title": "Cancel return envelope order",
+        "description": "Cancel a pending return envelope order.",
         "inputSchema": {
           "type": "object",
           "properties": {
@@ -3269,16 +2995,22 @@
               "type": "string",
               "description": "Unique identifier of the return envelope",
               "minLength": 1
+            },
+            "orderId": {
+              "type": "string",
+              "description": "Unique identifier of the return envelope order to cancel",
+              "minLength": 1
             }
           },
           "additionalProperties": false,
           "required": [
-            "id"
+            "id",
+            "orderId"
           ]
         },
         "request": {
-          "method": "GET",
-          "path": "/return_envelopes/{{id}}",
+          "method": "DELETE",
+          "path": "/return_envelopes/{{id}}/orders/{{orderId}}",
           "success": [
             200
           ]
@@ -3342,6 +3074,159 @@
           }
         }
       },
+      "return_envelope_orders.fill": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "sideEffect": "write",
+        "title": "Fill test return envelope order",
+        "description": "Simulate filling a test-mode return envelope order (placed -> filled).",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "description": "The return envelope ID",
+              "minLength": 1
+            },
+            "orderId": {
+              "type": "string",
+              "description": "The return envelope order ID",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "id",
+            "orderId"
+          ]
+        },
+        "request": {
+          "method": "POST",
+          "path": "/return_envelopes/{{id}}/orders/{{orderId}}/fill",
+          "success": [
+            200
+          ]
+        }
+      },
+      "return_envelope_orders.fills": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "sideEffect": "write",
+        "title": "Plural /fills test fill",
+        "description": "Plural /fills test fill, distinct from the singular /fill op. Body-less POST simulates filling a test-mode return envelope order.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "description": "The return envelope ID",
+              "minLength": 1
+            },
+            "orderId": {
+              "type": "string",
+              "description": "The return envelope order ID",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "id",
+            "orderId"
+          ]
+        },
+        "request": {
+          "method": "POST",
+          "path": "/return_envelopes/{{id}}/orders/{{orderId}}/fills",
+          "success": [
+            200
+          ]
+        }
+      },
+      "return_envelope_orders.get": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "sideEffect": "read",
+        "title": "Get return envelope order",
+        "description": "Retrieve a specific return envelope order.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "description": "Unique identifier of the return envelope",
+              "minLength": 1
+            },
+            "orderId": {
+              "type": "string",
+              "description": "Unique identifier of the return envelope order",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "id",
+            "orderId"
+          ]
+        },
+        "request": {
+          "method": "GET",
+          "path": "/return_envelopes/{{id}}/orders/{{orderId}}",
+          "success": [
+            200
+          ]
+        }
+      },
       "return_envelope_orders.list": {
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
@@ -3400,109 +3285,7 @@
           }
         }
       },
-      "return_envelope_orders.get": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
-        "sideEffect": "read",
-        "title": "Get return envelope order",
-        "description": "Retrieve a specific return envelope order.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "id": {
-              "type": "string",
-              "description": "Unique identifier of the return envelope",
-              "minLength": 1
-            },
-            "orderId": {
-              "type": "string",
-              "description": "Unique identifier of the return envelope order",
-              "minLength": 1
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "id",
-            "orderId"
-          ]
-        },
-        "request": {
-          "method": "GET",
-          "path": "/return_envelopes/{{id}}/orders/{{orderId}}",
-          "success": [
-            200
-          ]
-        }
-      },
-      "return_envelope_orders.cancel": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
-        "sideEffect": "destructive",
-        "title": "Cancel return envelope order",
-        "description": "Cancel a pending return envelope order.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "id": {
-              "type": "string",
-              "description": "Unique identifier of the return envelope",
-              "minLength": 1
-            },
-            "orderId": {
-              "type": "string",
-              "description": "Unique identifier of the return envelope order to cancel",
-              "minLength": 1
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "id",
-            "orderId"
-          ]
-        },
-        "request": {
-          "method": "DELETE",
-          "path": "/return_envelopes/{{id}}/orders/{{orderId}}",
-          "success": [
-            200
-          ]
-        }
-      },
-      "return_envelope_orders.fill": {
+      "return_envelopes.create": {
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
         "maxResponseBytes": 5242880,
@@ -3523,34 +3306,679 @@
         "validationMode": "strict-generated",
         "responseFormat": "json",
         "sideEffect": "write",
-        "title": "Fill test return envelope order",
-        "description": "Simulate filling a test-mode return envelope order (placed -> filled).",
+        "title": "Create return envelope",
+        "description": "Create a return envelope (BRE) that recipients can mail back.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "to": {
+              "type": "object",
+              "description": "Return address where the envelope will be sent back to"
+            },
+            "description": {
+              "type": "string",
+              "description": "Optional description to identify the return envelope"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "to"
+          ]
+        },
+        "request": {
+          "method": "POST",
+          "path": "/return_envelopes",
+          "success": [
+            200,
+            201
+          ],
+          "body": {
+            "to": "{{to}}",
+            "description": "{{description}}"
+          },
+          "headers": {
+            "Content-Type": "application/json"
+          }
+        }
+      },
+      "return_envelopes.get": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "sideEffect": "read",
+        "title": "Get return envelope",
+        "description": "Retrieve a return envelope by ID.",
         "inputSchema": {
           "type": "object",
           "properties": {
             "id": {
               "type": "string",
-              "description": "The return envelope ID",
-              "minLength": 1
-            },
-            "orderId": {
-              "type": "string",
-              "description": "The return envelope order ID",
+              "description": "Unique identifier of the return envelope",
               "minLength": 1
             }
           },
           "additionalProperties": false,
           "required": [
-            "id",
-            "orderId"
+            "id"
+          ]
+        },
+        "request": {
+          "method": "GET",
+          "path": "/return_envelopes/{{id}}",
+          "success": [
+            200
+          ]
+        }
+      },
+      "return_envelopes.list": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "sideEffect": "read",
+        "title": "List return envelopes",
+        "description": "List return envelopes with optional pagination.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "skip": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/return_envelopes",
+          "success": [
+            200
+          ],
+          "query": {
+            "skip": "{{skip}}",
+            "limit": "{{limit}}"
+          }
+        }
+      },
+      "self_mailers.list": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "sideEffect": "read",
+        "title": "List self-mailers",
+        "description": "List self-mailers with optional filters and pagination.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "skip": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            },
+            "status": {
+              "type": "string",
+              "description": "Filter by status"
+            },
+            "to_date": {
+              "type": "string",
+              "description": "Filter self-mailers created on or before this ISO 8601 timestamp"
+            },
+            "from_date": {
+              "type": "string",
+              "description": "Filter self-mailers created on or after this ISO 8601 timestamp"
+            },
+            "metadata": {
+              "type": "object",
+              "description": "Key-value metadata pairs to filter self-mailers"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/self_mailers",
+          "success": [
+            200
+          ],
+          "query": {
+            "skip": "{{skip}}",
+            "limit": "{{limit}}",
+            "status": "{{status}}",
+            "to_date": "{{to_date}}",
+            "from_date": "{{from_date}}",
+            "metadata": "{{metadata}}"
+          }
+        }
+      },
+      "sub_organizations.list": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "sideEffect": "read",
+        "title": "List sub-organizations",
+        "description": "List sub-organizations with optional search and pagination.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "skip": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            },
+            "search": {
+              "type": "string",
+              "description": "Search query to filter sub-organizations by name or other fields"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/sub_organizations",
+          "success": [
+            200
+          ],
+          "query": {
+            "skip": "{{skip}}",
+            "limit": "{{limit}}",
+            "search": "{{search}}"
+          }
+        }
+      },
+      "template_editor_sessions.create": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "sideEffect": "write",
+        "title": "Create template editor session",
+        "description": "Create an embeddable template editor session for a template.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "template": {
+              "type": "string",
+              "description": "ID of an existing template (template_*)",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "template"
           ]
         },
         "request": {
           "method": "POST",
-          "path": "/return_envelopes/{{id}}/orders/{{orderId}}/fill",
+          "path": "/template_editor_sessions",
+          "success": [
+            200,
+            201
+          ],
+          "body": {
+            "template": "{{template}}"
+          },
+          "headers": {
+            "Content-Type": "application/json"
+          }
+        }
+      },
+      "template_editor_sessions.delete": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "sideEffect": "destructive",
+        "title": "Delete template editor session",
+        "description": "Delete a template editor session by ID.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "description": "Unique identifier of the template editor session to delete",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "id"
+          ]
+        },
+        "request": {
+          "method": "DELETE",
+          "path": "/template_editor_sessions/{{id}}",
           "success": [
             200
           ]
+        }
+      },
+      "template_editor_sessions.list": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "sideEffect": "read",
+        "title": "List template editor sessions",
+        "description": "List template editor sessions with optional pagination.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "skip": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/template_editor_sessions",
+          "success": [
+            200
+          ],
+          "query": {
+            "skip": "{{skip}}",
+            "limit": "{{limit}}"
+          }
+        }
+      },
+      "templates.create": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "sideEffect": "write",
+        "title": "Create template",
+        "description": "Create a reusable HTML mail template with optional Handlebars placeholders.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "html": {
+              "type": "string",
+              "description": "HTML content of the template (supports Handlebars/Mustache syntax)"
+            },
+            "name": {
+              "type": "string",
+              "description": "Name of the template"
+            },
+            "description": {
+              "type": "string",
+              "description": "Description of the template"
+            },
+            "testRenderModel": {
+              "type": "object",
+              "description": "Data model used for testing the template rendering"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "html",
+            "name"
+          ]
+        },
+        "request": {
+          "method": "POST",
+          "path": "/templates",
+          "success": [
+            200,
+            201
+          ],
+          "body": {
+            "html": "{{html}}",
+            "name": "{{name}}",
+            "description": "{{description}}",
+            "testRenderModel": "{{testRenderModel}}"
+          },
+          "headers": {
+            "Content-Type": "application/json"
+          }
+        }
+      },
+      "templates.delete": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "sideEffect": "destructive",
+        "title": "Delete template",
+        "description": "Delete a template by its ID. This cannot be undone.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "description": "Unique identifier of the template to delete",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "id"
+          ]
+        },
+        "request": {
+          "method": "DELETE",
+          "path": "/templates/{{id}}",
+          "success": [
+            200
+          ]
+        }
+      },
+      "templates.get": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "sideEffect": "read",
+        "title": "Get template",
+        "description": "Retrieve one PostGrid Print & Mail template by ID.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "description": "Unique identifier of the template to retrieve",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "id"
+          ]
+        },
+        "request": {
+          "method": "GET",
+          "path": "/templates/{{id}}",
+          "success": [
+            200
+          ]
+        }
+      },
+      "templates.list": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "sideEffect": "read",
+        "title": "List templates",
+        "description": "List PostGrid Print & Mail templates with optional skip and limit.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "skip": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/templates",
+          "success": [
+            200
+          ],
+          "query": {
+            "skip": "{{skip}}",
+            "limit": "{{limit}}"
+          }
+        }
+      },
+      "templates.update": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "sideEffect": "write",
+        "title": "Update template",
+        "description": "Update an existing mail template's HTML, description, or metadata.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "description": "Unique identifier of the template to update",
+              "minLength": 1
+            },
+            "html": {
+              "type": "string",
+              "description": "Updated HTML content for the template"
+            },
+            "metadata": {
+              "type": "object",
+              "description": "Custom key-value pairs for organizing the template"
+            },
+            "description": {
+              "type": "string",
+              "description": "Updated description for the template"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "id",
+            "html"
+          ]
+        },
+        "request": {
+          "method": "POST",
+          "path": "/templates/{{id}}",
+          "success": [
+            200
+          ],
+          "body": {
+            "html": "{{html}}",
+            "metadata": "{{metadata}}",
+            "description": "{{description}}"
+          },
+          "headers": {
+            "Content-Type": "application/json"
+          }
         }
       },
       "trackers.create": {
@@ -3625,6 +4053,96 @@
           }
         }
       },
+      "trackers.delete": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "sideEffect": "destructive",
+        "title": "Delete tracker",
+        "description": "Delete a tracker by ID.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "description": "Unique identifier of the tracker to delete",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "id"
+          ]
+        },
+        "request": {
+          "method": "DELETE",
+          "path": "/trackers/{{id}}",
+          "success": [
+            200
+          ]
+        }
+      },
+      "trackers.get": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "sideEffect": "read",
+        "title": "Get tracker",
+        "description": "Retrieve a tracker by ID.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "description": "Unique identifier of the tracker to retrieve",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "id"
+          ]
+        },
+        "request": {
+          "method": "GET",
+          "path": "/trackers/{{id}}",
+          "success": [
+            200
+          ]
+        }
+      },
       "trackers.list": {
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
@@ -3673,51 +4191,6 @@
             "skip": "{{skip}}",
             "limit": "{{limit}}"
           }
-        }
-      },
-      "trackers.get": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
-        "sideEffect": "read",
-        "title": "Get tracker",
-        "description": "Retrieve a tracker by ID.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "id": {
-              "type": "string",
-              "description": "Unique identifier of the tracker to retrieve",
-              "minLength": 1
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "id"
-          ]
-        },
-        "request": {
-          "method": "GET",
-          "path": "/trackers/{{id}}",
-          "success": [
-            200
-          ]
         }
       },
       "trackers.update": {
@@ -3783,51 +4256,6 @@
           "headers": {
             "Content-Type": "application/json"
           }
-        }
-      },
-      "trackers.delete": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
-        "sideEffect": "destructive",
-        "title": "Delete tracker",
-        "description": "Delete a tracker by ID.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "id": {
-              "type": "string",
-              "description": "Unique identifier of the tracker to delete",
-              "minLength": 1
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "id"
-          ]
-        },
-        "request": {
-          "method": "DELETE",
-          "path": "/trackers/{{id}}",
-          "success": [
-            200
-          ]
         }
       },
       "trackers.visits.list": {
@@ -3958,6 +4386,154 @@
           }
         }
       },
+      "webhooks.delete": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "sideEffect": "destructive",
+        "title": "Delete webhook",
+        "description": "Delete a webhook subscription by ID.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "description": "Unique identifier of the webhook to delete",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "id"
+          ]
+        },
+        "request": {
+          "method": "DELETE",
+          "path": "/webhooks/{{id}}",
+          "success": [
+            200
+          ]
+        }
+      },
+      "webhooks.get": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "sideEffect": "read",
+        "title": "Get webhook",
+        "description": "Retrieve a webhook by ID.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "description": "Unique identifier of the webhook to retrieve",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "id"
+          ]
+        },
+        "request": {
+          "method": "GET",
+          "path": "/webhooks/{{id}}",
+          "success": [
+            200
+          ]
+        }
+      },
+      "webhooks.invocations.list": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "sideEffect": "read",
+        "title": "List webhook invocations",
+        "description": "List prior invocations of a webhook with response status codes.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "description": "The unique identifier of the webhook",
+              "minLength": 1
+            },
+            "skip": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "id"
+          ]
+        },
+        "request": {
+          "method": "GET",
+          "path": "/webhooks/{{id}}/invocations",
+          "success": [
+            200
+          ],
+          "query": {
+            "skip": "{{skip}}",
+            "limit": "{{limit}}"
+          }
+        }
+      },
       "webhooks.list": {
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
@@ -4006,51 +4582,6 @@
             "skip": "{{skip}}",
             "limit": "{{limit}}"
           }
-        }
-      },
-      "webhooks.get": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
-        "sideEffect": "read",
-        "title": "Get webhook",
-        "description": "Retrieve a webhook by ID.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "id": {
-              "type": "string",
-              "description": "Unique identifier of the webhook to retrieve",
-              "minLength": 1
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "id"
-          ]
-        },
-        "request": {
-          "method": "GET",
-          "path": "/webhooks/{{id}}",
-          "success": [
-            200
-          ]
         }
       },
       "webhooks.update": {
@@ -4127,486 +4658,6 @@
           },
           "headers": {
             "Content-Type": "application/json"
-          }
-        }
-      },
-      "webhooks.delete": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
-        "sideEffect": "destructive",
-        "title": "Delete webhook",
-        "description": "Delete a webhook subscription by ID.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "id": {
-              "type": "string",
-              "description": "Unique identifier of the webhook to delete",
-              "minLength": 1
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "id"
-          ]
-        },
-        "request": {
-          "method": "DELETE",
-          "path": "/webhooks/{{id}}",
-          "success": [
-            200
-          ]
-        }
-      },
-      "webhooks.invocations.list": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
-        "sideEffect": "read",
-        "title": "List webhook invocations",
-        "description": "List prior invocations of a webhook with response status codes.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "id": {
-              "type": "string",
-              "description": "The unique identifier of the webhook",
-              "minLength": 1
-            },
-            "skip": {
-              "type": "integer",
-              "minimum": 0
-            },
-            "limit": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 100
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "id"
-          ]
-        },
-        "request": {
-          "method": "GET",
-          "path": "/webhooks/{{id}}/invocations",
-          "success": [
-            200
-          ],
-          "query": {
-            "skip": "{{skip}}",
-            "limit": "{{limit}}"
-          }
-        }
-      },
-      "events.list": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
-        "sideEffect": "read",
-        "title": "List webhook events",
-        "description": "List webhook events that have occurred, with optional pagination.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "skip": {
-              "type": "integer",
-              "minimum": 0
-            },
-            "limit": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 100
-            }
-          },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "GET",
-          "path": "/events",
-          "success": [
-            200
-          ],
-          "query": {
-            "skip": "{{skip}}",
-            "limit": "{{limit}}"
-          }
-        }
-      },
-      "template_editor_sessions.create": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
-        "sideEffect": "write",
-        "title": "Create template editor session",
-        "description": "Create an embeddable template editor session for a template.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "template": {
-              "type": "string",
-              "description": "ID of an existing template (template_*)",
-              "minLength": 1
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "template"
-          ]
-        },
-        "request": {
-          "method": "POST",
-          "path": "/template_editor_sessions",
-          "success": [
-            200,
-            201
-          ],
-          "body": {
-            "template": "{{template}}"
-          },
-          "headers": {
-            "Content-Type": "application/json"
-          }
-        }
-      },
-      "template_editor_sessions.list": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
-        "sideEffect": "read",
-        "title": "List template editor sessions",
-        "description": "List template editor sessions with optional pagination.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "skip": {
-              "type": "integer",
-              "minimum": 0
-            },
-            "limit": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 100
-            }
-          },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "GET",
-          "path": "/template_editor_sessions",
-          "success": [
-            200
-          ],
-          "query": {
-            "skip": "{{skip}}",
-            "limit": "{{limit}}"
-          }
-        }
-      },
-      "template_editor_sessions.delete": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
-        "sideEffect": "destructive",
-        "title": "Delete template editor session",
-        "description": "Delete a template editor session by ID.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "id": {
-              "type": "string",
-              "description": "Unique identifier of the template editor session to delete",
-              "minLength": 1
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "id"
-          ]
-        },
-        "request": {
-          "method": "DELETE",
-          "path": "/template_editor_sessions/{{id}}",
-          "success": [
-            200
-          ]
-        }
-      },
-      "self_mailers.list": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
-        "sideEffect": "read",
-        "title": "List self-mailers",
-        "description": "List self-mailers with optional filters and pagination.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "skip": {
-              "type": "integer",
-              "minimum": 0
-            },
-            "limit": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 100
-            },
-            "status": {
-              "type": "string",
-              "description": "Filter by status"
-            },
-            "to_date": {
-              "type": "string",
-              "description": "Filter self-mailers created on or before this ISO 8601 timestamp"
-            },
-            "from_date": {
-              "type": "string",
-              "description": "Filter self-mailers created on or after this ISO 8601 timestamp"
-            },
-            "metadata": {
-              "type": "object",
-              "description": "Key-value metadata pairs to filter self-mailers"
-            }
-          },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "GET",
-          "path": "/self_mailers",
-          "success": [
-            200
-          ],
-          "query": {
-            "skip": "{{skip}}",
-            "limit": "{{limit}}",
-            "status": "{{status}}",
-            "to_date": "{{to_date}}",
-            "from_date": "{{from_date}}",
-            "metadata": "{{metadata}}"
-          }
-        }
-      },
-      "sub_organizations.list": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
-        "sideEffect": "read",
-        "title": "List sub-organizations",
-        "description": "List sub-organizations with optional search and pagination.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "skip": {
-              "type": "integer",
-              "minimum": 0
-            },
-            "limit": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 100
-            },
-            "search": {
-              "type": "string",
-              "description": "Search query to filter sub-organizations by name or other fields"
-            }
-          },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "GET",
-          "path": "/sub_organizations",
-          "success": [
-            200
-          ],
-          "query": {
-            "skip": "{{skip}}",
-            "limit": "{{limit}}",
-            "search": "{{search}}"
-          }
-        }
-      },
-      "postal_statements.list": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
-        "sideEffect": "read",
-        "title": "List postal statements",
-        "description": "List postal statements for billing and tracking.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "skip": {
-              "type": "integer",
-              "minimum": 0
-            },
-            "limit": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 100
-            },
-            "search": {
-              "type": "string",
-              "description": "Search query to filter postal statements"
-            }
-          },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "GET",
-          "path": "/postal_statements",
-          "success": [
-            200
-          ],
-          "query": {
-            "skip": "{{skip}}",
-            "limit": "{{limit}}",
-            "search": "{{search}}"
           }
         }
       }
