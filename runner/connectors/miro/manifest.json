@@ -1,7 +1,7 @@
 {
   "key": "miro",
   "name": "Miro",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "runtime": "bun",
   "visibility": "public",
   "provenance": {
@@ -5893,6 +5893,181 @@
         ],
         "result": {
           "data": "{{response}}"
+        }
+      }
+    },
+    "docs.create": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "title": "Create Doc Format Item",
+      "description": "Adds a doc format item to a board via POST /v2/boards/{boardId}/docs. The JSON body accepts data, position, and parent. Covers MIRO_CREATE_DOC_FORMAT_ITEM.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "boardId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique identifier (ID) of the board where you want to create the item."
+          },
+          "data": {
+            "type": "object",
+            "additionalProperties": false,
+            "description": "Markdown content of the doc format item.",
+            "properties": {
+              "contentType": {
+                "type": "string",
+                "description": "Content type of the data.",
+                "enum": [
+                  "markdown"
+                ]
+              },
+              "content": {
+                "type": "string",
+                "description": "The content of the item in markdown format."
+              },
+              "contentVersion": {
+                "type": "string",
+                "description": "The version of the content."
+              }
+            },
+            "required": [
+              "contentType",
+              "content"
+            ]
+          },
+          "position": {
+            "type": "object",
+            "additionalProperties": false,
+            "description": "Location of the item on the board.",
+            "properties": {
+              "x": {
+                "type": "number",
+                "description": "X-axis coordinate of the location of the item on the board."
+              },
+              "y": {
+                "type": "number",
+                "description": "Y-axis coordinate of the location of the item on the board."
+              },
+              "origin": {
+                "type": "string",
+                "description": "Area of the item that is used as the reference point for positioning.",
+                "enum": [
+                  "center"
+                ]
+              }
+            }
+          },
+          "parent": {
+            "type": "object",
+            "additionalProperties": false,
+            "description": "Parent frame for the item.",
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "description": "ID of the parent frame."
+              }
+            }
+          }
+        },
+        "required": [
+          "boardId",
+          "data"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "item": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "item"
+        ]
+      },
+      "request": {
+        "method": "POST",
+        "path": "/boards/{{boardId}}/docs",
+        "body": {
+          "data": "{{data}}",
+          "position": "{{position}}",
+          "parent": "{{parent}}"
+        },
+        "success": [
+          201
+        ],
+        "result": {
+          "item": "{{response}}"
+        }
+      }
+    },
+    "docs.get": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "title": "Get Doc Format Item",
+      "description": "Retrieves a doc format item via GET /v2/boards/{boardId}/docs/{itemId}. Optional textContentType selects html or markdown. Covers MIRO_GET_DOC_FORMAT_ITEM.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "boardId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique identifier (ID) of the board from which you want to retrieve a specific item."
+          },
+          "itemId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique identifier (ID) of the item that you want to retrieve."
+          },
+          "textContentType": {
+            "type": "string",
+            "description": "Controls the contentType of the returned doc's content.",
+            "enum": [
+              "html",
+              "markdown"
+            ]
+          }
+        },
+        "required": [
+          "boardId",
+          "itemId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "item": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "item"
+        ]
+      },
+      "request": {
+        "method": "GET",
+        "path": "/boards/{{boardId}}/docs/{{itemId}}",
+        "query": {
+          "textContentType": "{{textContentType}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "item": "{{response}}"
         }
       }
     }

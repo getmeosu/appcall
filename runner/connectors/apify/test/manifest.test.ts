@@ -5,7 +5,7 @@ describe("apify connector manifest", () => {
   test("declares key, name, runtime, version", () => {
     expect(manifest.key).toBe("apify");
     expect(manifest.name).toBe("Apify");
-    expect(manifest.version).toBe("0.3.0");
+    expect(manifest.version).toBe("0.3.1");
     expect(manifest.runtime).toBe("bun");
   });
 

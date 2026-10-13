@@ -4,10 +4,14 @@ import manifest from "../manifest.json";
 import mapping from "../fixtures/mapping.json";
 
 const operations = manifest.operations as Record<string, Record<string, unknown>>;
+
+function requestOf(key: string): Record<string, unknown> {
+  return operations[key]!.request as Record<string, unknown>;
+}
 const setupKeys = new Set(
   (manifest.auth.setup.fields as Array<{ key: string }>).map((field) => field.key),
 );
-const READ_POST = new Set(["query.create", "endpoints.run", "llm_analytics.summarize", "llm_analytics.text_repr", "insights.generate_name", "logs.query", "llm_analytics.translate", "llm_analytics.provider_keys.validate"]);
+const READ_POST = new Set(["query.create", "endpoints.run", "llm_analytics.summarize", "llm_analytics.text_repr", "insights.generate_name", "logs.query", "llm_analytics.translate", "llm_analytics.provider_keys.validate", "hog_functions.invocations.create"]);
 const SOFT_DELETE = new Set([
   "experiments.delete",
   "annotations.delete",
@@ -19,7 +23,7 @@ const SOFT_DELETE = new Set([
 describe("posthog manifest", () => {
   test("declares a filesystem-loaded first-slice connector", () => {
     expect(manifest.key).toBe("posthog");
-    expect(manifest.version).toBe("0.3.0");
+    expect(manifest.version).toBe("0.4.0");
     expect(manifest.runtime).toBe("bun");
     expect(manifest.categories).toEqual(["productivity"]);
     expect(manifest.auth.type).toBe("api_key");
@@ -36,10 +40,10 @@ describe("posthog manifest", () => {
       "us.i.posthog.com",
       "eu.i.posthog.com",
     ]);
-    expect(manifest.auth.setup.fields.map((field: { key: string }) => field.key)).toEqual([
-      "apiKey",
-      "region",
-    ]);
+    const setupFields = manifest.auth.setup.fields as Array<{ key: string; required?: boolean }>;
+    expect(setupFields.map((field) => field.key)).toEqual(["apiKey", "region"]);
+    expect(setupFields.find((field) => field.key === "region")?.required).toBe(true);
+    expect(manifest.http.baseUrl).not.toMatch(/\{\{\s*baseUrl\s*\}\}|https:\/\/\{\{\s*host\s*\}\}/);
     expect(() => compileDeclarativeConnector(manifest as never)).not.toThrow();
   });
 
@@ -120,6 +124,32 @@ describe("posthog manifest", () => {
         expect(request.path.startsWith("/api/"), key).toBe(true);
       }
     }
+  });
+
+  test("adds the public missing_http routes without dropping origin operations", () => {
+    expect(Object.keys(operations).length).toBeGreaterThanOrEqual(405);
+    expect(requestOf("feature_flags.replace")).toMatchObject({
+      method: "PUT",
+      path: "/api/projects/{{project_id}}/feature_flags/{{id}}/",
+    });
+    expect(requestOf("insights.replace")).toMatchObject({
+      method: "PUT",
+      path: "/api/projects/{{project_id}}/insights/{{id}}/",
+    });
+    expect(requestOf("insights.replace").query).toBeUndefined();
+    expect(requestOf("users.retrieve")).toMatchObject({
+      method: "GET",
+      path: "/api/users/{{uuid}}/",
+    });
+    expect(requestOf("users.retrieve").body).toBeUndefined();
+    expect(requestOf("hog_functions.invocations.create")).toMatchObject({
+      method: "POST",
+      path: "/api/projects/{{project_id}}/hog_functions/{{id}}/invocations/",
+    });
+    expect(operations["feature_flags.update"].request).toMatchObject({ method: "PATCH" });
+    expect(operations["insights.update"].request).toMatchObject({ method: "PATCH" });
+    expect(operations["users.me"].request).toMatchObject({ method: "GET", path: "/api/users/@me/" });
+    expect(operations["hog_functions.invocations.create"].sideEffect).toBe("read");
   });
 
   test("healthcheck is GET /api/users/@me/ with a static echo", () => {

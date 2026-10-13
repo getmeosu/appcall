@@ -1,7 +1,7 @@
 {
   "key": "close",
   "name": "Close",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "runtime": "bun",
   "visibility": "public",
   "categories": [
@@ -1299,6 +1299,633 @@
           "_limit": "{{limit}}",
           "_skip": "{{skip}}"
         }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "calls.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Log call",
+      "description": "Log an external call activity. Every body field is optional; status defaults to completed.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "contact_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Contact ID associated with the call."
+          },
+          "created_by": {
+            "type": "string",
+            "minLength": 1,
+            "description": "User ID recorded as the creator."
+          },
+          "direction": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Call direction.",
+            "enum": [
+              "inbound",
+              "outbound"
+            ]
+          },
+          "duration": {
+            "type": "integer",
+            "description": "Call duration in seconds."
+          },
+          "lead_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Lead ID the call is logged on."
+          },
+          "note_html": {
+            "type": "string",
+            "minLength": 1,
+            "description": "HTML note for the call."
+          },
+          "phone": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Phone number in E.164 format."
+          },
+          "status": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Call status. Defaults to completed when omitted.",
+            "enum": [
+              "created",
+              "in-progress",
+              "completed",
+              "cancel",
+              "no-answer",
+              "busy",
+              "failed",
+              "timeout"
+            ]
+          },
+          "user_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "User ID associated with the call."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/activity/call/",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "contact_id": "{{contact_id}}",
+          "created_by": "{{created_by}}",
+          "direction": "{{direction}}",
+          "duration": "{{duration}}",
+          "lead_id": "{{lead_id}}",
+          "note_html": "{{note_html}}",
+          "phone": "{{phone}}",
+          "status": "{{status}}",
+          "user_id": "{{user_id}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "emails.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create email",
+      "description": "Create an email activity. lead_id and status are required. Attachments are previously uploaded JSON url objects, not multipart.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "lead_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Lead ID that owns the email."
+          },
+          "status": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Email status.",
+            "enum": [
+              "inbox",
+              "draft",
+              "scheduled",
+              "outbox",
+              "sent",
+              "error"
+            ]
+          },
+          "attachments": {
+            "type": "array",
+            "description": "Previously uploaded files as JSON objects, not multipart.",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "filename",
+                "size",
+                "url"
+              ],
+              "properties": {
+                "filename": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Attachment file name."
+                },
+                "size": {
+                  "type": "integer",
+                  "description": "Attachment size in bytes."
+                },
+                "url": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Download URL from the Close Files API."
+                },
+                "content_type": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Attachment MIME type."
+                }
+              }
+            }
+          },
+          "bcc": {
+            "type": "array",
+            "description": "Blind-copy recipients.",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "body_html": {
+            "type": "string",
+            "minLength": 1,
+            "description": "HTML email body."
+          },
+          "body_text": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Plain-text email body."
+          },
+          "cc": {
+            "type": "array",
+            "description": "Copy recipients.",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "contact_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Contact ID associated with the email."
+          },
+          "date_created": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Caller-supplied creation timestamp."
+          },
+          "email_account_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Email account ID used to send or log the message."
+          },
+          "sender": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Sender address. Required by Close for inbox, scheduled, outbox, and error."
+          },
+          "subject": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Email subject."
+          },
+          "to": {
+            "type": "array",
+            "description": "Primary recipients.",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "user_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "User ID associated with the email."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "lead_id",
+          "status"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/activity/email/",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "lead_id": "{{lead_id}}",
+          "status": "{{status}}",
+          "attachments": "{{attachments}}",
+          "bcc": "{{bcc}}",
+          "body_html": "{{body_html}}",
+          "body_text": "{{body_text}}",
+          "cc": "{{cc}}",
+          "contact_id": "{{contact_id}}",
+          "date_created": "{{date_created}}",
+          "email_account_id": "{{email_account_id}}",
+          "sender": "{{sender}}",
+          "subject": "{{subject}}",
+          "to": "{{to}}",
+          "user_id": "{{user_id}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "sms.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create SMS",
+      "description": "Create an SMS activity. status is required.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "minLength": 1,
+            "description": "SMS status.",
+            "enum": [
+              "inbox",
+              "draft",
+              "scheduled",
+              "outbox",
+              "sent",
+              "error"
+            ]
+          },
+          "contact_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Contact ID associated with the SMS."
+          },
+          "direction": {
+            "type": "string",
+            "minLength": 1,
+            "description": "SMS direction.",
+            "enum": [
+              "inbound",
+              "outbound"
+            ]
+          },
+          "lead_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Lead ID the SMS is logged on."
+          },
+          "local_phone": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Internal sending number in E.164 format."
+          },
+          "remote_phone": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Remote phone number in E.164 format."
+          },
+          "source": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Whether Close or an external system handled the SMS.",
+            "enum": [
+              "Close.io",
+              "External"
+            ]
+          },
+          "text": {
+            "type": "string",
+            "minLength": 1,
+            "description": "SMS body. Omit when template_id is used."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "status"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/activity/sms/",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "status": "{{status}}",
+          "contact_id": "{{contact_id}}",
+          "direction": "{{direction}}",
+          "lead_id": "{{lead_id}}",
+          "local_phone": "{{local_phone}}",
+          "remote_phone": "{{remote_phone}}",
+          "source": "{{source}}",
+          "text": "{{text}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "calls.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Delete call",
+      "description": "Delete a call activity by ID. Close returns HTTP 200 and an empty JSON object.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Call activity ID to delete."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/activity/call/{{id}}/",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "notes.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List notes",
+      "description": "List note activities with optional lead filter and pagination.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "description": "Maximum records to return.",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "skip": {
+            "type": "integer",
+            "description": "Number of records to skip.",
+            "minimum": 0
+          },
+          "leadId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Lead ID used to filter child records."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/activity/note/",
+        "success": [
+          200
+        ],
+        "query": {
+          "_limit": "{{limit}}",
+          "_skip": "{{skip}}",
+          "lead_id": "{{leadId}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "calls.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List calls",
+      "description": "List call activities with optional lead filter and pagination.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "description": "Maximum records to return.",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "skip": {
+            "type": "integer",
+            "description": "Number of records to skip.",
+            "minimum": 0
+          },
+          "leadId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Lead ID used to filter child records."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/activity/call/",
+        "success": [
+          200
+        ],
+        "query": {
+          "_limit": "{{limit}}",
+          "_skip": "{{skip}}",
+          "lead_id": "{{leadId}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "customActivities.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List custom activities",
+      "description": "List custom activity types defined for the organization, including custom field metadata.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/custom_activity/",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "customObjectTypes.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List custom object types",
+      "description": "List custom object types, including custom field metadata.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/custom_object_type/",
+        "success": [
+          200
+        ]
       },
       "enforceOutputSchema": true,
       "validationMode": "strict-generated",
