@@ -637,29 +637,22 @@
         "title": "Healthcheck",
         "validationMode": "strict-generated"
       },
-      "posts.list": {
-        "description": "List Beamer changelog posts with optional filters and pagination.",
+      "notifications.unread": {
+        "description": "Retrieve unread Beamer posts that are visible in the feed.",
         "enforceOutputSchema": true,
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
-            "archived": {
-              "type": "boolean"
-            },
-            "category": {
-              "minLength": 1,
-              "type": "string"
-            },
-            "expired": {
-              "type": "boolean"
-            },
             "filter": {
               "minLength": 1,
               "type": "string"
             },
-            "language": {
-              "minLength": 2,
+            "filterUrl": {
+              "minLength": 1,
               "type": "string"
+            },
+            "markAsRead": {
+              "type": "boolean"
             },
             "maxResults": {
               "maximum": 10,
@@ -670,7 +663,7 @@
               "minimum": 1,
               "type": "integer"
             },
-            "published": {
+            "saveViews": {
               "type": "boolean"
             }
           },
@@ -693,16 +686,14 @@
         },
         "request": {
           "method": "GET",
-          "path": "/posts",
+          "path": "/unread",
           "query": {
-            "archived": "{{archived}}",
-            "category": "{{category}}",
-            "expired": "{{expired}}",
             "filter": "{{filter}}",
-            "language": "{{language}}",
+            "filterUrl": "{{filterUrl}}",
+            "markAsRead": "{{markAsRead}}",
             "maxResults": "{{maxResults}}",
             "page": "{{page}}",
-            "published": "{{published}}"
+            "saveViews": "{{saveViews}}"
           },
           "success": [
             200
@@ -711,75 +702,115 @@
         "responseFormat": "json",
         "sideEffect": "read",
         "timeoutMs": 15000,
-        "title": "List posts",
+        "title": "Get unread posts",
         "validationMode": "strict-generated"
       },
-      "unread.count": {
-        "description": "Count unread Beamer posts for an optional end-user context.",
-        "enforceOutputSchema": true,
-        "inputSchema": {
-          "additionalProperties": false,
-          "properties": {
-            "filterByUserId": {
-              "type": "boolean"
-            },
-            "userId": {
-              "minLength": 1,
-              "type": "string"
-            }
-          },
-          "type": "object"
-        },
+      "nps.count": {
         "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
         "maxInputBytes": 65536,
         "maxResponseBytes": 5242880,
+        "title": "Count NPS responses",
+        "description": "Count Beamer NPS survey responses.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        },
         "outputSchema": {
-          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "data"
+          ],
           "properties": {
             "data": {
               "type": "object"
             }
           },
-          "required": [
-            "data"
-          ],
-          "type": "object"
+          "additionalProperties": false
         },
         "request": {
           "method": "GET",
-          "path": "/unread/count",
-          "query": {
-            "filterByUserId": "{{filterByUserId}}",
-            "userId": "{{userId}}"
-          },
+          "path": "/nps/count",
           "success": [
             200
           ]
         },
-        "responseFormat": "json",
-        "sideEffect": "read",
-        "timeoutMs": 15000,
-        "title": "Count unread posts",
-        "validationMode": "strict-generated"
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
       },
-      "posts.get": {
+      "nps.list": {
         "kind": "action",
         "sideEffect": "read",
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
         "maxResponseBytes": 5242880,
-        "title": "Get post",
-        "description": "Get a Beamer changelog post by id.",
+        "title": "List NPS responses",
+        "description": "List Beamer NPS survey responses.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "page": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "maxResults": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 10
+            },
+            "dateFrom": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "array"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/nps",
+          "success": [
+            200
+          ],
+          "query": {
+            "page": "{{page}}",
+            "maxResults": "{{maxResults}}",
+            "dateFrom": "{{dateFrom}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "posts.comments.count": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Count post comments",
+        "description": "Count comments on a Beamer post.",
         "inputSchema": {
           "type": "object",
           "properties": {
             "postId": {
               "type": "integer",
-              "minimum": 1
-            },
-            "language": {
-              "type": "string",
-              "minLength": 2
+              "minimum": 1,
+              "description": "Beamer post id."
             }
           },
           "additionalProperties": false,
@@ -801,11 +832,184 @@
         },
         "request": {
           "method": "GET",
-          "path": "/posts/{{postId}}",
+          "path": "/posts/{{postId}}/comments/count",
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "posts.comments.create": {
+        "kind": "action",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Create post comment",
+        "description": "Create a comment on a Beamer post.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "postId": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "text": {
+              "type": "string",
+              "minLength": 1
+            },
+            "userId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "userEmail": {
+              "type": "string",
+              "minLength": 3
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "postId",
+            "text"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "POST",
+          "path": "/posts/{{postId}}/comments",
+          "success": [
+            201,
+            200
+          ],
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "text": "{{text}}",
+            "userId": "{{userId}}",
+            "userEmail": "{{userEmail}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "posts.comments.list": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "List post comments",
+        "description": "List comments on a Beamer post.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "postId": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "page": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "maxResults": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 10
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "postId"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "array"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/posts/{{postId}}/comments",
           "success": [
             200
           ],
           "query": {
+            "page": "{{page}}",
+            "maxResults": "{{maxResults}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "posts.count": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Count posts",
+        "description": "Count Beamer posts matching optional filters.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "published": {
+              "type": "boolean"
+            },
+            "category": {
+              "type": "string",
+              "minLength": 1
+            },
+            "language": {
+              "type": "string",
+              "minLength": 2
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/posts/count",
+          "success": [
+            200
+          ],
+          "query": {
+            "published": "{{published}}",
+            "category": "{{category}}",
             "language": "{{language}}"
           }
         },
@@ -901,6 +1105,297 @@
         "validationMode": "strict-generated",
         "responseFormat": "json"
       },
+      "posts.delete": {
+        "kind": "action",
+        "sideEffect": "destructive",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Delete post",
+        "description": "Delete a Beamer post by id.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "postId": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Beamer post id."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "postId"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "DELETE",
+          "path": "/posts/{{postId}}",
+          "success": [
+            204,
+            200
+          ],
+          "result": {
+            "data": {
+              "deleted": true,
+              "postId": "{{input.postId}}"
+            }
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "posts.get": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Get post",
+        "description": "Get a Beamer changelog post by id.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "postId": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "language": {
+              "type": "string",
+              "minLength": 2
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "postId"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/posts/{{postId}}",
+          "success": [
+            200
+          ],
+          "query": {
+            "language": "{{language}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "posts.list": {
+        "description": "List Beamer changelog posts with optional filters and pagination.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "archived": {
+              "type": "boolean"
+            },
+            "category": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "expired": {
+              "type": "boolean"
+            },
+            "filter": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "language": {
+              "minLength": 2,
+              "type": "string"
+            },
+            "maxResults": {
+              "maximum": 10,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "page": {
+              "minimum": 1,
+              "type": "integer"
+            },
+            "published": {
+              "type": "boolean"
+            }
+          },
+          "type": "object"
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "array"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        },
+        "request": {
+          "method": "GET",
+          "path": "/posts",
+          "query": {
+            "archived": "{{archived}}",
+            "category": "{{category}}",
+            "expired": "{{expired}}",
+            "filter": "{{filter}}",
+            "language": "{{language}}",
+            "maxResults": "{{maxResults}}",
+            "page": "{{page}}",
+            "published": "{{published}}"
+          },
+          "success": [
+            200
+          ]
+        },
+        "responseFormat": "json",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "title": "List posts",
+        "validationMode": "strict-generated"
+      },
+      "posts.reactions.count": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Count post reactions",
+        "description": "Count reactions on a Beamer post.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "postId": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Beamer post id."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "postId"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/posts/{{postId}}/reactions/count",
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "posts.reactions.list": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "List post reactions",
+        "description": "List reactions on a Beamer post.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "postId": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "reaction": {
+              "type": "string",
+              "enum": [
+                "positive",
+                "neutral",
+                "negative"
+              ]
+            },
+            "page": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "maxResults": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 10
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "postId"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "array"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/posts/{{postId}}/reactions",
+          "success": [
+            200
+          ],
+          "query": {
+            "reaction": "{{reaction}}",
+            "page": "{{page}}",
+            "maxResults": "{{maxResults}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
       "posts.update": {
         "kind": "action",
         "sideEffect": "write",
@@ -977,81 +1472,17 @@
         "validationMode": "strict-generated",
         "responseFormat": "json"
       },
-      "posts.delete": {
-        "kind": "action",
-        "sideEffect": "destructive",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "title": "Delete post",
-        "description": "Delete a Beamer post by id.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "postId": {
-              "type": "integer",
-              "minimum": 1,
-              "description": "Beamer post id."
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "postId"
-          ]
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "DELETE",
-          "path": "/posts/{{postId}}",
-          "success": [
-            204,
-            200
-          ],
-          "result": {
-            "data": {
-              "deleted": true,
-              "postId": "{{input.postId}}"
-            }
-          }
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "posts.count": {
+      "requests.count": {
         "kind": "action",
         "sideEffect": "read",
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
         "maxResponseBytes": 5242880,
-        "title": "Count posts",
-        "description": "Count Beamer posts matching optional filters.",
+        "title": "Count feature requests",
+        "description": "Count Beamer feature requests.",
         "inputSchema": {
           "type": "object",
-          "properties": {
-            "published": {
-              "type": "boolean"
-            },
-            "category": {
-              "type": "string",
-              "minLength": 1
-            },
-            "language": {
-              "type": "string",
-              "minLength": 2
-            }
-          },
+          "properties": {},
           "additionalProperties": false
         },
         "outputSchema": {
@@ -1068,163 +1499,35 @@
         },
         "request": {
           "method": "GET",
-          "path": "/posts/count",
+          "path": "/requests/count",
           "success": [
             200
-          ],
-          "query": {
-            "published": "{{published}}",
-            "category": "{{category}}",
-            "language": "{{language}}"
-          }
+          ]
         },
         "enforceOutputSchema": true,
         "validationMode": "strict-generated",
         "responseFormat": "json"
       },
-      "posts.comments.list": {
+      "requests.get": {
         "kind": "action",
         "sideEffect": "read",
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
         "maxResponseBytes": 5242880,
-        "title": "List post comments",
-        "description": "List comments on a Beamer post.",
+        "title": "Get feature request",
+        "description": "Get a Beamer feature request by id.",
         "inputSchema": {
           "type": "object",
           "properties": {
-            "postId": {
-              "type": "integer",
-              "minimum": 1
-            },
-            "page": {
-              "type": "integer",
-              "minimum": 1
-            },
-            "maxResults": {
+            "featureRequestId": {
               "type": "integer",
               "minimum": 1,
-              "maximum": 10
+              "description": "Feature request id."
             }
           },
           "additionalProperties": false,
           "required": [
-            "postId"
-          ]
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "array"
-            }
-          },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "GET",
-          "path": "/posts/{{postId}}/comments",
-          "success": [
-            200
-          ],
-          "query": {
-            "page": "{{page}}",
-            "maxResults": "{{maxResults}}"
-          }
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "posts.comments.create": {
-        "kind": "action",
-        "sideEffect": "write",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "title": "Create post comment",
-        "description": "Create a comment on a Beamer post.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "postId": {
-              "type": "integer",
-              "minimum": 1
-            },
-            "text": {
-              "type": "string",
-              "minLength": 1
-            },
-            "userId": {
-              "type": "string",
-              "minLength": 1
-            },
-            "userEmail": {
-              "type": "string",
-              "minLength": 3
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "postId",
-            "text"
-          ]
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "POST",
-          "path": "/posts/{{postId}}/comments",
-          "success": [
-            201,
-            200
-          ],
-          "headers": {
-            "Content-Type": "application/json"
-          },
-          "body": {
-            "text": "{{text}}",
-            "userId": "{{userId}}",
-            "userEmail": "{{userEmail}}"
-          }
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "posts.comments.count": {
-        "kind": "action",
-        "sideEffect": "read",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "title": "Count post comments",
-        "description": "Count comments on a Beamer post.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "postId": {
-              "type": "integer",
-              "minimum": 1,
-              "description": "Beamer post id."
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "postId"
+            "featureRequestId"
           ]
         },
         "outputSchema": {
@@ -1241,118 +1544,7 @@
         },
         "request": {
           "method": "GET",
-          "path": "/posts/{{postId}}/comments/count",
-          "success": [
-            200
-          ]
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "posts.reactions.list": {
-        "kind": "action",
-        "sideEffect": "read",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "title": "List post reactions",
-        "description": "List reactions on a Beamer post.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "postId": {
-              "type": "integer",
-              "minimum": 1
-            },
-            "reaction": {
-              "type": "string",
-              "enum": [
-                "positive",
-                "neutral",
-                "negative"
-              ]
-            },
-            "page": {
-              "type": "integer",
-              "minimum": 1
-            },
-            "maxResults": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 10
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "postId"
-          ]
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "array"
-            }
-          },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "GET",
-          "path": "/posts/{{postId}}/reactions",
-          "success": [
-            200
-          ],
-          "query": {
-            "reaction": "{{reaction}}",
-            "page": "{{page}}",
-            "maxResults": "{{maxResults}}"
-          }
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "posts.reactions.count": {
-        "kind": "action",
-        "sideEffect": "read",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "title": "Count post reactions",
-        "description": "Count reactions on a Beamer post.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "postId": {
-              "type": "integer",
-              "minimum": 1,
-              "description": "Beamer post id."
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "postId"
-          ]
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "GET",
-          "path": "/posts/{{postId}}/reactions/count",
+          "path": "/requests/{{featureRequestId}}",
           "success": [
             200
           ]
@@ -1411,177 +1603,53 @@
         "validationMode": "strict-generated",
         "responseFormat": "json"
       },
-      "requests.get": {
-        "kind": "action",
-        "sideEffect": "read",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "title": "Get feature request",
-        "description": "Get a Beamer feature request by id.",
+      "unread.count": {
+        "description": "Count unread Beamer posts for an optional end-user context.",
+        "enforceOutputSchema": true,
         "inputSchema": {
-          "type": "object",
-          "properties": {
-            "featureRequestId": {
-              "type": "integer",
-              "minimum": 1,
-              "description": "Feature request id."
-            }
-          },
           "additionalProperties": false,
-          "required": [
-            "featureRequestId"
-          ]
+          "properties": {
+            "filterByUserId": {
+              "type": "boolean"
+            },
+            "userId": {
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "type": "object"
         },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
         "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
+          "additionalProperties": false,
           "properties": {
             "data": {
               "type": "object"
             }
           },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "GET",
-          "path": "/requests/{{featureRequestId}}",
-          "success": [
-            200
-          ]
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "requests.count": {
-        "kind": "action",
-        "sideEffect": "read",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "title": "Count feature requests",
-        "description": "Count Beamer feature requests.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {},
-          "additionalProperties": false
-        },
-        "outputSchema": {
-          "type": "object",
           "required": [
             "data"
           ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
+          "type": "object"
         },
         "request": {
           "method": "GET",
-          "path": "/requests/count",
-          "success": [
-            200
-          ]
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "nps.list": {
-        "kind": "action",
-        "sideEffect": "read",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "title": "List NPS responses",
-        "description": "List Beamer NPS survey responses.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "page": {
-              "type": "integer",
-              "minimum": 1
-            },
-            "maxResults": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 10
-            },
-            "dateFrom": {
-              "type": "string",
-              "minLength": 1
-            }
-          },
-          "additionalProperties": false
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "array"
-            }
-          },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "GET",
-          "path": "/nps",
-          "success": [
-            200
-          ],
+          "path": "/unread/count",
           "query": {
-            "page": "{{page}}",
-            "maxResults": "{{maxResults}}",
-            "dateFrom": "{{dateFrom}}"
-          }
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "nps.count": {
-        "kind": "action",
-        "sideEffect": "read",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "title": "Count NPS responses",
-        "description": "Count Beamer NPS survey responses.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {},
-          "additionalProperties": false
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
+            "filterByUserId": "{{filterByUserId}}",
+            "userId": "{{userId}}"
           },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "GET",
-          "path": "/nps/count",
           "success": [
             200
           ]
         },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
+        "responseFormat": "json",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "title": "Count unread posts",
+        "validationMode": "strict-generated"
       },
       "users.list": {
         "kind": "action",

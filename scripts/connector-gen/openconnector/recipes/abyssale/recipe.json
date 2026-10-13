@@ -523,155 +523,28 @@
       }
     },
     "operations": {
-      "healthcheck": {
+      "ABYSSALE_CREATE_PROJECT": {
         "kind": "action",
-        "sideEffect": "read",
-        "timeoutMs": 5000,
-        "maxInputBytes": 4096,
-        "maxResponseBytes": 65536,
-        "title": "Healthcheck",
-        "description": "Validate the Abyssale API key by listing projects.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {},
-          "additionalProperties": false
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "array"
-            }
-          },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "GET",
-          "path": "/projects",
-          "success": [
-            200
-          ]
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "projects.list": {
-        "kind": "action",
-        "sideEffect": "read",
-        "timeoutMs": 15000,
-        "maxInputBytes": 4096,
-        "maxResponseBytes": 5242880,
-        "title": "List projects",
-        "description": "List Abyssale projects available to the API key.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {},
-          "additionalProperties": false
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "array"
-            }
-          },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "GET",
-          "path": "/projects",
-          "success": [
-            200
-          ]
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "designs.list": {
-        "kind": "action",
-        "sideEffect": "read",
+        "sideEffect": "write",
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
         "maxResponseBytes": 5242880,
-        "title": "List designs",
-        "description": "List Abyssale designs available to the API key, optionally filtered by project and type.",
+        "title": "Create a project",
+        "description": "Create a new project to organize your designs. Assign designs to this project in the Abyssale editor to make them accessible via the API.",
         "inputSchema": {
           "type": "object",
           "properties": {
-            "projectId": {
+            "name": {
               "type": "string",
-              "minLength": 1,
-              "description": "Limit designs to one project."
-            },
-            "type": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Design type filter.",
-              "enum": [
-                "static",
-                "animated",
-                "printer",
-                "printer_multipage"
-              ]
+              "minLength": 2,
+              "maxLength": 100,
+              "description": "Name of the project."
             }
           },
-          "additionalProperties": false
-        },
-        "outputSchema": {
-          "type": "object",
+          "additionalProperties": false,
           "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "array"
-            }
-          },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "GET",
-          "path": "/designs",
-          "success": [
-            200
-          ],
-          "query": {
-            "project_id": "{{projectId}}",
-            "type": "{{type}}"
-          }
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "designs.get": {
-        "kind": "action",
-        "sideEffect": "read",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "title": "Get design",
-        "description": "Retrieve one Abyssale design including formats, elements, and variables.",
-        "inputSchema": {
-          "type": "object",
-          "required": [
-            "designId"
-          ],
-          "properties": {
-            "designId": {
-              "type": "string",
-              "minLength": 1
-            }
-          },
-          "additionalProperties": false
+            "name"
+          ]
         },
         "outputSchema": {
           "type": "object",
@@ -686,47 +559,17 @@
           "additionalProperties": false
         },
         "request": {
-          "method": "GET",
-          "path": "/designs/{{designId}}",
+          "method": "POST",
+          "path": "/projects",
           "success": [
             200
-          ]
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "fonts.list": {
-        "kind": "action",
-        "sideEffect": "read",
-        "timeoutMs": 15000,
-        "maxInputBytes": 4096,
-        "maxResponseBytes": 5242880,
-        "title": "List fonts",
-        "description": "List custom and Google fonts available in Abyssale.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {},
-          "additionalProperties": false
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
           ],
-          "properties": {
-            "data": {
-              "type": "array"
-            }
+          "headers": {
+            "Content-Type": "application/json"
           },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "GET",
-          "path": "/fonts",
-          "success": [
-            200
-          ]
+          "body": {
+            "name": "{{name}}"
+          }
         },
         "enforceOutputSchema": true,
         "validationMode": "strict-generated",
@@ -773,32 +616,34 @@
         "validationMode": "strict-generated",
         "responseFormat": "json"
       },
-      "designs.formats.get": {
+      "banners.export": {
         "kind": "action",
-        "sideEffect": "read",
+        "sideEffect": "write",
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
         "maxResponseBytes": 5242880,
-        "title": "Get design format",
-        "description": "Get one format on an Abyssale design.",
+        "title": "Export banners",
+        "description": "Request a ZIP export of previously generated Abyssale assets.",
         "inputSchema": {
           "type": "object",
           "properties": {
-            "designId": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Design ID."
+            "ids": {
+              "type": "array",
+              "minItems": 1,
+              "description": "Generated asset IDs to include.",
+              "items": {
+                "type": "string"
+              }
             },
-            "formatSpecifier": {
+            "callbackUrl": {
               "type": "string",
               "minLength": 1,
-              "description": "Format name or ID."
+              "description": "Webhook URL that receives NEW_EXPORT."
             }
           },
           "additionalProperties": false,
           "required": [
-            "designId",
-            "formatSpecifier"
+            "ids"
           ]
         },
         "outputSchema": {
@@ -814,11 +659,19 @@
           "additionalProperties": false
         },
         "request": {
-          "method": "GET",
-          "path": "/designs/{{designId}}/formats/{{formatSpecifier}}",
+          "method": "POST",
+          "path": "/async/banners/export",
           "success": [
-            200
-          ]
+            200,
+            201
+          ],
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "ids": "{{ids}}",
+            "callback_url": "{{callbackUrl}}"
+          }
         },
         "enforceOutputSchema": true,
         "validationMode": "strict-generated",
@@ -1020,26 +873,32 @@
         "validationMode": "strict-generated",
         "responseFormat": "json"
       },
-      "generation-requests.get": {
+      "designs.formats.get": {
         "kind": "action",
         "sideEffect": "read",
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
         "maxResponseBytes": 5242880,
-        "title": "Get generation request",
-        "description": "Poll an asynchronous Abyssale generation request.",
+        "title": "Get design format",
+        "description": "Get one format on an Abyssale design.",
         "inputSchema": {
           "type": "object",
           "properties": {
-            "generationRequestId": {
+            "designId": {
               "type": "string",
               "minLength": 1,
-              "description": "Generation request ID."
+              "description": "Design ID."
+            },
+            "formatSpecifier": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Format name or ID."
             }
           },
           "additionalProperties": false,
           "required": [
-            "generationRequestId"
+            "designId",
+            "formatSpecifier"
           ]
         },
         "outputSchema": {
@@ -1056,7 +915,7 @@
         },
         "request": {
           "method": "GET",
-          "path": "/generation-request/{{generationRequestId}}",
+          "path": "/designs/{{designId}}/formats/{{formatSpecifier}}",
           "success": [
             200
           ]
@@ -1065,35 +924,26 @@
         "validationMode": "strict-generated",
         "responseFormat": "json"
       },
-      "banners.export": {
+      "designs.get": {
         "kind": "action",
-        "sideEffect": "write",
+        "sideEffect": "read",
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
         "maxResponseBytes": 5242880,
-        "title": "Export banners",
-        "description": "Request a ZIP export of previously generated Abyssale assets.",
+        "title": "Get design",
+        "description": "Retrieve one Abyssale design including formats, elements, and variables.",
         "inputSchema": {
           "type": "object",
+          "required": [
+            "designId"
+          ],
           "properties": {
-            "ids": {
-              "type": "array",
-              "minItems": 1,
-              "description": "Generated asset IDs to include.",
-              "items": {
-                "type": "string"
-              }
-            },
-            "callbackUrl": {
+            "designId": {
               "type": "string",
-              "minLength": 1,
-              "description": "Webhook URL that receives NEW_EXPORT."
+              "minLength": 1
             }
           },
-          "additionalProperties": false,
-          "required": [
-            "ids"
-          ]
+          "additionalProperties": false
         },
         "outputSchema": {
           "type": "object",
@@ -1108,18 +958,67 @@
           "additionalProperties": false
         },
         "request": {
-          "method": "POST",
-          "path": "/async/banners/export",
+          "method": "GET",
+          "path": "/designs/{{designId}}",
           "success": [
-            200,
-            201
-          ],
-          "headers": {
-            "Content-Type": "application/json"
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "designs.list": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "List designs",
+        "description": "List Abyssale designs available to the API key, optionally filtered by project and type.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "projectId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Limit designs to one project."
+            },
+            "type": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Design type filter.",
+              "enum": [
+                "static",
+                "animated",
+                "printer",
+                "printer_multipage"
+              ]
+            }
           },
-          "body": {
-            "ids": "{{ids}}",
-            "callback_url": "{{callbackUrl}}"
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "array"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/designs",
+          "success": [
+            200
+          ],
+          "query": {
+            "project_id": "{{projectId}}",
+            "type": "{{type}}"
           }
         },
         "enforceOutputSchema": true,
@@ -1176,6 +1075,159 @@
         "validationMode": "strict-generated",
         "responseFormat": "json"
       },
+      "fonts.list": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 4096,
+        "maxResponseBytes": 5242880,
+        "title": "List fonts",
+        "description": "List custom and Google fonts available in Abyssale.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "array"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/fonts",
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "generation-requests.get": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Get generation request",
+        "description": "Poll an asynchronous Abyssale generation request.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "generationRequestId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Generation request ID."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "generationRequestId"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/generation-request/{{generationRequestId}}",
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "healthcheck": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 5000,
+        "maxInputBytes": 4096,
+        "maxResponseBytes": 65536,
+        "title": "Healthcheck",
+        "description": "Validate the Abyssale API key by listing projects.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "array"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/projects",
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "projects.list": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 4096,
+        "maxResponseBytes": 5242880,
+        "title": "List projects",
+        "description": "List Abyssale projects available to the API key.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "array"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/projects",
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
       "signing-secret.get": {
         "kind": "action",
         "sideEffect": "read",
@@ -1212,47 +1264,6 @@
         "validationMode": "strict-generated",
         "responseFormat": "json"
       },
-      "signing-secret.rotate": {
-        "kind": "action",
-        "sideEffect": "write",
-        "timeoutMs": 15000,
-        "maxInputBytes": 4096,
-        "maxResponseBytes": 5242880,
-        "title": "Rotate signing secret",
-        "description": "Rotate the Abyssale webhook signing secret.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {},
-          "additionalProperties": false
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "POST",
-          "path": "/signing-secret/rotate",
-          "success": [
-            200,
-            201
-          ],
-          "headers": {
-            "Content-Type": "application/json"
-          },
-          "body": {}
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
       "signing-secret.revoke": {
         "kind": "action",
         "sideEffect": "write",
@@ -1281,6 +1292,47 @@
         "request": {
           "method": "POST",
           "path": "/signing-secret/revoke",
+          "success": [
+            200,
+            201
+          ],
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": {}
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "signing-secret.rotate": {
+        "kind": "action",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "maxInputBytes": 4096,
+        "maxResponseBytes": 5242880,
+        "title": "Rotate signing secret",
+        "description": "Rotate the Abyssale webhook signing secret.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "POST",
+          "path": "/signing-secret/rotate",
           "success": [
             200,
             201

@@ -2,7 +2,20 @@ import { expect, it } from "bun:test";
 import manifest from "../manifest.json";
 
 it("declares bounded action schemas with titles and descriptions", () => {
-  expect(manifest.version).toBe("0.2.0");
+  expect(manifest.version).toBe("0.2.1");
+  expect(Object.keys(manifest.operations)).toHaveLength(23);
+  const added = manifest.operations as Record<string, { request?: { method?: string; path?: string; body?: unknown; headers?: Record<string, string> }; sideEffect?: string }>;
+  expect(added["locations.delete"]?.request).toEqual({ method: "DELETE", path: "/v1/locations/{{location_id}}", success: [200] });
+  expect(added["locations.delete"]?.request?.body).toBeUndefined();
+  expect(added["locations.delete"]?.request?.headers).toBeUndefined();
+  expect(added["locations.delete"]?.sideEffect).toBe("destructive");
+  expect(added["itemAttrs.get"]?.request).toEqual({ method: "GET", path: "/v1/item-attrs/{{attr_id}}", success: [200] });
+  expect(added["itemAttrs.get"]?.request?.body).toBeUndefined();
+  expect(added["itemAttrs.get"]?.request?.headers).toBeUndefined();
+  expect(added["teams.linked"]?.request).toEqual({ method: "GET", path: "/v1/teams/linked", success: [200] });
+  expect(added["teams.linked"]?.request?.body).toBeUndefined();
+  expect(added["teams.linked"]?.request?.headers).toBeUndefined();
+  expect(added["transactions.list"]?.request?.path).toBe("/v1/transactions");
   expect(manifest.http?.auth.field).toBe("apiKey");
   expect(manifest.network?.allowedHosts).toEqual(["rest.boxhero-app.com"]);
   for (const [key, op] of Object.entries(manifest.operations) as [string, any][]) {

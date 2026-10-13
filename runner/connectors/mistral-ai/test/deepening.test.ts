@@ -84,6 +84,64 @@ describe("mistral-ai deepening", () => {
     expect(JSON.parse(String(query.calls[0]!.init?.body))).toEqual({ name: "get_progress" });
   });
 
+  test("reads dataset tasks and patches libraries as JSON", async () => {
+    const list = capture({ tasks: { count: 0 } });
+    await actions["observability.dataset_tasks.list"]!({
+      apiKey: token,
+      dataset_id: "ds_01example",
+      page: 1,
+      page_size: 20,
+      fetch: list.fetchFn,
+    });
+    const listUrl = new URL(list.calls[0]!.url);
+    expect(listUrl.pathname).toBe("/v1/observability/datasets/ds_01example/tasks");
+    expect(listUrl.searchParams.get("page")).toBe("1");
+    expect(listUrl.searchParams.get("page_size")).toBe("20");
+    expect(list.calls[0]!.init?.method).toBe("GET");
+    expect(list.calls[0]!.init?.body).toBeUndefined();
+    expect(new Headers(list.calls[0]!.init?.headers).get("content-type")).toBeNull();
+
+    const task = capture({ id: "task_01example", status: "RUNNING" });
+    await actions["observability.dataset_tasks.get"]!({
+      apiKey: token,
+      dataset_id: "ds_01example",
+      task_id: "task_01example",
+      fetch: task.fetchFn,
+    });
+    expect(task.calls[0]!.url).toBe("https://api.mistral.ai/v1/observability/datasets/ds_01example/tasks/task_01example");
+    expect(task.calls[0]!.init?.body).toBeUndefined();
+    expect(new Headers(task.calls[0]!.init?.headers).get("content-type")).toBeNull();
+
+    const library = capture({ id: "lib_01example" });
+    await actions["libraries.patch"]!({
+      apiKey: token,
+      library_id: "lib_01example",
+      name: "Notes",
+      fetch: library.fetchFn,
+    });
+    expect(library.calls[0]!.url).toBe("https://api.mistral.ai/v1/libraries/lib_01example");
+    expect(library.calls[0]!.init?.method).toBe("PATCH");
+    expect(new Headers(library.calls[0]!.init?.headers).get("content-type")).toBe("application/json");
+    expect(JSON.parse(String(library.calls[0]!.init?.body))).toEqual({ name: "Notes" });
+
+    const document = capture({ id: "doc_01example" });
+    await actions["libraries.documents.patch"]!({
+      apiKey: token,
+      library_id: "lib_01example",
+      document_id: "doc_01example",
+      name: "Notes",
+      attributes: { topic: "beta" },
+      fetch: document.fetchFn,
+    });
+    expect(document.calls[0]!.url).toBe("https://api.mistral.ai/v1/libraries/lib_01example/documents/doc_01example");
+    expect(document.calls[0]!.init?.method).toBe("PATCH");
+    expect(new Headers(document.calls[0]!.init?.headers).get("content-type")).toBe("application/json");
+    expect(JSON.parse(String(document.calls[0]!.init?.body))).toEqual({
+      name: "Notes",
+      attributes: { topic: "beta" },
+    });
+  });
+
   test("maps rate limits", async () => {
     await expect(
       actions["models.list"]!({ apiKey: token, fetch: async () => json({ message: "slow" }, 429) }),

@@ -7,6 +7,38 @@ import manifest from "../manifest.json";
 const operations = manifest.operations as Record<string, Record<string, unknown>>;
 const ORIGIN_OPS = ["healthcheck", "projects.get", "projects.list", "users.current", "users.list"] as const;
 
+// ops the pinned recipe has real provenance for
+const PINNED_OPS = [
+  "comments.add",
+  "comments.list",
+  "customers.create",
+  "customers.list",
+  "customers.update",
+  "healthcheck",
+  "photos.create",
+  "photos.description.set",
+  "photos.get",
+  "photos.tags.add",
+  "photos.tags.list",
+  "projects.create",
+  "projects.get",
+  "projects.labels.add",
+  "projects.labels.list",
+  "projects.list",
+  "projects.photos.list",
+  "projects.search",
+  "projects.tasks.create",
+  "projects.tasks.list",
+  "projects.tasks.update",
+  "projects.update",
+  "tags.create",
+  "users.current",
+  "users.list",
+];
+
+// ops this branch added from the provider's live API; no pinned action id exists
+const DEEPENED_OPS = ["tags.list"];
+
 const COMPOSIO_TOOLS: Record<string, string | null> = {
   COMPANYCAM_ADD_COMMENT: "comments.add",
   COMPANYCAM_ADD_PHOTO_TAGS: "photos.tags.add",
@@ -88,7 +120,7 @@ function deepEqual(a: unknown, b: unknown): boolean {
 describe("companycam manifest", () => {
   test("has bounded host, origin auth, version, and compiles", () => {
     expect(manifest.key).toBe("companycam");
-    expect(manifest.version).toBe("0.3.0");
+    expect(manifest.version).toBe("0.3.1");
     expect(manifest.runtime).toBe("bun");
     expect(manifest.categories).toEqual(["productivity"]);
     expect(manifest.network.allowedHosts).toEqual(["api.companycam.com"]);
@@ -124,7 +156,7 @@ describe("companycam manifest", () => {
       expect(requestOf(key!), slug).toBeDefined();
       expect(compiled.actions[key!], slug).toBeTypeOf("function");
     }
-    expect(Object.keys(operations).length).toBe(25);
+    expect(Object.keys(operations).length).toBe(26);
     expect(operations["users.current"]).toBeDefined();
   });
 
@@ -194,6 +226,13 @@ describe("companycam manifest", () => {
     expect(requestOf("photos.tags.add")).toMatchObject({ method: "POST", path: "/photos/{{photoId}}/tags" });
     expect(requestOf("photos.tags.list").path).toBe("/photos/{{photoId}}/tags");
     expect(requestOf("tags.create")).toMatchObject({ method: "POST", path: "/tags" });
+    expect(requestOf("tags.list")).toMatchObject({ method: "GET", path: "/tags" });
+    expect(requestOf("tags.list").baseUrl).toBeUndefined();
+    expect(requestOf("tags.list").body).toBeUndefined();
+    expect((requestOf("tags.list").headers as Record<string, string> | undefined)?.["Content-Type"]).toBeUndefined();
+    expect((requestOf("tags.list").query as Record<string, string>).page).toBe("{{page}}");
+    expect((requestOf("tags.list").query as Record<string, string>).per_page).toBe("{{perPage}}");
+    expect((operations["tags.list"]!.inputSchema as { required?: string[] }).required).toBeUndefined();
     expect((requestOf("tags.create").body as { tag: Record<string, string> }).tag.display_value).toBe("{{displayValue}}");
     expect(requestOf("projects.labels.add").path).toBe("/projects/{{projectId}}/labels");
     expect(requestOf("projects.labels.list").path).toBe("/projects/{{projectId}}/labels");
@@ -237,12 +276,23 @@ describe("companycam manifest", () => {
     expect((operations["projects.tasks.update"]!.inputSchema as { required: string[] }).required).toEqual(["projectId", "taskId"]);
   });
 
-  test("origin recipe still contains the origin five; recipe rewrite is out of this write set", async () => {
+  test("recipe mirrors the deepened operations; provenance mappings stay pinned", async () => {
     const recipe = await Bun.file(new URL("../../../../scripts/connector-gen/openconnector/recipes/companycam/recipe.json", import.meta.url)).json();
     for (const key of ORIGIN_OPS) {
       expect(recipe.manifest.operations[key], key).toBeDefined();
     }
     expect(recipe.manifest.http.baseUrl).toBe("https://api.companycam.com/v2");
+    expect(recipe.manifest.version).toBe("0.3.0");
+    const runnerOps = Object.keys(operations).sort();
+    const recipeOps = Object.keys(recipe.manifest.operations).sort();
+    expect(runnerOps).toEqual(recipeOps);
+    expect(runnerOps.filter((key) => !Object.hasOwn(recipe.operationSources, key))).toEqual(DEEPENED_OPS);
+    expect(Object.keys(recipe.operationSources).sort()).toEqual(PINNED_OPS);
+    expect([...recipe.selection.operations].sort()).toEqual(PINNED_OPS);
+    for (const key of recipeOps) {
+      expect(operations[key], key).toBeDefined();
+      expect(deepEqual(operations[key], recipe.manifest.operations[key]), key).toBe(true);
+    }
   });
 });
 

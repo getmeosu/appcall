@@ -5,6 +5,11 @@ import { compileDeclarativeConnector } from "../../../bun/src/declarative/compil
 import manifest from "../manifest.json";
 
 const EXISTING = ["accounts.create", "accounts.delete", "accounts.get", "accounts.list", "accounts.update", "contacts.create", "contacts.delete", "contacts.get", "contacts.list", "contacts.update", "healthcheck", "notes.create", "notes.get", "notes.list", "opportunities.get", "opportunities.list", "products.list", "query", "tasks.create", "tasks.get", "tasks.list", "tickets.get", "tickets.list"] as const;
+const ADDED: Record<string, { method: string; path: string }> = {
+  "contract.delete": { method: "DELETE", path: "/api/record/contract/{{id}}" },
+  "contract.update": { method: "PUT", path: "/api/record/Contract/{{id}}" },
+  "fields.formula_field.update": { method: "PUT", path: "/api/v2/system-field/{{objectType}}/formula/{{fieldName}}" },
+};
 const ORIGIN_PATHS: Record<string, string> = {
   "healthcheck": "/api/record/account",
   "accounts.get": "/api/record/account/{{id}}",
@@ -55,8 +60,38 @@ describe("fireberry prepared connector", () => {
   const ops = Object.keys(manifest.operations);
 
   test("keeps origin operations and covers Composio HTTP tools", () => {
-    expect(manifest.version).toBe("0.3.0");
-    expect(ops).toHaveLength(125);
+    expect(manifest.version).toBe("0.3.1");
+    expect(ops).toHaveLength(128);
+    for (const [key, spec] of Object.entries(ADDED)) {
+      const operation = manifest.operations[key] as {
+        request: { method: string; path: string; headers?: Record<string, string>; body?: unknown };
+        sideEffect?: string;
+        inputSchema: { additionalProperties: boolean };
+        outputSchema: { additionalProperties: boolean; properties: { data: { type: string } }; required: string[] };
+        timeoutMs: number;
+        maxInputBytes: number;
+        maxResponseBytes: number;
+      };
+      expect(operation.request.method).toBe(spec.method);
+      expect(operation.request.path).toBe(spec.path);
+      expect(operation.sideEffect).toBe("write");
+      expect(operation.inputSchema.additionalProperties).toBe(false);
+      expect(operation.outputSchema.additionalProperties).toBe(false);
+      expect(operation.outputSchema.required).toEqual(["data"]);
+      expect(operation.outputSchema.properties.data.type).toBe("object");
+      expect(operation.timeoutMs).toBeGreaterThanOrEqual(1);
+      expect(operation.timeoutMs).toBeLessThanOrEqual(300000);
+      expect(operation.maxInputBytes).toBeLessThanOrEqual(26214400);
+      expect(operation.maxResponseBytes).toBeGreaterThanOrEqual(operation.maxInputBytes);
+      expect(compiled.actions[key]).toBeTypeOf("function");
+      if (spec.method === "DELETE") {
+        expect("body" in operation.request).toBe(false);
+        expect(operation.request.headers?.["Content-Type"]).toBeUndefined();
+      } else {
+        expect(operation.request.body).toBeTruthy();
+        expect(operation.request.headers?.["Content-Type"]).toBe("application/json");
+      }
+    }
     for (const key of EXISTING) {
       const operation = manifest.operations[key] as { request: { path: string } };
       expect(operation.request.path).toBe(ORIGIN_PATHS[key]);

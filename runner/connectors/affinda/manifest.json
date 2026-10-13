@@ -8142,6 +8142,83 @@
           "Content-Type": "application/json"
         }
       }
+    },
+    "AFFINDA_GET_USAGE_BY_WORKSPACE": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "title": "Get usage by workspace",
+      "description": "Return monthly credits consumption of a workspace. Deprecated: use GET /v3/usage?organization={id}&workspace={id} instead. The new endpoint returns a unified daily series and supports the same workspace scoping along with organization- and document-type-level reporting.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "identifier": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Workspace's identifier."
+          },
+          "start": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Start date of the period to retrieve. Format: YYYY-MM."
+          },
+          "end": {
+            "type": "string",
+            "minLength": 1,
+            "description": "End date of the period to retrieve. Format: YYYY-MM."
+          }
+        },
+        "required": [
+          "identifier"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "month": {
+                  "type": "string",
+                  "description": "Month of the usage."
+                },
+                "count": {
+                  "type": "integer",
+                  "description": "Usage count."
+                }
+              },
+              "required": [
+                "month",
+                "count"
+              ]
+            }
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v3/workspaces/{{identifier}}/usage",
+        "success": [
+          200
+        ],
+        "query": {
+          "start": "{{start}}",
+          "end": "{{end}}"
+        }
+      }
     }
   },
   "provenance": {
@@ -8151,6 +8228,6 @@
     }
   },
   "runtime": "bun",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "visibility": "public"
 }

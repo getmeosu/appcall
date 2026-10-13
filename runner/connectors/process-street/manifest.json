@@ -1,7 +1,7 @@
 {
   "key": "process-street",
   "name": "Process Street",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "runtime": "bun",
   "visibility": "public",
   "categories": [
@@ -1248,6 +1248,81 @@
           "workflowId": "{{workflowId}}",
           "taskId": "{{taskId}}"
         }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "PROCESS_STREET_FIND_DATA_SET_ROWS": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Find data set rows",
+      "description": "Returns data set rows for a data set, 20 at a time, optionally matching exact column values.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "dataSetId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "The ID of the Data Set."
+          },
+          "columns": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Column values to match exactly, case-insensitively. A row must match every supplied column."
+          },
+          "_": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Opaque pagination cursor from the previous response next link."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "dataSetId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/data-sets/{{dataSetId}}/records",
+        "parameters": [
+          {
+            "wireName": "columns",
+            "inputName": "columns",
+            "in": "query",
+            "style": "deepObject",
+            "explode": true,
+            "allowReserved": false
+          },
+          {
+            "wireName": "_",
+            "inputName": "_",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "allowReserved": false
+          }
+        ],
+        "success": [
+          200
+        ]
       },
       "enforceOutputSchema": true,
       "validationMode": "strict-generated",

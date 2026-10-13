@@ -1,23 +1,91 @@
 import { describe, expect, it } from "bun:test";
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
+import { existsSync, readFileSync } from "node:fs";
 import manifest from "../manifest.json";
 import mapping from "../fixtures/composio-mapping.json";
 
-const recipe = JSON.parse(
-  readFileSync(join(import.meta.dir, "../../../../scripts/connector-gen/openconnector/recipes/postgrid/recipe.json"), "utf8"),
-) as {
+const recipePath = "scripts/connector-gen/openconnector/recipes/postgrid/recipe.json";
+const recipe = JSON.parse(readFileSync(recipePath, "utf8")) as {
   selection: { operations: string[] };
-  manifest: { operations: Record<string, unknown> };
+  operationSources: Record<string, unknown>;
+  manifest: { operations: Record<string, unknown>; version: string };
 };
 
 const operations = manifest.operations as Record<string, Record<string, unknown>>;
+
+// ops the pinned recipe has real provenance for
+const PINNED_OPS = [
+  "bank_accounts.create",
+  "bank_accounts.delete",
+  "bank_accounts.get",
+  "bank_accounts.list",
+  "boxes.cancel",
+  "boxes.create",
+  "boxes.get",
+  "boxes.list",
+  "boxes.progress",
+  "cheques.cancel",
+  "cheques.cancel_with_note",
+  "cheques.create",
+  "cheques.get",
+  "cheques.list",
+  "cheques.progress",
+  "contacts.create",
+  "contacts.delete",
+  "contacts.get",
+  "contacts.list",
+  "events.list",
+  "healthcheck",
+  "letters.create",
+  "letters.get",
+  "letters.list",
+  "postal_statements.list",
+  "postcards.cancel",
+  "postcards.cancel_with_note",
+  "postcards.create",
+  "postcards.get",
+  "postcards.list",
+  "postcards.progress",
+  "return_envelope_orders.cancel",
+  "return_envelope_orders.create",
+  "return_envelope_orders.fill",
+  "return_envelope_orders.get",
+  "return_envelope_orders.list",
+  "return_envelopes.create",
+  "return_envelopes.get",
+  "return_envelopes.list",
+  "self_mailers.list",
+  "sub_organizations.list",
+  "template_editor_sessions.create",
+  "template_editor_sessions.delete",
+  "template_editor_sessions.list",
+  "templates.create",
+  "templates.delete",
+  "templates.get",
+  "templates.list",
+  "templates.update",
+  "trackers.create",
+  "trackers.delete",
+  "trackers.get",
+  "trackers.list",
+  "trackers.update",
+  "trackers.visits.list",
+  "webhooks.create",
+  "webhooks.delete",
+  "webhooks.get",
+  "webhooks.invocations.list",
+  "webhooks.list",
+  "webhooks.update"
+];
+// ops this branch added from the provider's live API; no pinned action id exists
+const DEEPENED_OPS = [
+  "return_envelope_orders.fills"
+];
 
 describe("postgrid manifest", () => {
   it("keeps the public api-key contract and pinned provenance", () => {
     expect(manifest.key).toBe("postgrid");
     expect(manifest.visibility).toBe("public");
-    expect(manifest.version).toBe("0.2.0");
+    expect(manifest.version).toBe("0.2.1");
     expect(manifest.http.auth.field).toBe("apiKey");
     expect(manifest.http.auth.name).toBe("x-api-key");
     expect(manifest.http.auth.value).toBe("{{apiKey}}");
@@ -30,13 +98,16 @@ describe("postgrid manifest", () => {
 
   it("exposes every action as a real HTTP tool with title, description, and object inputSchema", () => {
     const actions = Object.entries(operations);
-    expect(actions.length).toBe(61);
+    expect(actions.length).toBe(62);
     expect(Object.keys(operations)).toContain("healthcheck");
     expect(Object.keys(operations)).toContain("contacts.list");
     expect(Object.keys(operations)).toContain("letters.create");
     expect(Object.keys(operations)).toContain("cheques.cancel_with_note");
     expect(Object.keys(operations)).toContain("boxes.progress");
     expect(Object.keys(operations)).toContain("webhooks.create");
+    expect(Object.keys(operations)).toContain("return_envelope_orders.fill");
+    expect(Object.keys(operations)).toContain("return_envelope_orders.fills");
+    expect(Object.keys(operations)).toContain("postal_statements.list");
     for (const [, operation] of actions) {
       expect(operation.kind).toBe("action");
       expect(["read", "write", "destructive"]).toContain(operation.sideEffect);
@@ -57,10 +128,59 @@ describe("postgrid manifest", () => {
     expect(mapping.composio_tools).toBe(60);
     expect(Object.keys(mapping.aligned).length).toBe(60);
     expect(mapping.skipped).toEqual({});
+    expect(mapping.aligned.POSTGRID_FILL_TEST_RETURN_ENVELOPE_ORDER).toBe("return_envelope_orders.fills");
   });
 
-  it("keeps recipe operations equal to runner operations", () => {
-    expect(Object.keys(recipe.manifest.operations).sort()).toEqual(Object.keys(operations).sort());
-    expect([...recipe.selection.operations].sort()).toEqual(Object.keys(operations).sort());
+  it("mirrors the deepened plural /fills op in the recipe and keeps provenance mappings pinned", () => {
+    expect(existsSync(recipePath)).toBe(true);
+    const runnerOps = Object.keys(operations).sort();
+    const recipeOps = Object.keys(recipe.manifest.operations).sort();
+    expect(recipe.manifest.version).toBe("0.2.0");
+    expect(runnerOps).toEqual(recipeOps);
+    expect([...recipe.selection.operations].sort()).toEqual(PINNED_OPS);
+    expect(Object.keys(recipe.operationSources).sort()).toEqual(PINNED_OPS);
+    const absentFromRecipe = runnerOps.filter((key) => !Object.hasOwn(recipe.operationSources, key));
+    expect(absentFromRecipe).toEqual(DEEPENED_OPS);
+    for (const key of recipeOps) {
+      expect(operations[key], key).toEqual(recipe.manifest.operations[key]);
+    }
+  });
+
+  it("adds a body-less plural /fills test fill beside singular /fill", () => {
+    const fill = operations["return_envelope_orders.fill"]!;
+    const fills = operations["return_envelope_orders.fills"]!;
+    expect((fill.request as { path: string }).path).toBe("/return_envelopes/{{id}}/orders/{{orderId}}/fill");
+    expect(fills.sideEffect).toBe("write");
+    expect(fills.timeoutMs).toBe(fill.timeoutMs);
+    expect(fills.maxInputBytes).toBe(fill.maxInputBytes);
+    expect(fills.maxResponseBytes).toBe(fill.maxResponseBytes);
+    expect(fills.outputSchema).toEqual(fill.outputSchema);
+    expect(fills.inputSchema).toEqual(fill.inputSchema);
+    expect(fills.responseFormat).toBe("json");
+    expect(fills.validationMode).toBe(fill.validationMode);
+    expect(fills.enforceOutputSchema).toBe(fill.enforceOutputSchema);
+    expect(fills.title).toBe("Plural /fills test fill");
+    expect(String(fills.description)).toContain("Plural /fills test fill");
+    expect(String(fills.description)).toContain("distinct from the singular /fill op");
+    const request = fills.request as {
+      method: string;
+      path: string;
+      baseUrl?: string;
+      success: number[];
+      body?: unknown;
+      headers?: Record<string, string>;
+    };
+    expect(request).toEqual({
+      method: "POST",
+      path: "/return_envelopes/{{id}}/orders/{{orderId}}/fills",
+      success: [200],
+    });
+    expect(request.baseUrl).toBeUndefined();
+    expect(request.body).toBeUndefined();
+    expect(request.headers).toBeUndefined();
+    const schema = fills.inputSchema as { type: string; additionalProperties: boolean; required: string[] };
+    expect(schema.type).toBe("object");
+    expect(schema.additionalProperties).toBe(false);
+    expect(schema.required).toEqual(["id", "orderId"]);
   });
 });

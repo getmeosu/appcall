@@ -17,11 +17,12 @@ const mock = (body: unknown, status = 200) => {
 
 describe("postgrid declarative connector", () => {
   it("compiles every HTTP action including healthcheck", () => {
-    expect(Object.keys(actions).length).toBe(61);
+    expect(Object.keys(actions).length).toBe(62);
     expect(actions.healthcheck).toBeDefined();
     expect(actions["letters.create"]).toBeDefined();
     expect(actions["cheques.cancel_with_note"]).toBeDefined();
     expect(actions["return_envelope_orders.fill"]).toBeDefined();
+    expect(actions["return_envelope_orders.fills"]).toBeDefined();
   });
 
   it("healthchecks with x-api-key and wraps data", async () => {
@@ -90,5 +91,21 @@ describe("postgrid declarative connector", () => {
     expect(m.calls[0]?.url).toBe("https://api.postgrid.com/print-mail/v1/boxes/box_1/progressions");
     expect(m.calls[0]?.init?.method).toBe("POST");
     expect(m.calls[0]?.init?.body ?? null).toBe(null);
+  });
+
+  it("fills a test return envelope order via plural /fills without a JSON body", async () => {
+    const m = mock({ id: "return_envelope_order_test01", object: "return_envelope_order", status: "filled" });
+    await actions["return_envelope_orders.fills"]!({
+      apiKey: "x",
+      id: "return_envelope_testEnv01",
+      orderId: "return_envelope_order_test01",
+      fetch: m.fetch,
+    });
+    expect(m.calls[0]?.url).toBe(
+      "https://api.postgrid.com/print-mail/v1/return_envelopes/return_envelope_testEnv01/orders/return_envelope_order_test01/fills",
+    );
+    expect(m.calls[0]?.init?.method).toBe("POST");
+    expect(m.calls[0]?.init?.body ?? null).toBe(null);
+    expect(new Headers(m.calls[0]?.init?.headers).get("content-type")).toBeNull();
   });
 });

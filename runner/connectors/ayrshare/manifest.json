@@ -1,7 +1,7 @@
 {
   "key": "ayrshare",
   "name": "Ayrshare",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "runtime": "bun",
   "visibility": "public",
   "categories": [
@@ -1084,6 +1084,88 @@
           "post": "{{post}}",
           "platforms": "{{platforms}}",
           "mediaUrls": "{{mediaUrls}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "AYRSHARE_CREATE_AUTO_SCHEDULE": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Set auto schedule",
+      "description": "Set up an auto-post schedule by providing times to send. Posts go out at the next available time.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "schedule": {
+            "type": "array",
+            "description": "ISO-8601 UTC times to auto-post, for example 13:05Z. Treated as a set. Not required when setStartDate is provided.",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Alphanumeric title for this schedule. Defaults to default when omitted. Special characters such as * ~ / [ ] are not allowed."
+          },
+          "setStartDate": {
+            "type": "string",
+            "minLength": 1,
+            "description": "ISO-8601 UTC datetime when this titled schedule starts, for example 2021-07-08T12:30:00Z."
+          },
+          "daysOfWeek": {
+            "type": "array",
+            "description": "Days to send, 0-6 for Sunday through Saturday. Defaults to 0 and 6 when omitted.",
+            "items": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 6
+            }
+          },
+          "excludeDates": {
+            "type": "array",
+            "description": "Dates to exclude from auto scheduling, for example 2026-01-01. Applies only to posts scheduled after this is set.",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/auto-schedule/set",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "schedule": "{{schedule}}",
+          "title": "{{title}}",
+          "setStartDate": "{{setStartDate}}",
+          "daysOfWeek": "{{daysOfWeek}}",
+          "excludeDates": "{{excludeDates}}"
         }
       },
       "enforceOutputSchema": true,

@@ -53,10 +53,40 @@ function deepEqual(a: unknown, b: unknown): boolean {
   return false;
 }
 
+// ops the pinned recipe has real provenance for
+const PINNED_OPS = [
+  "dashboards.create",
+  "dashboards.delete",
+  "dashboards.get",
+  "dashboards.list",
+  "dashboards.update",
+  "feed-data.batch.create",
+  "feed-data.create",
+  "feed-data.delete",
+  "feed-data.get",
+  "feed-data.list",
+  "feed-data.update",
+  "feeds.create",
+  "feeds.delete",
+  "feeds.get",
+  "feeds.list",
+  "feeds.update",
+  "groups.create",
+  "groups.delete",
+  "groups.feeds.add",
+  "groups.feeds.remove",
+  "groups.get",
+  "groups.list",
+  "groups.update",
+  "healthcheck",
+];
+// ops this branch added from the provider's live API; no pinned action id exists
+const DEEPENED_OPS = ["throttle.get"];
+
 describe("adafruit-io manifest", () => {
   test("has bounded host, origin auth, version, and compiles", () => {
     expect(manifest.key).toBe("adafruit-io");
-    expect(manifest.version).toBe("0.2.0");
+    expect(manifest.version).toBe("0.2.1");
     expect(manifest.runtime).toBe("bun");
     expect(manifest.categories).toEqual(["dev-tools"]);
     expect(manifest.network.allowedHosts).toEqual(["io.adafruit.com"]);
@@ -84,7 +114,7 @@ describe("adafruit-io manifest", () => {
 
   test("covers every Composio Adafruit IO tool with a real request", () => {
     expect(Object.keys(COMPOSIO_TOOLS)).toHaveLength(21);
-    expect(Object.keys(operations).length).toBe(24);
+    expect(Object.keys(operations).length).toBe(25);
     for (const [slug, key] of Object.entries(COMPOSIO_TOOLS)) {
       expect(operations[key], slug).toBeDefined();
       expect(requestOf(key), slug).toBeDefined();
@@ -157,6 +187,22 @@ describe("adafruit-io manifest", () => {
     expect(requestOf("groups.feeds.remove").path).toBe("/{{username}}/groups/{{groupKey}}/remove");
     expect(requestOf("dashboards.list").path).toBe("/{{username}}/dashboards");
     expect(requestOf("dashboards.get").path).toBe("/{{username}}/dashboards/{{dashboardKey}}");
+    expect(requestOf("throttle.get")).toEqual({ method: "GET", path: "/{{username}}/throttle", success: [200] });
+    const throttle = operations["throttle.get"]!;
+    expect(throttle.kind).toBe("action");
+    expect(throttle.sideEffect).toBe("read");
+    expect(throttle.timeoutMs).toBe(15000);
+    expect(throttle.maxInputBytes).toBe(65536);
+    expect(throttle.maxResponseBytes).toBe(5242880);
+    expect(throttle.enforceOutputSchema).toBe(true);
+    expect(throttle.validationMode).toBe("strict-generated");
+    expect(throttle.responseFormat).toBe("json");
+    expect(throttle.outputSchema).toEqual(operations["dashboards.get"]!.outputSchema);
+    expect((throttle.outputSchema as { properties: { data: { type?: string } } }).properties.data.type).toBe("object");
+    expect((throttle.inputSchema as { required: string[]; properties: { username: unknown } }).required).toEqual(["username"]);
+    expect((throttle.inputSchema as { properties: { username: unknown } }).properties.username).toEqual(
+      (operations["dashboards.list"]!.inputSchema as { properties: { username: unknown } }).properties.username,
+    );
     expect((requestOf("feeds.create").query as Record<string, string>).group_key).toBe("{{groupKey}}");
     expect((requestOf("groups.feeds.add").query as Record<string, string>).feed_key).toBe("{{feedKey}}");
     expect((requestOf("feed-data.list").query as Record<string, string>).before).toBe("{{nextCursor}}");
@@ -167,12 +213,24 @@ describe("adafruit-io manifest", () => {
     expect(requestOf("feeds.delete").result).toEqual({ success: true });
   });
 
-  test("recipe operations equal runner operations", async () => {
-    const recipe = await Bun.file(new URL("../../../../scripts/connector-gen/openconnector/recipes/adafruit_io/recipe.json", import.meta.url)).json();
-    expect(Object.keys(recipe.manifest.operations).sort()).toEqual(Object.keys(operations).sort());
-    expect([...recipe.selection.operations].sort()).toEqual(Object.keys(operations).sort());
-    expect(Object.keys(recipe.operationSources).sort()).toEqual(Object.keys(operations).sort());
+  test("recipe mirrors the deepened operations; provenance mappings stay pinned", async () => {
+    const recipe = await Bun.file(new URL("../../../../scripts/connector-gen/openconnector/recipes/adafruit_io/recipe.json", import.meta.url)).json() as {
+      selection: { operations: string[] };
+      operationSources: Record<string, unknown>;
+      manifest: { operations: Record<string, unknown>; version: string };
+    };
+    const recipeOps = recipe.manifest.operations;
+    const runnerOps = Object.keys(operations).sort();
+    const recipeKeys = Object.keys(recipeOps).sort();
     expect(recipe.manifest.version).toBe("0.2.0");
+    expect(recipeKeys).toHaveLength(25);
+    expect(runnerOps).toEqual(recipeKeys);
+    expect([...recipe.selection.operations].sort()).toEqual(PINNED_OPS);
+    expect(Object.keys(recipe.operationSources).sort()).toEqual(PINNED_OPS);
+    expect(runnerOps.filter((key) => !Object.hasOwn(recipe.operationSources, key))).toEqual(DEEPENED_OPS);
+    for (const key of recipeKeys) {
+      expect(operations[key], key).toEqual(recipeOps[key]);
+    }
   });
 });
 

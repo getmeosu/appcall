@@ -117,6 +117,44 @@ describe("bigmailer compiled HTTP actions", () => {
     expect(captured?.method).toBe("POST");
   });
 
+  test("reads the documented identity check at /v1/me without a query or body", async () => {
+    let captured: Request | undefined;
+    let initBody: BodyInit | null | undefined;
+    const result = await actions["me.get"]!({
+      apiKey: "fixture-token",
+      fetch: async (input: RequestInfo | URL, init?: RequestInit) => {
+        captured = new Request(input, init);
+        initBody = init?.body;
+        return Response.json({});
+      },
+    });
+    const url = new URL(captured!.url);
+    expect(url.origin).toBe("https://api.bigmailer.io");
+    expect(url.pathname).toBe("/v1/me");
+    expect(url.search).toBe("");
+    expect(captured?.method).toBe("GET");
+    expect(initBody ?? null).toBeNull();
+    expect(captured?.headers.get("accept")).toBe("application/json");
+    expect(captured?.headers.get("x-api-key")).toBe("fixture-token");
+    expect(captured?.headers.get("content-type")).toBeNull();
+    expect(result).toEqual({
+      connector: "bigmailer",
+      action: "me.get",
+      source: "provider",
+      data: {},
+    });
+  });
+
+  test("rejects the getting-started sample limit on me.get", async () => {
+    let rejection: unknown;
+    try {
+      await actions["me.get"]!({ apiKey: "fixture-token", limit: 10 });
+    } catch (error) {
+      rejection = error;
+    }
+    expect(rejection).toMatchObject({ code: "INVALID_ACTION_INPUT" });
+  });
+
   test("reads the authenticated user at /v1/users/me", async () => {
     let captured: Request | undefined;
     const result = await actions["users.me"]!({

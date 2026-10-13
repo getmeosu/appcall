@@ -12,7 +12,7 @@ function renderPath(path: string, input: Record<string, unknown>): string {
 
 describe("kommo Composio tools compile to real Kommo HTTP calls", () => {
   test("every case has a compiled handler", () => {
-    expect(cases.length).toBe(53);
+    expect(cases.length).toBe(55);
     for (const entry of cases as Array<{ key: string }>) {
       expect(actions[entry.key], entry.key).toBeTypeOf("function");
     }
@@ -25,6 +25,8 @@ describe("kommo Composio tools compile to real Kommo HTTP calls", () => {
     input: Record<string, unknown>;
     host: string;
     origin?: boolean;
+    responseStatus?: number;
+    responseBody?: unknown;
   }>) {
     test(`${entry.key} ${entry.method} ${entry.path}`, async () => {
       const seen: Request[] = [];
@@ -34,8 +36,9 @@ describe("kommo Composio tools compile to real Kommo HTTP calls", () => {
         ...entry.input,
         fetch: async (input, init) => {
           seen.push(new Request(input, init));
-          const status = entry.method === "POST" ? 201 : 200;
-          return new Response(JSON.stringify(item), { status });
+          const status = entry.responseStatus ?? (entry.method === "POST" ? 201 : 200);
+          const payload = entry.responseBody ?? item;
+          return new Response(JSON.stringify(payload), { status });
         },
       });
       expect(seen).toHaveLength(1);

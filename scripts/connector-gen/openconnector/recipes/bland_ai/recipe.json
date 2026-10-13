@@ -553,14 +553,135 @@
       }
     },
     "operations": {
-      "healthcheck": {
-        "timeoutMs": 5000,
-        "maxInputBytes": 4096,
-        "maxResponseBytes": 65536,
+      "agents.create": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "write",
+        "title": "Create agent",
+        "description": "Create a Bland AI web agent.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "prompt": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Agent prompt."
+            },
+            "voice": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Voice name or UUID."
+            },
+            "webhook": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Post-call webhook URL."
+            },
+            "language": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Language code."
+            },
+            "maxDuration": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Maximum call length in minutes."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "prompt"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "POST",
+          "path": "/v1/agents",
+          "success": [
+            200,
+            201
+          ],
+          "body": {
+            "prompt": "{{prompt}}",
+            "voice": "{{voice}}",
+            "webhook": "{{webhook}}",
+            "language": "{{language}}",
+            "max_duration": "{{maxDuration}}"
+          },
+          "headers": {
+            "Content-Type": "application/json"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "agents.get": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
         "kind": "action",
         "sideEffect": "read",
-        "title": "Healthcheck",
-        "description": "Validate the Bland AI API key by retrieving account details.",
+        "title": "Get agent",
+        "description": "Retrieve one Bland AI web agent by ID.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "agentId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Bland agent ID."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "agentId"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/v1/agents/{{agentId}}",
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "agents.list": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "read",
+        "title": "List agents",
+        "description": "List Bland AI web agents.",
         "inputSchema": {
           "type": "object",
           "properties": {},
@@ -580,7 +701,231 @@
         },
         "request": {
           "method": "GET",
-          "path": "/v1/me",
+          "path": "/v1/agents",
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "calls.active.list": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "read",
+        "title": "List active calls",
+        "description": "List currently queued and in-progress Bland AI calls.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/v1/active",
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "calls.analyze": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "write",
+        "title": "Analyze call",
+        "description": "Run post-call analysis questions against a Bland AI call.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "callId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Bland call ID."
+            },
+            "goal": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Analysis goal for the call."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "callId",
+            "goal"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "POST",
+          "path": "/v1/calls/{{callId}}/analyze",
+          "success": [
+            200
+          ],
+          "body": {
+            "goal": "{{goal}}"
+          },
+          "headers": {
+            "Content-Type": "application/json"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "calls.create": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "write",
+        "title": "Send call",
+        "description": "Dispatch a Bland AI outbound phone call.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "phoneNumber": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Destination phone number in E.164 format."
+            },
+            "task": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Prompt describing what the agent should do."
+            },
+            "voice": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Voice name or UUID."
+            },
+            "pathwayId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Conversational pathway ID."
+            },
+            "webhook": {
+              "type": "string",
+              "minLength": 1,
+              "description": "URL that receives post-call events."
+            },
+            "record": {
+              "type": "boolean",
+              "description": "Whether to record the call."
+            },
+            "maxDuration": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Maximum call length in minutes."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "phoneNumber"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "POST",
+          "path": "/v1/calls",
+          "success": [
+            200,
+            201
+          ],
+          "body": {
+            "phone_number": "{{phoneNumber}}",
+            "task": "{{task}}",
+            "voice": "{{voice}}",
+            "pathway_id": "{{pathwayId}}",
+            "webhook": "{{webhook}}",
+            "record": "{{record}}",
+            "max_duration": "{{maxDuration}}"
+          },
+          "headers": {
+            "Content-Type": "application/json"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "calls.get": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "read",
+        "title": "Get call",
+        "description": "Retrieve detailed information for one Bland AI call.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "callId": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "callId"
+          ],
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/v1/calls/{{callId}}",
           "success": [
             200
           ]
@@ -683,217 +1028,6 @@
         "validationMode": "strict-generated",
         "responseFormat": "json"
       },
-      "calls.get": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
-        "sideEffect": "read",
-        "title": "Get call",
-        "description": "Retrieve detailed information for one Bland AI call.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "callId": {
-              "type": "string",
-              "minLength": 1
-            }
-          },
-          "required": [
-            "callId"
-          ],
-          "additionalProperties": false
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "GET",
-          "path": "/v1/calls/{{callId}}",
-          "success": [
-            200
-          ]
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "voices.list": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
-        "sideEffect": "read",
-        "title": "List voices",
-        "description": "List Bland AI voices available to the authenticated account.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {},
-          "additionalProperties": false
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "GET",
-          "path": "/v1/voices",
-          "success": [
-            200
-          ]
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "voices.get": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
-        "sideEffect": "read",
-        "title": "Get voice",
-        "description": "Retrieve one Bland AI voice by UUID or curated name.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "voiceId": {
-              "type": "string",
-              "minLength": 1
-            }
-          },
-          "required": [
-            "voiceId"
-          ],
-          "additionalProperties": false
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "GET",
-          "path": "/v1/voices/{{voiceId}}",
-          "success": [
-            200
-          ]
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "calls.create": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
-        "sideEffect": "write",
-        "title": "Send call",
-        "description": "Dispatch a Bland AI outbound phone call.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "phoneNumber": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Destination phone number in E.164 format."
-            },
-            "task": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Prompt describing what the agent should do."
-            },
-            "voice": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Voice name or UUID."
-            },
-            "pathwayId": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Conversational pathway ID."
-            },
-            "webhook": {
-              "type": "string",
-              "minLength": 1,
-              "description": "URL that receives post-call events."
-            },
-            "record": {
-              "type": "boolean",
-              "description": "Whether to record the call."
-            },
-            "maxDuration": {
-              "type": "integer",
-              "minimum": 1,
-              "description": "Maximum call length in minutes."
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "phoneNumber"
-          ]
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "POST",
-          "path": "/v1/calls",
-          "success": [
-            200,
-            201
-          ],
-          "body": {
-            "phone_number": "{{phoneNumber}}",
-            "task": "{{task}}",
-            "voice": "{{voice}}",
-            "pathway_id": "{{pathwayId}}",
-            "webhook": "{{webhook}}",
-            "record": "{{record}}",
-            "max_duration": "{{maxDuration}}"
-          },
-          "headers": {
-            "Content-Type": "application/json"
-          }
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
       "calls.stop": {
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
@@ -939,69 +1073,27 @@
         "validationMode": "strict-generated",
         "responseFormat": "json"
       },
-      "calls.active.list": {
+      "contacts.list": {
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
         "maxResponseBytes": 5242880,
         "kind": "action",
         "sideEffect": "read",
-        "title": "List active calls",
-        "description": "List currently queued and in-progress Bland AI calls.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {},
-          "additionalProperties": false
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "GET",
-          "path": "/v1/active",
-          "success": [
-            200
-          ]
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "calls.analyze": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
-        "sideEffect": "write",
-        "title": "Analyze call",
-        "description": "Run post-call analysis questions against a Bland AI call.",
+        "title": "List contacts",
+        "description": "List Bland AI organization contacts.",
         "inputSchema": {
           "type": "object",
           "properties": {
-            "callId": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Bland call ID."
+            "limit": {
+              "type": "integer",
+              "maximum": 200
             },
-            "goal": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Analysis goal for the call."
+            "offset": {
+              "type": "integer",
+              "minimum": 0
             }
           },
-          "additionalProperties": false,
-          "required": [
-            "callId",
-            "goal"
-          ]
+          "additionalProperties": false
         },
         "outputSchema": {
           "type": "object",
@@ -1016,30 +1108,28 @@
           "additionalProperties": false
         },
         "request": {
-          "method": "POST",
-          "path": "/v1/calls/{{callId}}/analyze",
+          "method": "GET",
+          "path": "/v1/contacts",
+          "query": {
+            "limit": "{{limit}}",
+            "offset": "{{offset}}"
+          },
           "success": [
             200
-          ],
-          "body": {
-            "goal": "{{goal}}"
-          },
-          "headers": {
-            "Content-Type": "application/json"
-          }
+          ]
         },
         "enforceOutputSchema": true,
         "validationMode": "strict-generated",
         "responseFormat": "json"
       },
-      "numbers.list": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
+      "healthcheck": {
+        "timeoutMs": 5000,
+        "maxInputBytes": 4096,
+        "maxResponseBytes": 65536,
         "kind": "action",
         "sideEffect": "read",
-        "title": "List inbound numbers",
-        "description": "List inbound phone numbers configured on the Bland AI account.",
+        "title": "Healthcheck",
+        "description": "Validate the Bland AI API key by retrieving account details.",
         "inputSchema": {
           "type": "object",
           "properties": {},
@@ -1059,7 +1149,43 @@
         },
         "request": {
           "method": "GET",
-          "path": "/v1/inbound",
+          "path": "/v1/me",
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "knowledge.list": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "read",
+        "title": "List knowledge bases",
+        "description": "List knowledge base items available to Bland AI agents.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/v1/knowledge",
           "success": [
             200
           ]
@@ -1113,14 +1239,14 @@
         "validationMode": "strict-generated",
         "responseFormat": "json"
       },
-      "agents.list": {
+      "numbers.list": {
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
         "maxResponseBytes": 5242880,
         "kind": "action",
         "sideEffect": "read",
-        "title": "List agents",
-        "description": "List Bland AI web agents.",
+        "title": "List inbound numbers",
+        "description": "List inbound phone numbers configured on the Bland AI account.",
         "inputSchema": {
           "type": "object",
           "properties": {},
@@ -1140,209 +1266,7 @@
         },
         "request": {
           "method": "GET",
-          "path": "/v1/agents",
-          "success": [
-            200
-          ]
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "agents.get": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
-        "sideEffect": "read",
-        "title": "Get agent",
-        "description": "Retrieve one Bland AI web agent by ID.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "agentId": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Bland agent ID."
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "agentId"
-          ]
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "GET",
-          "path": "/v1/agents/{{agentId}}",
-          "success": [
-            200
-          ]
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "agents.create": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
-        "sideEffect": "write",
-        "title": "Create agent",
-        "description": "Create a Bland AI web agent.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "prompt": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Agent prompt."
-            },
-            "voice": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Voice name or UUID."
-            },
-            "webhook": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Post-call webhook URL."
-            },
-            "language": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Language code."
-            },
-            "maxDuration": {
-              "type": "integer",
-              "minimum": 1,
-              "description": "Maximum call length in minutes."
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "prompt"
-          ]
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "POST",
-          "path": "/v1/agents",
-          "success": [
-            200,
-            201
-          ],
-          "body": {
-            "prompt": "{{prompt}}",
-            "voice": "{{voice}}",
-            "webhook": "{{webhook}}",
-            "language": "{{language}}",
-            "max_duration": "{{maxDuration}}"
-          },
-          "headers": {
-            "Content-Type": "application/json"
-          }
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "pathways.list": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
-        "sideEffect": "read",
-        "title": "List pathways",
-        "description": "List Bland AI conversational pathways.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {},
-          "additionalProperties": false
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "GET",
-          "path": "/v1/pathway",
-          "success": [
-            200
-          ]
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "pathways.get": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
-        "sideEffect": "read",
-        "title": "Get pathway",
-        "description": "Retrieve one Bland AI conversational pathway, including nodes and edges.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "pathwayId": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Pathway ID."
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "pathwayId"
-          ]
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "GET",
-          "path": "/v1/pathway/{{pathwayId}}",
+          "path": "/v1/inbound",
           "success": [
             200
           ]
@@ -1409,6 +1333,87 @@
         "validationMode": "strict-generated",
         "responseFormat": "json"
       },
+      "pathways.get": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "read",
+        "title": "Get pathway",
+        "description": "Retrieve one Bland AI conversational pathway, including nodes and edges.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "pathwayId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Pathway ID."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "pathwayId"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/v1/pathway/{{pathwayId}}",
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "pathways.list": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "read",
+        "title": "List pathways",
+        "description": "List Bland AI conversational pathways.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/v1/pathway",
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
       "tools.list": {
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
@@ -1445,14 +1450,127 @@
         "validationMode": "strict-generated",
         "responseFormat": "json"
       },
-      "knowledge.list": {
+      "tools.v2.list": {
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
         "maxResponseBytes": 5242880,
         "kind": "action",
         "sideEffect": "read",
-        "title": "List knowledge bases",
-        "description": "List knowledge base items available to Bland AI agents.",
+        "title": "List v2 tools",
+        "description": "List Bland AI integration tools that are not tied to a resource connection.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "page": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000
+            },
+            "search": {
+              "type": "string"
+            },
+            "orderBy": {
+              "type": "string",
+              "enum": [
+                "created_at"
+              ]
+            },
+            "orderDirection": {
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ]
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/v2/tools",
+          "query": {
+            "page": "{{page}}",
+            "limit": "{{limit}}",
+            "search": "{{search}}",
+            "orderBy": "{{orderBy}}",
+            "orderDirection": "{{orderDirection}}"
+          },
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "voices.get": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "read",
+        "title": "Get voice",
+        "description": "Retrieve one Bland AI voice by UUID or curated name.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "voiceId": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "voiceId"
+          ],
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/v1/voices/{{voiceId}}",
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "voices.list": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "read",
+        "title": "List voices",
+        "description": "List Bland AI voices available to the authenticated account.",
         "inputSchema": {
           "type": "object",
           "properties": {},
@@ -1472,7 +1590,7 @@
         },
         "request": {
           "method": "GET",
-          "path": "/v1/knowledge",
+          "path": "/v1/voices",
           "success": [
             200
           ]
