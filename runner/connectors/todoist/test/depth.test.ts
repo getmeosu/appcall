@@ -29,7 +29,7 @@ function sentBody(call: Call): unknown {
 
 describe("todoist depth slice", () => {
   it("bumps the connector to a minor version for the new surface", () => {
-    expect(manifest.version).toBe("0.2.0");
+    expect(manifest.version).toBe("0.3.0");
   });
 
   it("projects.delete archives permanently via DELETE", async () => {

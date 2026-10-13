@@ -58,6 +58,10 @@ describe("todoist manifest", () => {
     const writes = Object.entries(operations)
       .filter(([, operation]) => operation.kind === "action")
       .filter(([, operation]) => ["POST", "PUT", "PATCH", "DELETE"].includes(String((operation.request as Record<string, unknown>).method)))
+      // POST /api/v1/sync is Todoist's transport for reads and writes alike.
+      // filters.list sends only sync_token and resource_types, never a command,
+      // so it is a read even though the endpoint can mutate.
+      .filter(([key]) => key !== "filters.list")
       .map(([key]) => key);
     for (const key of writes) {
       expect(operations[key]!.sideEffect, `${key} mutates and must be sideEffect write`).toBe("write");

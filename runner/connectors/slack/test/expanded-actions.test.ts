@@ -26,34 +26,44 @@ describe("Slack Web API parity actions", () => {
     expect(Object.hasOwn(cases, "users.setActive")).toBe(false);
   });
 
-  test("omits operations and OAuth scopes that require a user token", () => {
-    const unsupported = [
+  test("declares the depth methods that were previously omitted for token-scope reasons", () => {
+    const declared = [
       "search.messages",
       "search.all",
+      "search.files",
       "users.profile.set",
+      "users.deletePhoto",
+      "users.identity",
       "dnd.setSnooze",
       "dnd.endDnd",
       "dnd.endSnooze",
       "stars.add",
       "stars.remove",
       "stars.list",
+      "files.sharedPublicURL",
     ];
-    for (const operation of unsupported) {
-      expect(Object.hasOwn(manifest.operations, operation)).toBe(false);
+    for (const operation of declared) {
+      expect(Object.hasOwn(manifest.operations, operation)).toBe(true);
+      // Declarative depth operations do not shadow a registered handler.
       expect(Object.hasOwn(slackExpandedActionHandlers, operation)).toBe(false);
       expect(Object.hasOwn(cases, operation)).toBe(false);
     }
+  });
+
+  test("keeps the multipart-only users.setPhoto out of the manifest", () => {
+    expect(Object.hasOwn(manifest.operations, "users.setPhoto")).toBe(false);
+    expect(Object.hasOwn(slackExpandedActionHandlers, "users.setPhoto")).toBe(false);
+    expect(Object.hasOwn(cases, "users.setPhoto")).toBe(false);
+  });
+
+  test("keeps user-only OAuth scopes out of the bot authorization scope list", () => {
+    // The managed OAuth flow authorizes with bot scopes (scope=); the user-only
+    // scopes required by some depth methods are not requested here.
     expect(manifest.auth.scopes).not.toContain("search:read");
     expect(manifest.auth.scopes).not.toContain("users.profile:write");
     expect(manifest.auth.scopes).not.toContain("dnd:write");
     expect(manifest.auth.scopes).not.toContain("stars:read");
     expect(manifest.auth.scopes).not.toContain("stars:write");
-  });
-
-  test("omits files.sharedPublicURL because it requires a user token", () => {
-    expect(Object.hasOwn(manifest.operations, "files.sharedPublicURL")).toBe(false);
-    expect(Object.hasOwn(slackExpandedActionHandlers, "files.sharedPublicURL")).toBe(false);
-    expect(Object.hasOwn(cases, "files.sharedPublicURL")).toBe(false);
   });
 
   test("declares recurrence as an object and omits unsupported remote-file content fields", () => {

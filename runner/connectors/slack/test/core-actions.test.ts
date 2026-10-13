@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { compileDeclarativeConnector } from "../../../bun/src/declarative/compile";
 import manifest from "../manifest.json";
@@ -24,9 +24,15 @@ const operations = manifest.operations as Record<string, {
   title?: string;
   description?: string;
   inputSchema?: { type?: string };
-  request?: { method?: string; path?: string; body?: unknown; headers?: Record<string, string> };
+  request?: { method?: string; path?: string; body?: unknown; bodyEncoding?: string; headers?: Record<string, string> };
 }>;
 const fixtures = coreFixtures as Record<string, CoreFixture>;
+const depthCaseDir = join(import.meta.dir, "../fixtures/cases");
+const depthFixtureOperations = new Set(
+  readdirSync(depthCaseDir)
+    .filter((name) => name.endsWith(".json"))
+    .map((name) => (JSON.parse(readFileSync(join(depthCaseDir, name), "utf8")) as { operation: string }).operation),
+);
 const recipe = JSON.parse(readFileSync(join(import.meta.dir, "../../recipes/slack/recipe.json"), "utf8")) as {
   manifest: { operations: Record<string, { request?: unknown }> };
 };
@@ -53,15 +59,19 @@ describe("slack core Web API depth", () => {
         expect(request.body, key).toBeUndefined();
         expect(request.headers?.["Content-Type"], key).toBeUndefined();
       } else if (request?.body !== undefined) {
-        expect(request.headers?.["Content-Type"], key).toBe("application/json");
+        expect(request.headers?.["Content-Type"], key).toBe(
+          request.bodyEncoding === "form" ? "application/x-www-form-urlencoded" : "application/json",
+        );
       }
     }
     expect(uncovered).toEqual([]);
-    expect(Object.keys(slackCoreActionHandlers).sort()).toEqual(Object.keys(fixtures).sort());
+    expect(Object.keys(slackCoreActionHandlers).sort()).toEqual(
+      [...Object.keys(fixtures), ...depthFixtureOperations].sort(),
+    );
   });
 
   test("keeps a success fixture for every non-webhook operation", () => {
-    const covered = new Set([...Object.keys(expandedFixtures), ...Object.keys(fixtures)]);
+    const covered = new Set([...Object.keys(expandedFixtures), ...Object.keys(fixtures), ...depthFixtureOperations]);
     const missing = Object.entries(operations)
       .filter(([, operation]) => operation.kind !== "webhook")
       .map(([key]) => key)

@@ -1,7 +1,7 @@
 {
   "key": "todoist",
   "name": "Todoist",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "runtime": "bun",
   "visibility": "public",
   "categories": [
@@ -2331,6 +2331,1728 @@
       },
       "sample": {
         "projectId": "6XGgm6PHrGgMpCFX"
+      }
+    },
+    "projects.permissions": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "Get Project Permissions",
+      "description": "List every project and workspace collaborator role with the actions it may perform. Use this to check what a role can do before assigning it.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/projects/permissions",
+        "success": [
+          200
+        ]
+      }
+    },
+    "projects.inviteCollaborator": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Invite Project Collaborator",
+      "description": "Invite a person to a shared project by email with the Sync API share_project command. Workspace projects accept an optional role; when it is omitted Todoist applies the workspace default. Provide a unique uuid for the command; Todoist echoes it under sync_status.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "projectId": {
+            "type": "string",
+            "description": "Project to share."
+          },
+          "email": {
+            "type": "string",
+            "description": "Email address of the person to invite."
+          },
+          "role": {
+            "type": "string",
+            "description": "Workspace role for the new collaborator, such as MEMBER or ADMIN. Ignored for personal projects."
+          },
+          "uuid": {
+            "type": "string",
+            "description": "Unique command identifier echoed under sync_status. Generate one per call."
+          }
+        },
+        "required": [
+          "projectId",
+          "email",
+          "uuid"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/sync",
+        "success": [
+          200
+        ],
+        "body": {
+          "commands": [
+            {
+              "type": "share_project",
+              "uuid": "{{uuid}}",
+              "args": {
+                "project_id": "{{projectId}}",
+                "email": "{{email}}",
+                "role": "{{role}}"
+              }
+            }
+          ]
+        }
+      },
+      "sample": {
+        "projectId": "6XGgm6PHrGgMpCFX",
+        "email": "collaborator@example.com",
+        "uuid": "3b6e4f4e-9b0c-4a3f-9a7e-2f1c4d5e6a7b"
+      }
+    },
+    "sections.search": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "Search Sections",
+      "description": "Find active sections whose name matches a text fragment, case-insensitively. Narrow to one project with projectId. Use List Sections to enumerate them instead.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1024,
+            "description": "Text to match against section names; * is a wildcard."
+          },
+          "projectId": {
+            "type": "string",
+            "description": "Only sections in this project."
+          },
+          "workspaceId": {
+            "type": "integer",
+            "description": "Only sections in this workspace."
+          },
+          "cursor": {
+            "type": "string",
+            "description": "Cursor from a previous call's nextCursor."
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Sections per page, up to 200. Defaults to 50."
+          }
+        },
+        "required": [
+          "query"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/sections/search",
+        "success": [
+          200
+        ],
+        "query": {
+          "query": "{{query}}",
+          "project_id": "{{projectId}}",
+          "workspace_id": "{{workspaceId}}",
+          "cursor": "{{cursor}}",
+          "limit": "{{limit}}"
+        }
+      },
+      "sample": {
+        "query": "review"
+      }
+    },
+    "sections.listArchived": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "List Archived Sections",
+      "description": "List the archived sections of one project. Archived sections leave List Sections; this is the way to read them back.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "projectId": {
+            "type": "string",
+            "description": "Project whose archived sections to list."
+          },
+          "cursor": {
+            "type": "string",
+            "description": "Cursor from a previous call's nextCursor."
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Sections per page."
+          }
+        },
+        "required": [
+          "projectId"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/sections/archived",
+        "success": [
+          200
+        ],
+        "query": {
+          "project_id": "{{projectId}}",
+          "cursor": "{{cursor}}",
+          "limit": "{{limit}}"
+        }
+      },
+      "sample": {
+        "projectId": "6XGgm6PHrGgMpCFX"
+      }
+    },
+    "tasks.completedByCompletionDate": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "List Completed Tasks by Completion Date",
+      "description": "List tasks completed inside a completion-date window. Todoist limits the window to roughly three months between since and until. Use List Completed Tasks by Due Date when the original due date is the axis you care about.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "since": {
+            "type": "string",
+            "description": "Start of the completion-date window, inclusive, as RFC 3339."
+          },
+          "until": {
+            "type": "string",
+            "description": "End of the completion-date window, exclusive, as RFC 3339."
+          },
+          "workspaceId": {
+            "type": "integer",
+            "description": "Only completed tasks in this workspace."
+          },
+          "projectId": {
+            "type": "string",
+            "description": "Only completed tasks in this project."
+          },
+          "sectionId": {
+            "type": "string",
+            "description": "Only completed tasks in this section."
+          },
+          "parentId": {
+            "type": "string",
+            "description": "Only completed sub-tasks of this task."
+          },
+          "filterQuery": {
+            "type": "string",
+            "description": "Todoist filter expression to narrow the results."
+          },
+          "filterLang": {
+            "type": "string",
+            "description": "Language the filter query is written in."
+          },
+          "cursor": {
+            "type": "string",
+            "description": "Cursor from a previous call's nextCursor."
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Tasks per page. Defaults to 50."
+          },
+          "publicKey": {
+            "type": "string",
+            "description": "Public project access key, for reading a shared project."
+          }
+        },
+        "required": [
+          "since",
+          "until"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/tasks/completed/by_completion_date",
+        "success": [
+          200
+        ],
+        "query": {
+          "since": "{{since}}",
+          "until": "{{until}}",
+          "workspace_id": "{{workspaceId}}",
+          "project_id": "{{projectId}}",
+          "section_id": "{{sectionId}}",
+          "parent_id": "{{parentId}}",
+          "filter_query": "{{filterQuery}}",
+          "filter_lang": "{{filterLang}}",
+          "cursor": "{{cursor}}",
+          "limit": "{{limit}}",
+          "public_key": "{{publicKey}}"
+        }
+      },
+      "sample": {
+        "since": "2026-01-01T00:00:00Z",
+        "until": "2026-02-01T00:00:00Z"
+      }
+    },
+    "tasks.completedByDueDate": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "List Completed Tasks by Due Date",
+      "description": "List tasks completed inside a due-date window. Todoist limits the window to six weeks between since and until. Use List Completed Tasks by Completion Date when the completion time is the axis you care about.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "since": {
+            "type": "string",
+            "description": "Start of the due-date window, inclusive, as RFC 3339."
+          },
+          "until": {
+            "type": "string",
+            "description": "End of the due-date window, exclusive, as RFC 3339."
+          },
+          "workspaceId": {
+            "type": "integer",
+            "description": "Only completed tasks in this workspace."
+          },
+          "projectId": {
+            "type": "string",
+            "description": "Only completed tasks in this project."
+          },
+          "sectionId": {
+            "type": "string",
+            "description": "Only completed tasks in this section."
+          },
+          "parentId": {
+            "type": "string",
+            "description": "Only completed sub-tasks of this task."
+          },
+          "filterQuery": {
+            "type": "string",
+            "description": "Todoist filter expression to narrow the results."
+          },
+          "filterLang": {
+            "type": "string",
+            "description": "Language the filter query is written in."
+          },
+          "cursor": {
+            "type": "string",
+            "description": "Cursor from a previous call's nextCursor."
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Tasks per page. Defaults to 50."
+          }
+        },
+        "required": [
+          "since",
+          "until"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/tasks/completed/by_due_date",
+        "success": [
+          200
+        ],
+        "query": {
+          "since": "{{since}}",
+          "until": "{{until}}",
+          "workspace_id": "{{workspaceId}}",
+          "project_id": "{{projectId}}",
+          "section_id": "{{sectionId}}",
+          "parent_id": "{{parentId}}",
+          "filter_query": "{{filterQuery}}",
+          "filter_lang": "{{filterLang}}",
+          "cursor": "{{cursor}}",
+          "limit": "{{limit}}"
+        }
+      },
+      "sample": {
+        "since": "2026-01-01T00:00:00Z",
+        "until": "2026-02-01T00:00:00Z"
+      }
+    },
+    "tasks.bulkCreate": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Bulk Create Tasks",
+      "description": "Create many tasks in one Sync API request with item_add commands. Each command is {type: \"item_add\", uuid, temp_id?, args: {content, project_id?, section_id?, labels?, due_string?, priority?, ...}}; Todoist executes up to 100 per batch and reports each uuid under sync_status.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "commands": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 100,
+            "items": {
+              "type": "object"
+            },
+            "description": "item_add command objects, one per task."
+          }
+        },
+        "required": [
+          "commands"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/sync",
+        "success": [
+          200
+        ],
+        "body": {
+          "commands": "{{commands}}"
+        }
+      },
+      "sample": {
+        "commands": [
+          {
+            "type": "item_add",
+            "uuid": "7d2f2a1c-3e4b-4f5a-8c9d-0e1f2a3b4c5d",
+            "args": {
+              "content": "Write the launch post"
+            }
+          }
+        ]
+      }
+    },
+    "tasks.reorder": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Reorder Tasks",
+      "description": "Set deterministic task order by sending the Sync API item_reorder command with each task's new child_order. Provide a unique uuid for the command; Todoist echoes it under sync_status.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object"
+            },
+            "description": "Task order entries: {id, child_order}."
+          },
+          "uuid": {
+            "type": "string",
+            "description": "Unique command identifier echoed under sync_status. Generate one per call."
+          }
+        },
+        "required": [
+          "items",
+          "uuid"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/sync",
+        "success": [
+          200
+        ],
+        "body": {
+          "commands": [
+            {
+              "type": "item_reorder",
+              "uuid": "{{uuid}}",
+              "args": {
+                "items": "{{items}}"
+              }
+            }
+          ]
+        }
+      },
+      "sample": {
+        "items": [
+          {
+            "id": "6XGgmFVcrG5RRjVr",
+            "child_order": 1
+          }
+        ],
+        "uuid": "bf0855a3-0138-4b76-b895-88cad8db9edc"
+      }
+    },
+    "labels.listShared": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "List Shared Labels",
+      "description": "List label names shared across the caller's tasks, with cursor pagination. Set omitPersonal to leave the caller's personal labels out.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "omitPersonal": {
+            "type": "boolean",
+            "description": "Exclude the caller's personal labels from the names."
+          },
+          "cursor": {
+            "type": "string",
+            "description": "Cursor from a previous call's nextCursor."
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Labels per page, up to 200. Defaults to 50."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/labels/shared",
+        "success": [
+          200
+        ],
+        "query": {
+          "omit_personal": "{{omitPersonal}}",
+          "cursor": "{{cursor}}",
+          "limit": "{{limit}}"
+        }
+      }
+    },
+    "labels.search": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "Search Labels",
+      "description": "Find labels whose name matches a text fragment, case-insensitively. Use List Labels to enumerate them all.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1024,
+            "description": "Text to match against label names; * is a wildcard."
+          },
+          "cursor": {
+            "type": "string",
+            "description": "Cursor from a previous call's nextCursor."
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Labels per page, up to 200. Defaults to 50."
+          }
+        },
+        "required": [
+          "query"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/labels/search",
+        "success": [
+          200
+        ],
+        "query": {
+          "query": "{{query}}",
+          "cursor": "{{cursor}}",
+          "limit": "{{limit}}"
+        }
+      },
+      "sample": {
+        "query": "urgent"
+      }
+    },
+    "activities.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "List Activities",
+      "description": "List activity log entries, optionally narrowed by object, event type, initiator, workspace, or date window. Uses cursor pagination.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "objectType": {
+            "type": "string",
+            "enum": [
+              "project",
+              "item",
+              "note",
+              "section"
+            ],
+            "description": "Object type to filter by; use together with objectId."
+          },
+          "objectId": {
+            "type": "string",
+            "description": "Specific object to read activities for; requires objectType."
+          },
+          "parentProjectId": {
+            "type": "string",
+            "description": "Only activities belonging to this project."
+          },
+          "parentItemId": {
+            "type": "string",
+            "description": "Only activities belonging to this task."
+          },
+          "eventType": {
+            "type": "string",
+            "description": "Simple event type such as added, deleted, updated, completed, moved."
+          },
+          "initiatorId": {
+            "type": "string",
+            "description": "Only activities started by this user ID."
+          },
+          "workspaceId": {
+            "type": "integer",
+            "description": "Only activities in this workspace."
+          },
+          "includeParentObject": {
+            "type": "boolean",
+            "description": "Also include activities for the parent object."
+          },
+          "includeChildObjects": {
+            "type": "boolean",
+            "description": "Also include activities for child objects."
+          },
+          "annotateNotes": {
+            "type": "boolean",
+            "description": "Include extra comment details in extra_data."
+          },
+          "annotateParents": {
+            "type": "boolean",
+            "description": "Include parent object names in extra_data."
+          },
+          "cursor": {
+            "type": "string",
+            "description": "Cursor from a previous call's nextCursor."
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Activities per page, up to 200. Defaults to 50."
+          },
+          "dateFrom": {
+            "type": "string",
+            "description": "Only activities on or after this RFC 3339 timestamp."
+          },
+          "dateTo": {
+            "type": "string",
+            "description": "Only activities before this RFC 3339 timestamp."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/activities",
+        "success": [
+          200
+        ],
+        "query": {
+          "object_type": "{{objectType}}",
+          "object_id": "{{objectId}}",
+          "parent_project_id": "{{parentProjectId}}",
+          "parent_item_id": "{{parentItemId}}",
+          "event_type": "{{eventType}}",
+          "initiator_id": "{{initiatorId}}",
+          "workspace_id": "{{workspaceId}}",
+          "include_parent_object": "{{includeParentObject}}",
+          "include_child_objects": "{{includeChildObjects}}",
+          "annotate_notes": "{{annotateNotes}}",
+          "annotate_parents": "{{annotateParents}}",
+          "cursor": "{{cursor}}",
+          "limit": "{{limit}}",
+          "date_from": "{{dateFrom}}",
+          "date_to": "{{dateTo}}"
+        }
+      },
+      "sample": {
+        "objectType": "item",
+        "eventType": "completed"
+      }
+    },
+    "backups.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "List Backups",
+      "description": "List the user's backup archives. Returns archive metadata only, not live task or project data; the list is empty when backups are not enabled. Accounts with MFA enabled must pass an mfaToken.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "mfaToken": {
+            "type": "string",
+            "description": "MFA token, required for accounts with MFA enabled."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/backups",
+        "success": [
+          200
+        ],
+        "query": {
+          "mfa_token": "{{mfaToken}}"
+        }
+      }
+    },
+    "filters.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "List Filters",
+      "description": "List the caller's custom filters through the Sync API by reading the filters resource type. Pass * as syncToken for a full sync, or the sync token from a previous response for an incremental one.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "syncToken": {
+            "type": "string",
+            "description": "Sync token from a previous response, or * for a full sync."
+          }
+        },
+        "required": [
+          "syncToken"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/sync",
+        "success": [
+          200
+        ],
+        "body": {
+          "sync_token": "{{syncToken}}",
+          "resource_types": [
+            "filters"
+          ]
+        }
+      },
+      "sample": {
+        "syncToken": "*"
+      }
+    },
+    "idMappings.resolve": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Resolve ID Mappings",
+      "description": "Translate IDs between the legacy numeric format and the current alphanumeric format for one object type. Pass a comma-separated list of IDs; missing mappings come back with a null counterpart.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "objName": {
+            "type": "string",
+            "enum": [
+              "sections",
+              "tasks",
+              "comments",
+              "reminders",
+              "location_reminders",
+              "projects"
+            ],
+            "description": "Object type the IDs belong to. IDs are not unique across object types."
+          },
+          "objIds": {
+            "type": "string",
+            "description": "Comma-separated list of IDs to translate."
+          }
+        },
+        "required": [
+          "objName",
+          "objIds"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/id_mappings/{{objName}}/{{objIds}}",
+        "success": [
+          200
+        ]
+      },
+      "sample": {
+        "objName": "tasks",
+        "objIds": "6VfWjjjFg2xqX6Pa,918273645"
+      }
+    },
+    "stats.productivity": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Get Productivity Stats",
+      "description": "Fetch the caller's completion statistics: totals, karma, streak, goals, and per-day and per-week breakdowns. Weekly figures are only present on paid plans.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/tasks/completed/stats",
+        "success": [
+          200
+        ]
+      }
+    },
+    "templates.exportUrl": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Export Template as URL",
+      "description": "Export a project as a shareable template and return its download URL. Set useRelativeDates to keep due dates relative in the exported file.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "projectId": {
+            "type": "string",
+            "description": "Project to export."
+          },
+          "useRelativeDates": {
+            "type": "boolean",
+            "description": "Export due dates as relative dates. Defaults to true."
+          }
+        },
+        "required": [
+          "projectId"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/templates/url",
+        "success": [
+          200
+        ],
+        "query": {
+          "project_id": "{{projectId}}",
+          "use_relative_dates": "{{useRelativeDates}}"
+        }
+      },
+      "sample": {
+        "projectId": "6XGgm6PHrGgMpCFX"
+      }
+    },
+    "templates.importIntoProject": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Import Template into Project",
+      "description": "Import a template from Todoist's template gallery into an existing project. Both the target project and the template ID are required; locale selects the template's language.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "projectId": {
+            "type": "string",
+            "description": "Existing project to import the template into."
+          },
+          "templateId": {
+            "type": "string",
+            "description": "Template identifier from the Todoist template gallery."
+          },
+          "locale": {
+            "type": "string",
+            "description": "Locale for localized template content. Defaults to en."
+          }
+        },
+        "required": [
+          "projectId",
+          "templateId"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/templates/import_into_project_from_template_id",
+        "success": [
+          200
+        ],
+        "body": {
+          "project_id": "{{projectId}}",
+          "template_id": "{{templateId}}",
+          "locale": "{{locale}}"
+        }
+      },
+      "sample": {
+        "projectId": "6XGgm6PHrGgMpCFX",
+        "templateId": "project-tracker"
+      }
+    },
+    "workspaces.create": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Create Workspace",
+      "description": "Create a Todoist workspace. Only the name is required; sharing and guest settings fall back to Todoist's defaults.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255,
+            "description": "Workspace name."
+          },
+          "description": {
+            "type": "string",
+            "description": "Workspace description."
+          },
+          "isLinkSharingEnabled": {
+            "type": "boolean",
+            "description": "Allow link sharing for the workspace."
+          },
+          "isGuestAllowed": {
+            "type": "boolean",
+            "description": "Allow guests in the workspace."
+          },
+          "domainName": {
+            "type": "string",
+            "description": "Workspace email domain."
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/workspaces",
+        "success": [
+          200
+        ],
+        "body": {
+          "name": "{{name}}",
+          "description": "{{description}}",
+          "is_link_sharing_enabled": "{{isLinkSharingEnabled}}",
+          "is_guest_allowed": "{{isGuestAllowed}}",
+          "domain_name": "{{domainName}}"
+        }
+      },
+      "sample": {
+        "name": "Design Team"
+      }
+    },
+    "workspaces.planDetails": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Get Workspace Plan Details",
+      "description": "Fetch a workspace's plan, member count, project usage, limits, and pricing. Use this to check subscription state before promising workspace features.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "workspaceId": {
+            "type": "integer",
+            "description": "Workspace whose plan details to read."
+          }
+        },
+        "required": [
+          "workspaceId"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/workspaces/plan_details",
+        "success": [
+          200
+        ],
+        "query": {
+          "workspace_id": "{{workspaceId}}"
+        }
+      },
+      "sample": {
+        "workspaceId": 123456
+      }
+    },
+    "workspaces.listAllInvitations": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "List All Workspace Invitations",
+      "description": "List every pending invitation to a workspace, with inviter, email, and role. The list is not paginated.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "workspaceId": {
+            "type": "integer",
+            "description": "Workspace whose invitations to list."
+          }
+        },
+        "required": [
+          "workspaceId"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/workspaces/invitations/all",
+        "success": [
+          200
+        ],
+        "query": {
+          "workspace_id": "{{workspaceId}}"
+        }
+      },
+      "sample": {
+        "workspaceId": 123456
+      }
+    },
+    "workspaces.listInvitations": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "List Workspace Invitations",
+      "description": "List the email addresses with a pending invitation to a workspace. The list is not paginated.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "workspaceId": {
+            "type": "integer",
+            "description": "Workspace whose pending invitations to list."
+          }
+        },
+        "required": [
+          "workspaceId"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/workspaces/invitations",
+        "success": [
+          200
+        ],
+        "query": {
+          "workspace_id": "{{workspaceId}}"
+        }
+      },
+      "sample": {
+        "workspaceId": 123456
+      }
+    },
+    "workspaces.listJoinable": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "List Joinable Workspaces",
+      "description": "List the workspaces the caller can join. Pair with Join Workspace when the caller wants to enter one.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/workspaces/joinable",
+        "success": [
+          200
+        ]
+      }
+    },
+    "workspaces.listArchivedProjects": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "List Archived Workspace Projects",
+      "description": "List a workspace's archived projects with cursor pagination. Archived projects are excluded from List Projects, so combine both for a complete view.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "workspaceId": {
+            "type": "integer",
+            "description": "Workspace whose archived projects to list."
+          },
+          "cursor": {
+            "type": "string",
+            "description": "Cursor from a previous call's nextCursor."
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Projects per page, up to 500. Defaults to 100."
+          }
+        },
+        "required": [
+          "workspaceId"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/workspaces/{{workspaceId}}/projects/archived",
+        "success": [
+          200
+        ],
+        "query": {
+          "cursor": "{{cursor}}",
+          "limit": "{{limit}}"
+        }
+      },
+      "sample": {
+        "workspaceId": 123456
+      }
+    },
+    "workspaces.listActiveProjects": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "List Workspace Active Projects",
+      "description": "List a workspace's active projects with cursor pagination. Guests only see projects they have joined.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "workspaceId": {
+            "type": "integer",
+            "description": "Workspace whose active projects to list."
+          },
+          "cursor": {
+            "type": "string",
+            "description": "Cursor from a previous call's nextCursor."
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Projects per page, up to 500. Defaults to 100."
+          }
+        },
+        "required": [
+          "workspaceId"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/workspaces/{{workspaceId}}/projects/active",
+        "success": [
+          200
+        ],
+        "query": {
+          "cursor": "{{cursor}}",
+          "limit": "{{limit}}"
+        }
+      },
+      "sample": {
+        "workspaceId": 123456
+      }
+    },
+    "workspaces.listUsers": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "List Workspace Users",
+      "description": "List workspace members, optionally narrowed to one workspace. Guests cannot read this list.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "workspaceId": {
+            "type": "integer",
+            "description": "Only users of this workspace. Omit for every workspace the caller belongs to."
+          },
+          "cursor": {
+            "type": "string",
+            "description": "Cursor from a previous call's nextCursor."
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Users per page. Defaults to 100."
+          },
+          "sort": {
+            "type": "string",
+            "enum": [
+              "id",
+              "name"
+            ],
+            "description": "Order by ID, or by name with the requesting user first. Name sorting requires workspaceId."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/workspaces/users",
+        "success": [
+          200
+        ],
+        "query": {
+          "workspace_id": "{{workspaceId}}",
+          "cursor": "{{cursor}}",
+          "limit": "{{limit}}",
+          "sort": "{{sort}}"
+        }
+      },
+      "sample": {
+        "workspaceId": 123456
+      }
+    },
+    "sync": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "write",
+      "title": "Sync",
+      "description": "Read and write Todoist data through the Sync API. Pass syncToken (and optionally resourceTypes) to read resources, or commands to batch writes; Todoist executes up to 100 commands per request and reports each uuid under sync_status.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "syncToken": {
+            "type": "string",
+            "description": "Sync token from a previous response, or * for a full sync. Required for reads."
+          },
+          "resourceTypes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Resource types to return, such as projects, items, sections, labels, or filters. Use [\"all\"] for everything."
+          },
+          "commands": {
+            "type": "array",
+            "maxItems": 100,
+            "items": {
+              "type": "object"
+            },
+            "description": "Write commands such as item_add, item_update, item_complete, project_add, or share_project."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/sync",
+        "success": [
+          200
+        ],
+        "body": {
+          "sync_token": "{{syncToken}}",
+          "resource_types": "{{resourceTypes}}",
+          "commands": "{{commands}}"
+        }
+      },
+      "sample": {
+        "syncToken": "*",
+        "resourceTypes": [
+          "projects",
+          "items"
+        ]
+      }
+    },
+    "settings.updateNotification": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Update Notification Setting",
+      "description": "Enable or disable one notification type on one channel for the caller. Todoist returns the caller's full notification preference map.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "notificationType": {
+            "type": "string",
+            "description": "Notification type to change, such as item_completed or workspace_invitation_created."
+          },
+          "service": {
+            "type": "string",
+            "enum": [
+              "email",
+              "push"
+            ],
+            "description": "Channel to change."
+          },
+          "dontNotify": {
+            "type": "boolean",
+            "description": "True disables notifications for this type and channel; false enables them."
+          }
+        },
+        "required": [
+          "notificationType",
+          "service"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "PUT",
+        "path": "/api/v1/notification_setting",
+        "success": [
+          200
+        ],
+        "body": {
+          "notification_type": "{{notificationType}}",
+          "service": "{{service}}",
+          "dont_notify": "{{dontNotify}}"
+        }
+      },
+      "sample": {
+        "notificationType": "item_completed",
+        "service": "email",
+        "dontNotify": true
       }
     },
     "webhook.item_completed": {
