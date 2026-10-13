@@ -39,7 +39,7 @@ describe("affinda manifest", () => {
   it("keeps the origin identity and bumps the deepened version", () => {
     expect(manifest.key).toBe("affinda");
     expect(manifest.name).toBe("Affinda");
-    expect(manifest.version).toBe("0.3.0");
+    expect(manifest.version).toBe("0.3.1");
     expect(manifest.auth.type).toBe("api_key");
     expect(manifest.http.baseUrl).toBe("https://{{region}}.affinda.com");
     expect(manifest.http.auth.value).toBe("Bearer {{apiKey}}");
@@ -60,7 +60,7 @@ describe("affinda manifest", () => {
       expect(operations[key], key).toBeDefined();
     }
     expect(mapping.origin_ops.sort()).toEqual([...origin].sort());
-    expect(Object.keys(operations).length).toBe(120);
+    expect(Object.keys(operations).length).toBe(121);
     expect(mapping.added.length).toBe(100);
     expect(Object.keys(mapping.tools).length).toBe(119);
   });
@@ -92,10 +92,51 @@ describe("affinda manifest", () => {
     }
   });
 
-  it("keeps recipe operations identical to runner operations", () => {
-    expect(manifest.version).toBe(recipe.manifest.version);
-    expect(Object.keys(operations).sort()).toEqual(Object.keys(recipeOps).sort());
-    expect([...recipe.selection.operations].sort()).toEqual(Object.keys(operations).sort());
+  it("keeps pinned recipe operations and records the workspace usage recipe gap", () => {
+    expect(recipe.manifest.version).toBe("0.3.0");
+    const recipeKeys = Object.keys(recipeOps).sort();
+    const runnerKeys = Object.keys(operations).sort();
+    expect(recipeKeys).toHaveLength(120);
+    expect([...recipe.selection.operations].sort()).toEqual(recipeKeys);
+    expect(Object.keys(recipe.operationSources).sort()).toEqual(recipeKeys);
+    expect(runnerKeys).toEqual([...recipeKeys, "AFFINDA_GET_USAGE_BY_WORKSPACE"].sort());
+    for (const key of recipeKeys) {
+      expect(operations[key], key).toEqual(recipeOps[key]);
+    }
+    expect(recipe.operationSources["AFFINDA_GET_USAGE_BY_WORKSPACE"]).toBeUndefined();
+    expect(recipe.selection.operations).not.toContain("AFFINDA_GET_USAGE_BY_WORKSPACE");
+    expect(manifest.auth).toEqual(recipe.manifest.auth);
+    expect(manifest.http).toEqual(recipe.manifest.http);
+    expect(manifest.network).toEqual(recipe.manifest.network);
+  });
+
+  it("adds monthly workspace usage as a body-less JSON read", () => {
+    const operation = operations["AFFINDA_GET_USAGE_BY_WORKSPACE"];
+    expect(operation, "AFFINDA_GET_USAGE_BY_WORKSPACE").toBeDefined();
+    expect(operation?.sideEffect).toBe("read");
+    expect(operation?.responseFormat).toBe("json");
+    const outputSchema = operation?.outputSchema as { type?: string };
+    expect(outputSchema.type).toBe("object");
+    const inputSchema = operation?.inputSchema as { additionalProperties?: boolean; required?: string[] };
+    expect(inputSchema.additionalProperties).toBe(false);
+    expect(inputSchema.required).toEqual(["identifier"]);
+    const request = operation?.request as {
+      method?: string;
+      path?: string;
+      baseUrl?: string;
+      body?: unknown;
+      headers?: unknown;
+      query?: Record<string, string>;
+      success?: number[];
+    };
+    expect(request.method).toBe("GET");
+    expect(request.path).toBe("/v3/workspaces/{{identifier}}/usage");
+    expect(request.baseUrl).toBeUndefined();
+    expect(request.body).toBeUndefined();
+    expect(request.headers).toBeUndefined();
+    expect(request.query).toEqual({ start: "{{start}}", end: "{{end}}" });
+    expect(request.success).toEqual([200]);
+    expect(JSON.stringify(request)).not.toMatch(/content-type/i);
   });
 });
 

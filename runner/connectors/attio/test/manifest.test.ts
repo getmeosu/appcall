@@ -7,7 +7,7 @@ const operations = manifest.operations as Record<string, Record<string, unknown>
 describe("attio manifest", () => {
   test("has bounded hosts and compiles", () => {
     expect(manifest.network.allowedHosts).toEqual(["api.attio.com"]);
-    expect(manifest.version).toBe("0.4.0");
+    expect(manifest.version).toBe("0.4.1");
     expect(manifest.http.baseUrl).toBe("https://api.attio.com");
     expect(manifest.http.auth.value).toBe("Bearer {{accessToken}}");
     expect(() => compileDeclarativeConnector(manifest as never)).not.toThrow();
@@ -19,7 +19,7 @@ describe("attio manifest", () => {
   });
 
   test("gives every action a real request, title, description, and object inputSchema", () => {
-    expect(Object.keys(operations).length).toBe(109);
+    expect(Object.keys(operations).length).toBe(111);
     for (const [key, operation] of Object.entries(operations)) {
       expect(operation.kind, key).toBe("action");
       expect(["read", "write", "destructive"], key).toContain(operation.sideEffect);
@@ -64,6 +64,36 @@ describe("attio manifest", () => {
     for (const key of Object.keys(recipe.manifest.operations)) {
       expect(operations[key], key).toBeDefined();
     }
+  });
+
+
+  test("adds JSON meeting create and get on the existing host", () => {
+    const created = operations["meetings.create"]!;
+    const got = operations["meetings.get"]!;
+    const createdRequest = created.request as Record<string, unknown>;
+    const gotRequest = got.request as Record<string, unknown>;
+    expect(createdRequest.method).toBe("POST");
+    expect(createdRequest.path).toBe("/v2/meetings");
+    expect(createdRequest.baseUrl).toBeUndefined();
+    expect(createdRequest.headers).toEqual({ "Content-Type": "application/json" });
+    expect(createdRequest.body).toBeDefined();
+    expect(gotRequest.method).toBe("GET");
+    expect(gotRequest.path).toBe("/v2/meetings/{{meeting_id}}");
+    expect(gotRequest.baseUrl).toBeUndefined();
+    expect(gotRequest.body).toBeUndefined();
+    expect(gotRequest.headers).toBeUndefined();
+    expect(JSON.stringify(gotRequest)).not.toMatch(/content-type/i);
+    expect((created.outputSchema as { type?: string }).type).toBe("object");
+    expect((got.outputSchema as { type?: string }).type).toBe("object");
+    expect((created.inputSchema as { required?: string[] }).required).toEqual([
+      "title",
+      "description",
+      "start",
+      "end",
+      "is_all_day",
+      "participants",
+    ]);
+    expect((got.inputSchema as { required?: string[] }).required).toEqual(["meeting_id"]);
   });
 
   test("covers the 12 previously aliased Composio tools as distinct HTTP operations", () => {

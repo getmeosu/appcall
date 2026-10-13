@@ -1,7 +1,7 @@
 {
   "key": "grafana",
   "name": "Grafana",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "runtime": "bun",
   "visibility": "public",
   "categories": [
@@ -1274,6 +1274,185 @@
           "dashboardUID": "{{dashboardUID}}",
           "panelId": "{{panelId}}",
           "time": "{{time}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "health.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "title": "Get health",
+      "description": "Return Grafana web and database health with GET /api/health.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/health",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "signingKeys.retrieve": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Retrieve signing keys",
+      "description": "Retrieve the Grafana JSON Web Key Set with GET /api/signing-keys/keys.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/signing-keys/keys",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "publicDashboards.query": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Query public dashboard",
+      "description": "Query one public dashboard panel with POST /api/public/dashboards/{accessToken}/panels/{panelId}/query.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "accessToken": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Public dashboard access token."
+          },
+          "panelId": {
+            "type": "integer",
+            "description": "Panel ID."
+          },
+          "intervalMs": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Suggested interval in milliseconds."
+          },
+          "maxDataPoints": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Maximum data points to return."
+          },
+          "queryCachingTTL": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Optional query cache TTL in milliseconds."
+          },
+          "timeRange": {
+            "type": "object",
+            "properties": {
+              "from": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Range start, for example now-1h."
+              },
+              "to": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Range end, for example now."
+              },
+              "timezone": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Optional IANA timezone or browser."
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "from",
+              "to"
+            ],
+            "description": "Optional time range sent with the query."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "accessToken",
+          "panelId",
+          "intervalMs",
+          "maxDataPoints",
+          "timeRange"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/api/public/dashboards/{{accessToken}}/panels/{{panelId}}/query",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "intervalMs": "{{intervalMs}}",
+          "maxDataPoints": "{{maxDataPoints}}",
+          "queryCachingTTL": "{{queryCachingTTL}}",
+          "timeRange": {
+            "from": "{{timeRange.from}}",
+            "to": "{{timeRange.to}}",
+            "timezone": "{{timeRange.timezone}}"
+          }
         }
       },
       "enforceOutputSchema": true,

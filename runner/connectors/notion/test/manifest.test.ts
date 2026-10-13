@@ -79,7 +79,7 @@ function dummyInput(schema: { properties?: Record<string, any>; required?: strin
 describe("notion manifest", () => {
   test("compiles a REST connector against api.notion.com with Bearer notionToken", () => {
     expect(manifest.key).toBe("notion");
-    expect(manifest.version).toBe("0.3.0");
+    expect(manifest.version).toBe("0.3.1");
     expect(manifest.runtime).toBe("bun");
     expect(manifest.categories).toEqual(["productivity"]);
     expect(manifest.network.allowedHosts).toEqual(["api.notion.com"]);
@@ -96,6 +96,7 @@ describe("notion manifest", () => {
     expect(Object.keys(manifest.auth).sort()).toEqual([...AUTH_KEYS]);
     expect(manifest.auth.scopes).toEqual([]);
     expect(manifest.auth.setup.fields.map((field: { key: string }) => field.key)).toEqual(["notionToken"]);
+    expect(manifest.http.auth.field).toBe(manifest.auth.setup.fields[0].key);
     expect(manifest.auth.setup.fields[0].required).toBe(true);
     expect(manifest.auth.setup.fields[0].secret).toBe(true);
     expect(() => compileDeclarativeConnector(manifest as never)).not.toThrow();
@@ -187,12 +188,38 @@ describe("notion manifest", () => {
     expect(recipe.auth.setup.fields.map((field: { key: string }) => field.key)).toEqual(["notionToken"]);
     expect(recipe.auth.setup.fields[0].secret).toBe(true);
     expect(recipe.auth.setup.fields[0].required).toBe(true);
-    expect(Object.keys(recipe.manifest.operations).sort()).toEqual(Object.keys(operations).sort());
-    expect([...recipe.selection.operations].sort()).toEqual(Object.keys(operations).sort());
-    expect(Object.keys(recipe.operationSources).sort()).toEqual(Object.keys(operations).sort());
+    const prior = Object.keys(recipe.manifest.operations).sort();
+    const added = ["plugins.get", "plugins.list"];
+    expect(Object.keys(operations).sort()).toEqual([...prior, ...added].sort());
+    for (const name of prior) {
+      expect(operations[name], name).toEqual(recipe.manifest.operations[name]);
+    }
+    expect([...recipe.selection.operations].sort()).toEqual(prior);
+    expect(Object.keys(recipe.operationSources).sort()).toEqual(prior);
     expect(recipe.source.revision).toBe("33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a");
     expect(recipe.selection.upstreamSha).toBe("33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a");
-    expect(JSON.stringify(recipe.manifest)).toBe(JSON.stringify(manifest));
+    expect(recipe.manifest.version).toBe("0.3.0");
+  });
+
+  test("adds the public JSON plugin routes and leaves multipart send unmapped", () => {
+    expect(operations["plugins.list"]?.sideEffect).toBe("read");
+    expect(requestOf("plugins.list")).toEqual({
+      method: "GET",
+      path: "/v1/ai/plugins",
+      success: [200, 201, 202, 204],
+      query: {
+        page_size: "{{pageSize}}",
+        start_cursor: "{{startCursor}}",
+      },
+    });
+    expect(requestOf("plugins.get")).toEqual({
+      method: "GET",
+      path: "/v1/ai/plugins/{{pluginId}}",
+      success: [200, 201, 202, 204],
+    });
+    expect(operations["plugins.get"]?.inputSchema?.required).toEqual(["pluginId"]);
+    expect(operations["fileUploads.send"]).toBeUndefined();
+    expect(Object.keys(operations)).toHaveLength(68);
   });
 });
 
@@ -278,5 +305,30 @@ describe("notion compiled handlers", () => {
       }),
     ).rejects.toMatchObject({ code: "INVALID_ACTION_INPUT" });
     expect(calls).toBe(0);
+  });
+
+  test("replays one success fixture for each new plugin operation", async () => {
+    for (const name of ["plugins-list-success.json", "plugins-get-success.json"]) {
+      const fixtureUrl = new URL(`../fixtures/cases/${name}`, import.meta.url);
+      const fixture = await Bun.file(fixtureUrl).json();
+      const exchange = fixture.exchanges[0];
+      const responseBody = await Bun.file(new URL(exchange.response.bodyFile, fixtureUrl)).json();
+      const expected = await Bun.file(new URL(fixture.expected.resultFile, fixtureUrl)).json();
+      const { requests, result } = await invoke(
+        fixture.operation,
+        { ...fixture.credentials, ...fixture.input },
+        () => jsonResponse(responseBody, exchange.response.status),
+      );
+      expect(requests, name).toHaveLength(1);
+      expect(requests[0]!.method, name).toBe(exchange.request.method);
+      expect(requests[0]!.url, name).toBe(exchange.request.url);
+      expect(await requests[0]!.clone().text(), name).toBe("");
+      expect(requests[0]!.headers.get("content-type"), name).toBeNull();
+      expect(requests[0]!.headers.get("authorization"), name).toBe(exchange.request.headers.Authorization);
+      expect(requests[0]!.headers.get("notion-version"), name).toBe(exchange.request.headers["Notion-Version"]);
+      expect(requests[0]!.headers.get("accept"), name).toBe(exchange.request.headers.Accept);
+      expect(exchange.request.body, name).toBeNull();
+      expect(result, name).toEqual(expected);
+    }
   });
 });

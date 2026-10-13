@@ -1,17 +1,23 @@
 import { describe, expect, it } from "bun:test";
 import { existsSync, readFileSync } from "node:fs";
-import { join } from "node:path";
 import { compileDeclarativeConnector } from "../../../bun/src/declarative/compile";
 import manifest from "../manifest.json";
 import mapping from "../fixtures/composio-mapping.json";
 
-const recipePath = join(import.meta.dir, "../../../../scripts/connector-gen/openconnector/recipes/polygon_io/recipe.json");
+const recipePath = "scripts/connector-gen/openconnector/recipes/polygon_io/recipe.json";
 const operations = manifest.operations as Record<string, Record<string, unknown>>;
+const addedOps = [
+  "economy.labor-market.list",
+  "stocks.dividends.v1.list",
+  "stocks.filings.risk-factors.list",
+  "stocks.income-statements.list",
+  "stocks.splits.v1.list",
+];
 
 describe("polygon-io manifest", () => {
   it("keeps the connector identity and bumps the deepened version", () => {
     expect(manifest.key).toBe("polygon-io");
-    expect(manifest.version).toBe("0.2.0");
+    expect(manifest.version).toBe("0.2.1");
     expect(manifest.runtime).toBe("bun");
     expect(manifest.name).toBe("Massive (Polygon.io)");
     expect(manifest.categories).toEqual(["banking-data"]);
@@ -29,7 +35,7 @@ describe("polygon-io manifest", () => {
 
   it("exposes every action as a real HTTP tool with title, description, and object inputSchema", () => {
     const keys = Object.keys(operations);
-    expect(keys.length).toBe(79);
+    expect(keys.length).toBe(84);
     expect(keys).toContain("healthcheck");
     expect(keys).toContain("tickers.list");
     expect(keys).toContain("aggs.range");
@@ -75,7 +81,7 @@ describe("polygon-io manifest", () => {
     expect(Object.keys(compiled.actions).sort()).toEqual(Object.keys(operations).sort());
   });
 
-  it("keeps recipe operations equal to runner operations", () => {
+  it("keeps the unchanged 0.2.0 recipe and leaves the five deepened reads as the only gap", () => {
     expect(existsSync(recipePath)).toBe(true);
     const recipe = JSON.parse(readFileSync(recipePath, "utf8")) as {
       selection: { operations: string[] };
@@ -83,15 +89,168 @@ describe("polygon-io manifest", () => {
       manifest: { operations: Record<string, unknown>; version: string };
     };
     const runnerOps = Object.keys(operations).sort();
+    const recipeOps = Object.keys(recipe.manifest.operations).sort();
     expect(recipe.manifest.version).toBe("0.2.0");
-    expect(Object.keys(recipe.manifest.operations).sort()).toEqual(runnerOps);
-    expect([...recipe.selection.operations].sort()).toEqual(runnerOps);
-    expect(Object.keys(recipe.operationSources).sort()).toEqual(runnerOps);
+    expect(recipeOps).toHaveLength(79);
+    expect([...recipe.selection.operations].sort()).toEqual(recipeOps);
+    expect(Object.keys(recipe.operationSources).sort()).toEqual(recipeOps);
+    const absentFromRecipe = runnerOps.filter((key) => !Object.hasOwn(recipe.operationSources, key));
+    expect(absentFromRecipe).toEqual(addedOps);
+    expect(runnerOps).toEqual([...recipeOps, ...addedOps].sort());
+    for (const key of recipeOps) {
+      expect(operations[key], key).toEqual(recipe.manifest.operations[key]);
+    }
+  });
+
+  it("adds five body-less Massive reads without replacing v3 dividends, splits, or taxonomy risk factors", () => {
+    const inflation = operations["economy.inflation.list"]!;
+    const sections = operations["filings.10k-sections.list"]!;
+    const balance = operations["stocks.balance-sheets.list"]!;
+    const dividends = operations["dividends.list"]!;
+    const splits = operations["splits.list"]!;
+    expect((dividends.request as { path: string }).path).toBe("/v3/reference/dividends");
+    expect((splits.request as { path: string }).path).toBe("/v3/reference/splits");
+    expect((operations["taxonomies.risk-factors.list"]!.request as { path: string }).path).toBe(
+      "/stocks/taxonomies/vX/risk-factors",
+    );
+
+    const specs: {
+      key: string;
+      sibling: Record<string, unknown>;
+      path: string;
+      query: Record<string, string>;
+      limitMax: number;
+    }[] = [
+      {
+        key: "economy.labor-market.list",
+        sibling: inflation,
+        path: "/fed/v1/labor-market",
+        query: { date: "{{date}}", sort: "{{sort}}", limit: "{{limit}}" },
+        limitMax: 50000,
+      },
+      {
+        key: "stocks.filings.risk-factors.list",
+        sibling: sections,
+        path: "/stocks/filings/vX/risk-factors",
+        query: {
+          ticker: "{{ticker}}",
+          cik: "{{cik}}",
+          filing_date: "{{filingDate}}",
+          sort: "{{sort}}",
+          limit: "{{limit}}",
+        },
+        limitMax: 50000,
+      },
+      {
+        key: "stocks.income-statements.list",
+        sibling: balance,
+        path: "/stocks/financials/v1/income-statements",
+        query: {
+          cik: "{{cik}}",
+          tickers: "{{tickers}}",
+          timeframe: "{{timeframe}}",
+          fiscal_year: "{{fiscalYear}}",
+          fiscal_quarter: "{{fiscalQuarter}}",
+          period_end: "{{periodEnd}}",
+          "period_end.gt": "{{periodEndGt}}",
+          "period_end.gte": "{{periodEndGte}}",
+          "period_end.lt": "{{periodEndLt}}",
+          "period_end.lte": "{{periodEndLte}}",
+          filing_date: "{{filingDate}}",
+          "filing_date.gt": "{{filingDateGt}}",
+          "filing_date.gte": "{{filingDateGte}}",
+          "filing_date.lt": "{{filingDateLt}}",
+          "filing_date.lte": "{{filingDateLte}}",
+          sort: "{{sort}}",
+          limit: "{{limit}}",
+        },
+        limitMax: 50000,
+      },
+      {
+        key: "stocks.dividends.v1.list",
+        sibling: dividends,
+        path: "/stocks/v1/dividends",
+        query: {
+          ticker: "{{ticker}}",
+          ex_dividend_date: "{{exDividendDate}}",
+          frequency: "{{frequency}}",
+          distribution_type: "{{distributionType}}",
+          sort: "{{sort}}",
+          limit: "{{limit}}",
+        },
+        limitMax: 5000,
+      },
+      {
+        key: "stocks.splits.v1.list",
+        sibling: splits,
+        path: "/stocks/v1/splits",
+        query: {
+          ticker: "{{ticker}}",
+          execution_date: "{{executionDate}}",
+          adjustment_type: "{{adjustmentType}}",
+          sort: "{{sort}}",
+          limit: "{{limit}}",
+        },
+        limitMax: 5000,
+      },
+    ];
+
+    for (const spec of specs) {
+      const operation = operations[spec.key]!;
+      expect(operation.sideEffect, spec.key).toBe("read");
+      expect(operation.timeoutMs, spec.key).toBe(spec.sibling.timeoutMs);
+      expect(operation.maxInputBytes, spec.key).toBe(spec.sibling.maxInputBytes);
+      expect(operation.maxResponseBytes, spec.key).toBe(spec.sibling.maxResponseBytes);
+      expect(operation.outputSchema, spec.key).toEqual(spec.sibling.outputSchema);
+      expect(operation.responseFormat, spec.key).toBe(spec.sibling.responseFormat);
+      expect(operation.validationMode, spec.key).toBe(spec.sibling.validationMode);
+      expect(operation.enforceOutputSchema, spec.key).toBe(spec.sibling.enforceOutputSchema);
+      const request = operation.request as {
+        method: string;
+        path: string;
+        baseUrl?: string;
+        success: number[];
+        body?: unknown;
+        headers?: Record<string, string>;
+        query: Record<string, string>;
+      };
+      expect(request.method, spec.key).toBe("GET");
+      expect(request.path, spec.key).toBe(spec.path);
+      expect(request.success, spec.key).toEqual([200]);
+      expect(request.query, spec.key).toEqual(spec.query);
+      expect(request.baseUrl, spec.key).toBeUndefined();
+      expect(request.body, spec.key).toBeUndefined();
+      expect(request.headers, spec.key).toBeUndefined();
+      const schema = operation.inputSchema as {
+        type: string;
+        additionalProperties: boolean;
+        required?: string[];
+        properties: Record<string, { type?: string; minimum?: number; maximum?: number }>;
+      };
+      expect(schema.type, spec.key).toBe("object");
+      expect(schema.additionalProperties, spec.key).toBe(false);
+      expect(schema.required, spec.key).toBeUndefined();
+      expect(schema.properties.limit, spec.key).toEqual({ type: "integer", minimum: 1, maximum: spec.limitMax });
+    }
+
+    const income = operations["stocks.income-statements.list"]!.inputSchema as {
+      properties: Record<string, { type?: string }>;
+    };
+    expect(income.properties.tickers.type).toBe("string");
+    expect(income.properties.fiscalYear.type).toBe("integer");
+    expect(income.properties.fiscalQuarter.type).toBe("integer");
+    for (const absent of ["sic", "ticker", "companyName", "companyNameSearch", "includeSources"]) {
+      expect(income.properties[absent], absent).toBeUndefined();
+    }
+    const v1Dividends = operations["stocks.dividends.v1.list"]!.inputSchema as {
+      properties: Record<string, { type?: string }>;
+    };
+    expect(v1Dividends.properties.frequency.type).toBe("integer");
   });
 
   it("accounts for every Composio Polygon tool that still has a Massive HTTP endpoint", () => {
     expect(mapping.composio_tools).toBe(90);
-    expect(mapping.mapped.length).toBe(87);
+    expect(mapping.mapped.length).toBe(92);
     expect(mapping.unmapped_composio.map((row: { composio: string }) => row.composio).sort()).toEqual([
       "POLYGON_GET_CRYPTO_TICKER_BOOK",
       "POLYGON_GET_FOREX_LOCALES",

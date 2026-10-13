@@ -1,21 +1,17 @@
 import { describe, expect, it } from "bun:test";
 import { existsSync, readFileSync } from "node:fs";
-import { join } from "node:path";
 import manifest from "../manifest.json";
 import mapping from "../fixtures/composio-mapping.json";
 
-const recipeCandidates = [
-  join(import.meta.dir, "../../../../scripts/connector-gen/openconnector/recipes/browser_use/recipe.json"),
-  "../../../../scripts/connector-gen/openconnector/recipes/browser_use/recipe.json",
-];
-const recipePath = recipeCandidates.find((path) => existsSync(path));
+const recipePath = "scripts/connector-gen/openconnector/recipes/browser_use/recipe.json";
 const operations = manifest.operations as Record<string, Record<string, unknown>>;
-const expectedOps = ["healthcheck", "billing.account.get", "sessions.list", "sessions.get", "sessions.update", "sessions.delete", "sessions.feedback.get", "sessions.feedback.set", "sessions.share.get", "sessions.share.set", "sessions.queue.create", "sessions.queue.list", "sessions.queue.get", "sessions.queue.cancel", "runs.create", "runs.list", "runs.get", "runs.status.get", "runs.cancel", "runs.events.list", "browsers.create", "browsers.list", "browsers.get", "browsers.stop", "browsers.downloads.list", "profiles.create", "profiles.list", "profiles.get", "profiles.update", "profiles.delete", "workspaces.create", "workspaces.get", "workspaces.update", "workspaces.archive", "workspaces.files.list", "workspaces.files.delete", "integrations.list", "integrations.categories.list", "integrations.status.get", "integrations.disconnect", "paymentMethods.list"];
+const addedOps = ["extensions.list", "extensions.get", "sessions.cost.get", "stripeLink.get", "workspaces.size.get", "runs.attachments.list"];
+const expectedOps = ["healthcheck", "billing.account.get", "sessions.list", "sessions.get", "sessions.update", "sessions.delete", "sessions.feedback.get", "sessions.feedback.set", "sessions.share.get", "sessions.share.set", "sessions.queue.create", "sessions.queue.list", "sessions.queue.get", "sessions.queue.cancel", "runs.create", "runs.list", "runs.get", "runs.status.get", "runs.cancel", "runs.events.list", "browsers.create", "browsers.list", "browsers.get", "browsers.stop", "browsers.downloads.list", "profiles.create", "profiles.list", "profiles.get", "profiles.update", "profiles.delete", "workspaces.create", "workspaces.get", "workspaces.update", "workspaces.archive", "workspaces.files.list", "workspaces.files.delete", "integrations.list", "integrations.categories.list", "integrations.status.get", "integrations.disconnect", "paymentMethods.list", ...addedOps];
 
 describe("browser-use manifest", () => {
   it("keeps connector identity and bumps the deepened version", () => {
     expect(manifest.key).toBe("browser-use");
-    expect(manifest.version).toBe("0.2.0");
+    expect(manifest.version).toBe("0.2.1");
     expect(manifest.runtime).toBe("bun");
     expect(manifest.visibility).toBe("public");
     expect(manifest.categories).toEqual(["dev-tools"]);
@@ -34,7 +30,7 @@ describe("browser-use manifest", () => {
 
   it("exposes every action as a real HTTP tool with title, description, and object inputSchema", () => {
     expect(Object.keys(operations)).toEqual(expectedOps);
-    expect(Object.keys(operations).length).toBe(41);
+    expect(Object.keys(operations).length).toBe(47);
     for (const [key, operation] of Object.entries(operations)) {
       expect(operation.kind, key).toBe("action");
       expect(["read", "write", "destructive"]).toContain(operation.sideEffect);
@@ -60,20 +56,95 @@ describe("browser-use manifest", () => {
     }
   });
 
-  it("keeps recipe operations equal to runner operations", () => {
-    expect(recipePath).toBeDefined();
-    const recipe = JSON.parse(readFileSync(recipePath!, "utf8")) as {
+  it("keeps the unchanged 0.2.0 recipe and leaves the new reads as the only gap", () => {
+    expect(existsSync(recipePath)).toBe(true);
+    const recipe = JSON.parse(readFileSync(recipePath, "utf8")) as {
       selection: { operations: string[] };
       operationSources: Record<string, unknown>;
       manifest: { operations: Record<string, unknown>; version: string };
-      source: { revision: string };
     };
-    const runnerOps = Object.keys(operations);
+    const runnerOps = Object.keys(operations).sort();
+    const recipeOps = Object.keys(recipe.manifest.operations).sort();
     expect(recipe.manifest.version).toBe("0.2.0");
-    expect(Object.keys(recipe.manifest.operations)).toEqual(runnerOps);
-    expect(recipe.selection.operations).toEqual(runnerOps);
-    expect(Object.keys(recipe.operationSources)).toEqual(runnerOps);
-    expect(recipe.source.revision).toBe("33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a");
+    expect(recipeOps).toHaveLength(41);
+    expect([...recipe.selection.operations].sort()).toEqual(recipeOps);
+    expect(Object.keys(recipe.operationSources).sort()).toEqual(recipeOps);
+    const absentFromRecipe = runnerOps.filter((key) => !Object.hasOwn(recipe.operationSources, key));
+    expect(absentFromRecipe).toEqual([...addedOps].sort());
+    expect(runnerOps).toEqual([...recipeOps, ...addedOps].sort());
+    for (const key of recipeOps) {
+      expect(operations[key], key).toEqual(recipe.manifest.operations[key]);
+    }
+  });
+
+  it("adds body-less v4 JSON reads without a base URL override", () => {
+    const sibling = operations["sessions.get"]!;
+    const paths: Record<string, string> = {
+      "extensions.list": "/extensions",
+      "extensions.get": "/extensions/{{extensionId}}",
+      "sessions.cost.get": "/sessions/{{sessionId}}/cost",
+      "stripeLink.get": "/stripe-link",
+      "workspaces.size.get": "/workspaces/{{workspaceId}}/size",
+      "runs.attachments.list": "/runs/{{runId}}/attachments",
+    };
+    for (const key of addedOps) {
+      const operation = operations[key]!;
+      const request = operation.request as {
+        method?: string;
+        path?: string;
+        success?: number[];
+        baseUrl?: string;
+        body?: unknown;
+        headers?: Record<string, string>;
+      };
+      expect(operation.sideEffect, key).toBe("read");
+      expect(operation.timeoutMs, key).toBe(sibling.timeoutMs);
+      expect(operation.maxInputBytes, key).toBe(sibling.maxInputBytes);
+      expect(operation.maxResponseBytes, key).toBe(sibling.maxResponseBytes);
+      expect(operation.responseFormat, key).toBe("json");
+      expect(operation.validationMode, key).toBe("strict-generated");
+      expect(operation.enforceOutputSchema, key).toBe(true);
+      expect((operation.outputSchema as { type?: string }).type, key).toBe("object");
+      expect(request).toMatchObject({ method: "GET", path: paths[key], success: [200] });
+      expect(request.baseUrl, key).toBeUndefined();
+      expect(request.body, key).toBeUndefined();
+      expect(request.headers, key).toBeUndefined();
+      expect((operation.request as { query?: unknown }).query, key).toEqual(key === "extensions.list" ? { pageSize: "{{pageSize}}", pageNumber: "{{pageNumber}}" } : undefined);
+    }
+    const listInput = operations["extensions.list"]!.inputSchema as {
+      required?: string[];
+      properties: {
+        pageSize: { type: string; minimum: number; maximum: number };
+        pageNumber: { type: string; minimum: number };
+      };
+    };
+    expect(listInput.required).toBeUndefined();
+    expect(listInput.properties.pageSize).toEqual({ type: "integer", minimum: 1, maximum: 100 });
+    expect(listInput.properties.pageNumber).toEqual({ type: "integer", minimum: 1 });
+    const dataOf = (key: string) =>
+      (operations[key]!.outputSchema as { properties: { data: { type: string; additionalProperties: boolean; required: string[]; properties: Record<string, unknown> } } }).properties.data;
+    const extension = dataOf("extensions.get");
+    expect(extension.type).toBe("object");
+    expect(extension.additionalProperties).toBe(false);
+    expect(extension.required).toEqual(["id", "name", "version", "createdAt"]);
+    expect(Object.keys(extension.properties).sort()).toEqual(["createdAt", "id", "name", "version"]);
+    expect(dataOf("extensions.list").required).toEqual(["items", "totalItems", "pageNumber", "pageSize"]);
+    expect(dataOf("sessions.cost.get").required).toEqual(["sessionId", "numRuns", "llmCostUsd", "searchCostUsd", "browserCostUsd", "proxyCostUsd", "proxyUsedMb", "totalCostUsd"]);
+    const stripe = dataOf("stripeLink.get");
+    expect(stripe.required).toEqual(["isConnected"]);
+    expect(stripe.properties.isConnected).toEqual({ type: "boolean" });
+    expect(stripe.properties.connectionId).toEqual({ type: ["string", "null"] });
+    expect(stripe.properties.linkEmail).toEqual({ type: ["string", "null"] });
+    expect(stripe.properties.mode).toEqual({ type: ["string", "null"], enum: ["test", "live", null] });
+    expect(dataOf("workspaces.size.get").required).toEqual(["usedBytes", "maxBytes"]);
+    expect(dataOf("workspaces.size.get").properties.usedBytes).toEqual({ type: "integer", minimum: 0 });
+    expect(dataOf("workspaces.size.get").properties.maxBytes).toEqual({ type: "integer", minimum: 1 });
+    const attachment = (dataOf("runs.attachments.list").properties.attachments as { items: { required: string[]; properties: { status: { enum: string[] } } } }).items;
+    expect(dataOf("runs.attachments.list").required).toEqual(["attachments"]);
+    expect(attachment.required).toEqual(["id", "name", "contentType", "sizeBytes", "status"]);
+    expect(attachment.properties.status.enum).toEqual(["pending", "uploaded"]);
+    expect(operations["sessions.get"]!.request).toEqual({ method: "GET", path: "/sessions/{{sessionId}}", success: [200] });
+    expect(operations["workspaces.files.list"]!.request).toMatchObject({ method: "GET", path: "/workspaces/{{workspaceId}}/files" });
   });
 
   it("accounts for every documented Composio BROWSER_USE tool", () => {

@@ -56,7 +56,7 @@ function deepEqual(a: unknown, b: unknown): boolean {
 describe("giphy manifest", () => {
   test("has bounded hosts, origin auth, version, and compiles", () => {
     expect(manifest.key).toBe("giphy");
-    expect(manifest.version).toBe("0.2.0");
+    expect(manifest.version).toBe("0.2.1");
     expect(manifest.runtime).toBe("bun");
     expect(manifest.categories).toEqual(["social"]);
     expect(manifest.network.allowedHosts).toEqual(ALLOWED);
@@ -86,7 +86,7 @@ describe("giphy manifest", () => {
 
   test("covers every Composio Giphy tool with a real request", () => {
     expect(Object.keys(COMPOSIO_TOOLS)).toHaveLength(23);
-    expect(Object.keys(operations).length).toBe(24);
+    expect(Object.keys(operations).length).toBe(26);
     for (const [slug, key] of Object.entries(COMPOSIO_TOOLS)) {
       expect(operations[key], slug).toBeDefined();
       expect(requestOf(key), slug).toBeDefined();
@@ -154,14 +154,63 @@ describe("giphy manifest", () => {
     expect(requestOf("gifs.upload").bodyEncoding).toBe("form");
     expect(requestOf("analytics.register").baseUrl).toBe("https://giphy-analytics.giphy.com");
     expect((requestOf("analytics.register").query as Record<string, string>).customer_id).toBe("{{random_id}}");
+    expect(requestOf("content.get")).toMatchObject({
+      method: "GET",
+      path: "/content/{{contentId}}",
+      success: [200],
+      query: {
+        rating: "{{rating}}",
+        random_id: "{{random_id}}",
+        country_code: "{{country_code}}",
+        region: "{{region}}",
+      },
+    });
+    expect(requestOf("content.get").baseUrl).toBeUndefined();
+    expect(requestOf("content.get").body).toBeUndefined();
+    expect(Object.keys(requestOf("content.get").query as object).sort()).toEqual(["country_code", "random_id", "rating", "region"]);
+    expect(requestOf("content.list")).toMatchObject({
+      method: "GET",
+      path: "/content",
+      success: [200],
+      query: {
+        ids: "{{ids}}",
+        rating: "{{rating}}",
+        random_id: "{{random_id}}",
+        country_code: "{{country_code}}",
+        region: "{{region}}",
+      },
+    });
+    expect(requestOf("content.list").baseUrl).toBeUndefined();
+    expect(requestOf("content.list").body).toBeUndefined();
+    expect(Object.keys(requestOf("content.list").query as object).sort()).toEqual(["country_code", "ids", "random_id", "rating", "region"]);
+    expect((operations["content.get"]!.inputSchema as { required: string[] }).required).toEqual(["contentId"]);
+    expect((operations["content.list"]!.inputSchema as { required: string[] }).required).toEqual(["ids"]);
+    expect((operations["content.get"]!.outputSchema as { properties: { data: { type: string } } }).properties.data.type).toBe("object");
+    expect((operations["content.list"]!.outputSchema as { properties: { data: { type: string } } }).properties.data.type).toBe("object");
+    expect(operations["content.get"]!.sideEffect).toBe("read");
+    expect(operations["content.list"]!.sideEffect).toBe("read");
   });
 
-  test("recipe operations equal runner operations", async () => {
+  test("shared recipe operations stay equal to the unchanged recipe", async () => {
     const recipe = await Bun.file(new URL("../../../../scripts/connector-gen/openconnector/recipes/giphy/recipe.json", import.meta.url)).json();
-    expect(Object.keys(recipe.manifest.operations).sort()).toEqual(Object.keys(operations).sort());
-    expect([...recipe.selection.operations].sort()).toEqual(Object.keys(operations).sort());
+    const runnerOps = Object.keys(operations).sort();
+    const recipeOps = Object.keys(recipe.manifest.operations).sort();
+    const gap = ["content.get", "content.list"];
     expect(recipe.manifest.version).toBe("0.2.0");
     expect(recipe.manifest.network.allowedHosts).toEqual(ALLOWED);
+    expect(recipeOps).toHaveLength(24);
+    expect([...recipe.selection.operations].sort()).toEqual(recipeOps);
+    expect(Object.keys(recipe.operationSources).sort()).toEqual(recipeOps);
+    expect(runnerOps.filter((key) => !recipeOps.includes(key))).toEqual(gap);
+    expect(recipeOps.filter((key) => !runnerOps.includes(key))).toEqual([]);
+    for (const key of recipeOps) {
+      expect(operations[key], key).toEqual(recipe.manifest.operations[key]);
+    }
+    for (const key of gap) {
+      expect(recipe.manifest.operations[key]).toBeUndefined();
+      expect(recipe.operationSources[key]).toBeUndefined();
+      expect(recipe.selection.operations).not.toContain(key);
+    }
   });
 });
 

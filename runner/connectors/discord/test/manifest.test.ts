@@ -4,32 +4,44 @@ import manifest from "../manifest.json";
 const operations = manifest.operations as Record<string, Record<string, unknown>>;
 
 const expectedKeys = [
-  "bans.bulkBan", "bans.create", "bans.delete", "bans.get", "bans.list", "bot.getMe",
-  "channels.create", "channels.createInvite", "channels.createWebhook", "channels.delete",
-  "channels.deletePermission", "channels.editPermissions", "channels.follow", "channels.get",
-  "channels.list", "channels.listInvites", "channels.listWebhooks", "channels.triggerTyping",
-  "channels.update", "dm.open", "emojis.list", "events.createExternal", "events.createVoice",
-  "events.delete", "events.get", "events.list", "events.listUsers", "events.update",
-  "guild.beginPrune", "guild.deleteIntegration", "guild.get", "guild.getAuditLog",
-  "guild.getPreview", "guild.getPruneCount", "guild.getVanityUrl", "guild.getWelcomeScreen",
-  "guild.getWidget", "guild.getWidgetSettings", "guild.leave", "guild.listIntegrations",
-  "guild.listVoiceRegions", "guild.listWebhooks", "guild.update", "guild.updateWelcomeScreen",
-  "guild.updateWidget", "guilds.list", "healthcheck", "invites.get", "invites.list",
-  "invites.revoke", "members.addRole", "members.clearTimeout", "members.get", "members.getMe",
-  "members.kick", "members.list", "members.removeRole", "members.search", "members.timeout",
-  "members.update", "members.updateMe", "messages.bulkDelete", "messages.create",
-  "messages.crosspost", "messages.delete", "messages.edit", "messages.get", "messages.list",
-  "messages.listPinned", "messages.pin", "messages.reply", "messages.send", "messages.unpin",
-  "normalized.post.create", "reactions.add", "reactions.clear", "reactions.deleteEmoji",
-  "reactions.list", "reactions.remove", "reactions.removeUser", "roles.create", "roles.delete",
-  "roles.list", "roles.update", "threads.addMember", "threads.create", "threads.createFromMessage",
-  "threads.getMember", "threads.join", "threads.leave", "threads.listActive",
-  "threads.listArchived", "threads.listJoinedPrivateArchived", "threads.listMembers",
-  "threads.listPrivateArchived", "threads.removeMember", "users.get", "webhook.channel_create",
-  "webhook.guild_member_add", "webhook.message_create", "webhook.message_reaction_add"
+  "bans.bulkBan", "bans.create", "bans.delete", "bans.get",
+  "bans.list", "bot.getMe", "channels.create", "channels.createInvite",
+  "channels.createWebhook", "channels.delete", "channels.deletePermission", "channels.editPermissions",
+  "channels.follow", "channels.get", "channels.list", "channels.listInvites",
+  "channels.listWebhooks", "channels.triggerTyping", "channels.update", "commands.editPermissions",
+  "commands.getPermissions", "commands.listPermissions", "dm.open", "emojis.list",
+  "entitlements.consume", "entitlements.deleteTest", "events.createExternal", "events.createVoice",
+  "events.delete", "events.get", "events.list", "events.listUsers",
+  "events.update", "gateway.get", "guild.beginPrune", "guild.deleteIntegration",
+  "guild.get", "guild.getAuditLog", "guild.getPreview", "guild.getPruneCount",
+  "guild.getVanityUrl", "guild.getWelcomeScreen", "guild.getWidget", "guild.getWidgetSettings",
+  "guild.leave", "guild.listIntegrations", "guild.listVoiceRegions", "guild.listWebhooks",
+  "guild.update", "guild.updateWelcomeScreen", "guild.updateWidget", "guilds.list",
+  "healthcheck", "invites.get", "invites.list", "invites.revoke",
+  "members.addRole", "members.clearTimeout", "members.get", "members.getMe",
+  "members.kick", "members.list", "members.removeRole", "members.search",
+  "members.timeout", "members.update", "members.updateMe", "messages.bulkDelete",
+  "messages.create", "messages.crosspost", "messages.delete", "messages.edit",
+  "messages.get", "messages.list", "messages.listPinned", "messages.pin",
+  "messages.reply", "messages.send", "messages.unpin", "normalized.post.create",
+  "oauth2.getAuthorization", "oauth2.getPublicKeys", "oauth2.getUserInfo", "reactions.add", "reactions.clear", "reactions.deleteEmoji",
+  "reactions.list", "reactions.remove", "reactions.removeUser", "roles.create",
+  "roles.delete", "roles.list", "roles.update", "stickers.listPacks",
+  "subscriptions.get", "subscriptions.list", "templates.get", "threads.addMember",
+  "threads.create", "threads.createFromMessage", "threads.getMember", "threads.join",
+  "threads.leave", "threads.listActive", "threads.listArchived", "threads.listJoinedPrivateArchived",
+  "threads.listMembers", "threads.listPrivateArchived", "threads.removeMember", "users.deleteMyRoleConnection",
+  "users.get", "users.getMyGuildMember", "users.getMyRoleConnection", "users.listMyApplicationEntitlements", "users.listMyConnections",
+  "users.updateMe", "users.updateMyRoleConnection", "webhook.channel_create", "webhook.guild_member_add",
+  "webhook.message_create", "webhook.message_reaction_add"
 ];
 
-const destructive = ["bans.bulkBan", "bans.create", "bans.delete", "channels.delete", "events.delete", "guild.beginPrune", "guild.deleteIntegration", "guild.leave", "invites.revoke", "members.kick", "messages.bulkDelete", "roles.delete"];
+const destructive = [
+  "bans.bulkBan", "bans.create", "bans.delete", "channels.delete",
+  "entitlements.deleteTest", "events.delete", "guild.beginPrune", "guild.deleteIntegration",
+  "guild.leave", "invites.revoke", "members.kick", "messages.bulkDelete",
+  "roles.delete", "users.deleteMyRoleConnection"
+];
 
 describe("discord manifest", () => {
   it("declares exactly the community-manager operation set", () => {
@@ -67,8 +79,8 @@ describe("discord manifest", () => {
     }
   });
 
-  it("bumps the connector version for the trigger expansion", () => {
-    expect(manifest.version).toBe("0.3.0");
+  it("bumps the connector version above the origin manifest", () => {
+    expect(manifest.version).toBe("0.4.1");
   });
 
   it("keeps every request inside discord.com", () => {

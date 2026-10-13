@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { existsSync, readFileSync } from "node:fs";
 import { compileDeclarativeConnector } from "../../../bun/src/declarative/compile";
 import manifest from "../manifest.json";
 import mapping from "../fixtures/mapping.json";
@@ -33,7 +34,7 @@ const setupKeys = new Set((manifest.auth.setup.fields as Array<{ key: string }>)
 describe("amplitude manifest", () => {
   test("keeps origin auth, provenance, and the twenty live Dashboard REST ops", () => {
     expect(manifest.key).toBe("amplitude");
-    expect(manifest.version).toBe("0.4.0");
+    expect(manifest.version).toBe("0.4.1");
     expect(manifest.auth.type).toBe("api_key");
     expect(manifest.auth.scopes).toEqual([]);
     expect(manifest.auth.setup).toEqual({
@@ -63,7 +64,7 @@ describe("amplitude manifest", () => {
   });
 
   test("every HTTP action is a real tool; webhooks are EventOnly reads", () => {
-    expect(Object.keys(operations).length).toBe(59);
+    expect(Object.keys(operations).length).toBe(62);
     for (const [key, operation] of Object.entries(operations)) {
       expect(String(operation.title ?? "").length, key).toBeGreaterThan(0);
       expect(String(operation.description ?? "").length, key).toBeGreaterThan(0);
@@ -95,7 +96,9 @@ describe("amplitude manifest", () => {
       if (method === "GET" || method === "DELETE") {
         expect(request.body, key).toBeUndefined();
         expect(contentType, key).toBeUndefined();
-        expect(operation.sideEffect, key).toBe(method === "DELETE" ? "destructive" : "read");
+        expect(operation.sideEffect, key).toBe(
+          key === "annotations.v3.delete" ? "write" : method === "DELETE" ? "destructive" : "read",
+        );
       } else if (request.body !== undefined) {
         if (request.bodyEncoding === "form") {
           expect(contentType, key).toBe("application/x-www-form-urlencoded");
@@ -135,6 +138,11 @@ describe("amplitude manifest", () => {
 
   test("maps every live Composio AMPLITUDE tool onto a request-backed operation", () => {
     expect(Object.keys(mapping).length).toBe(54);
+    expect(mapping.AMPLITUDE_LIST_ANNOTATIONS).toBe("annotations.v3.list");
+    expect(mapping.AMPLITUDE_CREATE_ANNOTATION).toBe("annotations.v3.create");
+    expect(mapping.AMPLITUDE_DELETE_ANNOTATION).toBe("annotations.v3.delete");
+    expect(mapping.AMPLITUDE_GET_ANNOTATION).toBe("annotations.get");
+    expect(mapping.AMPLITUDE_UPDATE_ANNOTATION).toBe("annotations.update");
     const runnable = Object.values(operations).filter((operation) => operation.request).length;
     expect(runnable).toBeGreaterThanOrEqual(54);
     for (const [slug, key] of Object.entries(mapping as Record<string, string>)) {
@@ -144,16 +152,194 @@ describe("amplitude manifest", () => {
     }
   });
 
-  test("recipe operations equal runner operations", async () => {
-    const recipe = await Bun.file(new URL("../../recipes/amplitude/recipe.json", import.meta.url)).json();
+  test("keeps the unchanged 0.2.0 recipe and leaves chart annotation v3 as the only gap", () => {
+    const recipePath = "scripts/connector-gen/openconnector/recipes/amplitude/recipe.json";
+    expect(existsSync(recipePath)).toBe(true);
+    const recipe = JSON.parse(readFileSync(recipePath, "utf8")) as {
+      source: { revision: string };
+      selection: { operations: string[] };
+      operationSources: Record<string, unknown>;
+      manifest: {
+        version: string;
+        auth: unknown;
+        network: { allowedHosts: string[] };
+        operations: Record<string, Record<string, unknown>>;
+      };
+    };
+    const runnerOps = Object.keys(operations).sort();
+    const recipeOps = Object.keys(recipe.manifest.operations).sort();
+    const added = ["annotations.v3.create", "annotations.v3.delete", "annotations.v3.list"];
+    expect(recipe.manifest.version).toBe("0.2.0");
+    expect(recipeOps).toHaveLength(59);
+    expect([...recipe.selection.operations].sort()).toEqual(recipeOps);
+    expect(Object.keys(recipe.operationSources).sort()).toEqual(recipeOps);
+    const absentFromRecipe = runnerOps.filter((key) => !Object.hasOwn(recipe.operationSources, key));
+    expect(absentFromRecipe).toEqual(added);
+    expect(runnerOps).toEqual([...recipeOps, ...added].sort());
     expect(recipe.manifest.auth).toEqual({
       type: "api_key",
       scopes: [],
       setup: manifest.auth.setup,
     });
-    expect(Object.keys(recipe.manifest.operations).sort()).toEqual(Object.keys(operations).sort());
-    expect([...recipe.selection.operations].sort()).toEqual(Object.keys(operations).sort());
-    expect(recipe.manifest.network.allowedHosts).toEqual(["amplitude.com", "api.amplitude.com", "api2.amplitude.com"]);
+    expect(recipe.manifest.network.allowedHosts).toEqual(["amplitude.com"]);
+    expect(manifest.network.allowedHosts).toEqual(["amplitude.com", "api.amplitude.com", "api2.amplitude.com"]);
+    expect(manifest.network.allowedHosts).not.toContain("analytics.eu.amplitude.com");
     expect(recipe.source.revision).toBe("33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a");
+    // Origin recipe descriptions for the original Dashboard ops already differ from the runner.
+    const descriptionDrift = [
+      "annotations.create",
+      "annotations.delete",
+      "annotations.list",
+      "cohorts.get",
+      "cohorts.list",
+      "events.list",
+      "events.segmentation",
+      "funnels.get",
+      "healthcheck",
+      "releases.create",
+      "releases.list",
+      "retention.get",
+      "taxonomy.categories.list",
+      "taxonomy.eventProperties.list",
+      "taxonomy.events.create",
+      "taxonomy.events.list",
+      "taxonomy.userProperties.list",
+      "usermap.get",
+      "users.activity",
+      "users.search",
+    ];
+    const drifted: string[] = [];
+    for (const key of recipeOps) {
+      const runnerOp = operations[key] as Record<string, unknown>;
+      const recipeOp = recipe.manifest.operations[key]!;
+      const { description: runnerDescription, ...runnerRest } = runnerOp;
+      const { description: recipeDescription, ...recipeRest } = recipeOp;
+      expect(runnerRest, key).toEqual(recipeRest);
+      if (runnerDescription !== recipeDescription) drifted.push(key);
+    }
+    expect(drifted).toEqual(descriptionDrift);
+  });
+
+  test("adds chart annotation v3 list, create, and delete beside the v2 routes", () => {
+    const sibling = operations["annotations.get"]!;
+    expect((operations["annotations.list"]!.request as { path: string }).path).toBe("/api/2/annotations");
+    expect((operations["annotations.create"]!.request as { method: string; path: string }).method).toBe("POST");
+    expect((operations["annotations.create"]!.request as { path: string }).path).toBe("/api/2/annotations");
+    expect((operations["annotations.delete"]!.request as { path: string }).path).toBe("/api/2/annotations");
+    expect((operations["annotations.get"]!.request as { path: string }).path).toBe("/api/3/annotations/{{annotationId}}");
+    expect((operations["annotations.update"]!.request as { method: string; path: string }).method).toBe("PUT");
+    expect((operations["annotations.update"]!.request as { path: string }).path).toBe("/api/3/annotations/{{annotationId}}");
+
+    const list = operations["annotations.v3.list"]!;
+    const create = operations["annotations.v3.create"]!;
+    const remove = operations["annotations.v3.delete"]!;
+    expect(list.title).toBe("List chart annotations");
+    expect(create.title).toBe("Create chart annotation");
+    expect(remove.title).toBe("Delete chart annotation");
+    expect(list.sideEffect).toBe("read");
+    expect(create.sideEffect).toBe("write");
+    expect(remove.sideEffect).toBe("write");
+    for (const operation of [list, create, remove]) {
+      expect(operation.timeoutMs).toBe(sibling.timeoutMs);
+      expect(operation.maxInputBytes).toBe(sibling.maxInputBytes);
+      expect(operation.maxResponseBytes).toBe(sibling.maxResponseBytes);
+      expect(operation.responseFormat).toBe(sibling.responseFormat);
+      expect(operation.validationMode).toBe(sibling.validationMode);
+      expect(operation.enforceOutputSchema).toBe(sibling.enforceOutputSchema);
+      const request = operation.request as {
+        baseUrl?: string;
+        success: number[];
+        headers: Record<string, string>;
+        result: string;
+      };
+      expect(request.baseUrl).toBeUndefined();
+      expect(request.success).toEqual([200]);
+      expect(request.headers.Accept).toBe("application/json");
+      expect(request.result).toBe("{{response}}");
+    }
+    expect(list.request).toEqual({
+      method: "GET",
+      path: "/api/3/annotations",
+      success: [200],
+      headers: { Accept: "application/json" },
+      query: {
+        category: "{{category}}",
+        chart_id: "{{chartId}}",
+        start: "{{start}}",
+        end: "{{end}}",
+      },
+      result: "{{response}}",
+    });
+    expect(create.request).toEqual({
+      method: "POST",
+      path: "/api/3/annotations",
+      success: [200],
+      headers: { Accept: "application/json", "Content-Type": "application/json" },
+      body: {
+        label: "{{label}}",
+        start: "{{start}}",
+        category: "{{category}}",
+        chart_id: "{{chartId}}",
+        details: "{{details}}",
+        end: "{{end}}",
+      },
+      result: "{{response}}",
+    });
+    expect(remove.request).toEqual({
+      method: "DELETE",
+      path: "/api/3/annotations/{{annotationId}}",
+      success: [200],
+      headers: { Accept: "application/json" },
+      result: "{{response}}",
+    });
+    expect(list.inputSchema).toEqual({
+      type: "object",
+      properties: {
+        category: { type: "string", description: "Optional category name filter." },
+        chartId: { type: "string", description: "Optional chart ID filter." },
+        start: { type: "string", description: "Optional ISO 8601 range start." },
+        end: { type: "string", description: "Optional ISO 8601 range end." },
+      },
+      additionalProperties: false,
+    });
+    expect(create.inputSchema).toEqual({
+      type: "object",
+      properties: {
+        label: { type: "string", description: "Annotation title." },
+        start: { type: "string", description: "ISO 8601 start timestamp." },
+        category: { type: "string", description: "Optional category name." },
+        chartId: { type: "string", description: "Optional chart ID." },
+        details: { type: "string", description: "Optional annotation details." },
+        end: { type: "string", description: "Optional ISO 8601 end timestamp." },
+      },
+      additionalProperties: false,
+      required: ["label", "start"],
+    });
+    expect(remove.inputSchema).toEqual({
+      type: "object",
+      properties: {
+        annotationId: { type: "string", minLength: 1, description: "Annotation ID." },
+      },
+      additionalProperties: false,
+      required: ["annotationId"],
+    });
+    expect(list.outputSchema).toEqual({
+      type: "object",
+      required: ["data"],
+      properties: { data: { type: "array", items: { type: "object" } } },
+      additionalProperties: false,
+    });
+    expect(create.outputSchema).toEqual({
+      type: "object",
+      required: ["data"],
+      properties: { data: { type: "object" } },
+      additionalProperties: false,
+    });
+    expect(remove.outputSchema).toEqual({
+      type: "object",
+      required: ["success"],
+      properties: { success: { type: "boolean" } },
+      additionalProperties: false,
+    });
   });
 });

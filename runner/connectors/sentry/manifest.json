@@ -7,7 +7,7 @@
   },
   "key": "sentry",
   "name": "Sentry",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "runtime": "bun",
   "visibility": "public",
   "evidence": {
@@ -14592,6 +14592,379 @@
         },
         "success": [
           201
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "list_an_organizations_release_files": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List an organization's release files",
+      "description": "Retrieve a list of files for a given release.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "organization_id_or_slug": {
+            "type": "string",
+            "description": "The ID or slug of the organization the resource belongs to.",
+            "minLength": 1
+          },
+          "version": {
+            "type": "string",
+            "description": "The version identifier of the release.",
+            "minLength": 1
+          },
+          "query": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "If set, only files with these partial names will be returned."
+          },
+          "checksum": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "If set, only files with these exact checksums will be returned."
+          },
+          "cursor": {
+            "type": "string",
+            "description": "A pointer to the last object fetched and its sort order; used to retrieve the next or previous results.",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "organization_id_or_slug",
+          "version"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/organizations/{{organization_id_or_slug}}/releases/{{version}}/files/",
+        "query": {
+          "query": "{{query}}",
+          "checksum": "{{checksum}}",
+          "cursor": "{{cursor}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "list_an_issues_events": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List an issue's events",
+      "description": "Return a list of error events bound to an issue.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "organization_id_or_slug": {
+            "type": "string",
+            "description": "The ID or slug of the organization the resource belongs to.",
+            "minLength": 1
+          },
+          "issue_id": {
+            "type": "string",
+            "description": "The ID of the issue you'd like to query.",
+            "minLength": 1
+          },
+          "start": {
+            "type": "string",
+            "description": "The start of the period of time for the query, expected in ISO-8601 format. For example, 2001-12-14T12:34:56.7890."
+          },
+          "end": {
+            "type": "string",
+            "description": "The end of the period of time for the query, expected in ISO-8601 format. For example, 2001-12-14T12:34:56.7890."
+          },
+          "statsPeriod": {
+            "type": "string",
+            "description": "The period of time for the query, which overrides start and end. A number followed by d, h, m, s, or w, for example 24h."
+          },
+          "environment": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "The name of environments to filter by."
+          },
+          "full": {
+            "type": "boolean",
+            "description": "Specify true to include the full event body, including the stacktrace, in the event payload. When true, the page size is capped at 10."
+          },
+          "sample": {
+            "type": "boolean",
+            "description": "Return events in pseudo-random order. This is deterministic so an identical query will always return the same events in the same order."
+          },
+          "query": {
+            "type": "string",
+            "description": "An optional search query for filtering events. For example, transaction:foo AND release:abc."
+          },
+          "per_page": {
+            "type": "integer",
+            "maximum": 100,
+            "description": "Limit the number of rows to return in the result. Default and maximum allowed is 100."
+          },
+          "cursor": {
+            "type": "string",
+            "description": "A pointer to the last object fetched and its sort order; used to retrieve the next or previous results.",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "organization_id_or_slug",
+          "issue_id"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/organizations/{{organization_id_or_slug}}/issues/{{issue_id}}/events/",
+        "query": {
+          "start": "{{start}}",
+          "end": "{{end}}",
+          "statsPeriod": "{{statsPeriod}}",
+          "environment": "{{environment}}",
+          "full": "{{full}}",
+          "sample": "{{sample}}",
+          "query": "{{query}}",
+          "per_page": "{{per_page}}",
+          "cursor": "{{cursor}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "retrieve_monitors_for_an_organization": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Retrieve monitors for an organization",
+      "description": "Lists monitors, including nested monitor environments. May be filtered to a project or environment.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "organization_id_or_slug": {
+            "type": "string",
+            "description": "The ID or slug of the organization the resource belongs to.",
+            "minLength": 1
+          },
+          "project": {
+            "type": "array",
+            "items": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "string"
+                }
+              ]
+            },
+            "description": "The IDs or slugs of projects to filter by. Project slugs are unique within each organization. Omit this parameter to include all accessible projects. -1 is also accepted to include all accessible projects."
+          },
+          "environment": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "The name of environments to filter by."
+          },
+          "owner": {
+            "type": "string",
+            "description": "The owner of the monitor, in the format user:id or team:id. May be specified multiple times."
+          },
+          "cursor": {
+            "type": "string",
+            "description": "A pointer to the last object fetched and its sort order; used to retrieve the next or previous results.",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "organization_id_or_slug"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/organizations/{{organization_id_or_slug}}/monitors/",
+        "query": {
+          "project": "{{project}}",
+          "environment": "{{environment}}",
+          "owner": "{{owner}}",
+          "cursor": "{{cursor}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "list_a_project_releases_commits": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List a project release's commits",
+      "description": "Retrieve a list of commits for a given release.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "organization_id_or_slug": {
+            "type": "string",
+            "description": "The ID or slug of the organization the resource belongs to.",
+            "minLength": 1
+          },
+          "project_id_or_slug": {
+            "type": "string",
+            "description": "The ID or slug of the project the resource belongs to. Project slugs are unique within each organization.",
+            "minLength": 1
+          },
+          "version": {
+            "type": "string",
+            "description": "The version identifier of the release.",
+            "minLength": 1
+          },
+          "cursor": {
+            "type": "string",
+            "description": "A pointer to the last object fetched and its sort order; used to retrieve the next or previous results.",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "organization_id_or_slug",
+          "project_id_or_slug",
+          "version"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/projects/{{organization_id_or_slug}}/{{project_id_or_slug}}/releases/{{version}}/commits/",
+        "query": {
+          "cursor": "{{cursor}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "list_a_teams_projects": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List a team's projects",
+      "description": "Return a list of projects bound to a team.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "organization_id_or_slug": {
+            "type": "string",
+            "description": "The ID or slug of the organization the resource belongs to.",
+            "minLength": 1
+          },
+          "team_id_or_slug": {
+            "type": "string",
+            "description": "The ID or slug of the team the resource belongs to.",
+            "minLength": 1
+          },
+          "cursor": {
+            "type": "string",
+            "description": "A pointer to the last object fetched and its sort order; used to retrieve the next or previous results.",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "organization_id_or_slug",
+          "team_id_or_slug"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/teams/{{organization_id_or_slug}}/{{team_id_or_slug}}/projects/",
+        "query": {
+          "cursor": "{{cursor}}"
+        },
+        "success": [
+          200
         ]
       },
       "enforceOutputSchema": true,

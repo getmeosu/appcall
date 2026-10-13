@@ -88,7 +88,7 @@ function deepEqual(a: unknown, b: unknown): boolean {
 describe("companycam manifest", () => {
   test("has bounded host, origin auth, version, and compiles", () => {
     expect(manifest.key).toBe("companycam");
-    expect(manifest.version).toBe("0.3.0");
+    expect(manifest.version).toBe("0.3.1");
     expect(manifest.runtime).toBe("bun");
     expect(manifest.categories).toEqual(["productivity"]);
     expect(manifest.network.allowedHosts).toEqual(["api.companycam.com"]);
@@ -124,7 +124,7 @@ describe("companycam manifest", () => {
       expect(requestOf(key!), slug).toBeDefined();
       expect(compiled.actions[key!], slug).toBeTypeOf("function");
     }
-    expect(Object.keys(operations).length).toBe(25);
+    expect(Object.keys(operations).length).toBe(26);
     expect(operations["users.current"]).toBeDefined();
   });
 
@@ -194,6 +194,13 @@ describe("companycam manifest", () => {
     expect(requestOf("photos.tags.add")).toMatchObject({ method: "POST", path: "/photos/{{photoId}}/tags" });
     expect(requestOf("photos.tags.list").path).toBe("/photos/{{photoId}}/tags");
     expect(requestOf("tags.create")).toMatchObject({ method: "POST", path: "/tags" });
+    expect(requestOf("tags.list")).toMatchObject({ method: "GET", path: "/tags" });
+    expect(requestOf("tags.list").baseUrl).toBeUndefined();
+    expect(requestOf("tags.list").body).toBeUndefined();
+    expect((requestOf("tags.list").headers as Record<string, string> | undefined)?.["Content-Type"]).toBeUndefined();
+    expect((requestOf("tags.list").query as Record<string, string>).page).toBe("{{page}}");
+    expect((requestOf("tags.list").query as Record<string, string>).per_page).toBe("{{perPage}}");
+    expect((operations["tags.list"]!.inputSchema as { required?: string[] }).required).toBeUndefined();
     expect((requestOf("tags.create").body as { tag: Record<string, string> }).tag.display_value).toBe("{{displayValue}}");
     expect(requestOf("projects.labels.add").path).toBe("/projects/{{projectId}}/labels");
     expect(requestOf("projects.labels.list").path).toBe("/projects/{{projectId}}/labels");
@@ -243,6 +250,14 @@ describe("companycam manifest", () => {
       expect(recipe.manifest.operations[key], key).toBeDefined();
     }
     expect(recipe.manifest.http.baseUrl).toBe("https://api.companycam.com/v2");
+    expect(recipe.manifest.version).toBe("0.3.0");
+    const recipeOps = recipe.manifest.operations as Record<string, unknown>;
+    const missing = Object.keys(operations).filter((key) => !Object.hasOwn(recipeOps, key)).sort();
+    expect(missing).toEqual(["tags.list"]);
+    for (const key of Object.keys(recipeOps)) {
+      expect(operations[key], key).toBeDefined();
+      expect(deepEqual(operations[key], recipeOps[key]), key).toBe(true);
+    }
   });
 });
 

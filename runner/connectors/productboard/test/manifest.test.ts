@@ -16,7 +16,8 @@ const ORIGINAL = [
 describe("productboard manifest", () => {
   test("keeps identity, host pin, and bearer auth", () => {
     expect(manifest.key).toBe("productboard");
-    expect(manifest.version).toBe("0.2.0");
+    expect(manifest.version).toBe("0.2.1");
+    expect(Object.keys(operations)).toHaveLength(117);
     expect(manifest.runtime).toBe("bun");
     expect(manifest.network.allowedHosts).toEqual(["api.productboard.com"]);
     expect(manifest.http.baseUrl).toBe("https://api.productboard.com/v2");

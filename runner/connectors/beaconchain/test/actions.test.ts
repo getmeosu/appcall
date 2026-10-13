@@ -114,4 +114,62 @@ describe("beaconchain declarative Composio contract", () => {
       }),
     ).rejects.toMatchObject({ code: "CONNECTOR_UPSTREAM_ERROR" });
   });
+
+  test("validators overview GET is body-less and accepts an object or an array", async () => {
+    const objectBody = { status: "OK", data: { validator_index: 1, status: "active_online" } };
+    const arrayBody = { status: "OK", data: [{ validator_index: 1 }, { validator_index: 2 }] };
+    for (const body of [objectBody, arrayBody]) {
+      const seen: Request[] = [];
+      const result = await actions["validators.overview.get"]!({
+        apiKey: "secret",
+        indexOrPubkey: "1,2",
+        fetch: async (input, init) => {
+          seen.push(new Request(input, init));
+          return response(body);
+        },
+      });
+      const url = new URL(seen[0]!.url);
+      expect(url.pathname).toBe("/api/v1/validator/1%2C2");
+      expect(url.search).toBe("");
+      expect(seen[0]!.method).toBe("GET");
+      expect(seen[0]!.headers.get("authorization")).toBe("Bearer secret");
+      expect(seen[0]!.headers.get("content-type")).toBeNull();
+      expect(await seen[0]!.clone().text()).toBe("");
+      expect(result).toMatchObject({ connector: "beaconchain", action: "validators.overview.get", source: "provider", data: body });
+    }
+  });
+
+  test("validators overview POST sends indicesOrPubkey as a string and accepts both data shapes", async () => {
+    const objectBody = { status: "OK", data: { validator_index: 1, status: "active_online" } };
+    const arrayBody = { status: "OK", data: [{ validator_index: 1 }, { validator_index: 2 }] };
+    const seen: Request[] = [];
+    const objectResult = await actions["validators.overview.post"]!({
+      apiKey: "secret",
+      indicesOrPubkey: "1",
+      fetch: async (input, init) => {
+        seen.push(new Request(input, init));
+        return response(objectBody);
+      },
+    });
+    const arrayResult = await actions["validators.overview.post"]!({
+      apiKey: "secret",
+      indicesOrPubkey: "1,2",
+      fetch: async (input, init) => {
+        seen.push(new Request(input, init));
+        return response(arrayBody);
+      },
+    });
+    const first = new URL(seen[0]!.url);
+    const second = new URL(seen[1]!.url);
+    expect(first.pathname).toBe("/api/v1/validator");
+    expect(second.pathname).toBe("/api/v1/validator");
+    expect(first.search).toBe("");
+    expect(second.search).toBe("");
+    expect(seen[0]!.headers.get("content-type")).toBe("application/json");
+    expect(seen[0]!.headers.get("authorization")).toBe("Bearer secret");
+    expect(await seen[0]!.clone().text()).toBe(JSON.stringify({ indicesOrPubkey: "1" }));
+    expect(await seen[1]!.clone().text()).toBe(JSON.stringify({ indicesOrPubkey: "1,2" }));
+    expect(objectResult).toMatchObject({ action: "validators.overview.post", data: objectBody });
+    expect(arrayResult).toMatchObject({ action: "validators.overview.post", data: arrayBody });
+  });
 });

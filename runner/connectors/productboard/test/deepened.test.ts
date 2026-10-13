@@ -36,6 +36,7 @@ describe("productboard composio coverage", () => {
       api: string;
       input: Record<string, unknown>;
       query: Record<string, unknown>;
+      body?: string | null;
       listResponse: boolean;
     }>) {
       const seen: Request[] = [];
@@ -73,6 +74,13 @@ describe("productboard composio coverage", () => {
         } else {
           expect(url.searchParams.get(name), `${route.key} ${name}`).toBe(String(value));
         }
+      }
+      if ("body" in route) {
+        const raw = await seen[0].text();
+        expect(raw, route.key).toBe(route.body === null ? "" : route.body);
+        const contentType = seen[0].headers.get("content-type");
+        if (route.body === null) expect(contentType, route.key).toBeNull();
+        else expect(contentType, route.key).toContain("application/json");
       }
     }
   });

@@ -7,7 +7,7 @@ const operations = manifest.operations as Record<string, Record<string, unknown>
 describe("mistral-ai manifest", () => {
   test("has bounded hosts and compiles", () => {
     expect(manifest.network.allowedHosts).toEqual(["api.mistral.ai"]);
-    expect(manifest.version).toBe("0.3.0");
+    expect(manifest.version).toBe("0.3.1");
     expect(manifest.key).toBe("mistral-ai");
     expect(manifest.http.baseUrl).toBe("https://api.mistral.ai");
     expect(manifest.http.auth.value).toBe("Bearer {{apiKey}}");
@@ -52,9 +52,24 @@ describe("mistral-ai manifest", () => {
     }
   });
 
-  test("recipe operations equal runner operations", async () => {
+  test("recipe stays pinned and new calls are the gap", async () => {
+    // Archived origin recipe. New operations are not given an upstreamActionId.
     const recipe = await Bun.file(new URL("../../../../scripts/connector-gen/openconnector/recipes/mistral_ai/recipe.json", import.meta.url)).json();
-    expect(Object.keys(recipe.manifest.operations).sort()).toEqual(Object.keys(operations).sort());
-    expect(recipe.selection.operations.sort()).toEqual(Object.keys(operations).sort());
+    const recipeOps = Object.keys(recipe.manifest.operations).sort();
+    const runnerOps = Object.keys(operations).sort();
+    const added = runnerOps.filter((key) => !recipeOps.includes(key));
+    expect(recipeOps).toHaveLength(106);
+    expect(runnerOps).toHaveLength(110);
+    expect(recipeOps.every((key) => runnerOps.includes(key))).toBe(true);
+    expect(added).toEqual([
+      "libraries.documents.patch",
+      "libraries.patch",
+      "observability.dataset_tasks.get",
+      "observability.dataset_tasks.list",
+    ]);
+    expect(recipe.selection.operations.sort()).toEqual(recipeOps);
+    for (const key of added) {
+      expect(recipe.operationSources?.[key]?.upstreamActionId).toBeUndefined();
+    }
   });
 });

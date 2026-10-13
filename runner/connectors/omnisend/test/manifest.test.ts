@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { existsSync, readFileSync } from "node:fs";
 import manifest from "../manifest.json";
 import { compileDeclarativeConnector } from "../../../bun/src/declarative/compile";
 
@@ -69,6 +70,16 @@ const COMPOSIO_TOOLS: Record<string, string> = {
   OMNISEND_UPDATE_PRODUCT_CATEGORY: "productCategories.update",
 };
 
+const V3_ROUTES = [
+  "batches.create.v3",
+  "batches.get.v3",
+  "batches.items.list.v3",
+  "batches.list.v3",
+  "campaigns.list.v3",
+  "contacts.update.v3",
+  "events.definitions.list",
+] as const;
+
 const compiled = compileDeclarativeConnector(manifest as never);
 
 function requestOf(key: string): Record<string, unknown> {
@@ -78,7 +89,7 @@ function requestOf(key: string): Record<string, unknown> {
 describe("omnisend manifest", () => {
   test("has bounded host, origin auth, and compiles", () => {
     expect(manifest.key).toBe("omnisend");
-    expect(manifest.version).toBe("0.3.0");
+    expect(manifest.version).toBe("0.3.1");
     expect(manifest.network.allowedHosts).toEqual(["api.omnisend.com"]);
     expect(manifest.http.baseUrl).toBe("https://api.omnisend.com/api");
     expect(manifest.http.auth.value).toBe("Omnisend-API-Key {{apiKey}}");
@@ -112,7 +123,7 @@ describe("omnisend manifest", () => {
 
   test("covers every Composio Omnisend tool with a real request", () => {
     expect(Object.keys(COMPOSIO_TOOLS)).toHaveLength(43);
-    expect(Object.keys(operations).length).toBe(47);
+    expect(Object.keys(operations).length).toBe(54);
     for (const [slug, key] of Object.entries(COMPOSIO_TOOLS)) {
       expect(operations[key], slug).toBeDefined();
       expect(requestOf(key), slug).toBeDefined();
@@ -228,11 +239,225 @@ describe("omnisend manifest", () => {
     expect((requestOf("campaigns.list").query as Record<string, string>).offset).toBeUndefined();
   });
 
-  test("recipe operations equal runner operations", async () => {
-    const recipe = await Bun.file(new URL("../../../../scripts/connector-gen/openconnector/recipes/omnisend/recipe.json", import.meta.url)).json();
-    expect(Object.keys(recipe.manifest.operations).sort()).toEqual(Object.keys(operations).sort());
-    expect(recipe.selection.operations.sort()).toEqual(Object.keys(operations).sort());
+  test("keeps the unchanged 0.3.0 recipe and leaves the v3 routes as the only gap", () => {
+    const recipePath = "scripts/connector-gen/openconnector/recipes/omnisend/recipe.json";
+    expect(existsSync(recipePath)).toBe(true);
+    const recipe = JSON.parse(readFileSync(recipePath, "utf8")) as {
+      selection: { operations: string[] };
+      operationSources: Record<string, unknown>;
+      manifest: { operations: Record<string, unknown>; version: string };
+    };
+    const runnerOps = Object.keys(operations).sort();
+    const recipeOps = Object.keys(recipe.manifest.operations).sort();
     expect(recipe.manifest.version).toBe("0.3.0");
+    expect(recipeOps).toHaveLength(47);
+    expect([...recipe.selection.operations].sort()).toEqual(recipeOps);
+    expect(Object.keys(recipe.operationSources).sort()).toEqual(recipeOps);
+    const absentFromRecipe = runnerOps.filter((key) => !Object.hasOwn(recipe.operationSources, key));
+    expect(absentFromRecipe).toEqual([...V3_ROUTES]);
+    expect(runnerOps).toEqual([...recipeOps, ...V3_ROUTES].sort());
+    for (const key of recipeOps) {
+      expect(operations[key], key).toEqual(recipe.manifest.operations[key]);
+    }
+  });
+
+  test("adds documented v3 JSON routes without moving the /api operations", () => {
+    const limits = operations["batches.items.get"]!;
+    for (const key of V3_ROUTES) {
+      const operation = operations[key]!;
+      expect(operation.timeoutMs, key).toBe(limits.timeoutMs);
+      expect(operation.maxInputBytes, key).toBe(limits.maxInputBytes);
+      expect(operation.maxResponseBytes, key).toBe(limits.maxResponseBytes);
+      expect(operation.responseFormat, key).toBe("json");
+      expect(operation.validationMode, key).toBe("strict-generated");
+      expect(operation.enforceOutputSchema, key).toBe(true);
+      expect((operation.outputSchema as { type?: string }).type, key).toBe("object");
+      const request = requestOf(key);
+      expect(request.baseUrl, key).toBe("https://api.omnisend.com/v3");
+      expect(request.success, key).toEqual([200]);
+      expect((request.headers as Record<string, string>)["X-API-KEY"], key).toBe("{{apiKey}}");
+      expect(String(request.path).includes("/v3"), key).toBe(false);
+      if (request.method === "GET") {
+        expect(request.body, key).toBeUndefined();
+        expect((request.headers as Record<string, string>)["Content-Type"], key).toBeUndefined();
+      } else {
+        expect((request.headers as Record<string, string>)["Content-Type"], key).toBe("application/json");
+      }
+    }
+
+    expect(requestOf("batches.create")).toMatchObject({ method: "POST", path: "/batches", success: [200, 201] });
+    expect(requestOf("batches.create").baseUrl).toBeUndefined();
+    expect(requestOf("batches.list").baseUrl).toBeUndefined();
+    expect(requestOf("batches.get").baseUrl).toBeUndefined();
+    expect(requestOf("batches.items.list").baseUrl).toBeUndefined();
+    expect(requestOf("campaigns.list").baseUrl).toBeUndefined();
+    expect(requestOf("contacts.update").baseUrl).toBeUndefined();
+    expect(requestOf("events.list")).toMatchObject({ method: "POST", path: "/event-metadata/query" });
+    expect(requestOf("events.list").baseUrl).toBeUndefined();
+
+    expect(requestOf("batches.create.v3")).toEqual({
+      method: "POST",
+      path: "/batches",
+      success: [200],
+      baseUrl: "https://api.omnisend.com/v3",
+      headers: { "Content-Type": "application/json", "X-API-KEY": "{{apiKey}}" },
+      body: {
+        method: "{{method}}",
+        endpoint: "{{endpoint}}",
+        eventID: "{{eventID}}",
+        items: "{{items}}",
+      },
+    });
+    const createSchema = operations["batches.create.v3"]!.inputSchema as {
+      required?: string[];
+      properties: {
+        method: { type: string; enum?: string[] };
+        endpoint: { enum: string[] };
+        items: { type: string; items: { type: string; additionalProperties: boolean; properties?: Record<string, unknown> } };
+      };
+    };
+    expect(createSchema.required).toBeUndefined();
+    expect(createSchema.properties.method).toEqual({ type: "string" });
+    expect(createSchema.properties.endpoint.enum).toEqual(["contacts", "orders", "products", "events", "categories"]);
+    expect(createSchema.properties.items.items).toEqual({ type: "object", additionalProperties: true });
+
+    expect(requestOf("batches.list.v3")).toEqual({
+      method: "GET",
+      path: "/batches",
+      success: [200],
+      baseUrl: "https://api.omnisend.com/v3",
+      headers: { "X-API-KEY": "{{apiKey}}" },
+      query: {
+        offset: "{{offset}}",
+        limit: "{{limit}}",
+        status: "{{status}}",
+        dateFrom: "{{dateFrom}}",
+        dateTo: "{{dateTo}}",
+        endpoint: "{{endpoint}}",
+      },
+    });
+    expect((operations["batches.list.v3"]!.inputSchema as { required: string[] }).required).toEqual(["endpoint"]);
+
+    expect(requestOf("batches.get.v3")).toEqual({
+      method: "GET",
+      path: "/batches/{{batchID}}",
+      success: [200],
+      baseUrl: "https://api.omnisend.com/v3",
+      headers: { "X-API-KEY": "{{apiKey}}" },
+    });
+    expect(requestOf("batches.items.list.v3")).toEqual({
+      method: "GET",
+      path: "/batches/{{batchID}}/items",
+      success: [200],
+      baseUrl: "https://api.omnisend.com/v3",
+      headers: { "X-API-KEY": "{{apiKey}}" },
+    });
+    expect(requestOf("campaigns.list.v3")).toEqual({
+      method: "GET",
+      path: "/campaigns",
+      success: [200],
+      baseUrl: "https://api.omnisend.com/v3",
+      headers: { "X-API-KEY": "{{apiKey}}" },
+      query: {
+        status: "{{status}}",
+        type: "{{type}}",
+        offset: "{{offset}}",
+        limit: "{{limit}}",
+      },
+    });
+    const campaignSchema = operations["campaigns.list.v3"]!.inputSchema as {
+      required?: string[];
+      properties: { status: { enum: string[] }; limit: { minimum: number; maximum: number } };
+    };
+    expect(campaignSchema.required).toBeUndefined();
+    expect(campaignSchema.properties.status.enum).toEqual(["draft", "paused", "scheduled", "inProgress", "sent"]);
+    expect(campaignSchema.properties.limit).toMatchObject({ type: "integer", minimum: 1, maximum: 5000 });
+
+    expect(requestOf("events.definitions.list")).toEqual({
+      method: "GET",
+      path: "/events",
+      success: [200],
+      baseUrl: "https://api.omnisend.com/v3",
+      headers: { "X-API-KEY": "{{apiKey}}" },
+    });
+    const eventsOutput = operations["events.definitions.list"]!.outputSchema as {
+      properties: { data: { type: string; items: { type: string; additionalProperties: boolean } } };
+    };
+    expect(eventsOutput.properties.data.type).toBe("array");
+    expect(eventsOutput.properties.data.items).toEqual({ type: "object", additionalProperties: true });
+
+    expect(requestOf("contacts.update.v3")).toEqual({
+      method: "PATCH",
+      path: "/contacts/{{contactID}}",
+      success: [200],
+      baseUrl: "https://api.omnisend.com/v3",
+      headers: { "Content-Type": "application/json", "X-API-KEY": "{{apiKey}}" },
+      body: {
+        identifiers: "{{identifiers}}",
+        firstName: "{{firstName}}",
+        lastName: "{{lastName}}",
+        tags: "{{tags}}",
+        country: "{{country}}",
+        countryCode: "{{countryCode}}",
+        state: "{{state}}",
+        city: "{{city}}",
+        address: "{{address}}",
+        postalCode: "{{postalCode}}",
+        gender: "{{gender}}",
+        birthdate: "{{birthdate}}",
+        customProperties: "{{customProperties}}",
+      },
+    });
+    const contactSchema = operations["contacts.update.v3"]!.inputSchema as {
+      required: string[];
+      properties: Record<string, { type?: string; enum?: string[]; minLength?: number; maxLength?: number; items?: { required?: string[]; properties?: Record<string, { enum?: string[] }> } }>;
+    };
+    expect(contactSchema.required).toEqual(["contactID", "identifiers"]);
+    expect(Object.keys(contactSchema.properties).sort()).toEqual([
+      "address",
+      "birthdate",
+      "city",
+      "contactID",
+      "country",
+      "countryCode",
+      "customProperties",
+      "firstName",
+      "gender",
+      "identifiers",
+      "lastName",
+      "postalCode",
+      "state",
+      "tags",
+    ]);
+    expect(contactSchema.properties.countryCode).toMatchObject({ type: "string", minLength: 2, maxLength: 2 });
+    expect(contactSchema.properties.gender?.enum).toEqual(["m", "f"]);
+    expect(contactSchema.properties.identifiers?.items?.required).toEqual(["id", "type", "channels"]);
+    expect(contactSchema.properties.identifiers?.items?.properties?.type?.enum).toEqual(["email", "phone"]);
+  });
+
+  test("ships one success fixture for each new v3 route", () => {
+    const cases = new URL("../fixtures/cases/", import.meta.url);
+    const files: Record<string, string> = {
+      "batches.create.v3": "batches-create-v3-success.json",
+      "batches.list.v3": "batches-list-v3-success.json",
+      "batches.get.v3": "batches-get-v3-success.json",
+      "batches.items.list.v3": "batches-items-list-v3-success.json",
+      "campaigns.list.v3": "campaigns-list-v3-success.json",
+      "events.definitions.list": "events-definitions-list-success.json",
+      "contacts.update.v3": "contacts-update-v3-success.json",
+    };
+    expect(Object.keys(files).sort()).toEqual([...V3_ROUTES]);
+    for (const [operation, file] of Object.entries(files)) {
+      const fixture = JSON.parse(readFileSync(new URL(file, cases), "utf8")) as {
+        operation: string;
+        exchanges: Array<{ request: { method: string; body: unknown }; response: { status: number } }>;
+      };
+      expect(fixture.operation, file).toBe(operation);
+      expect(fixture.exchanges).toHaveLength(1);
+      expect(fixture.exchanges[0]!.response.status, file).toBe(200);
+      if (fixture.exchanges[0]!.request.method === "GET") expect(fixture.exchanges[0]!.request.body, file).toBeNull();
+      else expect(typeof fixture.exchanges[0]!.request.body, file).toBe("string");
+    }
   });
 });
 
@@ -433,5 +658,124 @@ describe("omnisend compiled handlers", () => {
       url: "https://example.com/p",
       status: "inStock",
     });
+  });
+
+  test("batches.create.v3 posts free-form items to v3 and omits unset fields", async () => {
+    const items = [
+      {
+        identifiers: [
+          {
+            type: "email",
+            id: "ada@example.com",
+            channels: { email: { status: "subscribed" } },
+          },
+        ],
+        firstName: "Ada",
+      },
+    ];
+    const { requests, result } = await invoke(
+      "batches.create.v3",
+      { method: "POST", endpoint: "contacts", items },
+      () => jsonResponse({ batchID: "batch-v3", totalCount: 1 }),
+    );
+    expect(requests[0]!.method).toBe("POST");
+    expect(requests[0]!.url).toBe("https://api.omnisend.com/v3/batches");
+    expect(requests[0]!.headers.get("x-api-key")).toBe("token");
+    expect(requests[0]!.headers.get("content-type")).toBe("application/json");
+    expect(await requests[0]!.json()).toEqual({ method: "POST", endpoint: "contacts", items });
+    expect(result).toMatchObject({ action: "batches.create.v3", data: { batchID: "batch-v3", totalCount: 1 } });
+
+    const empty = await invoke("batches.create.v3", {}, () => jsonResponse({ batchID: "batch-empty", totalCount: 0 }));
+    expect(empty.requests[0]!.url).toBe("https://api.omnisend.com/v3/batches");
+    expect(await empty.requests[0]!.json()).toEqual({});
+  });
+
+  test("batches.list.v3 requires endpoint and drops unset filters", async () => {
+    const { requests } = await invoke("batches.list.v3", { endpoint: "products" }, () => jsonResponse({ batches: [] }));
+    expect(requests[0]!.method).toBe("GET");
+    expect(requests[0]!.url).toBe("https://api.omnisend.com/v3/batches?endpoint=products");
+    expect(requests[0]!.headers.get("content-type")).toBeNull();
+    expect(requests[0]!.headers.get("x-api-key")).toBe("token");
+
+    const filtered = await invoke(
+      "batches.list.v3",
+      { endpoint: "contacts", offset: 0, limit: 2, status: "finished", dateFrom: "2017-05-01", dateTo: "2017-05-16" },
+      () => jsonResponse({ batches: [], paging: { offset: 0, limit: 2 } }),
+    );
+    expect(filtered.requests[0]!.url).toBe(
+      "https://api.omnisend.com/v3/batches?offset=0&limit=2&status=finished&dateFrom=2017-05-01&dateTo=2017-05-16&endpoint=contacts",
+    );
+  });
+
+  test("batches.get.v3 and batches.items.list.v3 read JSON by batchID", async () => {
+    const batch = await invoke("batches.get.v3", { batchID: "batch-1" }, () =>
+      jsonResponse({ batchID: "batch-1", status: "finished" }),
+    );
+    expect(batch.requests[0]!.url).toBe("https://api.omnisend.com/v3/batches/batch-1");
+    expect(batch.requests[0]!.headers.get("x-api-key")).toBe("token");
+    expect(batch.result).toMatchObject({ action: "batches.get.v3", data: { batchID: "batch-1" } });
+
+    const items = await invoke("batches.items.list.v3", { batchID: "batch-1" }, () =>
+      jsonResponse({ batchID: "batch-1", status: "finished", responses: [] }),
+    );
+    expect(items.requests[0]!.url).toBe("https://api.omnisend.com/v3/batches/batch-1/items");
+    expect(items.result).toMatchObject({ data: { batchID: "batch-1", responses: [] } });
+  });
+
+  test("campaigns.list.v3 sends only documented query fields", async () => {
+    const { requests } = await invoke("campaigns.list.v3", {}, () => jsonResponse({ campaigns: [] }));
+    expect(requests[0]!.url).toBe("https://api.omnisend.com/v3/campaigns");
+    const filtered = await invoke(
+      "campaigns.list.v3",
+      { status: "sent", type: "abTest", offset: 0, limit: 2 },
+      () => jsonResponse({ campaigns: [] }),
+    );
+    expect(filtered.requests[0]!.url).toBe("https://api.omnisend.com/v3/campaigns?status=sent&type=abTest&offset=0&limit=2");
+  });
+
+  test("events.definitions.list returns the v3 event array as data", async () => {
+    const events = [{ eventID: "evt-1", name: "Custom Event Test", enabled: false }];
+    const { requests, result } = await invoke("events.definitions.list", {}, () => jsonResponse(events));
+    expect(requests[0]!.method).toBe("GET");
+    expect(requests[0]!.url).toBe("https://api.omnisend.com/v3/events");
+    expect(requests[0]!.headers.get("content-type")).toBeNull();
+    expect(requests[0]!.headers.get("x-api-key")).toBe("token");
+    expect(result).toMatchObject({ action: "events.definitions.list", source: "provider", data: events });
+  });
+
+  test("contacts.update.v3 patches documented fields and rejects stale keys", async () => {
+    const identifiers = [
+      {
+        id: "ada@example.com",
+        type: "email",
+        channels: { email: { status: "subscribed", statusDate: "2016-02-01T10:07:28Z" } },
+      },
+    ];
+    const { requests, result } = await invoke(
+      "contacts.update.v3",
+      { contactID: "696969", identifiers, firstName: "Ada", countryCode: "GB", gender: "f" },
+      () => jsonResponse({ email: "ada@example.com", contactID: "696969" }),
+    );
+    expect(requests[0]!.method).toBe("PATCH");
+    expect(requests[0]!.url).toBe("https://api.omnisend.com/v3/contacts/696969");
+    expect(requests[0]!.headers.get("x-api-key")).toBe("token");
+    expect(requests[0]!.headers.get("content-type")).toBe("application/json");
+    expect(await requests[0]!.json()).toEqual({
+      identifiers,
+      firstName: "Ada",
+      countryCode: "GB",
+      gender: "f",
+    });
+    expect(result).toMatchObject({ action: "contacts.update.v3", data: { contactID: "696969" } });
+
+    await expect(
+      compiled.actions["contacts.update.v3"]!({
+        apiKey: "token",
+        contactID: "696969",
+        identifiers,
+        status: "subscribed",
+        fetch: async () => jsonResponse({}),
+      }),
+    ).rejects.toMatchObject({ code: "INVALID_ACTION_INPUT" });
   });
 });

@@ -1,13 +1,12 @@
 import { describe, expect, test } from "bun:test";
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
+import { existsSync, readFileSync } from "node:fs";
 import manifest from "../manifest.json";
 import { compileDeclarativeConnector } from "../../../bun/src/declarative/compile";
 
+const recipePath = "scripts/connector-gen/openconnector/recipes/bolna/recipe.json";
+
 const operations = manifest.operations as Record<string, Record<string, unknown>>;
-const recipe = JSON.parse(
-  readFileSync(join(import.meta.dir, "../../../../scripts/connector-gen/openconnector/recipes/bolna/recipe.json"), "utf8"),
-) as {
+const recipe = JSON.parse(readFileSync(recipePath, "utf8")) as {
   selection: { operations: string[] };
   operationSources: Record<string, { sourceRefs: string[] }>;
   source: { spans: Record<string, unknown> };
@@ -68,9 +67,9 @@ function requestOf(key: string): Record<string, unknown> {
 }
 
 describe("bolna manifest", () => {
-  test("keeps origin identity, auth, and version 0.2.0", () => {
+  test("keeps origin identity and auth and bumps version to 0.2.1", () => {
     expect(manifest.key).toBe("bolna");
-    expect(manifest.version).toBe("0.2.0");
+    expect(manifest.version).toBe("0.2.1");
     expect(manifest.network.allowedHosts).toEqual(["api.bolna.ai"]);
     expect(manifest.http.baseUrl).toBe("https://api.bolna.ai");
     expect(manifest.http.auth).toMatchObject({
@@ -100,7 +99,7 @@ describe("bolna manifest", () => {
 
   test("covers every Composio Bolna tool with a real HTTP operation", () => {
     expect(Object.keys(COMPOSIO_TOOLS)).toHaveLength(35);
-    expect(Object.keys(operations)).toHaveLength(36);
+    expect(Object.keys(operations)).toHaveLength(98);
     for (const [slug, key] of Object.entries(COMPOSIO_TOOLS)) {
       expect(operations[key], slug).toBeDefined();
       if (HANDWRITTEN.has(key)) {
@@ -214,17 +213,79 @@ describe("bolna manifest", () => {
     }
   });
 
-  test("recipe operations match the runner manifest and reuse existing spans", () => {
+  test("keeps the unchanged 0.2.0 recipe and leaves the new routes as the only gap", () => {
+    expect(existsSync(recipePath)).toBe(true);
     expect(recipe.manifest.version).toBe("0.2.0");
     const runnerOps = Object.keys(operations).sort();
-    expect(Object.keys(recipe.manifest.operations).sort()).toEqual(runnerOps);
-    expect([...recipe.selection.operations].sort()).toEqual(runnerOps);
-    expect(Object.keys(recipe.operationSources).sort()).toEqual(runnerOps);
+    const recipeOps = Object.keys(recipe.manifest.operations).sort();
+    expect(recipeOps).toHaveLength(36);
+    expect([...recipe.selection.operations].sort()).toEqual(recipeOps);
+    expect(Object.keys(recipe.operationSources).sort()).toEqual(recipeOps);
+    const absentFromRecipe = runnerOps.filter((key) => !Object.hasOwn(recipe.operationSources, key));
+    expect(absentFromRecipe).toHaveLength(62);
+    expect(runnerOps).toEqual([...recipeOps, ...absentFromRecipe].sort());
     for (const [opKey, mapping] of Object.entries(recipe.operationSources)) {
       expect(mapping.sourceRefs.length, opKey).toBeGreaterThan(0);
       for (const ref of mapping.sourceRefs) {
         expect(recipe.source.spans[ref], `${opKey} sourceRef ${ref}`).toBeDefined();
       }
     }
+    for (const key of recipeOps) {
+      const runner = operations[key]!;
+      const recipeOp = recipe.manifest.operations[key] as Record<string, unknown>;
+      if (key === "batches.create" || key === "knowledgebases.create") {
+        expect(runner.maxResponseBytes).toBe(key === "batches.create" ? 6291456 : 8388608);
+        expect(recipeOp.maxResponseBytes).toBe(5242880);
+        const { maxResponseBytes: _runnerLimit, ...runnerRest } = runner;
+        const { maxResponseBytes: _recipeLimit, ...recipeRest } = recipeOp;
+        expect(runnerRest).toEqual(recipeRest);
+        continue;
+      }
+      expect(runner, key).toEqual(recipeOp);
+    }
+  });
+
+  test("adds documented JSON routes with sibling limits and no host change", () => {
+    const sibling = operations["users.me"]!;
+    const recipeOps = new Set(Object.keys(recipe.manifest.operations));
+    const added = Object.keys(operations).filter((key) => !recipeOps.has(key));
+    expect(added).toHaveLength(62);
+    for (const key of added) {
+      const operation = operations[key]!;
+      const request = operation.request as {
+        method: string;
+        path: string;
+        success: number[];
+        baseUrl?: string;
+        body?: unknown;
+        headers?: Record<string, string>;
+      };
+      expect(operation.timeoutMs, key).toBe(sibling.timeoutMs);
+      expect(operation.maxInputBytes, key).toBe(sibling.maxInputBytes);
+      expect(operation.maxResponseBytes, key).toBe(sibling.maxResponseBytes);
+      expect(operation.responseFormat, key).toBe("json");
+      expect(operation.validationMode, key).toBe("strict-generated");
+      expect(operation.enforceOutputSchema, key).toBe(true);
+      expect((operation.outputSchema as { type?: string }).type, key).toBe("object");
+      expect(request.baseUrl, key).toBeUndefined();
+      expect(request.success.length, key).toBeGreaterThan(0);
+      expect(request.path.startsWith("/"), key).toBe(true);
+      if (request.method === "GET" || request.method === "DELETE") {
+        expect(request.body, key).toBeUndefined();
+        expect(request.headers?.["Content-Type"], key).toBeUndefined();
+      } else if (request.body !== undefined) {
+        expect(request.headers?.["Content-Type"], key).toBe("application/json");
+      } else {
+        expect(request.headers?.["Content-Type"], key).toBeUndefined();
+      }
+    }
+    expect(manifest.http.baseUrl).toBe("https://api.bolna.ai");
+    expect(manifest.network.allowedHosts).toEqual(["api.bolna.ai"]);
+    expect(manifest.http.auth).toMatchObject({
+      field: "apiKey",
+      in: "header",
+      name: "Authorization",
+      value: "Bearer {{apiKey}}",
+    });
   });
 });

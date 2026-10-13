@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { loadFixtureCases, runCandidateFixtures } from "../../../../scripts/connector-gen/openconnector/recipe-fixtures";
+import { loadFixtureCases, runCandidateFixtures } from "/Users/arvee/Documents/atharva/appcall/scripts/connector-gen/openconnector/recipe-fixtures";
 import manifest from "../manifest.json";
 
 const actionKeys = Object.entries(manifest.operations)

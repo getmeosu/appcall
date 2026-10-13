@@ -1,7 +1,7 @@
 {
   "key": "pingdom",
   "name": "Pingdom",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "runtime": "bun",
   "visibility": "public",
   "categories": [
@@ -181,6 +181,70 @@
         "success": [
           200
         ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "checks.single": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "checks.single",
+      "description": "Perform one on-demand Pingdom check.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "host": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Target host."
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "http",
+              "httpcustom",
+              "tcp",
+              "dns",
+              "udp",
+              "smtp",
+              "pop3",
+              "imap"
+            ],
+            "description": "Documented single-check type."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "host",
+          "type"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/single",
+        "success": [
+          200
+        ],
+        "query": {
+          "host": "{{host}}",
+          "type": "{{type}}"
+        }
       },
       "enforceOutputSchema": true,
       "validationMode": "strict-generated",
@@ -615,6 +679,42 @@
       "validationMode": "strict-generated",
       "responseFormat": "json"
     },
+    "reference.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "reference.get",
+      "description": "Get Pingdom regions, timezones, and format references.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/reference",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
     "credits.get": {
       "kind": "action",
       "sideEffect": "read",
@@ -687,6 +787,51 @@
       "validationMode": "strict-generated",
       "responseFormat": "json"
     },
+    "contacts.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "contacts.get",
+      "description": "Get one Pingdom alerting contact.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "contactid": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Pingdom contact id."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "contactid"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/alerting/contacts/{{contactid}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
     "teams.list": {
       "kind": "action",
       "sideEffect": "read",
@@ -715,6 +860,51 @@
       "request": {
         "method": "GET",
         "path": "/alerting/teams",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "teams.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "teams.get",
+      "description": "Get one Pingdom alerting team.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "teamid": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Pingdom team id."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "teamid"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/alerting/teams/{{teamid}}",
         "success": [
           200
         ]
@@ -768,6 +958,63 @@
       "validationMode": "strict-generated",
       "responseFormat": "json"
     },
+    "maintenance.occurrences": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "maintenance.occurrences",
+      "description": "List Pingdom maintenance occurrences.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "maintenanceid": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Maintenance window id."
+          },
+          "from": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Effective from, as a UNIX timestamp."
+          },
+          "to": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Effective to, as a UNIX timestamp."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/maintenance.occurrences",
+        "success": [
+          200
+        ],
+        "query": {
+          "maintenanceid": "{{maintenanceid}}",
+          "from": "{{from}}",
+          "to": "{{to}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
     "actions.list": {
       "kind": "action",
       "sideEffect": "read",
@@ -807,6 +1054,74 @@
         ],
         "query": {
           "limit": "{{limit}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "tms.checks.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "tms.checks.list",
+      "description": "List Pingdom transaction checks.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "extended_tags": {
+            "type": "boolean",
+            "description": "Return extended tags."
+          },
+          "tags": {
+            "type": "string",
+            "description": "Comma-separated tag filter."
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "script",
+              "recording"
+            ],
+            "description": "Transaction check type."
+          },
+          "limit": {
+            "type": "string",
+            "description": "Maximum checks to return."
+          },
+          "offset": {
+            "type": "string",
+            "description": "Number of checks to skip."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/tms/check",
+        "success": [
+          200
+        ],
+        "query": {
+          "extended_tags": "{{extended_tags}}",
+          "tags": "{{tags}}",
+          "type": "{{type}}",
+          "limit": "{{limit}}",
+          "offset": "{{offset}}"
         }
       },
       "enforceOutputSchema": true,

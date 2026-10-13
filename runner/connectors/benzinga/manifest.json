@@ -1,7 +1,7 @@
 {
   "key": "benzinga",
   "name": "Benzinga",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "runtime": "bun",
   "visibility": "public",
   "categories": [
@@ -1293,6 +1293,141 @@
         ],
         "query": {
           "parameters[tickers]": "{{symbol}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "news.removed.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List removed news",
+      "description": "Return Benzinga news items that were removed. Optional page, pageSize (max 1000), and updatedSince Unix timestamp (UTC). pageSize times page may not exceed 10000.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 10000,
+            "description": "Page offset. pageSize times page may not exceed 10000."
+          },
+          "pageSize": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000,
+            "description": "Number of results returned. Maximum 1000."
+          },
+          "updatedSince": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Unix timestamp (UTC). Only items updated since this time."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v2/news-removed",
+        "success": [
+          200
+        ],
+        "query": {
+          "page": "{{page}}",
+          "pageSize": "{{pageSize}}",
+          "updatedSince": "{{updatedSince}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "calendar.removed.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List removed calendar events",
+      "description": "Return Benzinga calendar events removed or cancelled for an optional event type. Optional page, pageSize (limit 1000), and updated Unix timestamp (UTC).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100000,
+            "description": "Page offset, 0-100000."
+          },
+          "pageSize": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000,
+            "description": "Number of results returned. Limit 1000."
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "ratings",
+              "earnings",
+              "dividends",
+              "splits",
+              "ipos",
+              "offerings",
+              "economics",
+              "guidance",
+              "ma",
+              "conference calls"
+            ],
+            "description": "Calendar event type to filter removed records."
+          },
+          "updated": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Unix timestamp (UTC). Records updated at or after this time."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v2.1/calendar-removed",
+        "success": [
+          200
+        ],
+        "query": {
+          "page": "{{page}}",
+          "pageSize": "{{pageSize}}",
+          "type": "{{type}}",
+          "updated": "{{updated}}"
         }
       },
       "enforceOutputSchema": true,

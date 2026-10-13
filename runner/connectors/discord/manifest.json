@@ -1,7 +1,7 @@
 {
   "key": "discord",
   "name": "Discord",
-  "version": "0.3.0",
+  "version": "0.4.1",
   "runtime": "bun",
   "visibility": "public",
   "categories": [
@@ -5191,6 +5191,898 @@
         ],
         "result": {
           "invite": "{{response}}"
+        }
+      }
+    },
+    "entitlements.consume": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Consume Entitlement",
+      "description": "Mark a one-time consumable entitlement as consumed. POST /applications/{application.id}/entitlements/{entitlement.id}/consume returns 204 and takes no body.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "applicationId": {
+            "type": "string",
+            "description": "Discord snowflake, sent as a string."
+          },
+          "entitlementId": {
+            "type": "string",
+            "description": "Discord snowflake, sent as a string."
+          }
+        },
+        "required": [
+          "applicationId",
+          "entitlementId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "consumed": {
+            "type": "boolean"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/applications/{{applicationId}}/entitlements/{{entitlementId}}/consume",
+        "success": [
+          204
+        ],
+        "result": {
+          "consumed": true
+        }
+      }
+    },
+    "entitlements.deleteTest": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "destructive",
+      "title": "Delete Test Entitlement",
+      "description": "Delete an active test entitlement. DELETE /applications/{application.id}/entitlements/{entitlement.id} returns 204. Only test entitlements can be deleted.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "applicationId": {
+            "type": "string",
+            "description": "Discord snowflake, sent as a string."
+          },
+          "entitlementId": {
+            "type": "string",
+            "description": "Discord snowflake, sent as a string."
+          }
+        },
+        "required": [
+          "applicationId",
+          "entitlementId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "deleted": {
+            "type": "boolean"
+          }
+        }
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/applications/{{applicationId}}/entitlements/{{entitlementId}}",
+        "success": [
+          204
+        ],
+        "result": {
+          "deleted": true
+        }
+      }
+    },
+    "users.deleteMyRoleConnection": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "destructive",
+      "title": "Delete My Role Connection",
+      "description": "Delete the current user's application role connection. Official route DELETE /users/@me/applications/{application.id}/role-connection. Requires the role_connections.write scope; this connector still sends the configured bot token.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "applicationId": {
+            "type": "string",
+            "description": "Discord snowflake, sent as a string."
+          }
+        },
+        "required": [
+          "applicationId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "deleted": {
+            "type": "boolean"
+          }
+        }
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/users/@me/applications/{{applicationId}}/role-connection",
+        "success": [
+          204
+        ],
+        "result": {
+          "deleted": true
+        }
+      }
+    },
+    "commands.editPermissions": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Edit Command Permissions",
+      "description": "Replace permission overwrites for one application command in a guild. PUT returns the guild application command permissions object. Discord requires a user bearer token with applications.commands.permissions.update; this connector still sends the configured bot token.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "applicationId": {
+            "type": "string",
+            "description": "Discord snowflake, sent as a string."
+          },
+          "guildId": {
+            "type": "string",
+            "description": "Discord snowflake, sent as a string."
+          },
+          "commandId": {
+            "type": "string",
+            "description": "Discord snowflake, sent as a string."
+          },
+          "permissions": {
+            "type": "array",
+            "description": "Up to 100 overwrites. Each item has id, type (1 role, 2 user, 3 channel), and permission.",
+            "items": {
+              "type": "object"
+            }
+          }
+        },
+        "required": [
+          "applicationId",
+          "guildId",
+          "commandId",
+          "permissions"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "commandPermissions": {
+            "type": "object",
+            "description": "Guild application command permissions object."
+          }
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/applications/{{applicationId}}/guilds/{{guildId}}/commands/{{commandId}}/permissions",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "permissions": "{{permissions}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "commandPermissions": "{{response}}"
+        }
+      }
+    },
+    "commands.getPermissions": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Get Command Permissions",
+      "description": "Fetch permission overwrites for one application command in a guild.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "applicationId": {
+            "type": "string",
+            "description": "Discord snowflake, sent as a string."
+          },
+          "guildId": {
+            "type": "string",
+            "description": "Discord snowflake, sent as a string."
+          },
+          "commandId": {
+            "type": "string",
+            "description": "Discord snowflake, sent as a string."
+          }
+        },
+        "required": [
+          "applicationId",
+          "guildId",
+          "commandId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "commandPermissions": {
+            "type": "object",
+            "description": "Guild application command permissions object."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/applications/{{applicationId}}/guilds/{{guildId}}/commands/{{commandId}}/permissions",
+        "success": [
+          200
+        ],
+        "result": {
+          "commandPermissions": "{{response}}"
+        }
+      }
+    },
+    "commands.listPermissions": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "List Command Permissions",
+      "description": "Fetch permission overwrites for every application command in a guild.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "applicationId": {
+            "type": "string",
+            "description": "Discord snowflake, sent as a string."
+          },
+          "guildId": {
+            "type": "string",
+            "description": "Discord snowflake, sent as a string."
+          }
+        },
+        "required": [
+          "applicationId",
+          "guildId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "commandPermissions": {
+            "type": "array",
+            "description": "Guild application command permissions objects.",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/applications/{{applicationId}}/guilds/{{guildId}}/commands/permissions",
+        "success": [
+          200
+        ],
+        "result": {
+          "commandPermissions": "{{response}}"
+        }
+      }
+    },
+    "gateway.get": {
+      "kind": "action",
+      "timeoutMs": 5000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "sideEffect": "read",
+      "title": "Get Gateway",
+      "description": "Return a Gateway WSS URL. GET /gateway does not require authentication and returns {url}. Cache the URL and call again only when a connection cannot be opened.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "gateway": {
+            "type": "object",
+            "description": "Object with a url field."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/gateway",
+        "success": [
+          200
+        ],
+        "result": {
+          "gateway": "{{response}}"
+        }
+      }
+    },
+    "templates.get": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Get Guild Template",
+      "description": "Return the guild template for a template code, including its serialized source guild.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "templateCode": {
+            "type": "string",
+            "description": "Template code, not a full URL."
+          }
+        },
+        "required": [
+          "templateCode"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "template": {
+            "type": "object",
+            "description": "Guild template object."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/guilds/templates/{{templateCode}}",
+        "success": [
+          200
+        ],
+        "result": {
+          "template": "{{response}}"
+        }
+      }
+    },
+    "users.getMyGuildMember": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Get My Guild Member",
+      "description": "Return the current user's guild member object. Official route GET /users/@me/guilds/{guild.id}/member requires the guilds.members.read scope; this connector still sends the configured bot token.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "guildId": {
+            "type": "string",
+            "description": "Discord snowflake, sent as a string."
+          }
+        },
+        "required": [
+          "guildId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "member": {
+            "type": "object",
+            "description": "Guild member object."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/users/@me/guilds/{{guildId}}/member",
+        "success": [
+          200
+        ],
+        "result": {
+          "member": "{{response}}"
+        }
+      }
+    },
+    "oauth2.getAuthorization": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Get Current Authorization",
+      "description": "Return the current OAuth2 authorization (application, scopes, expiry, and user when identify was granted). GET /oauth2/@me requires a bearer token; this connector still sends the configured bot token.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "authorization": {
+            "type": "object",
+            "description": "Current authorization information."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/oauth2/@me",
+        "success": [
+          200
+        ],
+        "result": {
+          "authorization": "{{response}}"
+        }
+      }
+    },
+    "subscriptions.get": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Get SKU Subscription",
+      "description": "Return one subscription for a SKU by subscription id.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "skuId": {
+            "type": "string",
+            "description": "Discord snowflake, sent as a string."
+          },
+          "subscriptionId": {
+            "type": "string",
+            "description": "Discord snowflake, sent as a string."
+          }
+        },
+        "required": [
+          "skuId",
+          "subscriptionId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "subscription": {
+            "type": "object",
+            "description": "Subscription object."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/skus/{{skuId}}/subscriptions/{{subscriptionId}}",
+        "success": [
+          200
+        ],
+        "result": {
+          "subscription": "{{response}}"
+        }
+      }
+    },
+    "users.getMyRoleConnection": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Get My Role Connection",
+      "description": "Return the current user's application role connection. Requires role_connections.write; this connector still sends the configured bot token.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "applicationId": {
+            "type": "string",
+            "description": "Discord snowflake, sent as a string."
+          }
+        },
+        "required": [
+          "applicationId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "roleConnection": {
+            "type": "object",
+            "description": "Application role connection object."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/users/@me/applications/{{applicationId}}/role-connection",
+        "success": [
+          200
+        ],
+        "result": {
+          "roleConnection": "{{response}}"
+        }
+      }
+    },
+    "users.listMyConnections": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "List My Connections",
+      "description": "Return the current user's linked third-party connections. Requires the connections scope; this connector still sends the configured bot token.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connections": {
+            "type": "array",
+            "description": "Connection objects.",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/users/@me/connections",
+        "success": [
+          200
+        ],
+        "result": {
+          "connections": "{{response}}"
+        }
+      }
+    },
+    "subscriptions.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "List SKU Subscriptions",
+      "description": "List subscriptions that contain a SKU. user_id is required except for OAuth queries. before, after, and limit page the result (limit 1-100, default 50).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "skuId": {
+            "type": "string",
+            "description": "Discord snowflake, sent as a string."
+          },
+          "before": {
+            "type": "string",
+            "description": "List subscriptions before this id."
+          },
+          "after": {
+            "type": "string",
+            "description": "List subscriptions after this id."
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Page size, 1-100."
+          },
+          "userId": {
+            "type": "string",
+            "description": "User id to filter by. Required except for OAuth queries."
+          }
+        },
+        "required": [
+          "skuId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "subscriptions": {
+            "type": "array",
+            "description": "Subscription objects.",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/skus/{{skuId}}/subscriptions",
+        "query": {
+          "before": "{{before}}",
+          "after": "{{after}}",
+          "limit": "{{limit}}",
+          "user_id": "{{userId}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "subscriptions": "{{response}}"
+        }
+      }
+    },
+    "stickers.listPacks": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "List Sticker Packs",
+      "description": "Return the standard sticker packs available to Nitro subscribers. The JSON body is {sticker_packs}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "stickerPacks": {
+            "type": "array",
+            "description": "Sticker pack objects.",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/sticker-packs",
+        "success": [
+          200
+        ],
+        "result": {
+          "stickerPacks": "{{response.sticker_packs}}"
+        }
+      }
+    },
+    "users.updateMe": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 10485760,
+      "maxResponseBytes": 10485760,
+      "sideEffect": "write",
+      "title": "Modify Current User",
+      "description": "Change the current user's username, avatar, or banner. PATCH /users/@me accepts JSON image data URIs, not multipart. Omitted fields are left unchanged. A username change can randomize the discriminator and is heavily rate limited.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "username": {
+            "type": "string",
+            "description": "New username, 2-32 characters."
+          },
+          "avatar": {
+            "type": "string",
+            "description": "Image data URI to set the avatar."
+          },
+          "banner": {
+            "type": "string",
+            "description": "Image data URI to set the banner."
+          }
+        },
+        "required": []
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "user": {
+            "type": "object",
+            "description": "Updated user object."
+          }
+        }
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/users/@me",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "username": "{{username}}",
+          "avatar": "{{avatar}}",
+          "banner": "{{banner}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "user": "{{response}}"
+        }
+      }
+    },
+    "users.updateMyRoleConnection": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Update My Role Connection",
+      "description": "Replace the current user's application role connection and return it. Requires role_connections.write; this connector still sends the configured bot token. Metadata values must be strings.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "applicationId": {
+            "type": "string",
+            "description": "Discord snowflake, sent as a string."
+          },
+          "platformName": {
+            "type": "string",
+            "description": "Vanity platform name, max 50 characters."
+          },
+          "platformUsername": {
+            "type": "string",
+            "description": "Username on that platform, max 100 characters."
+          },
+          "metadata": {
+            "type": "object",
+            "description": "Metadata keys mapped to string values, each max 100 characters."
+          }
+        },
+        "required": [
+          "applicationId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "roleConnection": {
+            "type": "object",
+            "description": "Updated application role connection."
+          }
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/users/@me/applications/{{applicationId}}/role-connection",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "platform_name": "{{platformName}}",
+          "platform_username": "{{platformUsername}}",
+          "metadata": "{{metadata}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "roleConnection": "{{response}}"
+        }
+      }
+    },
+    "users.listMyApplicationEntitlements": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "List My Application Entitlements",
+      "description": "Return entitlements granted to the current user for one application, active and expired. Official route GET /users/@me/applications/{application.id}/entitlements returns a JSON array. sku_ids filters by SKU and exclude_consumed drops consumed items. Requires the applications.entitlements scope; this connector still sends the configured bot token.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "applicationId": {
+            "type": "string",
+            "description": "Discord snowflake, sent as a string."
+          },
+          "skuIds": {
+            "type": "string",
+            "description": "Comma-delimited SKU ids. Omit to return every entitlement for the application."
+          },
+          "excludeConsumed": {
+            "type": "boolean",
+            "description": "When true, omit consumed entitlements."
+          }
+        },
+        "required": [
+          "applicationId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "entitlements": {
+            "type": "array",
+            "description": "Entitlement objects.",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/users/@me/applications/{{applicationId}}/entitlements",
+        "query": {
+          "sku_ids": "{{skuIds}}",
+          "exclude_consumed": "{{excludeConsumed}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "entitlements": "{{response}}"
+        }
+      }
+    },
+    "oauth2.getUserInfo": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Get OpenID Connect UserInfo",
+      "description": "Return OpenID Connect claims for the current authorization. Official route GET /oauth2/userinfo returns JSON, including sub and any email or profile claims the token grants. Accepts a bot token or an OAuth token with the openid scope; this connector sends the configured bot token.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "userInfo": {
+            "type": "object",
+            "description": "OpenID Connect UserInfo claims."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/oauth2/userinfo",
+        "success": [
+          200
+        ],
+        "result": {
+          "userInfo": "{{response}}"
+        }
+      }
+    },
+    "oauth2.getPublicKeys": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Get OAuth2 Public Keys",
+      "description": "Return the public keys used to verify OAuth2 tokens. Official route GET /oauth2/keys returns JSON with a keys array. Authentication is optional; this connector still sends the configured bot token.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "publicKeys": {
+            "type": "object",
+            "description": "JSON Web Key Set, with a keys array."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/oauth2/keys",
+        "success": [
+          200
+        ],
+        "result": {
+          "publicKeys": "{{response}}"
         }
       }
     }
