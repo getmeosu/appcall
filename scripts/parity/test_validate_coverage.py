@@ -265,5 +265,102 @@ class CoreRuleTests(ValidatorTestCase):
         self.assertIn("Core violations: 1", text)
 
 
+class KeyPathMismatchTests(ValidatorTestCase):
+    def test_canonical_key_path_mismatch_is_core_and_uses_path_manifest(self):
+        artifact = {
+            "key": "other", "slug": "DEMO", "composio_tools": 1,
+            "mapped": [{"tool": "DEMO_GET", "operation": "other.get"}],
+            "missing_http": [], "missing_still": [], "full_depth": True, "notes": CANONICAL_NOTES,
+        }
+        _, connectors, root = self.make_repo(artifact, GET_OP)
+        other = root / "runner/connectors/other"
+        other.mkdir(parents=True)
+        (other / "manifest.json").write_text(
+            manifest({"other.get": {"request": {"method": "GET", "path": "/other"}}}))
+        result = validate_artifact(root / "runner/connectors/demo.coverage.json", connectors)
+        core_rules = [finding["rule"] for finding in result["core"]]
+        self.assertIn("core.key_path_mismatch", core_rules)
+        # Validated against demo's manifest, not the declared "other" connector.
+        self.assertIn("core.mapped_operation_missing", core_rules)
+        self.assertEqual(result["key"], "demo")
+        self.assertEqual(self.run_main("--root", str(root)), 1)
+
+    def test_legacy_key_path_mismatch_is_advisory_only(self):
+        artifact = {
+            "key": "other",
+            "mapped": {"DEMO_GET": "get"},
+            "missing_still": [{"slug": "DEMO_LEGACY", "reason": "Classic API was removed."}],
+        }
+        _, connectors, root = self.make_repo(artifact, GET_OP)
+        result = validate_artifact(root / "runner/connectors/demo.coverage.json", connectors)
+        self.assertEqual(result["core"], [])
+        self.assertIn("legacy.key_path_mismatch", {entry["rule"] for entry in result["advisories"]})
+        self.assertEqual(self.run_main("--root", str(root)), 0)
+
+
+class EntryToolTests(ValidatorTestCase):
+    def test_canonical_entry_tool_missing_is_core(self):
+        artifact = {
+            "key": "demo", "slug": "DEMO", "composio_tools": 2,
+            "mapped": [{"tool": "", "operation": "get"}],
+            "missing_http": [{"method": "GET", "path": "/v1/list",
+                              "docs": "https://docs.example/list", "notes": "status=200; body=object"}],
+            "missing_still": [], "full_depth": True, "notes": CANONICAL_NOTES,
+        }
+        _, connectors, root = self.make_repo(artifact, GET_OP)
+        result = validate_artifact(root / "runner/connectors/demo.coverage.json", connectors)
+        self.assertEqual(result["format"], "canonical")
+        self.assertEqual([finding["rule"] for finding in result["core"]],
+                         ["core.entry_tool_missing", "core.entry_tool_missing"])
+        self.assertEqual(self.run_main("--root", str(root)), 1)
+
+    def test_legacy_entry_tool_missing_is_advisory_only(self):
+        artifact = {
+            "mapped": {"DEMO_GET": "get"},
+            "missing_http": [{"method": "GET", "path": "/v1/list",
+                              "docs": "https://docs.example/list", "notes": "status=200; body=object"}],
+        }
+        _, connectors, root = self.make_repo(artifact, GET_OP)
+        result = validate_artifact(root / "runner/connectors/demo.coverage.json", connectors)
+        self.assertEqual(result["core"], [])
+        self.assertIn("legacy.entry_tool_missing", {entry["rule"] for entry in result["advisories"]})
+        self.assertEqual(self.run_main("--root", str(root)), 0)
+
+
+class RequestShapeTests(ValidatorTestCase):
+    def test_request_with_null_method_is_not_declarative(self):
+        artifact = {"DEMO_GET": "get"}
+        _, connectors, root = self.make_repo(artifact, {"get": {"request": {"method": None, "path": "/v1/get"}}})
+        result = validate_artifact(root / "runner/connectors/demo.coverage.json", connectors)
+        self.assertEqual(result["mapped_declarative"], 0)
+        self.assertEqual(result["mapped_unimplemented"], 1)
+        self.assertEqual([finding["rule"] for finding in result["core"]],
+                         ["core.mapped_operation_unimplemented"])
+        self.assertEqual(self.run_main("--root", str(root)), 1)
+
+    def test_request_with_numeric_method_falls_through_to_src_evidence(self):
+        artifact = {"DEMO_GET": "get"}
+        _, connectors, root = self.make_repo(
+            artifact, {"get": {"request": {"method": 200, "path": "/v1/get"}}},
+            src_files={"handlers.ts": "register('get');"})
+        result = validate_artifact(root / "runner/connectors/demo.coverage.json", connectors)
+        self.assertEqual(result["core"], [])
+        self.assertEqual(result["mapped_declarative"], 0)
+        self.assertEqual(result["mapped_handwritten"], 1)
+
+    def test_missing_http_non_string_method_is_core(self):
+        artifact = {
+            "key": "demo", "slug": "DEMO", "composio_tools": 1,
+            "mapped": [], "missing_http": [{"tool": "DEMO_LIST", "method": 200, "path": "/v1/list",
+                                            "docs": "https://docs.example/list", "notes": "status=200; body=object"}],
+            "missing_still": [], "full_depth": False, "notes": CANONICAL_NOTES,
+        }
+        _, connectors, root = self.make_repo(artifact, GET_OP)
+        result = validate_artifact(root / "runner/connectors/demo.coverage.json", connectors)
+        self.assertEqual([finding["rule"] for finding in result["core"]],
+                         ["core.missing_http_incomplete"])
+        self.assertEqual(self.run_main("--root", str(root)), 1)
+
+
 if __name__ == "__main__":
     unittest.main()

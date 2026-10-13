@@ -4,8 +4,8 @@
 Severity model (see docs/parity/FULL-DEPTH-CONTRACT.md):
 
 - ``core`` findings always fail: identity sum, mapped-operation evidence,
-  duplicate tools across lists, empty reasons, incomplete ``missing_http``
-  entries.
+  path/key mismatch, entries without a non-empty ``tool``, duplicate tools
+  across lists, empty reasons, incomplete ``missing_http`` entries.
 - ``advisories`` describe legacy shape: non-canonical key set or entry
   shapes, mapped-as-dict instead of a list, free-form ``why`` syntax,
   missing canonical ``notes``/``full_depth``/``slug``/``composio_tools``.
@@ -81,12 +81,16 @@ ADV_MISSING_HTTP_SHAPE = "legacy.missing_http_shape"
 ADV_KEY_SET = "legacy.key_set"
 TRIGGER_PENDING = "trigger_pending"
 
+CORE_KEY_PATH_MISMATCH = "core.key_path_mismatch"
+CORE_ENTRY_TOOL_MISSING = "core.entry_tool_missing"
 CORE_RULES = (CORE_ARTIFACT_UNREADABLE, CORE_IDENTITY, CORE_MANIFEST_UNREADABLE, CORE_MAPPED_OPERATION_MISSING,
               CORE_MAPPED_OPERATION_UNIMPLEMENTED, CORE_DUPLICATE_TOOL, CORE_EMPTY_REASON,
-              CORE_MISSING_HTTP_INCOMPLETE)
+              CORE_MISSING_HTTP_INCOMPLETE, CORE_KEY_PATH_MISMATCH, CORE_ENTRY_TOOL_MISSING)
+ADV_KEY_PATH_MISMATCH = "legacy.key_path_mismatch"
+ADV_ENTRY_TOOL_MISSING = "legacy.entry_tool_missing"
 ADVISORY_RULES = (ADV_MAPPED_SHAPE, ADV_MISSING_STILL_SHAPE, ADV_WHY_SYNTAX, ADV_NOTES_PREFIX,
                   ADV_FULL_DEPTH_MISSING, ADV_SLUG_MISSING, ADV_TOTAL_MISSING,
-                  ADV_MISSING_HTTP_SHAPE, ADV_KEY_SET)
+                  ADV_MISSING_HTTP_SHAPE, ADV_KEY_SET, ADV_KEY_PATH_MISMATCH, ADV_ENTRY_TOOL_MISSING)
 
 
 def discover_artifacts(connectors_root):
@@ -95,13 +99,23 @@ def discover_artifacts(connectors_root):
     return sorted({path for pattern in patterns for path in connectors_root.glob(pattern)})
 
 
-def _connector_key(path, connectors_root, artifact):
-    if isinstance(artifact, dict) and isinstance(artifact.get("key"), str) and artifact["key"].strip():
-        return artifact["key"]
+def _expected_key(path, connectors_root):
+    """Connector key implied by the artifact's path; the manifest authority."""
     relative = path.relative_to(connectors_root)
     if relative.name.endswith(".coverage.json"):
         return relative.name.removesuffix(".coverage.json")
     return relative.parts[0]
+
+
+def _has_tool(value):
+    return isinstance(value, str) and bool(value.strip())
+
+
+def _record_missing_tool(core, advisories, canonical_shape, message):
+    if canonical_shape:
+        core.append({"rule": CORE_ENTRY_TOOL_MISSING, "message": message})
+    else:
+        advisories.append((ADV_ENTRY_TOOL_MISSING, message))
 
 
 def _is_flat_legacy_map(artifact):
@@ -259,7 +273,9 @@ def validate_artifact(path, connectors_root, cache=None):
                 "core": [{"rule": CORE_ARTIFACT_UNREADABLE, "message": "artifact must be a JSON object"}],
                 "advisories": []}
 
-    key = _connector_key(path, connectors_root, artifact)
+    key = _expected_key(path, connectors_root)
+    declared_key = artifact.get("key")
+    declared_key = declared_key.strip() if isinstance(declared_key, str) else None
     advisories = []
     mapped = _normalize_mapped(artifact, advisories)
     reasons = _normalize_missing_still(artifact, advisories)
@@ -283,6 +299,13 @@ def validate_artifact(path, connectors_root, cache=None):
     cache = {} if cache is None else cache
     mapped_declarative = mapped_handwritten = mapped_unimplemented = 0
     trigger_pending = 0
+    canonical_shape = not advisories
+    if declared_key is not None and declared_key != key:
+        message = f"artifact path implies key {key!r} but declares {declared_key!r}"
+        if canonical_shape:
+            core.append({"rule": CORE_KEY_PATH_MISMATCH, "message": message})
+        else:
+            advisories.append((ADV_KEY_PATH_MISMATCH, message))
     declared = artifact.get("composio_tools")
     total = len(mapped) + len(missing_http) + len(reasons)
     if isinstance(declared, int) and not isinstance(declared, bool):
@@ -308,9 +331,9 @@ def validate_artifact(path, connectors_root, cache=None):
     seen_tools = Counter()
     for row in mapped:
         tool, operation = row["tool"], row["operation"]
-        if not isinstance(tool, str) or not tool.strip():
-            core.append({"rule": CORE_MAPPED_OPERATION_MISSING,
-                         "message": f"mapped entry {row!r} has no tool"})
+        if not _has_tool(tool):
+            _record_missing_tool(core, advisories, canonical_shape,
+                                 f"mapped entry {row!r} has no non-empty tool")
             continue
         seen_tools[tool] += 1
         if not isinstance(operation, str) or not operation.strip():
@@ -323,9 +346,10 @@ def validate_artifact(path, connectors_root, cache=None):
                          "message": f"mapped operation {operation!r} does not exist in manifest"})
             continue
         request = definition.get("request")
-        if (isinstance(request, dict) and request
-                and str(request.get("method", "")).strip()
-                and str(request.get("path", "")).strip()):
+        method = request.get("method") if isinstance(request, dict) else None
+        path = request.get("path") if isinstance(request, dict) else None
+        if (isinstance(method, str) and method.strip()
+                and isinstance(path, str) and path.strip()):
             mapped_declarative += 1
         elif definition.get("kind") == "webhook":
             registered = _registered_webhook_connectors(connectors_root, cache)
@@ -345,16 +369,24 @@ def validate_artifact(path, connectors_root, cache=None):
                                     f"and no runner/connectors/{key}/src/** reference"})
     for row in missing_http:
         tool = row.get("tool") if isinstance(row, dict) else None
-        if isinstance(tool, str) and tool.strip():
+        if not _has_tool(tool):
+            _record_missing_tool(core, advisories, canonical_shape,
+                                 f"missing_http entry {row!r} has no non-empty tool")
+        else:
             seen_tools[tool] += 1
-        if not isinstance(row, dict) or not str(row.get("method", "")).strip() \
-                or not str(row.get("path", "")).strip():
-            label = tool if isinstance(tool, str) else row
+        method = row.get("method") if isinstance(row, dict) else None
+        path = row.get("path") if isinstance(row, dict) else None
+        if not (isinstance(method, str) and method.strip()
+                and isinstance(path, str) and path.strip()):
+            label = tool if _has_tool(tool) else row
             core.append({"rule": CORE_MISSING_HTTP_INCOMPLETE,
-                         "message": f"missing_http entry {label!r} lacks method or path"})
+                         "message": f"missing_http entry {label!r} lacks a non-empty string method or path"})
     for row in reasons:
         tool = row["tool"]
-        if isinstance(tool, str) and tool.strip():
+        if not _has_tool(tool):
+            _record_missing_tool(core, advisories, canonical_shape,
+                                 f"missing_still entry {row!r} has no non-empty tool")
+        else:
             seen_tools[tool] += 1
         reason = row["reason"]
         if not isinstance(reason, str) or not reason.strip() or reason.strip().casefold() in PLACEHOLDER_REASONS:

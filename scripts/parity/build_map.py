@@ -16,19 +16,37 @@ def normalize_slug(value):
     return re.sub(r"[^A-Z0-9]", "", value.upper())
 
 
-def resolve_slug(key, index_slugs, baseline, corrections):
-    if key in corrections and corrections[key] in index_slugs:
-        return corrections[key]
-    if key in baseline and baseline[key] in index_slugs:
-        return baseline[key]
+def resolve_slug(key, index_slugs, alias_table):
+    if key in alias_table and alias_table[key] in index_slugs:
+        return alias_table[key]
     normalized = normalize_slug(key)
     matches = [slug for slug in index_slugs if normalize_slug(slug) == normalized]
     return matches[0] if len(matches) == 1 else None
 
 
-def _load_baseline(path):
-    source = json.loads(path.read_text(encoding="utf-8"))
-    return {row["appcall_key"]: row["composio_slug"] for row in source.get("rows", [])}
+def _load_optional_baseline(path):
+    """Read the historical parity report when present; never required for a run."""
+    try:
+        source = json.loads(path.read_text(encoding="utf-8"))
+        return {row["appcall_key"]: row["composio_slug"] for row in source.get("rows", [])}
+    except (OSError, UnicodeError, json.JSONDecodeError, KeyError, TypeError):
+        return {}
+
+
+def _alias_table(aliases, baseline):
+    """Verified pairs: aliases.json is the committed source of truth.
+
+    The optional historical baseline only fills keys the committed data does
+    not already cover, so a fresh checkout resolves every verified pair.
+    """
+    table = dict(aliases.get("verified_pairs", {}))
+    table.update(aliases.get("corrections", {}))
+    for key, slug in (baseline or {}).items():
+        table.setdefault(key, slug)
+    for group in aliases.get("many_to_one", []):
+        for key in group.get("keys", []):
+            table.setdefault(key, group["slug"])
+    return table
 
 
 def _coverage_paths(connectors_root, key):
@@ -66,20 +84,16 @@ def build_exclusions(index, aliases):
     }
 
 
-def build_map_data(repo_root, index, baseline, aliases):
+def build_map_data(repo_root, index, aliases, baseline=None):
     repo_root = Path(repo_root)
     connectors_root = repo_root / "runner/connectors"
-    alias_table = dict(aliases.get("corrections", {}))
-    for group in aliases.get("many_to_one", []):
-        for key in group.get("keys", []):
-            alias_table.setdefault(key, group["slug"])
-    baseline_map = baseline
+    alias_table = _alias_table(aliases, baseline)
     rows_by_slug = {row["slug"]: row for row in index["toolkits"]}
     connector_rows = []
     for manifest_path in sorted(connectors_root.glob("*/manifest.json")):
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
         key = manifest.get("key", manifest_path.parent.name)
-        slug = resolve_slug(key, set(rows_by_slug), baseline_map, alias_table)
+        slug = resolve_slug(key, set(rows_by_slug), alias_table)
         toolkit = rows_by_slug.get(slug) if slug else None
         operations = manifest.get("operations", {})
         kinds = [operation.get("kind") for operation in operations.values() if isinstance(operation, dict)]
@@ -197,8 +211,8 @@ def main(argv=None):
         index_path = args.index.resolve() if args.index else _latest_index(parity)
         index = json.loads(index_path.read_text(encoding="utf-8"))
         alias_data = json.loads((Path(__file__).parent / "aliases.json").read_text(encoding="utf-8"))
-        baseline = _load_baseline(parity / "composio-full-parity.json")
-        data = build_map_data(root, index, baseline, alias_data)
+        baseline = _load_optional_baseline(parity / "composio-full-parity.json")
+        data = build_map_data(root, index, alias_data, baseline)
         date = args.date or dt.datetime.now().astimezone().date().isoformat()
         json_path = parity / f"composio-map-{date}.json"
         markdown_path = parity / f"composio-map-{date}.md"

@@ -88,14 +88,13 @@ def fetch_index():
     })
     with urllib.request.urlopen(request, timeout=30) as response:
         content = response.read().decode("utf-8")
-    local_now = dt.datetime.now().astimezone()
-    fetched_at = local_now.astimezone(dt.timezone.utc).replace(microsecond=0)
+    fetched_at = dt.datetime.now(dt.timezone.utc).replace(microsecond=0)
     parsed = parse_index(content)
     return {
         "fetched_at": fetched_at.isoformat().replace("+00:00", "Z"),
         "source": SOURCE,
         **parsed,
-    }, local_now.date().isoformat()
+    }, fetched_at.date().isoformat()
 
 
 def main(argv=None):
