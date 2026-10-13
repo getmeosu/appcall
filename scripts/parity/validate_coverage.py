@@ -5,7 +5,9 @@ Severity model (see docs/parity/FULL-DEPTH-CONTRACT.md):
 
 - ``core`` findings always fail: identity sum, mapped-operation evidence,
   path/key mismatch, entries without a non-empty ``tool``, duplicate tools
-  across lists, empty reasons, incomplete ``missing_http`` entries.
+  across lists, empty reasons, incomplete ``missing_http`` entries, and a
+  canonical artifact committed with ``full_depth: false`` (uncertified
+  draft).
 - ``advisories`` describe legacy shape: non-canonical key set or entry
   shapes, mapped-as-dict instead of a list, free-form ``why`` syntax,
   missing canonical ``notes``/``full_depth``/``slug``/``composio_tools``.
@@ -83,9 +85,11 @@ TRIGGER_PENDING = "trigger_pending"
 
 CORE_KEY_PATH_MISMATCH = "core.key_path_mismatch"
 CORE_ENTRY_TOOL_MISSING = "core.entry_tool_missing"
+CORE_FULL_DEPTH_FALSE = "core.full_depth_false"
 CORE_RULES = (CORE_ARTIFACT_UNREADABLE, CORE_IDENTITY, CORE_MANIFEST_UNREADABLE, CORE_MAPPED_OPERATION_MISSING,
               CORE_MAPPED_OPERATION_UNIMPLEMENTED, CORE_DUPLICATE_TOOL, CORE_EMPTY_REASON,
-              CORE_MISSING_HTTP_INCOMPLETE, CORE_KEY_PATH_MISMATCH, CORE_ENTRY_TOOL_MISSING)
+              CORE_MISSING_HTTP_INCOMPLETE, CORE_KEY_PATH_MISMATCH, CORE_ENTRY_TOOL_MISSING,
+              CORE_FULL_DEPTH_FALSE)
 ADV_KEY_PATH_MISMATCH = "legacy.key_path_mismatch"
 ADV_ENTRY_TOOL_MISSING = "legacy.entry_tool_missing"
 ADVISORY_RULES = (ADV_MAPPED_SHAPE, ADV_MISSING_STILL_SHAPE, ADV_WHY_SYNTAX, ADV_NOTES_PREFIX,
@@ -306,6 +310,9 @@ def validate_artifact(path, connectors_root, cache=None):
             core.append({"rule": CORE_KEY_PATH_MISMATCH, "message": message})
         else:
             advisories.append((ADV_KEY_PATH_MISMATCH, message))
+    if canonical_shape and artifact.get("full_depth") is False:
+        core.append({"rule": CORE_FULL_DEPTH_FALSE,
+                     "message": "canonical artifact declares full_depth: false (uncertified draft)"})
     declared = artifact.get("composio_tools")
     total = len(mapped) + len(missing_http) + len(reasons)
     if isinstance(declared, int) and not isinstance(declared, bool):
