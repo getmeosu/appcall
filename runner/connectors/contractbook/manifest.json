@@ -1,0 +1,780 @@
+{
+  "key": "contractbook",
+  "name": "Contractbook",
+  "version": "0.1.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "utility"
+  ],
+  "auth": {
+    "type": "api_key",
+    "scopes": [],
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "Contractbook API key",
+          "required": true,
+          "secret": true
+        }
+      ]
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "api.contractbook.com"
+    ]
+  },
+  "models": [
+    "document",
+    "template",
+    "automation"
+  ],
+  "http": {
+    "baseUrl": "https://api.contractbook.com/v3",
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "Authorization",
+      "value": "Bearer {{apiKey}}"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "Retry-After",
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "error.message",
+        "message"
+      ]
+    },
+    "headers": {
+      "Accept": "application/json"
+    }
+  },
+  "operations": {
+    "documents.create-from-template": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 5242880,
+      "title": "Create Document From Template",
+      "description": "Create a draft document from a Contractbook template. Optional fields are sent in one JSON document object and do not send the draft for signature.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "templateId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Template ID used to create the draft."
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Replacement or override title."
+          },
+          "language": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Document language code override."
+          },
+          "tags": {
+            "type": "array",
+            "description": "Complete tag list. Each tag is a non-empty string. On update this replaces the existing tags.",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "message": {
+            "type": "object",
+            "additionalProperties": false,
+            "description": "Message object sent as document.message. Omit to leave the message unchanged.",
+            "required": [
+              "content"
+            ],
+            "properties": {
+              "content": {
+                "type": "string",
+                "description": "Message content."
+              }
+            }
+          },
+          "parties": {
+            "type": "array",
+            "description": "Party and signee objects. On update this replaces the existing parties.",
+            "items": {
+              "type": "object"
+            }
+          },
+          "attachments": {
+            "type": "array",
+            "description": "Attachment objects with an original URL already hosted for Contractbook. On update this replaces the existing attachments.",
+            "items": {
+              "type": "object"
+            }
+          },
+          "dataFields": {
+            "type": "array",
+            "description": "Data-field objects. On update this replaces the existing data fields.",
+            "items": {
+              "type": "object"
+            }
+          },
+          "dynamicTables": {
+            "type": "array",
+            "description": "Dynamic-table objects whose attrs contain id, columns, and rows.",
+            "items": {
+              "type": "object"
+            }
+          },
+          "toBeSignedBy": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Who must sign the document.",
+            "enum": [
+              "owner_and_others",
+              "others_only",
+              "owner_only"
+            ]
+          },
+          "companyLogoUrl": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Company logo URL stored on the document. This value is not fetched by the connector."
+          },
+          "signingOrderMode": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Signing order mode.",
+            "enum": [
+              "random",
+              "strict",
+              "grouped"
+            ]
+          },
+          "attachmentsSignedSeparately": {
+            "type": "boolean",
+            "description": "Whether attachments are signed and sealed separately."
+          }
+        },
+        "required": [
+          "templateId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "JSON object returned by Contractbook."
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/templates/{{templateId}}/create_document",
+        "success": [
+          201
+        ],
+        "result": {
+          "data": "{{response}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "document": {
+            "title": "{{title}}",
+            "language": "{{language}}",
+            "tags": "{{tags}}",
+            "message": "{{message}}",
+            "parties": "{{parties}}",
+            "attachments": "{{attachments}}",
+            "data_fields": "{{dataFields}}",
+            "dynamic_tables": "{{dynamicTables}}",
+            "to_be_signed_by": "{{toBeSignedBy}}",
+            "company_logo_url": "{{companyLogoUrl}}",
+            "signing_order_mode": "{{signingOrderMode}}",
+            "attachments_signed_separately": "{{attachmentsSignedSeparately}}"
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "documents.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 5242880,
+      "title": "Get Document",
+      "description": "Get the current Contractbook document, including the version required for a later update.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "documentId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Contractbook document ID."
+          }
+        },
+        "required": [
+          "documentId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "JSON object returned by Contractbook."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/documents/{{documentId}}",
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "templates.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 5242880,
+      "title": "Get Template",
+      "description": "Get a template, including its fields, parties, attachments, and signing configuration.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "templateId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Contractbook template ID."
+          }
+        },
+        "required": [
+          "templateId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "JSON object returned by Contractbook."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/templates/{{templateId}}",
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "automations.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 8192,
+      "maxResponseBytes": 5242880,
+      "title": "List Automations",
+      "description": "List published Contractbook automations for one trigger type. This does not run an automation.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "triggerType": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Trigger type whose automations to return.",
+            "enum": [
+              "webhook_trigger",
+              "hubspot_contractbook_automation_triggered",
+              "hubspot_deal_stage_changed",
+              "contract_signed",
+              "contract_verified_ai",
+              "contract_viewed",
+              "data_field_date_reached",
+              "data_field_updated",
+              "draft_created",
+              "draft_updated",
+              "drafter_questionnaire_completed",
+              "sent_for_signature",
+              "task_due_date_reached",
+              "task_is_done",
+              "pipedrive_deal_stage_changed",
+              "salesforce_flow_executed",
+              "salesforce_opportunity_stage_changed"
+            ]
+          }
+        },
+        "required": [
+          "triggerType"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "JSON object returned by Contractbook."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/automations",
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response}}"
+        },
+        "query": {
+          "trigger_type": "{{triggerType}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "documents.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 5242880,
+      "title": "List Documents",
+      "description": "Search documents visible to the connected account and return one cursor page.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "full": {
+            "type": "boolean",
+            "description": "Include data fields and full party details."
+          },
+          "tags": {
+            "type": "array",
+            "description": "Tags used to filter documents.",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "owned": {
+            "type": "boolean",
+            "description": "Filter by whether the connected account owns the document."
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Case-insensitive partial title to match."
+          },
+          "cursor": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Opaque cursor from pagination_meta on the previous page."
+          },
+          "states": {
+            "type": "array",
+            "description": "Document states to include.",
+            "items": {
+              "type": "string",
+              "enum": [
+                "draft",
+                "rejected",
+                "changes_requested",
+                "pending",
+                "signed",
+                "irrelevant"
+              ]
+            }
+          },
+          "contexts": {
+            "type": "array",
+            "description": "Document areas to search.",
+            "items": {
+              "type": "string",
+              "enum": [
+                "my_documents",
+                "team_documents",
+                "workspace"
+              ]
+            }
+          },
+          "pageSize": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100,
+            "description": "Maximum documents in this page."
+          },
+          "sortColumn": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Field used to sort results.",
+            "enum": [
+              "created_at",
+              "updated_at",
+              "title"
+            ]
+          },
+          "workspaceId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Workspace ID used when contexts includes workspace."
+          },
+          "signedBefore": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Return documents signed before this timestamp, excluding the boundary."
+          },
+          "documentTypes": {
+            "type": "array",
+            "description": "Document types to include.",
+            "items": {
+              "type": "string",
+              "enum": [
+                "draft",
+                "stored_contract",
+                "contract"
+              ]
+            }
+          },
+          "sortDirection": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Sort direction.",
+            "enum": [
+              "asc",
+              "desc"
+            ]
+          },
+          "updatedBefore": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Return documents updated before this timestamp, excluding the boundary."
+          },
+          "signedAtOrAfter": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Return documents signed at or after this timestamp."
+          },
+          "updatedAtOrAfter": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Return documents updated at or after this timestamp."
+          },
+          "integrationObjectId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "External integration object ID associated with the documents."
+          }
+        },
+        "required": []
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "JSON object returned by Contractbook."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/documents",
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response}}"
+        },
+        "query": {
+          "context[]": "{{contexts}}",
+          "full": "{{full}}",
+          "title": "{{title}}",
+          "states[]": "{{states}}",
+          "types[]": "{{documentTypes}}",
+          "tags[]": "{{tags}}",
+          "owned": "{{owned}}",
+          "cursor": "{{cursor}}",
+          "signed_at_lt": "{{signedBefore}}",
+          "signed_at_gte": "{{signedAtOrAfter}}",
+          "updated_at_lt": "{{updatedBefore}}",
+          "updated_at_gte": "{{updatedAtOrAfter}}",
+          "page_size": "{{pageSize}}",
+          "sort_column": "{{sortColumn}}",
+          "sort_direction": "{{sortDirection}}",
+          "integration_object_id": "{{integrationObjectId}}",
+          "workspace_id": "{{workspaceId}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "templates.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 5242880,
+      "title": "List Templates",
+      "description": "List Contractbook templates visible to the connected account.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "excludeSpaces": {
+            "type": "boolean",
+            "description": "Exclude templates located in spaces when true."
+          }
+        },
+        "required": []
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "JSON object returned by Contractbook."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/templates",
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response}}"
+        },
+        "query": {
+          "exclude_spaces": "{{excludeSpaces}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "documents.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 5242880,
+      "title": "Update Document",
+      "description": "Update selected fields of a draft or stored contract. Supplied collection fields replace the existing collection. The current version is required.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "documentId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Draft or stored-contract document ID."
+          },
+          "version": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Current document version from a document response. A stale value fails with version_mismatch."
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Replacement or override title."
+          },
+          "language": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Document language code override."
+          },
+          "tags": {
+            "type": "array",
+            "description": "Complete tag list. Each tag is a non-empty string. On update this replaces the existing tags.",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "message": {
+            "type": "object",
+            "additionalProperties": false,
+            "description": "Message object sent as document.message. Omit to leave the message unchanged.",
+            "required": [
+              "content"
+            ],
+            "properties": {
+              "content": {
+                "type": "string",
+                "description": "Message content."
+              }
+            }
+          },
+          "parties": {
+            "type": "array",
+            "description": "Party and signee objects. On update this replaces the existing parties.",
+            "items": {
+              "type": "object"
+            }
+          },
+          "attachments": {
+            "type": "array",
+            "description": "Attachment objects with an original URL already hosted for Contractbook. On update this replaces the existing attachments.",
+            "items": {
+              "type": "object"
+            }
+          },
+          "dataFields": {
+            "type": "array",
+            "description": "Data-field objects. On update this replaces the existing data fields.",
+            "items": {
+              "type": "object"
+            }
+          },
+          "dynamicTables": {
+            "type": "array",
+            "description": "Dynamic-table objects whose attrs contain id, columns, and rows.",
+            "items": {
+              "type": "object"
+            }
+          },
+          "toBeSignedBy": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Who must sign the document.",
+            "enum": [
+              "owner_and_others",
+              "others_only",
+              "owner_only"
+            ]
+          },
+          "companyLogoUrl": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Company logo URL stored on the document. This value is not fetched by the connector."
+          },
+          "signingOrderMode": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Signing order mode.",
+            "enum": [
+              "random",
+              "strict",
+              "grouped"
+            ]
+          },
+          "attachmentsSignedSeparately": {
+            "type": "boolean",
+            "description": "Whether attachments are signed and sealed separately."
+          }
+        },
+        "required": [
+          "documentId",
+          "version"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "JSON object returned by Contractbook."
+          }
+        }
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/documents/{{documentId}}",
+        "success": [
+          201
+        ],
+        "result": {
+          "data": "{{response}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "document": {
+            "version": "{{version}}",
+            "title": "{{title}}",
+            "language": "{{language}}",
+            "tags": "{{tags}}",
+            "message": "{{message}}",
+            "parties": "{{parties}}",
+            "attachments": "{{attachments}}",
+            "data_fields": "{{dataFields}}",
+            "dynamic_tables": "{{dynamicTables}}",
+            "to_be_signed_by": "{{toBeSignedBy}}",
+            "company_logo_url": "{{companyLogoUrl}}",
+            "signing_order_mode": "{{signingOrderMode}}",
+            "attachments_signed_separately": "{{attachmentsSignedSeparately}}"
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    }
+  }
+}

@@ -1,0 +1,545 @@
+{
+  "key": "bika",
+  "name": "Bika.ai",
+  "version": "0.1.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "dev-tools",
+    "productivity"
+  ],
+  "auth": {
+    "type": "api_key",
+    "scopes": [],
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "Bika API token",
+          "required": true,
+          "secret": true
+        }
+      ]
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "bika.ai"
+    ]
+  },
+  "models": [
+    "space",
+    "node",
+    "database",
+    "record"
+  ],
+  "http": {
+    "baseUrl": "https://bika.ai/api/openapi/bika",
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "Authorization",
+      "value": "Bearer {{apiKey}}"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "Retry-After",
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "message"
+      ]
+    },
+    "headers": {
+      "Accept": "application/json"
+    }
+  },
+  "operations": {
+    "spaces.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List Spaces",
+      "description": "List spaces available to the Bika API token.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/spaces",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "nodes.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List Nodes",
+      "description": "List nodes in a Bika space so a caller can find database ids, names, types, and paths.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "spaceId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Space id returned by listing spaces."
+          }
+        },
+        "required": [
+          "spaceId"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/spaces/{{spaceId}}/nodes",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "records.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List Records",
+      "description": "Return one page of records from a Bika database. nextCursor is sent as the offset query parameter.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "spaceId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Space id returned by listing spaces."
+          },
+          "databaseId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Database node id returned by listing nodes."
+          },
+          "fields": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "description": "Field names or ids to include. Match each value to fieldKey."
+          },
+          "fieldKey": {
+            "type": "string",
+            "enum": [
+              "name",
+              "id"
+            ],
+            "description": "Whether field object keys are field names or field ids."
+          },
+          "pageSize": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Maximum records to return in this page."
+          },
+          "nextCursor": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Offset cursor from a previous page. Sent as the offset query parameter."
+          }
+        },
+        "required": [
+          "spaceId",
+          "databaseId"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/spaces/{{spaceId}}/resources/databases/{{databaseId}}/records",
+        "query": {
+          "fields": "{{fields}}",
+          "fieldKey": "{{fieldKey}}",
+          "pageSize": "{{pageSize}}",
+          "offset": "{{nextCursor}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "records.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get Record",
+      "description": "Get one Bika record by id. fieldKey selects whether returned field keys are names or ids.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "spaceId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Space id returned by listing spaces."
+          },
+          "databaseId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Database node id returned by listing nodes."
+          },
+          "recordId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Record id."
+          },
+          "fieldKey": {
+            "type": "string",
+            "enum": [
+              "name",
+              "id"
+            ],
+            "description": "Whether field object keys are field names or field ids."
+          }
+        },
+        "required": [
+          "spaceId",
+          "databaseId",
+          "recordId"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/spaces/{{spaceId}}/resources/databases/{{databaseId}}/records/{{recordId}}",
+        "query": {
+          "fieldKey": "{{fieldKey}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "records.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "maxInputBytes": 262144,
+      "maxResponseBytes": 5242880,
+      "title": "Create Records",
+      "description": "Create one to ten records in a Bika database and return the created records.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "spaceId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Space id returned by listing spaces."
+          },
+          "databaseId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Database node id returned by listing nodes."
+          },
+          "fieldKey": {
+            "type": "string",
+            "enum": [
+              "name",
+              "id"
+            ],
+            "description": "Whether field object keys are field names or field ids."
+          },
+          "records": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 10,
+            "description": "One to ten records to create.",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "fields"
+              ],
+              "properties": {
+                "fields": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "description": "Field values keyed by field name or field id."
+                }
+              }
+            }
+          }
+        },
+        "required": [
+          "spaceId",
+          "databaseId",
+          "records"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v2/spaces/{{spaceId}}/resources/databases/{{databaseId}}/records",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "fieldKey": "{{fieldKey}}",
+          "records": "{{records}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "records.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "maxInputBytes": 262144,
+      "maxResponseBytes": 5242880,
+      "title": "Update Records",
+      "description": "Update one to ten existing Bika records and return the updated records.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "spaceId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Space id returned by listing spaces."
+          },
+          "databaseId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Database node id returned by listing nodes."
+          },
+          "fieldKey": {
+            "type": "string",
+            "enum": [
+              "name",
+              "id"
+            ],
+            "description": "Whether field object keys are field names or field ids."
+          },
+          "records": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 10,
+            "description": "One to ten records to update. Each item includes a record id and the fields to change.",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "id",
+                "fields"
+              ],
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Existing record id."
+                },
+                "fields": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "description": "Field values keyed by field name or field id."
+                }
+              }
+            }
+          }
+        },
+        "required": [
+          "spaceId",
+          "databaseId",
+          "records"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/v2/spaces/{{spaceId}}/resources/databases/{{databaseId}}/records",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "fieldKey": "{{fieldKey}}",
+          "records": "{{records}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "records.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 20000,
+      "maxInputBytes": 262144,
+      "maxResponseBytes": 5242880,
+      "title": "Delete Records",
+      "description": "Permanently delete one to ten records from a Bika database and return a deletion result for each id.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "spaceId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Space id returned by listing spaces."
+          },
+          "databaseId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Database node id returned by listing nodes."
+          },
+          "recordIds": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 10,
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "description": "One to ten record ids. Sent as repeated records query parameters."
+          }
+        },
+        "required": [
+          "spaceId",
+          "databaseId",
+          "recordIds"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/v2/spaces/{{spaceId}}/resources/databases/{{databaseId}}/records",
+        "query": {
+          "records": "{{recordIds}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    }
+  }
+}

@@ -1,0 +1,280 @@
+{
+  "key": "blocknative",
+  "name": "Blocknative",
+  "version": "0.2.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": ["dev-tools"],
+  "auth": {
+    "type": "api_key",
+    "scopes": [],
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "Blocknative API key",
+          "required": true,
+          "secret": true
+        }
+      ]
+    }
+  },
+  "network": {
+    "allowedHosts": ["api.blocknative.com"]
+  },
+  "models": ["chain", "oracle", "gas-price", "gas-distribution", "base-fee"],
+  "http": {
+    "baseUrl": "https://api.blocknative.com",
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "Authorization",
+      "value": "{{apiKey}}"
+    },
+    "headers": {
+      "Accept": "application/json"
+    },
+    "errors": {
+      "rateLimitStatuses": [429],
+      "retryAfterHeader": "Retry-After",
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": ["msg", "message", "error"]
+    }
+  },
+  "operations": {
+    "healthcheck": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 5000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "title": "Healthcheck",
+      "description": "Validate the Blocknative API key with GET /chains.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": ["data"],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": { "type": "object" }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/chains",
+        "success": [200]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "chains.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 5242880,
+      "title": "Get Supported Chains",
+      "description": "List chains supported by the Blocknative Gas Platform, including chain id, architecture, and features.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": ["data"],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": { "type": "object" }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/chains",
+        "success": [200]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "oracles.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 5242880,
+      "title": "Get Gas Oracles",
+      "description": "List Blocknative on-chain gas oracle metadata for each supported chain.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": ["data"],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": { "type": "object" }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/oracles",
+        "success": [200]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "gas.prices.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 1048576,
+      "title": "Get Gas Prices",
+      "description": "Fetch Blocknative gas price estimates for inclusion in the next block or the next few seconds. Confidence levels are sent as repeated confidenceLevels query parameters.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "system": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Chain ecosystem, for example ethereum, story, or polygon. Use with network, not instead of a documented chain id when both are known."
+          },
+          "chainid": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Network chain id. Default upstream is 1 (Ethereum mainnet). Bitcoin uses 0."
+          },
+          "network": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Network within the system, for example mainnet or sepolia."
+          },
+          "confidenceLevels": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 5,
+            "uniqueItems": true,
+            "description": "Up to five confidence levels. Ethereum mainnet accepts 1-99. Other chains accept 99, 95, 90, 80, 70, or 50.",
+            "items": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 99
+            }
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": ["data"],
+        "additionalProperties": false,
+        "properties": {
+          "data": { "type": "object" }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/gasprices/blockprices",
+        "query": {
+          "chainid": "{{chainid}}",
+          "system": "{{system}}",
+          "network": "{{network}}",
+          "confidenceLevels": "{{confidenceLevels}}"
+        },
+        "success": [200]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "gas.distribution.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "title": "Get Gas Price Distribution",
+      "description": "Retrieve the current Ethereum mainnet mempool gas price distribution. Only chain id 1 is supported.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "chainid": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1,
+            "description": "Chain id. Blocknative documents only Ethereum mainnet (1), which is also the default when omitted."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": ["data"],
+        "additionalProperties": false,
+        "properties": {
+          "data": { "type": "object" }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/gasprices/distribution",
+        "query": {
+          "chainid": "{{chainid}}"
+        },
+        "success": [200]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "gas.basefee.estimates": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "title": "Get Base Fee Estimates",
+      "description": "Get Ethereum mainnet base fee and blob base fee predictions for the next five blocks.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": ["data"],
+        "additionalProperties": false,
+        "properties": {
+          "data": { "type": "object" }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/gasprices/basefee-estimates",
+        "success": [200]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    }
+  }
+}

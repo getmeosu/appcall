@@ -1,0 +1,598 @@
+{
+  "key": "dpd2",
+  "name": "DPD",
+  "version": "0.1.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "ecommerce"
+  ],
+  "auth": {
+    "type": "api_key",
+    "scopes": [],
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "accountUsername",
+          "label": "DPD account username",
+          "required": true,
+          "secret": false
+        },
+        {
+          "key": "apiPassword",
+          "label": "DPD API password",
+          "required": true,
+          "secret": true
+        }
+      ]
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "api.getdpd.com"
+    ]
+  },
+  "models": [
+    "storefront",
+    "customer",
+    "purchase",
+    "subscriber"
+  ],
+  "http": {
+    "baseUrl": "https://api.getdpd.com/v2",
+    "auth": {
+      "field": "apiPassword",
+      "in": "header",
+      "name": "Authorization",
+      "basic": {
+        "username": "{{accountUsername}}",
+        "password": "{{apiPassword}}"
+      }
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "Retry-After",
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "message",
+        "error"
+      ]
+    },
+    "headers": {
+      "Accept": "application/json"
+    }
+  },
+  "operations": {
+    "ping": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 5000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "title": "Ping API",
+      "description": "Ping the DPD API. GET / on https://api.getdpd.com/v2 returns a JSON object whose status is SUCCESS.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": [
+              "status"
+            ],
+            "properties": {
+              "status": {
+                "type": "string"
+              }
+            },
+            "description": "Ping payload. The documented success body is {status: SUCCESS}."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "storefronts.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 5242880,
+      "title": "List Storefronts",
+      "description": "List storefronts in the DPD account. Page size is fixed at 100. Omit page to request the full set, or pass page until the JSON object {status: NOTFOUND} is returned.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Collection page. Each page contains at most 100 storefronts."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "array",
+              "object"
+            ],
+            "items": {
+              "type": "object"
+            },
+            "description": "JSON array of storefronts, or the end-of-pages object {status: NOTFOUND}."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/storefronts",
+        "query": {
+          "page": "{{page}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "storefronts.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "title": "Get Storefront",
+      "description": "Get one DPD storefront by numeric id, including name, URL, contact, currency, type, and subdomain.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ],
+        "properties": {
+          "id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Numeric storefront id from List Storefronts."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "Storefront JSON object."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/storefronts/{{id}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "customers.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 5242880,
+      "title": "List Customers",
+      "description": "List DPD customers. email, first_name, and last_name are case-insensitive startswith matches. date_min and date_max accept PHP strtotime values. Page size is fixed at 100; per_page is not a DPD parameter.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "email": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 320,
+            "description": "Customer email prefix. Case-insensitive startswith match."
+          },
+          "first_name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "Customer first-name prefix. Case-insensitive startswith match."
+          },
+          "last_name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "Customer last-name prefix. Case-insensitive startswith match."
+          },
+          "product_id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Product id the customer has purchased."
+          },
+          "receives_newsletters": {
+            "type": "boolean",
+            "description": "Whether the customer receives product-update email."
+          },
+          "date_min": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "description": "Customer created after this PHP strtotime value, such as YYYY-MM-DD."
+          },
+          "date_max": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "description": "Customer created before this PHP strtotime value, such as YYYY-MM-DD."
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Collection page. Each page contains at most 100 customers."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "array",
+              "object"
+            ],
+            "items": {
+              "type": "object"
+            },
+            "description": "JSON array of customers, or the end-of-pages object {status: NOTFOUND}."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/customers",
+        "query": {
+          "email": "{{email}}",
+          "first_name": "{{first_name}}",
+          "last_name": "{{last_name}}",
+          "product_id": "{{product_id}}",
+          "receives_newsletters": "{{receives_newsletters}}",
+          "date_min": "{{date_min}}",
+          "date_max": "{{date_max}}",
+          "page": "{{page}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "purchases.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 5242880,
+      "title": "List Purchases",
+      "description": "List DPD purchases. since and until are sent as date_min and date_max. Page size is fixed at 100; limit is not a DPD parameter.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Collection page. Each page contains at most 100 purchases."
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ACT",
+              "PND",
+              "RFD",
+              "ERR",
+              "CAN",
+              "HLD"
+            ],
+            "description": "Purchase status. ACT paid, PND pending, RFD refunded, ERR error, CAN canceled, HLD held."
+          },
+          "product_id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Product id."
+          },
+          "storefront_id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Storefront id."
+          },
+          "customer_id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Customer id."
+          },
+          "subscriber_id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Subscriber id."
+          },
+          "customer_email": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 320,
+            "description": "Customer email prefix. Case-insensitive startswith match."
+          },
+          "customer_first_name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "Customer first-name prefix. Case-insensitive startswith match."
+          },
+          "customer_last_name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "Customer last-name prefix. Case-insensitive startswith match."
+          },
+          "since": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "description": "Purchase created after this value. Sent as date_min. YYYY-MM-DD or any PHP strtotime value."
+          },
+          "until": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "description": "Purchase created before this value. Sent as date_max. YYYY-MM-DD or any PHP strtotime value."
+          },
+          "total": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "description": "Purchase total to compare. Compared with total_op."
+          },
+          "total_op": {
+            "type": "string",
+            "enum": [
+              "eq",
+              "ne",
+              "gt",
+              "lt"
+            ],
+            "description": "How to compare total. eq is the default when omitted."
+          },
+          "ship": {
+            "type": "boolean",
+            "description": "When true, only purchases with tangible goods that have not been shipped."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "array",
+              "object"
+            ],
+            "items": {
+              "type": "object"
+            },
+            "description": "JSON array of purchases, or the end-of-pages object {status: NOTFOUND}."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/purchases",
+        "query": {
+          "page": "{{page}}",
+          "status": "{{status}}",
+          "product_id": "{{product_id}}",
+          "storefront_id": "{{storefront_id}}",
+          "customer_id": "{{customer_id}}",
+          "subscriber_id": "{{subscriber_id}}",
+          "customer_email": "{{customer_email}}",
+          "customer_first_name": "{{customer_first_name}}",
+          "customer_last_name": "{{customer_last_name}}",
+          "date_min": "{{since}}",
+          "date_max": "{{until}}",
+          "total": "{{total}}",
+          "total_op": "{{total_op}}",
+          "ship": "{{ship}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "subscribers.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 5242880,
+      "title": "List Subscribers",
+      "description": "List subscribers for one storefront. email is sent as the username query parameter. Page size is fixed at 100. per_page, since, and filter are not DPD parameters.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "storefront_id"
+        ],
+        "properties": {
+          "storefront_id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Numeric storefront id."
+          },
+          "email": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 320,
+            "description": "Subscriber email address. Sent as the username query parameter."
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Collection page. Each page contains at most 100 subscribers."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "array",
+              "object"
+            ],
+            "items": {
+              "type": "object"
+            },
+            "description": "JSON array of subscribers, or the end-of-pages object {status: NOTFOUND}."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/storefronts/{{storefront_id}}/subscribers",
+        "query": {
+          "username": "{{email}}",
+          "page": "{{page}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "subscribers.verify": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 8192,
+      "maxResponseBytes": 1048576,
+      "title": "Verify Subscriber",
+      "description": "Get one subscriber's subscription status. Provide username (the subscriber email) or id. GET /storefronts/{storefront_id}/subscribers/verify returns a JSON object.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "storefront_id"
+        ],
+        "properties": {
+          "storefront_id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Numeric storefront id."
+          },
+          "username": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 320,
+            "description": "Subscriber email address."
+          },
+          "id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Subscriber id. Provide username or id."
+          }
+        },
+        "anyOf": [
+          {
+            "required": [
+              "username"
+            ]
+          },
+          {
+            "required": [
+              "id"
+            ]
+          }
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "JSON object with the subscriber subscription status."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/storefronts/{{storefront_id}}/subscribers/verify",
+        "query": {
+          "username": "{{username}}",
+          "id": "{{id}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    }
+  }
+}

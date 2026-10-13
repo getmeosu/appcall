@@ -1,0 +1,307 @@
+{
+  "key": "bitquery",
+  "name": "Bitquery",
+  "version": "0.1.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "dev-tools"
+  ],
+  "auth": {
+    "type": "api_key",
+    "scopes": [],
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "Bitquery access token",
+          "required": true,
+          "secret": true
+        }
+      ]
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "streaming.bitquery.io",
+      "graphql.bitquery.io"
+    ]
+  },
+  "models": [
+    "query"
+  ],
+  "http": {
+    "baseUrl": "https://streaming.bitquery.io",
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "Authorization",
+      "value": "Bearer {{apiKey}}"
+    },
+    "headers": {
+      "Accept": "application/json"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "Retry-After",
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "errors.0.message",
+        "message",
+        "error"
+      ],
+      "bodyErrorPaths": [
+        "errors"
+      ]
+    }
+  },
+  "operations": {
+    "archive.query": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Archive Database Query",
+      "description": "POST a caller-supplied GraphQL document to the Bitquery V1 endpoint https://graphql.bitquery.io. Maps BITQUERY_ARCHIVE_DATABASE_QUERY. V2 dataset: archive is a different API and is not selected here.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "query"
+        ],
+        "properties": {
+          "query": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Caller-supplied GraphQL document. This connector does not choose or rewrite it."
+          },
+          "variables": {
+            "type": "object",
+            "description": "Optional GraphQL variables object."
+          },
+          "operationName": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Optional operation name when the document contains multiple operations."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/",
+        "baseUrl": "https://graphql.bitquery.io",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "query": "{{query}}",
+          "variables": "{{variables}}",
+          "operationName": "{{operationName}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "combined.query": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Combined Database Query",
+      "description": "POST a caller-supplied GraphQL document to https://streaming.bitquery.io/graphql. Maps BITQUERY_COMBINED_DATABASE_QUERY. Official docs put dataset: combined in the document, not in a second URL.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "query"
+        ],
+        "properties": {
+          "query": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Caller-supplied GraphQL document. This connector does not choose or rewrite it."
+          },
+          "variables": {
+            "type": "object",
+            "description": "Optional GraphQL variables object."
+          },
+          "operationName": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Optional operation name when the document contains multiple operations."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/graphql",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "query": "{{query}}",
+          "variables": "{{variables}}",
+          "operationName": "{{operationName}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "eap.query": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Early Access Program Query",
+      "description": "POST a caller-supplied GraphQL document to https://streaming.bitquery.io/eap. Maps BITQUERY_EARLY_ACCESS_PROGRAM_QUERY. WebSocket subscriptions on wss://streaming.bitquery.io/eap are not this JSON request.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "query"
+        ],
+        "properties": {
+          "query": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Caller-supplied GraphQL document. This connector does not choose or rewrite it."
+          },
+          "variables": {
+            "type": "object",
+            "description": "Optional GraphQL variables object."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/eap",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "query": "{{query}}",
+          "variables": "{{variables}}",
+          "operationName": "{{operationName}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "realtime.query": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Realtime Database Query",
+      "description": "POST a caller-supplied GraphQL document to https://streaming.bitquery.io/graphql. Maps BITQUERY_REALTIME_DATABASE_QUERY. Omitting dataset uses realtime, which is the documented default.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "query"
+        ],
+        "properties": {
+          "query": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Caller-supplied GraphQL document. This connector does not choose or rewrite it."
+          },
+          "variables": {
+            "type": "object",
+            "description": "Optional GraphQL variables object."
+          },
+          "operationName": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Optional operation name when the document contains multiple operations."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/graphql",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "query": "{{query}}",
+          "variables": "{{variables}}",
+          "operationName": "{{operationName}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    }
+  }
+}

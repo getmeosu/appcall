@@ -1,0 +1,2538 @@
+{
+  "key": "claid-ai",
+  "name": "Claid.ai",
+  "version": "0.1.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "productivity"
+  ],
+  "auth": {
+    "type": "api_key",
+    "scopes": [],
+    "setup": {
+      "mode": "api_key",
+      "docsUrl": "https://docs.claid.ai/authentication",
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "Claid API key",
+          "required": true,
+          "secret": true
+        }
+      ]
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "api.claid.ai"
+    ]
+  },
+  "models": [
+    "image",
+    "scene",
+    "storage"
+  ],
+  "http": {
+    "baseUrl": "https://api.claid.ai/v1",
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "Authorization",
+      "value": "Bearer {{apiKey}}"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "RateLimit-Reset",
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "error_message",
+        "message",
+        "error"
+      ]
+    },
+    "headers": {
+      "Accept": "application/json"
+    }
+  },
+  "operations": {
+    "scenes.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 120000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Generate AI Backgrounds",
+      "description": "Create product scenes with POST /v1/scene/create. The JSON response lists temporary image URLs or storage URIs; this call does not download image bytes.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "description": "Scene create request.",
+        "properties": {
+          "object": {
+            "type": "object",
+            "additionalProperties": false,
+            "description": "Product image and placement. image_url is an https URL or a storage:// URI in the JSON body.",
+            "properties": {
+              "image_url": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 4096,
+                "description": "Product image URL or storage:// URI."
+              },
+              "placement_type": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 32,
+                "description": "Placement mode such as absolute."
+              },
+              "rotation_degree": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 360,
+                "description": "Rotation in degrees."
+              },
+              "scale": {
+                "type": "number",
+                "minimum": 0.01,
+                "maximum": 1,
+                "description": "Relative scale from 0.01 to 1."
+              },
+              "position": {
+                "type": "object",
+                "additionalProperties": false,
+                "description": "Relative position on the scene.",
+                "properties": {
+                  "x": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1,
+                    "description": "Horizontal position."
+                  },
+                  "y": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1,
+                    "description": "Vertical position."
+                  }
+                }
+              }
+            },
+            "required": [
+              "image_url"
+            ]
+          },
+          "scene": {
+            "type": "object",
+            "additionalProperties": false,
+            "description": "Background scene. Provide a prompt, a template, or an effect.",
+            "properties": {
+              "model": {
+                "type": "string",
+                "enum": [
+                  "v1",
+                  "v2"
+                ],
+                "description": "Scene model. v2 is the flagship model."
+              },
+              "prompt": {
+                "description": "Text prompt, or an object that asks Claid to generate one.",
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "minLength": 3,
+                    "maxLength": 2048,
+                    "description": "Scene prompt."
+                  },
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "description": "Autoprompt settings.",
+                    "properties": {
+                      "generate": {
+                        "type": "boolean",
+                        "description": "Generate the prompt."
+                      },
+                      "guidelines": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 2048,
+                        "description": "Prompt guidelines."
+                      }
+                    }
+                  }
+                ]
+              },
+              "negative_prompt": {
+                "type": "string",
+                "minLength": 3,
+                "maxLength": 2048,
+                "description": "Terms to exclude from the scene."
+              },
+              "template_url": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 4096,
+                "description": "Reference image URL or storage:// URI."
+              },
+              "template_mode": {
+                "type": "string",
+                "enum": [
+                  "transform",
+                  "adjust",
+                  "lock"
+                ],
+                "description": "How closely the background follows the template."
+              },
+              "color": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 32,
+                "description": "Hex background color or a named color."
+              },
+              "view": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 32,
+                "description": "Camera view such as front, top, or auto."
+              },
+              "aspect_ratio": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 16,
+                "description": "Scene aspect ratio such as 1:1."
+              },
+              "effect": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 32,
+                "description": "Scene effect such as shadows."
+              }
+            },
+            "minProperties": 1
+          },
+          "output": {
+            "description": "Where generated scene images are stored.",
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 4096,
+                "description": "Destination folder URI. Storage folders end with /."
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "description": "Scene output options.",
+                "properties": {
+                  "number_of_images": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 4,
+                    "description": "How many images to create. Default 4."
+                  },
+                  "destination": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 4096,
+                    "description": "Destination folder URI."
+                  },
+                  "format": {
+                    "type": "string",
+                    "enum": [
+                      "png",
+                      "jpeg",
+                      "webp",
+                      "avif"
+                    ],
+                    "description": "Output image format."
+                  },
+                  "resolution": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 8,
+                    "description": "Pixel budget such as 1MP or 2MP."
+                  }
+                }
+              }
+            ]
+          }
+        },
+        "required": [
+          "object",
+          "scene"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "input",
+              "output"
+            ],
+            "properties": {
+              "input": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "ext": {
+                    "type": "string"
+                  },
+                  "mps": {
+                    "type": "number"
+                  },
+                  "mime": {
+                    "type": "string"
+                  },
+                  "format": {
+                    "type": "string"
+                  },
+                  "width": {
+                    "type": "integer"
+                  },
+                  "height": {
+                    "type": "integer"
+                  },
+                  "text": {
+                    "type": "string"
+                  }
+                }
+              },
+              "output": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "ext": {
+                      "type": "string"
+                    },
+                    "mps": {
+                      "type": "number"
+                    },
+                    "mime": {
+                      "type": "string"
+                    },
+                    "format": {
+                      "type": "string"
+                    },
+                    "width": {
+                      "type": "integer"
+                    },
+                    "height": {
+                      "type": "integer"
+                    },
+                    "tmp_url": {
+                      "type": "string"
+                    },
+                    "object_key": {
+                      "type": "string"
+                    },
+                    "object_bucket": {
+                      "type": "string"
+                    },
+                    "object_uri": {
+                      "type": "string"
+                    },
+                    "claid_storage_uri": {
+                      "type": "string"
+                    }
+                  }
+                }
+              },
+              "profiling": {
+                "type": "object"
+              }
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/scene/create",
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response.data}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "object": "{{object}}",
+          "scene": "{{scene}}",
+          "output": "{{output}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "images.background.remove": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 120000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Remove Background",
+      "description": "Remove an image background with one POST /v1/image/edit JSON call. The response carries a temporary image URL, not image bytes.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "description": "Background removal request.",
+        "properties": {
+          "input": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096,
+            "description": "Source image URL or storage:// URI."
+          },
+          "operations": {
+            "type": "object",
+            "additionalProperties": false,
+            "description": "Background removal settings.",
+            "properties": {
+              "background": {
+                "type": "object",
+                "additionalProperties": false,
+                "description": "Removal, replacement color, or both.",
+                "properties": {
+                  "remove": {
+                    "description": "True to remove the background, or category and clipping settings.",
+                    "anyOf": [
+                      {
+                        "type": "boolean",
+                        "description": "Remove the whole background."
+                      },
+                      {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "description": "Category hint and clipping.",
+                        "properties": {
+                          "category": {
+                            "type": "string",
+                            "enum": [
+                              "general",
+                              "products",
+                              "cars"
+                            ],
+                            "description": "Removal category."
+                          },
+                          "clipping": {
+                            "type": "boolean",
+                            "description": "Crop to the subject bounds."
+                          }
+                        }
+                      }
+                    ]
+                  },
+                  "color": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 32,
+                    "description": "Replacement background color, for example #ffffff."
+                  }
+                }
+              }
+            },
+            "required": [
+              "background"
+            ]
+          },
+          "output": {
+            "description": "Optional output destination or format.",
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 4096,
+                "description": "Storage URI or temporary destination for the processed image."
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "description": "Format and destination for the processed image.",
+                "properties": {
+                  "destination": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 4096,
+                    "description": "Destination URI. Storage URIs use the storage:// scheme."
+                  },
+                  "format": {
+                    "type": "string",
+                    "enum": [
+                      "jpeg",
+                      "png",
+                      "webp",
+                      "avif",
+                      "tiff"
+                    ],
+                    "description": "Output image format."
+                  }
+                }
+              }
+            ]
+          }
+        },
+        "required": [
+          "input",
+          "operations"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "input",
+              "output"
+            ],
+            "properties": {
+              "input": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "ext": {
+                    "type": "string"
+                  },
+                  "mps": {
+                    "type": "number"
+                  },
+                  "mime": {
+                    "type": "string"
+                  },
+                  "format": {
+                    "type": "string"
+                  },
+                  "width": {
+                    "type": "integer"
+                  },
+                  "height": {
+                    "type": "integer"
+                  },
+                  "tmp_url": {
+                    "type": "string"
+                  },
+                  "object_key": {
+                    "type": "string"
+                  },
+                  "object_bucket": {
+                    "type": "string"
+                  },
+                  "object_uri": {
+                    "type": "string"
+                  },
+                  "claid_storage_uri": {
+                    "type": "string"
+                  }
+                }
+              },
+              "output": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "ext": {
+                    "type": "string"
+                  },
+                  "mps": {
+                    "type": "number"
+                  },
+                  "mime": {
+                    "type": "string"
+                  },
+                  "format": {
+                    "type": "string"
+                  },
+                  "width": {
+                    "type": "integer"
+                  },
+                  "height": {
+                    "type": "integer"
+                  },
+                  "tmp_url": {
+                    "type": "string"
+                  },
+                  "object_key": {
+                    "type": "string"
+                  },
+                  "object_bucket": {
+                    "type": "string"
+                  },
+                  "object_uri": {
+                    "type": "string"
+                  },
+                  "claid_storage_uri": {
+                    "type": "string"
+                  }
+                }
+              },
+              "profiling": {
+                "type": "object"
+              }
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/image/edit",
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response.data}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "input": "{{input}}",
+          "operations": "{{operations}}",
+          "output": "{{output}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "storages.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 5242880,
+      "title": "Get Storage Details",
+      "description": "Read one connected storage with GET /v1/storage/storages/{storage_id}.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "description": "Storage id to read.",
+        "properties": {
+          "storageId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Storage id. Composio calls this storage_id."
+          }
+        },
+        "required": [
+          "storageId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "name",
+              "type",
+              "parameters",
+              "created_at"
+            ],
+            "properties": {
+              "id": {
+                "type": "integer"
+              },
+              "name": {
+                "type": "string"
+              },
+              "type": {
+                "type": "string"
+              },
+              "parameters": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "path": {
+                    "type": "string"
+                  },
+                  "bucket": {
+                    "type": "string"
+                  },
+                  "base_url": {
+                    "type": "string"
+                  },
+                  "credentials": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "access_key": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              },
+              "created_at": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/storage/storages/{{storageId}}",
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response.data}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "storages.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Connect New Storage",
+      "description": "Connect an S3, GCS, or web folder storage with POST /v1/storage/storages. parameters is the official JSON object.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "description": "New storage connector.",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 50,
+            "description": "Storage name inside Claid."
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "s3",
+              "gcs",
+              "web_folder"
+            ],
+            "description": "Storage connector type."
+          },
+          "parameters": {
+            "description": "Connector parameters. Cloud buckets require a bucket and credentials. A web folder requires base_url.",
+            "anyOf": [
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "description": "S3 or GCS bucket parameters. Credentials are sent only on create or update.",
+                "properties": {
+                  "path": {
+                    "type": "string",
+                    "minLength": 0,
+                    "maxLength": 1024,
+                    "description": "Optional prefix prepended to object keys."
+                  },
+                  "bucket": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 255,
+                    "description": "Bucket name."
+                  },
+                  "credentials": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "description": "Cloud access keys. The secret is not returned by later reads.",
+                    "properties": {
+                      "access_key": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 256,
+                        "description": "Access key."
+                      },
+                      "secret_access_key": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 256,
+                        "description": "Secret access key."
+                      }
+                    },
+                    "required": [
+                      "access_key",
+                      "secret_access_key"
+                    ]
+                  }
+                },
+                "required": [
+                  "bucket",
+                  "credentials"
+                ]
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "description": "Web folder parameters. base_url is stored by Claid; this connector still calls only api.claid.ai.",
+                "properties": {
+                  "base_url": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 4096,
+                    "description": "Base URL of the web folder Claid will read."
+                  }
+                },
+                "required": [
+                  "base_url"
+                ]
+              }
+            ]
+          }
+        },
+        "required": [
+          "name",
+          "type",
+          "parameters"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "name",
+              "type",
+              "parameters",
+              "created_at"
+            ],
+            "properties": {
+              "id": {
+                "type": "integer"
+              },
+              "name": {
+                "type": "string"
+              },
+              "type": {
+                "type": "string"
+              },
+              "parameters": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "path": {
+                    "type": "string"
+                  },
+                  "bucket": {
+                    "type": "string"
+                  },
+                  "base_url": {
+                    "type": "string"
+                  },
+                  "credentials": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "access_key": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              },
+              "created_at": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/storage/storages",
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response.data}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "name": "{{name}}",
+          "type": "{{type}}",
+          "parameters": "{{parameters}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "images.resize.generative": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 120000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Generative Resize",
+      "description": "Outpaint an image to a new canvas with one POST /v1/image/edit JSON call. The response carries a temporary image URL, not image bytes.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "description": "Generative resize request.",
+        "properties": {
+          "input": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096,
+            "description": "Source image URL or storage:// URI."
+          },
+          "operations": {
+            "type": "object",
+            "additionalProperties": false,
+            "description": "Generative resize. Fit must be outpaint.",
+            "properties": {
+              "resizing": {
+                "type": "object",
+                "additionalProperties": false,
+                "description": "Target canvas and outpaint fit.",
+                "properties": {
+                  "width": {
+                    "description": "Output width in pixels, auto, or a percentage.",
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": 1,
+                        "description": "Size in pixels."
+                      },
+                      {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 16,
+                        "description": "Size as auto or a percentage such as 150%."
+                      }
+                    ]
+                  },
+                  "height": {
+                    "description": "Output height in pixels, auto, or a percentage.",
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": 1,
+                        "description": "Size in pixels."
+                      },
+                      {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 16,
+                        "description": "Size as auto or a percentage such as 150%."
+                      }
+                    ]
+                  },
+                  "fit": {
+                    "description": "Outpaint fit. A string or an object with feathering.",
+                    "anyOf": [
+                      {
+                        "const": "outpaint",
+                        "description": "Generate the new canvas edges."
+                      },
+                      {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "description": "Outpaint fit options.",
+                        "properties": {
+                          "type": {
+                            "const": "outpaint",
+                            "description": "Fit type."
+                          },
+                          "feathering": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 16,
+                            "description": "Edge feathering such as 20%."
+                          },
+                          "outpaint_by": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 64,
+                            "description": "Extra canvas on each side, for example 20% 10%."
+                          }
+                        },
+                        "required": [
+                          "type"
+                        ]
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "width",
+                  "height",
+                  "fit"
+                ]
+              }
+            },
+            "required": [
+              "resizing"
+            ]
+          },
+          "output": {
+            "description": "Optional output destination or format.",
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 4096,
+                "description": "Storage URI or temporary destination for the processed image."
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "description": "Format and destination for the processed image.",
+                "properties": {
+                  "destination": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 4096,
+                    "description": "Destination URI. Storage URIs use the storage:// scheme."
+                  },
+                  "format": {
+                    "type": "string",
+                    "enum": [
+                      "jpeg",
+                      "png",
+                      "webp",
+                      "avif",
+                      "tiff"
+                    ],
+                    "description": "Output image format."
+                  }
+                }
+              }
+            ]
+          }
+        },
+        "required": [
+          "input",
+          "operations"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "input",
+              "output"
+            ],
+            "properties": {
+              "input": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "ext": {
+                    "type": "string"
+                  },
+                  "mps": {
+                    "type": "number"
+                  },
+                  "mime": {
+                    "type": "string"
+                  },
+                  "format": {
+                    "type": "string"
+                  },
+                  "width": {
+                    "type": "integer"
+                  },
+                  "height": {
+                    "type": "integer"
+                  },
+                  "tmp_url": {
+                    "type": "string"
+                  },
+                  "object_key": {
+                    "type": "string"
+                  },
+                  "object_bucket": {
+                    "type": "string"
+                  },
+                  "object_uri": {
+                    "type": "string"
+                  },
+                  "claid_storage_uri": {
+                    "type": "string"
+                  }
+                }
+              },
+              "output": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "ext": {
+                    "type": "string"
+                  },
+                  "mps": {
+                    "type": "number"
+                  },
+                  "mime": {
+                    "type": "string"
+                  },
+                  "format": {
+                    "type": "string"
+                  },
+                  "width": {
+                    "type": "integer"
+                  },
+                  "height": {
+                    "type": "integer"
+                  },
+                  "tmp_url": {
+                    "type": "string"
+                  },
+                  "object_key": {
+                    "type": "string"
+                  },
+                  "object_bucket": {
+                    "type": "string"
+                  },
+                  "object_uri": {
+                    "type": "string"
+                  },
+                  "claid_storage_uri": {
+                    "type": "string"
+                  }
+                }
+              },
+              "profiling": {
+                "type": "object"
+              }
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/image/edit",
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response.data}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "input": "{{input}}",
+          "operations": "{{operations}}",
+          "output": "{{output}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "images.aiEdit": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 60000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Image AI Edit Async",
+      "description": "Submit one text-driven edit with POST /v1/image/ai-edit. The JSON body is the accepted task, including result_url. This operation does not poll that URL.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "description": "Async AI edit request.",
+        "properties": {
+          "input": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096,
+            "description": "Source image URL or storage:// URI."
+          },
+          "output": {
+            "description": "Async edit output destination.",
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 4096,
+                "description": "Destination URI."
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "description": "Output count, destination, and format.",
+                "properties": {
+                  "number_of_images": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 4,
+                    "description": "How many images to return."
+                  },
+                  "destination": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 4096,
+                    "description": "Destination URI."
+                  },
+                  "format": {
+                    "type": "string",
+                    "enum": [
+                      "png",
+                      "jpeg",
+                      "webp",
+                      "avif"
+                    ],
+                    "description": "Output image format."
+                  }
+                }
+              }
+            ]
+          },
+          "options": {
+            "type": "object",
+            "additionalProperties": false,
+            "description": "Text-driven edit options.",
+            "properties": {
+              "model": {
+                "type": "string",
+                "enum": [
+                  "v1",
+                  "v2"
+                ],
+                "description": "Edit model. Default v2."
+              },
+              "prompt": {
+                "type": "string",
+                "minLength": 3,
+                "maxLength": 5000,
+                "description": "Instruction for the edit."
+              },
+              "aspect_ratio": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 16,
+                "description": "Output aspect ratio such as 1:1."
+              },
+              "inference_steps": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 50,
+                "description": "Inference steps."
+              },
+              "guidance_scale": {
+                "type": "number",
+                "minimum": 1,
+                "maximum": 10,
+                "description": "How closely the edit follows the prompt."
+              }
+            },
+            "required": [
+              "prompt"
+            ]
+          }
+        },
+        "required": [
+          "input",
+          "options"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "status",
+              "created_at",
+              "request"
+            ],
+            "properties": {
+              "id": {
+                "type": "integer"
+              },
+              "status": {
+                "type": "string"
+              },
+              "result_url": {
+                "type": "string"
+              },
+              "created_at": {
+                "type": "string"
+              },
+              "request": {
+                "type": "object"
+              },
+              "errors": {
+                "type": "array"
+              },
+              "results": {
+                "type": "array"
+              }
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/image/ai-edit",
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response.data}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "input": "{{input}}",
+          "output": "{{output}}",
+          "options": "{{options}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "images.edit.batch": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 60000,
+      "maxInputBytes": 262144,
+      "maxResponseBytes": 5242880,
+      "title": "Image Edit Batch",
+      "description": "Submit one batch edit with POST /v1/image/edit/batch. The JSON body is the accepted job, including result_url. This operation does not poll that URL.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "description": "Batch image edit request.",
+        "properties": {
+          "input": {
+            "description": "One image URL, a list of image URLs, or a storage folder.",
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 4096,
+                "description": "One public image URL or storage:// URI."
+              },
+              {
+                "type": "array",
+                "minItems": 1,
+                "description": "Public image URLs.",
+                "items": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 4096,
+                  "description": "One public image URL."
+                }
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "description": "Storage folder input.",
+                "properties": {
+                  "source": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 4096,
+                    "description": "Storage folder URI, for example storage://name/folder/."
+                  },
+                  "recursive": {
+                    "type": "boolean",
+                    "description": "Also process subfolders."
+                  }
+                },
+                "required": [
+                  "source"
+                ]
+              }
+            ]
+          },
+          "operations": {
+            "type": "object",
+            "additionalProperties": false,
+            "description": "Image editing operations applied to every image in the batch.",
+            "properties": {
+              "restorations": {
+                "type": "object",
+                "description": "Polish, upscale, or decompress."
+              },
+              "adjustments": {
+                "type": "object",
+                "description": "HDR, exposure, saturation, contrast, or sharpness."
+              },
+              "background": {
+                "type": "object",
+                "description": "Background removal, color, or blur."
+              },
+              "resizing": {
+                "type": "object",
+                "description": "Width, height, and fit."
+              },
+              "padding": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 64,
+                "description": "Padding around the subject."
+              },
+              "privacy": {
+                "type": "object",
+                "description": "License-plate blur or identity crop."
+              },
+              "generative": {
+                "type": "object",
+                "description": "Style transfer."
+              }
+            },
+            "minProperties": 1
+          },
+          "output": {
+            "description": "Optional output folder URI or format object.",
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 4096,
+                "description": "Storage URI or temporary destination for the processed image."
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "description": "Format and destination for the processed image.",
+                "properties": {
+                  "destination": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 4096,
+                    "description": "Destination URI. Storage URIs use the storage:// scheme."
+                  },
+                  "format": {
+                    "type": "string",
+                    "enum": [
+                      "jpeg",
+                      "png",
+                      "webp",
+                      "avif",
+                      "tiff"
+                    ],
+                    "description": "Output image format."
+                  }
+                }
+              }
+            ]
+          }
+        },
+        "required": [
+          "input",
+          "operations"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "status",
+              "created_at",
+              "request"
+            ],
+            "properties": {
+              "id": {
+                "type": "integer"
+              },
+              "status": {
+                "type": "string"
+              },
+              "result_url": {
+                "type": "string"
+              },
+              "created_at": {
+                "type": "string"
+              },
+              "request": {
+                "type": "object"
+              },
+              "errors": {
+                "type": "array"
+              },
+              "results": {
+                "type": "array"
+              }
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/image/edit/batch",
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response.data}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "input": "{{input}}",
+          "operations": "{{operations}}",
+          "output": "{{output}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "images.generate": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 120000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Generate AI Images",
+      "description": "Generate images from a text prompt with POST /v1/image/generate. The JSON response lists temporary image URLs; this call does not download image bytes.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "description": "Text-to-image request.",
+        "properties": {
+          "input": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 1024,
+            "description": "Prompt for the image."
+          },
+          "options": {
+            "type": "object",
+            "additionalProperties": false,
+            "description": "How many images to generate and how closely to follow the prompt.",
+            "properties": {
+              "number_of_images": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 4,
+                "description": "Image count from 1 to 4."
+              },
+              "guidance_scale": {
+                "type": "number",
+                "minimum": 1,
+                "maximum": 49,
+                "description": "Prompt adherence. Values from 5 to 7 are typical."
+              }
+            }
+          },
+          "output": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096,
+            "description": "Optional storage folder URI. It must end with /."
+          }
+        },
+        "required": [
+          "input"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "input",
+              "output"
+            ],
+            "properties": {
+              "input": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "text": {
+                    "type": "string"
+                  }
+                }
+              },
+              "output": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "ext": {
+                      "type": "string"
+                    },
+                    "mps": {
+                      "type": "number"
+                    },
+                    "mime": {
+                      "type": "string"
+                    },
+                    "format": {
+                      "type": "string"
+                    },
+                    "width": {
+                      "type": "integer"
+                    },
+                    "height": {
+                      "type": "integer"
+                    },
+                    "tmp_url": {
+                      "type": "string"
+                    },
+                    "object_key": {
+                      "type": "string"
+                    },
+                    "object_bucket": {
+                      "type": "string"
+                    },
+                    "object_uri": {
+                      "type": "string"
+                    },
+                    "claid_storage_uri": {
+                      "type": "string"
+                    }
+                  }
+                }
+              },
+              "profiling": {
+                "type": "object"
+              }
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/image/generate",
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response.data}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "input": "{{input}}",
+          "options": "{{options}}",
+          "output": "{{output}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "images.privacy.blurPlate": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 120000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Blur License Plates",
+      "description": "Blur license plates with one POST /v1/image/edit JSON call that sets privacy.blur_car_plate. The response carries a temporary image URL, not image bytes.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "description": "License plate blur request.",
+        "properties": {
+          "input": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096,
+            "description": "Source image URL or storage:// URI."
+          },
+          "output": {
+            "description": "Optional output destination or format.",
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 4096,
+                "description": "Storage URI or temporary destination for the processed image."
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "description": "Format and destination for the processed image.",
+                "properties": {
+                  "destination": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 4096,
+                    "description": "Destination URI. Storage URIs use the storage:// scheme."
+                  },
+                  "format": {
+                    "type": "string",
+                    "enum": [
+                      "jpeg",
+                      "png",
+                      "webp",
+                      "avif",
+                      "tiff"
+                    ],
+                    "description": "Output image format."
+                  }
+                }
+              }
+            ]
+          }
+        },
+        "required": [
+          "input"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "input",
+              "output"
+            ],
+            "properties": {
+              "input": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "ext": {
+                    "type": "string"
+                  },
+                  "mps": {
+                    "type": "number"
+                  },
+                  "mime": {
+                    "type": "string"
+                  },
+                  "format": {
+                    "type": "string"
+                  },
+                  "width": {
+                    "type": "integer"
+                  },
+                  "height": {
+                    "type": "integer"
+                  },
+                  "tmp_url": {
+                    "type": "string"
+                  },
+                  "object_key": {
+                    "type": "string"
+                  },
+                  "object_bucket": {
+                    "type": "string"
+                  },
+                  "object_uri": {
+                    "type": "string"
+                  },
+                  "claid_storage_uri": {
+                    "type": "string"
+                  }
+                }
+              },
+              "output": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "ext": {
+                    "type": "string"
+                  },
+                  "mps": {
+                    "type": "number"
+                  },
+                  "mime": {
+                    "type": "string"
+                  },
+                  "format": {
+                    "type": "string"
+                  },
+                  "width": {
+                    "type": "integer"
+                  },
+                  "height": {
+                    "type": "integer"
+                  },
+                  "tmp_url": {
+                    "type": "string"
+                  },
+                  "object_key": {
+                    "type": "string"
+                  },
+                  "object_bucket": {
+                    "type": "string"
+                  },
+                  "object_uri": {
+                    "type": "string"
+                  },
+                  "claid_storage_uri": {
+                    "type": "string"
+                  }
+                }
+              },
+              "profiling": {
+                "type": "object"
+              }
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/image/edit",
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response.data}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "input": "{{input}}",
+          "operations": {
+            "privacy": {
+              "blur_car_plate": true
+            }
+          },
+          "output": "{{output}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "storages.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Update Connected Storage",
+      "description": "Update a connected storage with PATCH /v1/storage/storages/{storage_id}. Send only the fields that change.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "description": "Storage update.",
+        "properties": {
+          "storageId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Storage id. Composio calls this storage_id."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 50,
+            "description": "New storage name."
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "web_folder",
+              "s3",
+              "gcs"
+            ],
+            "description": "New storage type."
+          },
+          "parameters": {
+            "type": "object",
+            "additionalProperties": false,
+            "description": "Partial storage parameters. Send only the fields to change.",
+            "properties": {
+              "path": {
+                "type": "string",
+                "minLength": 0,
+                "maxLength": 1024,
+                "description": "Optional prefix prepended to object keys."
+              },
+              "bucket": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 255,
+                "description": "Bucket name."
+              },
+              "base_url": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 4096,
+                "description": "Base URL of a web folder."
+              },
+              "credentials": {
+                "type": "object",
+                "additionalProperties": false,
+                "description": "Replacement cloud keys.",
+                "properties": {
+                  "access_key": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256,
+                    "description": "Access key."
+                  },
+                  "secret_access_key": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256,
+                    "description": "Secret access key."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "required": [
+          "storageId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "name",
+              "type",
+              "parameters",
+              "created_at"
+            ],
+            "properties": {
+              "id": {
+                "type": "integer"
+              },
+              "name": {
+                "type": "string"
+              },
+              "type": {
+                "type": "string"
+              },
+              "parameters": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "path": {
+                    "type": "string"
+                  },
+                  "bucket": {
+                    "type": "string"
+                  },
+                  "base_url": {
+                    "type": "string"
+                  },
+                  "credentials": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "access_key": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              },
+              "created_at": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/storage/storages/{{storageId}}",
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response.data}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "name": "{{name}}",
+          "type": "{{type}}",
+          "parameters": "{{parameters}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "images.polish": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 120000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Polish Image",
+      "description": "Polish an image with one POST /v1/image/edit JSON call that sets restorations.polish. The response carries a temporary image URL, not image bytes.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "description": "Polish request.",
+        "properties": {
+          "input": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096,
+            "description": "Source image URL or storage:// URI."
+          },
+          "output": {
+            "description": "Optional output destination or format.",
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 4096,
+                "description": "Storage URI or temporary destination for the processed image."
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "description": "Format and destination for the processed image.",
+                "properties": {
+                  "destination": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 4096,
+                    "description": "Destination URI. Storage URIs use the storage:// scheme."
+                  },
+                  "format": {
+                    "type": "string",
+                    "enum": [
+                      "jpeg",
+                      "png",
+                      "webp",
+                      "avif",
+                      "tiff"
+                    ],
+                    "description": "Output image format."
+                  }
+                }
+              }
+            ]
+          }
+        },
+        "required": [
+          "input"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "input",
+              "output"
+            ],
+            "properties": {
+              "input": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "ext": {
+                    "type": "string"
+                  },
+                  "mps": {
+                    "type": "number"
+                  },
+                  "mime": {
+                    "type": "string"
+                  },
+                  "format": {
+                    "type": "string"
+                  },
+                  "width": {
+                    "type": "integer"
+                  },
+                  "height": {
+                    "type": "integer"
+                  },
+                  "tmp_url": {
+                    "type": "string"
+                  },
+                  "object_key": {
+                    "type": "string"
+                  },
+                  "object_bucket": {
+                    "type": "string"
+                  },
+                  "object_uri": {
+                    "type": "string"
+                  },
+                  "claid_storage_uri": {
+                    "type": "string"
+                  }
+                }
+              },
+              "output": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "ext": {
+                    "type": "string"
+                  },
+                  "mps": {
+                    "type": "number"
+                  },
+                  "mime": {
+                    "type": "string"
+                  },
+                  "format": {
+                    "type": "string"
+                  },
+                  "width": {
+                    "type": "integer"
+                  },
+                  "height": {
+                    "type": "integer"
+                  },
+                  "tmp_url": {
+                    "type": "string"
+                  },
+                  "object_key": {
+                    "type": "string"
+                  },
+                  "object_bucket": {
+                    "type": "string"
+                  },
+                  "object_uri": {
+                    "type": "string"
+                  },
+                  "claid_storage_uri": {
+                    "type": "string"
+                  }
+                }
+              },
+              "profiling": {
+                "type": "object"
+              }
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/image/edit",
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response.data}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "input": "{{input}}",
+          "operations": {
+            "restorations": {
+              "polish": true
+            }
+          },
+          "output": "{{output}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "images.smartFrame": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 120000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Smart Frame",
+      "description": "Place an image on a canvas with padding using one POST /v1/image/edit JSON call and fit canvas. The response carries a temporary image URL, not image bytes.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "description": "Smart frame request.",
+        "properties": {
+          "input": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096,
+            "description": "Source image URL or storage:// URI."
+          },
+          "options": {
+            "type": "object",
+            "additionalProperties": false,
+            "description": "Canvas size, padding, and optional background color.",
+            "properties": {
+              "width": {
+                "type": "integer",
+                "minimum": 1,
+                "description": "Canvas width in pixels."
+              },
+              "height": {
+                "type": "integer",
+                "minimum": 1,
+                "description": "Canvas height in pixels."
+              },
+              "padding": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 64,
+                "description": "Padding on each side, for example 10% 25% or 30px."
+              },
+              "background": {
+                "type": "object",
+                "additionalProperties": false,
+                "description": "Replacement background color.",
+                "properties": {
+                  "color": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 32,
+                    "description": "Hex color such as #ffffff."
+                  }
+                },
+                "required": [
+                  "color"
+                ]
+              }
+            },
+            "required": [
+              "width",
+              "height"
+            ]
+          }
+        },
+        "required": [
+          "input",
+          "options"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "input",
+              "output"
+            ],
+            "properties": {
+              "input": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "ext": {
+                    "type": "string"
+                  },
+                  "mps": {
+                    "type": "number"
+                  },
+                  "mime": {
+                    "type": "string"
+                  },
+                  "format": {
+                    "type": "string"
+                  },
+                  "width": {
+                    "type": "integer"
+                  },
+                  "height": {
+                    "type": "integer"
+                  },
+                  "tmp_url": {
+                    "type": "string"
+                  },
+                  "object_key": {
+                    "type": "string"
+                  },
+                  "object_bucket": {
+                    "type": "string"
+                  },
+                  "object_uri": {
+                    "type": "string"
+                  },
+                  "claid_storage_uri": {
+                    "type": "string"
+                  }
+                }
+              },
+              "output": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "ext": {
+                    "type": "string"
+                  },
+                  "mps": {
+                    "type": "number"
+                  },
+                  "mime": {
+                    "type": "string"
+                  },
+                  "format": {
+                    "type": "string"
+                  },
+                  "width": {
+                    "type": "integer"
+                  },
+                  "height": {
+                    "type": "integer"
+                  },
+                  "tmp_url": {
+                    "type": "string"
+                  },
+                  "object_key": {
+                    "type": "string"
+                  },
+                  "object_bucket": {
+                    "type": "string"
+                  },
+                  "object_uri": {
+                    "type": "string"
+                  },
+                  "claid_storage_uri": {
+                    "type": "string"
+                  }
+                }
+              },
+              "profiling": {
+                "type": "object"
+              }
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/image/edit",
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response.data}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "input": "{{input}}",
+          "operations": {
+            "resizing": {
+              "width": "{{options.width}}",
+              "height": "{{options.height}}",
+              "fit": "canvas"
+            },
+            "padding": "{{options.padding}}",
+            "background": "{{options.background}}"
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "storages.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 5242880,
+      "title": "List Connected Storages",
+      "description": "List connected storages with GET /v1/storage/storages.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "description": "No input. Lists every storage on the account.",
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "id",
+                "name",
+                "type",
+                "parameters",
+                "created_at"
+              ],
+              "properties": {
+                "id": {
+                  "type": "integer"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "type": {
+                  "type": "string"
+                },
+                "parameters": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "path": {
+                      "type": "string"
+                    },
+                    "bucket": {
+                      "type": "string"
+                    },
+                    "base_url": {
+                      "type": "string"
+                    },
+                    "credentials": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "access_key": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                },
+                "created_at": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/storage/storages",
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response.data}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "storages.types": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 5242880,
+      "title": "List Storage Types",
+      "description": "List storage connector types with GET /v1/storage/storage-types. Claid returns a JSON array of type names.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "description": "No input. Lists the supported storage types.",
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/storage/storage-types",
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response.data}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    }
+  }
+}

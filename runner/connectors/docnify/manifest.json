@@ -1,0 +1,949 @@
+{
+  "key": "docnify",
+  "name": "Docnify",
+  "version": "0.1.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "utility"
+  ],
+  "auth": {
+    "type": "api_key",
+    "scopes": [],
+    "setup": {
+      "mode": "api_key",
+      "docsUrl": "https://app.docnify.io/api/v1/openapi",
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "Docnify API token",
+          "required": true,
+          "secret": true
+        }
+      ]
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "app.docnify.io"
+    ]
+  },
+  "models": [
+    "document",
+    "template",
+    "recipient",
+    "field"
+  ],
+  "http": {
+    "baseUrl": "https://app.docnify.io/api/v1",
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "Authorization",
+      "value": "{{apiKey}}"
+    },
+    "errors": {
+      "messagePaths": [
+        "message"
+      ]
+    },
+    "headers": {
+      "Accept": "application/json"
+    }
+  },
+  "operations": {
+    "documents.recipients.add": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 2097152,
+      "title": "Add Document Recipient",
+      "description": "Add one recipient to a document. POST https://app.docnify.io/api/v1/documents/{documentId}/recipients returns the recipient JSON object.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "documentId",
+          "name",
+          "email",
+          "role"
+        ],
+        "properties": {
+          "documentId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Document ID. Live tool parameter documentId."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255,
+            "description": "Full name of the recipient."
+          },
+          "email": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 320,
+            "description": "Email address of the recipient."
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "SIGNER",
+              "APPROVER",
+              "VIEWER",
+              "ASSISTANT",
+              "CC"
+            ],
+            "description": "Recipient role."
+          },
+          "signingOrder": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Zero-based signing order. Omit for the document default."
+          },
+          "authOptions": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "actionAuth": {
+                "type": "array",
+                "maxItems": 8,
+                "items": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64
+                },
+                "description": "Enterprise action authentication types for this recipient."
+              }
+            },
+            "description": "Optional enterprise recipient authentication options."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/documents/{{documentId}}/recipients",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "name": "{{name}}",
+          "email": "{{email}}",
+          "role": "{{role}}",
+          "signingOrder": "{{signingOrder}}",
+          "authOptions": "{{authOptions}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "documents.fields.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "maxInputBytes": 262144,
+      "maxResponseBytes": 2097152,
+      "title": "Create Document Fields",
+      "description": "Create one or more fields on a document in one request. POST https://app.docnify.io/api/v1/documents/{documentId}/fields accepts a JSON array of field objects and returns JSON.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "documentId",
+          "fields"
+        ],
+        "properties": {
+          "documentId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Document ID. Live tool parameter documentId."
+          },
+          "fields": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 100,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "recipientId",
+                "type",
+                "pageNumber",
+                "pageX",
+                "pageY",
+                "pageWidth",
+                "pageHeight",
+                "fieldMeta"
+              ],
+              "properties": {
+                "recipientId": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "description": "Recipient who must complete this field."
+                },
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "SIGNATURE",
+                    "FREE_SIGNATURE",
+                    "INITIALS",
+                    "NAME",
+                    "EMAIL",
+                    "DATE",
+                    "TEXT",
+                    "NUMBER",
+                    "RADIO",
+                    "CHECKBOX",
+                    "DROPDOWN"
+                  ],
+                  "description": "Docnify field type."
+                },
+                "pageNumber": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "description": "1-based page number."
+                },
+                "pageX": {
+                  "type": "number",
+                  "description": "Horizontal position of the field."
+                },
+                "pageY": {
+                  "type": "number",
+                  "description": "Vertical position of the field."
+                },
+                "pageWidth": {
+                  "type": "number",
+                  "description": "Field width."
+                },
+                "pageHeight": {
+                  "type": "number",
+                  "description": "Field height."
+                },
+                "fieldMeta": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "description": "Field metadata such as label, required, and type-specific options."
+                }
+              }
+            },
+            "description": "Field definitions to add."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/documents/{{documentId}}/fields",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{{fields}}"
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "documents.delete": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "maxInputBytes": 8192,
+      "maxResponseBytes": 2097152,
+      "title": "Delete Document",
+      "description": "Delete one document by ID. DELETE https://app.docnify.io/api/v1/documents/{documentId} is body-less and returns the document JSON object.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "documentId"
+        ],
+        "properties": {
+          "documentId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Document ID. Live tool parameter id."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/documents/{{documentId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "documents.fields.delete": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "maxInputBytes": 8192,
+      "maxResponseBytes": 2097152,
+      "title": "Delete Document Field",
+      "description": "Delete one field from a document. DELETE https://app.docnify.io/api/v1/documents/{documentId}/fields/{fieldId} is body-less and returns the field JSON object.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "documentId",
+          "fieldId"
+        ],
+        "properties": {
+          "documentId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Document ID. Live tool parameter id."
+          },
+          "fieldId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Field ID. The live tool types fieldId as a string; the v1 path value is this positive integer."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/documents/{{documentId}}/fields/{{fieldId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "documents.recipients.delete": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "maxInputBytes": 8192,
+      "maxResponseBytes": 2097152,
+      "title": "Delete Document Recipient",
+      "description": "Remove one recipient from a document. DELETE https://app.docnify.io/api/v1/documents/{documentId}/recipients/{recipientId} is body-less and returns the recipient JSON object.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "documentId",
+          "recipientId"
+        ],
+        "properties": {
+          "documentId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Document ID. Live tool parameter document_id."
+          },
+          "recipientId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Recipient ID. Live tool parameter recipient_id."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/documents/{{documentId}}/recipients/{{recipientId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "documents.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 8192,
+      "maxResponseBytes": 2097152,
+      "title": "Get Document",
+      "description": "Fetch one document by ID, including recipients and fields. GET https://app.docnify.io/api/v1/documents/{documentId} returns a JSON object, not PDF bytes.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "documentId"
+        ],
+        "properties": {
+          "documentId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Document ID. Live tool parameter id."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/documents/{{documentId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "templates.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 8192,
+      "maxResponseBytes": 2097152,
+      "title": "Get Template",
+      "description": "Fetch one template by ID. GET https://app.docnify.io/api/v1/templates/{templateId} returns template JSON metadata.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "templateId"
+        ],
+        "properties": {
+          "templateId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Template ID. Live tool parameter template_id."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/templates/{{templateId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "documents.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 8192,
+      "maxResponseBytes": 2097152,
+      "title": "List Documents",
+      "description": "List documents in the account. GET https://app.docnify.io/api/v1/documents returns a JSON object with a documents array.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [],
+        "properties": {
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Page number. Defaults to 1 on the server when omitted."
+          },
+          "perPage": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Page size. Defaults to 10 on the server when omitted."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/documents",
+        "success": [
+          200
+        ],
+        "query": {
+          "page": "{{page}}",
+          "perPage": "{{perPage}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "templates.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 8192,
+      "maxResponseBytes": 2097152,
+      "title": "List Templates",
+      "description": "List templates in the account. GET https://app.docnify.io/api/v1/templates returns a JSON object with a templates array.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [],
+        "properties": {
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Page number. Defaults to 1 on the server when omitted."
+          },
+          "perPage": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Page size. Defaults to 10 on the server when omitted."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/templates",
+        "success": [
+          200
+        ],
+        "query": {
+          "page": "{{page}}",
+          "perPage": "{{perPage}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "documents.resend": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "maxInputBytes": 8192,
+      "maxResponseBytes": 2097152,
+      "title": "Resend Document",
+      "description": "Resend signing notifications for specific recipients. POST https://app.docnify.io/api/v1/documents/{documentId}/resend requires a JSON recipients array and returns a JSON message. The live tool page only lists id; the v1 body still requires recipient ids.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "documentId",
+          "recipients"
+        ],
+        "properties": {
+          "documentId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Document ID. Live tool parameter id."
+          },
+          "recipients": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 100,
+            "items": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "description": "Recipient IDs who should receive the signing notification again."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/documents/{{documentId}}/resend",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "recipients": "{{recipients}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "documents.send": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "maxInputBytes": 8192,
+      "maxResponseBytes": 2097152,
+      "title": "Send Document",
+      "description": "Send a document for signing. POST https://app.docnify.io/api/v1/documents/{documentId}/send accepts a JSON object and returns the document JSON plus a message. Omitted email flags use the server default.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "documentId"
+        ],
+        "properties": {
+          "documentId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Document ID. Live tool parameter id."
+          },
+          "sendEmail": {
+            "type": "boolean",
+            "description": "Whether to email recipients. The server defaults this to true when omitted."
+          },
+          "sendCompletionEmails": {
+            "type": "boolean",
+            "description": "Whether to send completion emails. Omit to keep the document email settings."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/documents/{{documentId}}/send",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "sendEmail": "{{sendEmail}}",
+          "sendCompletionEmails": "{{sendCompletionEmails}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "documents.fields.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 2097152,
+      "title": "Update Document Field",
+      "description": "Update one document field. PATCH https://app.docnify.io/api/v1/documents/{documentId}/fields/{fieldId} is the single JSON route for the live update-fields tool; each field is this same path, not a second route.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "documentId",
+          "fieldId"
+        ],
+        "properties": {
+          "documentId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Document ID. Live tool parameter documentId."
+          },
+          "fieldId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Field ID placed in the path. The v1 update route is one field per request."
+          },
+          "recipientId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Recipient who must complete this field."
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "SIGNATURE",
+              "FREE_SIGNATURE",
+              "INITIALS",
+              "NAME",
+              "EMAIL",
+              "DATE",
+              "TEXT",
+              "NUMBER",
+              "RADIO",
+              "CHECKBOX",
+              "DROPDOWN"
+            ],
+            "description": "Docnify field type."
+          },
+          "pageNumber": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "1-based page number."
+          },
+          "pageX": {
+            "type": "number",
+            "description": "Horizontal position of the field."
+          },
+          "pageY": {
+            "type": "number",
+            "description": "Vertical position of the field."
+          },
+          "pageWidth": {
+            "type": "number",
+            "description": "Field width."
+          },
+          "pageHeight": {
+            "type": "number",
+            "description": "Field height."
+          },
+          "fieldMeta": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Replacement field metadata, such as label or required."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/documents/{{documentId}}/fields/{{fieldId}}",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "recipientId": "{{recipientId}}",
+          "type": "{{type}}",
+          "pageNumber": "{{pageNumber}}",
+          "pageX": "{{pageX}}",
+          "pageY": "{{pageY}}",
+          "pageWidth": "{{pageWidth}}",
+          "pageHeight": "{{pageHeight}}",
+          "fieldMeta": "{{fieldMeta}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "documents.recipients.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "maxInputBytes": 8192,
+      "maxResponseBytes": 2097152,
+      "title": "Update Document Recipient",
+      "description": "Update a recipient name, email, or role. PATCH https://app.docnify.io/api/v1/documents/{documentId}/recipients/{recipientId} returns the recipient JSON object. Send at least one of name, email, or role.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "documentId",
+          "recipientId"
+        ],
+        "properties": {
+          "documentId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Document ID. Live tool parameter documentId."
+          },
+          "recipientId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Recipient ID. Live tool parameter recipientId."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255,
+            "description": "Full name of the recipient."
+          },
+          "email": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 320,
+            "description": "Email address of the recipient."
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "SIGNER",
+              "APPROVER",
+              "VIEWER",
+              "ASSISTANT",
+              "CC"
+            ],
+            "description": "Recipient role."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/documents/{{documentId}}/recipients/{{recipientId}}",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "name": "{{name}}",
+          "email": "{{email}}",
+          "role": "{{role}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    }
+  }
+}

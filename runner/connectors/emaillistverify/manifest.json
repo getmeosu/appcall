@@ -1,0 +1,446 @@
+{
+  "key": "emaillistverify",
+  "name": "EmailListVerify",
+  "version": "0.1.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "email"
+  ],
+  "auth": {
+    "type": "api_key",
+    "scopes": [],
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "EmailListVerify API key",
+          "required": true,
+          "secret": true
+        }
+      ]
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "api.emaillistverify.com"
+    ]
+  },
+  "models": [
+    "email",
+    "credit",
+    "maillist",
+    "contact",
+    "blacklist",
+    "job"
+  ],
+  "http": {
+    "baseUrl": "https://api.emaillistverify.com",
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "x-api-key",
+      "value": "{{apiKey}}"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "Retry-After",
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "message",
+        "error"
+      ]
+    },
+    "headers": {
+      "Accept": "application/json"
+    }
+  },
+  "operations": {
+    "healthcheck": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "title": "Healthcheck",
+      "description": "Validate the EmailListVerify API key by reading the credit balance.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/credits",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "blacklists.check": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 8192,
+      "maxResponseBytes": 1048576,
+      "title": "Check blacklists",
+      "description": "Check an IPv4 address, IPv6 address, or domain against DNS-based blacklists.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "value": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255,
+            "description": "IP address or domain to check. Maximum 255 characters."
+          }
+        },
+        "required": [
+          "value"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/api/checkBlacklists",
+        "success": [
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "value": "{{value}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "domains.checkDisposable": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 8192,
+      "maxResponseBytes": 65536,
+      "title": "Check disposable domain",
+      "description": "Check whether an email domain issues temporary addresses and has usable MX records.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "domain": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255,
+            "description": "Email domain to check, for example temporarydomain.net."
+          }
+        },
+        "required": [
+          "domain"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/api/checkDisposable",
+        "success": [
+          201
+        ],
+        "query": {
+          "domain": "{{domain}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "contacts.find": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 1048576,
+      "title": "Find contact email",
+      "description": "Search for a business email by company domain and optional name. Success is a JSON array of candidates.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "domain": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255,
+            "description": "Company email domain, for example connelycorp.com."
+          },
+          "firstName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255,
+            "description": "Optional contact first name."
+          },
+          "lastName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255,
+            "description": "Optional contact last name."
+          }
+        },
+        "required": [
+          "domain"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/api/findContact",
+        "success": [
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "firstName": "{{firstName}}",
+          "lastName": "{{lastName}}",
+          "domain": "{{domain}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "credits.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "title": "Get credits",
+      "description": "Read on-demand and subscription credit balances.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/credits",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "emailJobs.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 8192,
+      "maxResponseBytes": 1048576,
+      "title": "Get email job status",
+      "description": "Read one asynchronous email verification job by ID.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "description": "Email verification job ID."
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/emailJobs/{{id}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "maillists.progress": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 8192,
+      "maxResponseBytes": 1048576,
+      "title": "Get maillist progress",
+      "description": "Read status, completion percentage, and credit usage for one uploaded email list.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "description": "Uploaded email list ID."
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/maillists/{{id}}/progress",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "emails.verifyDetailed": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 8192,
+      "maxResponseBytes": 65536,
+      "title": "Verify single email detailed",
+      "description": "Verify one email address and return deliverability metadata as JSON.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "email": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 320,
+            "description": "Email address to verify."
+          }
+        },
+        "required": [
+          "email"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/verifyEmailDetailed",
+        "success": [
+          200
+        ],
+        "query": {
+          "email": "{{email}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    }
+  }
+}

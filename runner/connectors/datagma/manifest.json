@@ -1,0 +1,658 @@
+{
+  "key": "datagma",
+  "name": "Datagma",
+  "version": "0.1.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "utility"
+  ],
+  "auth": {
+    "type": "api_key",
+    "scopes": [],
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "Datagma API key",
+          "required": true,
+          "secret": true
+        }
+      ]
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "gateway.datagma.net"
+    ]
+  },
+  "models": [
+    "person",
+    "company",
+    "email",
+    "phone",
+    "twitter",
+    "credit",
+    "job-change"
+  ],
+  "http": {
+    "baseUrl": "https://gateway.datagma.net/api/ingress",
+    "auth": {
+      "field": "apiKey",
+      "in": "query",
+      "name": "apiId",
+      "value": "{{apiKey}}"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "Retry-After",
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "message"
+      ]
+    },
+    "headers": {
+      "Accept": "application/json"
+    }
+  },
+  "operations": {
+    "people.enrich": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 60000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 5242880,
+      "title": "Enrich person or company",
+      "description": "Enrich a person or company with GET /v2/full. data is a LinkedIn URL, email, domain, company name, or SIREN. Name fields disambiguate. Returns a JSON object.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2048,
+            "description": "LinkedIn URL, email, domain, company name, or SIREN number."
+          },
+          "companyKeyword": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "Keyword used to disambiguate companies that share a name."
+          },
+          "countryCode": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 8,
+            "description": "ISO country code that narrows the match, such as US or FR."
+          },
+          "firstName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "Person first name. Use with lastName when data is a company."
+          },
+          "lastName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "Person last name. Use with firstName when data is a company."
+          },
+          "fullName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "Person full name. Alternative to firstName and lastName."
+          },
+          "companyPremium": {
+            "type": "boolean",
+            "description": "Include LinkedIn company information when true."
+          },
+          "companyFull": {
+            "type": "boolean",
+            "description": "Include extended company funding, traffic, and technology data when true."
+          },
+          "companyFrench": {
+            "type": "boolean",
+            "description": "Include French SIREN directory data when true."
+          },
+          "personFull": {
+            "type": "boolean",
+            "description": "Include education, experience, skills, and posts when true."
+          },
+          "phoneFull": {
+            "type": "boolean",
+            "description": "Search for a cell phone when true. Requires a person name."
+          },
+          "deepTraffic": {
+            "type": "boolean",
+            "description": "Include detailed website traffic analysis when true."
+          },
+          "debug": {
+            "type": "boolean",
+            "description": "Include lower-confidence matches and scoring detail when true."
+          },
+          "whatsappCheck": {
+            "type": "boolean",
+            "description": "Check whether a returned phone is on WhatsApp when true."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/full",
+        "query": {
+          "data": "{{data}}",
+          "companyKeyword": "{{companyKeyword}}",
+          "countryCode": "{{countryCode}}",
+          "firstName": "{{firstName}}",
+          "lastName": "{{lastName}}",
+          "fullName": "{{fullName}}",
+          "companyPremium": "{{companyPremium}}",
+          "companyFull": "{{companyFull}}",
+          "companyFrench": "{{companyFrench}}",
+          "personFull": "{{personFull}}",
+          "phoneFull": "{{phoneFull}}",
+          "deepTraffic": "{{deepTraffic}}",
+          "debug": "{{debug}}",
+          "whatsappCheck": "{{whatsappCheck}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "email.find": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 60000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 1048576,
+      "title": "Find work email",
+      "description": "Find a verified work email with GET /v8/findEmail. Requires a full name or first and last name, plus a company domain or name or a LinkedIn company slug. Returns a JSON object.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "firstName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "Person first name. Use with lastName instead of fullName."
+          },
+          "lastName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "Person last name. Use with firstName instead of fullName."
+          },
+          "fullName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "Person full name. Alternative to firstName and lastName."
+          },
+          "company": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 300,
+            "description": "Company domain or company name."
+          },
+          "linkedInSlug": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500,
+            "description": "LinkedIn company URL. Used when the domain is unknown."
+          }
+        },
+        "anyOf": [
+          {
+            "required": [
+              "fullName",
+              "company"
+            ]
+          },
+          {
+            "required": [
+              "fullName",
+              "linkedInSlug"
+            ]
+          },
+          {
+            "required": [
+              "firstName",
+              "lastName",
+              "company"
+            ]
+          },
+          {
+            "required": [
+              "firstName",
+              "lastName",
+              "linkedInSlug"
+            ]
+          }
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v8/findEmail",
+        "query": {
+          "firstName": "{{firstName}}",
+          "lastName": "{{lastName}}",
+          "fullName": "{{fullName}}",
+          "company": "{{company}}",
+          "linkedInSlug": "{{linkedInSlug}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "phones.search": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 60000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 2097152,
+      "title": "Search phone numbers",
+      "description": "Find phone numbers with GET /v1/search from an email, a professional profile URL, or both. whatsappCheck is sent as whatsapp_check. Returns a JSON object.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "email": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 320,
+            "description": "Email address to search."
+          },
+          "username": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2048,
+            "description": "Professional profile URL. Sales Navigator URLs are not accepted by Datagma."
+          },
+          "minimumMatch": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Minimum confidence from 1 to 100. Datagma suggests 1."
+          },
+          "whatsappCheck": {
+            "type": "boolean",
+            "description": "Verify WhatsApp linkage. Sent as the whatsapp_check query parameter."
+          }
+        },
+        "anyOf": [
+          {
+            "required": [
+              "email"
+            ]
+          },
+          {
+            "required": [
+              "username"
+            ]
+          }
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/search",
+        "query": {
+          "email": "{{email}}",
+          "username": "{{username}}",
+          "minimumMatch": "{{minimumMatch}}",
+          "whatsapp_check": "{{whatsappCheck}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "credits.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "title": "Get credits",
+      "description": "Read the account credit balance with GET /v1/mine. email is optional. An echoed apiId is removed from the result. Returns a JSON object.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "email": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 320,
+            "description": "Account email. Omitted, the call uses the authenticated API key."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/mine",
+        "query": {
+          "email": "{{email}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "redactResponseKeys": [
+        "apiId"
+      ],
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "twitter.by-email": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "title": "Get Twitter profile by email",
+      "description": "Look up a Twitter profile from an email with GET /v1/twitter/by_email. Returns a JSON object, including status NOT_FOUND when there is no match.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "email"
+        ],
+        "properties": {
+          "email": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 320,
+            "description": "Email address to match to a Twitter account."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/twitter/by_email",
+        "query": {
+          "email": "{{email}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "twitter.by-username": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "title": "Get Twitter profile by username",
+      "description": "Enrich a Twitter username with GET /v1/twitter/by_username. username is the handle without @. Returns a JSON object.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "username"
+        ],
+        "properties": {
+          "username": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 50,
+            "description": "Twitter username without the @ prefix."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/twitter/by_username",
+        "query": {
+          "username": "{{username}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "phones.reverse": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "title": "Reverse phone lookup",
+      "description": "Reverse-lookup a phone with GET /v1/reverse_phone_lookup. code is the country calling code with a leading plus, and number is the national number. The route does not take one E.164 field or a caller-chosen URL. Returns a JSON object.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "number"
+        ],
+        "properties": {
+          "code": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 8,
+            "description": "Country calling code with a leading plus, such as +1 or +33."
+          },
+          "number": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 32,
+            "description": "National phone number without the country calling code."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/reverse_phone_lookup",
+        "query": {
+          "code": "{{code}}",
+          "number": "{{number}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "job-change.detect": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 60000,
+      "maxInputBytes": 8192,
+      "maxResponseBytes": 2097152,
+      "title": "Detect job change",
+      "description": "Detect a job change with GET /v4/update. The documented route takes fullName or firstName and lastName plus companyName, and an optional jobTitle. It does not accept an email query parameter. Returns a JSON object.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "firstName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "Person first name. Use with lastName and companyName."
+          },
+          "lastName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "Person last name. Use with firstName and companyName."
+          },
+          "fullName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "Person full name. Alternative to firstName and lastName."
+          },
+          "companyName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 300,
+            "description": "Last known company for this person."
+          },
+          "jobTitle": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "Last known job title, used when several people share the name."
+          }
+        },
+        "anyOf": [
+          {
+            "required": [
+              "fullName",
+              "companyName"
+            ]
+          },
+          {
+            "required": [
+              "firstName",
+              "lastName",
+              "companyName"
+            ]
+          }
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v4/update",
+        "query": {
+          "firstName": "{{firstName}}",
+          "lastName": "{{lastName}}",
+          "fullName": "{{fullName}}",
+          "companyName": "{{companyName}}",
+          "jobTitle": "{{jobTitle}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    }
+  }
+}

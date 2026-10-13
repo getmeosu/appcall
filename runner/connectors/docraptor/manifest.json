@@ -1,0 +1,797 @@
+{
+  "key": "docraptor",
+  "name": "DocRaptor",
+  "version": "0.1.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "utility",
+    "dev-tools"
+  ],
+  "auth": {
+    "type": "api_key",
+    "scopes": [],
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "DocRaptor API key",
+          "required": true,
+          "secret": true
+        }
+      ]
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "api.docraptor.com",
+      "docraptor.com"
+    ]
+  },
+  "models": [
+    "document",
+    "doc-status",
+    "ip"
+  ],
+  "http": {
+    "baseUrl": "https://api.docraptor.com",
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "Authorization",
+      "basic": {
+        "username": "{{apiKey}}",
+        "password": ""
+      }
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "Retry-After",
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "errors.0",
+        "error",
+        "message",
+        "validation_errors"
+      ]
+    },
+    "headers": {
+      "Accept": "application/json"
+    }
+  },
+  "operations": {
+    "docs.create-async": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 60000,
+      "maxInputBytes": 20971520,
+      "maxResponseBytes": 20971520,
+      "title": "Create Async Document",
+      "description": "Queue a PDF, XLS, or XLSX document. POST /async_docs returns JSON with status_id, not the file bytes.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "documentType",
+          "documentContent"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "Name stored with the document log."
+          },
+          "documentType": {
+            "type": "string",
+            "enum": [
+              "pdf",
+              "xls",
+              "xlsx"
+            ],
+            "description": "Output type. Sent as the type field."
+          },
+          "documentContent": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 16000000,
+            "description": "HTML or Excel XML. A document URL is not accepted."
+          },
+          "test": {
+            "type": "boolean",
+            "description": "Test mode watermarks PDFs and does not count against the plan."
+          },
+          "strict": {
+            "type": "string",
+            "enum": [
+              "none",
+              "html"
+            ]
+          },
+          "pipeline": {
+            "type": "string",
+            "enum": [
+              "6",
+              "7",
+              "8",
+              "9",
+              "9.2",
+              "10",
+              "10.1"
+            ]
+          },
+          "javascript": {
+            "type": "boolean"
+          },
+          "help": {
+            "type": "boolean"
+          },
+          "tag": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "ignoreResourceErrors": {
+            "type": "boolean"
+          },
+          "ignoreConsoleMessages": {
+            "type": "boolean"
+          },
+          "princeOptions": {
+            "type": "object",
+            "additionalProperties": false,
+            "description": "Prince options that are not URLs. baseurl and http_proxy are omitted.",
+            "properties": {
+              "media": {
+                "type": "string",
+                "enum": [
+                  "print",
+                  "screen"
+                ]
+              },
+              "javascript": {
+                "type": "boolean"
+              },
+              "max_passes": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 100
+              },
+              "no_xinclude": {
+                "type": "boolean"
+              },
+              "no_network": {
+                "type": "boolean"
+              },
+              "no_parallel_downloads": {
+                "type": "boolean"
+              },
+              "http_user": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              },
+              "http_password": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              },
+              "http_timeout": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 60
+              },
+              "insecure": {
+                "type": "boolean"
+              },
+              "no_author_style": {
+                "type": "boolean"
+              },
+              "no_default_style": {
+                "type": "boolean"
+              },
+              "no_embed_fonts": {
+                "type": "boolean"
+              },
+              "no_subset_fonts": {
+                "type": "boolean"
+              },
+              "no_compress": {
+                "type": "boolean"
+              },
+              "encrypt": {
+                "type": "boolean"
+              },
+              "key_bits": {
+                "type": "integer",
+                "enum": [
+                  40,
+                  128
+                ]
+              },
+              "user_password": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128
+              },
+              "owner_password": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128
+              },
+              "disallow_print": {
+                "type": "boolean"
+              },
+              "disallow_copy": {
+                "type": "boolean"
+              },
+              "disallow_annotate": {
+                "type": "boolean"
+              },
+              "disallow_modify": {
+                "type": "boolean"
+              },
+              "debug": {
+                "type": "boolean"
+              },
+              "input": {
+                "type": "string",
+                "enum": [
+                  "html",
+                  "xml",
+                  "auto"
+                ]
+              },
+              "css_dpi": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 2400
+              },
+              "profile": {
+                "type": "string",
+                "enum": [
+                  "PDF/A-1a",
+                  "PDF/A-1a+PDF/UA-1",
+                  "PDF/A-1b",
+                  "PDF/A-2a",
+                  "PDF/A-2a+PDF/UA-1",
+                  "PDF/A-2b",
+                  "PDF/A-3a",
+                  "PDF/A-3a+PDF/UA-1",
+                  "PDF/A-3b",
+                  "PDF/UA-1",
+                  "PDF/X-1a:2001",
+                  "PDF/X-1a:2003",
+                  "PDF/X-3:2002",
+                  "PDF/X-3:2003",
+                  "PDF/X-4"
+                ]
+              },
+              "pdf_title": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              },
+              "iframes": {
+                "type": "boolean"
+              },
+              "page_margin": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 32
+              },
+              "pdf_forms": {
+                "type": "boolean"
+              }
+            }
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "status_id"
+        ],
+        "properties": {
+          "status_id": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/async_docs",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "type": "{{documentType}}",
+          "name": "{{name}}",
+          "document_content": "{{documentContent}}",
+          "test": "{{test}}",
+          "strict": "{{strict}}",
+          "pipeline": "{{pipeline}}",
+          "javascript": "{{javascript}}",
+          "help": "{{help}}",
+          "tag": "{{tag}}",
+          "ignore_resource_errors": "{{ignoreResourceErrors}}",
+          "ignore_console_messages": "{{ignoreConsoleMessages}}",
+          "prince_options": "{{princeOptions}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "status_id": "{{response.status_id}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "docs.create-hosted-async": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 60000,
+      "maxInputBytes": 20971520,
+      "maxResponseBytes": 20971520,
+      "title": "Create Hosted Async Document",
+      "description": "Queue a hosted PDF, XLS, or XLSX document. POST /hosted_async_docs returns JSON with status_id. The later download URL is not requested.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "documentType",
+          "documentContent"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "Name stored with the document log."
+          },
+          "documentType": {
+            "type": "string",
+            "enum": [
+              "pdf",
+              "xls",
+              "xlsx"
+            ],
+            "description": "Output type. Sent as the type field."
+          },
+          "documentContent": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 16000000,
+            "description": "HTML or Excel XML. A document URL is not accepted."
+          },
+          "test": {
+            "type": "boolean",
+            "description": "Test mode watermarks PDFs and does not count against the plan."
+          },
+          "strict": {
+            "type": "string",
+            "enum": [
+              "none",
+              "html"
+            ]
+          },
+          "pipeline": {
+            "type": "string",
+            "enum": [
+              "6",
+              "7",
+              "8",
+              "9",
+              "9.2",
+              "10",
+              "10.1"
+            ]
+          },
+          "javascript": {
+            "type": "boolean"
+          },
+          "help": {
+            "type": "boolean"
+          },
+          "tag": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "ignoreResourceErrors": {
+            "type": "boolean"
+          },
+          "ignoreConsoleMessages": {
+            "type": "boolean"
+          },
+          "princeOptions": {
+            "type": "object",
+            "additionalProperties": false,
+            "description": "Prince options that are not URLs. baseurl and http_proxy are omitted.",
+            "properties": {
+              "media": {
+                "type": "string",
+                "enum": [
+                  "print",
+                  "screen"
+                ]
+              },
+              "javascript": {
+                "type": "boolean"
+              },
+              "max_passes": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 100
+              },
+              "no_xinclude": {
+                "type": "boolean"
+              },
+              "no_network": {
+                "type": "boolean"
+              },
+              "no_parallel_downloads": {
+                "type": "boolean"
+              },
+              "http_user": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              },
+              "http_password": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              },
+              "http_timeout": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 60
+              },
+              "insecure": {
+                "type": "boolean"
+              },
+              "no_author_style": {
+                "type": "boolean"
+              },
+              "no_default_style": {
+                "type": "boolean"
+              },
+              "no_embed_fonts": {
+                "type": "boolean"
+              },
+              "no_subset_fonts": {
+                "type": "boolean"
+              },
+              "no_compress": {
+                "type": "boolean"
+              },
+              "encrypt": {
+                "type": "boolean"
+              },
+              "key_bits": {
+                "type": "integer",
+                "enum": [
+                  40,
+                  128
+                ]
+              },
+              "user_password": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128
+              },
+              "owner_password": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128
+              },
+              "disallow_print": {
+                "type": "boolean"
+              },
+              "disallow_copy": {
+                "type": "boolean"
+              },
+              "disallow_annotate": {
+                "type": "boolean"
+              },
+              "disallow_modify": {
+                "type": "boolean"
+              },
+              "debug": {
+                "type": "boolean"
+              },
+              "input": {
+                "type": "string",
+                "enum": [
+                  "html",
+                  "xml",
+                  "auto"
+                ]
+              },
+              "css_dpi": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 2400
+              },
+              "profile": {
+                "type": "string",
+                "enum": [
+                  "PDF/A-1a",
+                  "PDF/A-1a+PDF/UA-1",
+                  "PDF/A-1b",
+                  "PDF/A-2a",
+                  "PDF/A-2a+PDF/UA-1",
+                  "PDF/A-2b",
+                  "PDF/A-3a",
+                  "PDF/A-3a+PDF/UA-1",
+                  "PDF/A-3b",
+                  "PDF/UA-1",
+                  "PDF/X-1a:2001",
+                  "PDF/X-1a:2003",
+                  "PDF/X-3:2002",
+                  "PDF/X-3:2003",
+                  "PDF/X-4"
+                ]
+              },
+              "pdf_title": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              },
+              "iframes": {
+                "type": "boolean"
+              },
+              "page_margin": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 32
+              },
+              "pdf_forms": {
+                "type": "boolean"
+              }
+            }
+          },
+          "hostedDownloadLimit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000,
+            "description": "Download cap for the hosted file."
+          },
+          "hostedExpiresAt": {
+            "type": "string",
+            "minLength": 19,
+            "maxLength": 40,
+            "description": "ISO 8601 expiration, to the second."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "status_id"
+        ],
+        "properties": {
+          "status_id": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/hosted_async_docs",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "type": "{{documentType}}",
+          "name": "{{name}}",
+          "document_content": "{{documentContent}}",
+          "test": "{{test}}",
+          "strict": "{{strict}}",
+          "pipeline": "{{pipeline}}",
+          "javascript": "{{javascript}}",
+          "help": "{{help}}",
+          "tag": "{{tag}}",
+          "ignore_resource_errors": "{{ignoreResourceErrors}}",
+          "ignore_console_messages": "{{ignoreConsoleMessages}}",
+          "hosted_download_limit": "{{hostedDownloadLimit}}",
+          "hosted_expires_at": "{{hostedExpiresAt}}",
+          "prince_options": "{{princeOptions}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "status_id": "{{response.status_id}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "docs.status": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "title": "Get Async Document Status",
+      "description": "Read the JSON status of an async document, including download_url when completed. This call does not download the file.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "statusId"
+        ],
+        "properties": {
+          "statusId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "status_id returned by async document creation."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "status"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "minLength": 1
+          },
+          "download_url": {
+            "type": "string"
+          },
+          "download_id": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "number_of_pages": {
+            "type": "integer"
+          },
+          "validation_errors": {
+            "type": "string"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "baseUrl": "https://docraptor.com",
+        "path": "/status/{{statusId}}",
+        "success": [
+          200
+        ],
+        "result": {
+          "status": "{{response.status}}",
+          "download_url": "{{response.download_url}}",
+          "download_id": "{{response.download_id}}",
+          "message": "{{response.message}}",
+          "number_of_pages": "{{response.number_of_pages}}",
+          "validation_errors": "{{response.validation_errors}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "docs.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 8192,
+      "maxResponseBytes": 10485760,
+      "title": "List Documents (JSON)",
+      "description": "List previously created document metadata as JSON. The response array is wrapped as documents. File bytes are not returned.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Page number. Default at DocRaptor is 1."
+          },
+          "perPage": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Documents per page. Default at DocRaptor is 100."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "documents"
+        ],
+        "properties": {
+          "documents": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/docs.json",
+        "query": {
+          "page": "{{page}}",
+          "per_page": "{{perPage}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "documents": "{{response}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "ips.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 1024,
+      "maxResponseBytes": 65536,
+      "title": "List IPs (JSON)",
+      "description": "List the IP addresses DocRaptor uses to download assets. The JSON array is wrapped as ips.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "ips"
+        ],
+        "properties": {
+          "ips": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "baseUrl": "https://docraptor.com",
+        "path": "/ips.json",
+        "success": [
+          200
+        ],
+        "result": {
+          "ips": "{{response}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    }
+  }
+}

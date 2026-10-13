@@ -1,0 +1,1219 @@
+{
+  "key": "craftmypdf",
+  "name": "CraftMyPDF",
+  "version": "0.1.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "utility"
+  ],
+  "auth": {
+    "type": "api_key",
+    "scopes": [],
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "CraftMyPDF API key",
+          "required": true,
+          "secret": true
+        }
+      ]
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "api.craftmypdf.com"
+    ]
+  },
+  "models": [
+    "account",
+    "template",
+    "transaction",
+    "pdf",
+    "editor-session"
+  ],
+  "http": {
+    "baseUrl": "https://api.craftmypdf.com/v1",
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "X-API-KEY",
+      "value": "{{apiKey}}"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "Retry-After",
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "message"
+      ]
+    },
+    "headers": {
+      "Accept": "application/json"
+    }
+  },
+  "operations": {
+    "account.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "title": "Get account information",
+      "description": "Return CraftMyPDF subscription and usage details as JSON. GET https://api.craftmypdf.com/v1/get-account-info with no body.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Account JSON from CraftMyPDF."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/get-account-info",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "templates.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 4194304,
+      "title": "List templates",
+      "description": "List PDF templates as JSON. GET /v1/list-templates. Optional limit, offset, and group_name are query parameters.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Maximum number of templates to return. CraftMyPDF defaults to 300."
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Number of templates to skip. CraftMyPDF defaults to 0."
+          },
+          "group_name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Return only templates in this group."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Template list JSON."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/list-templates",
+        "query": {
+          "limit": "{{limit}}",
+          "offset": "{{offset}}",
+          "group_name": "{{group_name}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "templates.query-usage": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 4194304,
+      "title": "Query template usage",
+      "description": "Return credit and generation counts for comma-separated template IDs. GET /v1/query-template-usage. Dates are ISO 8601 query values, not a second route.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "template_ids"
+        ],
+        "properties": {
+          "template_ids": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Comma-separated template IDs."
+          },
+          "start_date": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Range start in ISO 8601 UTC, for example 2025-01-30T00:00:00Z."
+          },
+          "end_date": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Range end in ISO 8601 UTC, for example 2025-01-30T23:59:59Z."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Usage JSON."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/query-template-usage",
+        "query": {
+          "template_ids": "{{template_ids}}",
+          "start_date": "{{start_date}}",
+          "end_date": "{{end_date}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "transactions.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 4194304,
+      "title": "List transactions",
+      "description": "List API transactions as JSON. GET /v1/list-transactions. Optional limit and offset are query parameters.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Maximum number of transactions to return. CraftMyPDF defaults to 300."
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Number of transactions to skip. CraftMyPDF defaults to 0."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Transaction list JSON."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/list-transactions",
+        "query": {
+          "limit": "{{limit}}",
+          "offset": "{{offset}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "pdf.get-info": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 100000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 4194304,
+      "title": "Get PDF information",
+      "description": "Return page count and metadata for a PDF as JSON. GET /v1/get-pdf-info. The pdf_url query value is fetched by CraftMyPDF. This connector calls only api.craftmypdf.com and does not download PDF bytes.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "pdf_url"
+        ],
+        "properties": {
+          "pdf_url": {
+            "type": "string",
+            "minLength": 1,
+            "description": "HTTPS URL of the PDF. Sent as the url query parameter. Not used as the connector host."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "PDF metadata JSON."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/get-pdf-info",
+        "query": {
+          "url": "{{pdf_url}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "pdf.create-async": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 100000,
+      "maxInputBytes": 4194304,
+      "maxResponseBytes": 4194304,
+      "title": "Create a PDF asynchronously",
+      "description": "Queue a template PDF and return the JSON transaction reference. POST /v1/create-async. CraftMyPDF GETs webhook_url later. This call does not return PDF bytes. The public path is /create-async. There is no /create-async2 route.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "template_id",
+          "data"
+        ],
+        "properties": {
+          "template_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Template ID from list templates."
+          },
+          "data": {
+            "description": "Template data as a JSON object or a stringified JSON string.",
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1
+              },
+              {
+                "type": "object",
+                "additionalProperties": true
+              }
+            ]
+          },
+          "version": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Template version. Omit to use the latest version."
+          },
+          "expiration": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 10080,
+            "description": "Generated file lifetime in minutes. Default 5. Range 1 to 10080."
+          },
+          "webhook_url": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Callback CraftMyPDF GETs when the PDF is ready. Sent in the JSON body. Not the connector request URL."
+          },
+          "image_resample_res": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Downsample images to this DPI. Suggested values are 1200, 600, 300, 150, or 72."
+          },
+          "cloud_storage": {
+            "type": "integer",
+            "enum": [
+              0,
+              1
+            ],
+            "description": "1 uploads the file to CraftMyPDF CDN. 0 skips CDN upload when Post Actions use your S3 bucket."
+          },
+          "postaction_s3_bucket": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Override the Post Action S3 bucket."
+          },
+          "postaction_s3_filekey": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Post Action S3 object key without a file extension. Slash separates folders."
+          },
+          "resize_images": {
+            "type": "boolean",
+            "description": "Resize JPEG and PNG images in the PDF."
+          },
+          "resize_max_width": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Maximum image width in pixels when resize_images is true. Default 1000."
+          },
+          "resize_max_height": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Maximum image height in pixels when resize_images is true. Default 1000."
+          },
+          "resize_format": {
+            "type": "string",
+            "enum": [
+              "jpeg",
+              "png"
+            ],
+            "description": "Format of resized images when resize_images is true."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Async acceptance JSON with status, transaction_ref, and is_async."
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/create-async",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "data": "{{data}}",
+          "template_id": "{{template_id}}",
+          "version": "{{version}}",
+          "expiration": "{{expiration}}",
+          "webhook_url": "{{webhook_url}}",
+          "image_resample_res": "{{image_resample_res}}",
+          "cloud_storage": "{{cloud_storage}}",
+          "postaction_s3_filekey": "{{postaction_s3_filekey}}",
+          "postaction_s3_bucket": "{{postaction_s3_bucket}}",
+          "resize_images": "{{resize_images}}",
+          "resize_max_width": "{{resize_max_width}}",
+          "resize_max_height": "{{resize_max_height}}",
+          "resize_format": "{{resize_format}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "pdf.create-parallel": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 100000,
+      "maxInputBytes": 4194304,
+      "maxResponseBytes": 4194304,
+      "title": "Create PDFs in parallel",
+      "description": "Generate several template PDFs in one JSON call. POST /v1/create-parallel. Success is JSON with file URLs. This connector does not download PDF bytes.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "requests"
+        ],
+        "properties": {
+          "requests": {
+            "type": "array",
+            "minItems": 1,
+            "description": "PDF generation requests processed together.",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "template_id",
+                "data"
+              ],
+              "properties": {
+                "template_id": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Template ID for this request."
+                },
+                "data": {
+                  "description": "Template data as a JSON object or a stringified JSON string.",
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    {
+                      "type": "object",
+                      "additionalProperties": true
+                    }
+                  ]
+                },
+                "meta": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Caller reference echoed on the result."
+                }
+              }
+            }
+          },
+          "merge": {
+            "type": "boolean",
+            "description": "Merge every generated PDF into one file. Default false."
+          },
+          "merge_expiration": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 10080,
+            "description": "Merged file lifetime in minutes when merge is true. Default 5. Range 1 to 10080."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Parallel generation JSON. results and merge_result carry file URLs."
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/create-parallel",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "requests": "{{requests}}",
+          "merge": "{{merge}}",
+          "merge_expiration": "{{merge_expiration}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "pdf.merge": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 100000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 4194304,
+      "title": "Merge PDF URLs",
+      "description": "Merge PDF URLs into one document. POST /v1/merge-pdfs. Success JSON contains a file URL. This connector does not download PDF bytes. urls are fetched by CraftMyPDF, not used as the connector host.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "urls"
+        ],
+        "properties": {
+          "urls": {
+            "type": "array",
+            "minItems": 1,
+            "description": "Public PDF URLs, merged in order.",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "expiration": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 10080,
+            "description": "Merged file lifetime in minutes. Default 5. Range 1 to 10080."
+          },
+          "output_file": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Output file name. Default output.pdf."
+          },
+          "cloud_storage": {
+            "type": "integer",
+            "enum": [
+              0,
+              1
+            ],
+            "description": "1 uploads the file to CraftMyPDF CDN. 0 skips CDN upload when Post Actions use your S3 bucket."
+          },
+          "postaction_s3_bucket": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Override the Post Action S3 bucket."
+          },
+          "postaction_s3_filekey": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Post Action S3 object key without a file extension. Slash separates folders."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Merge JSON with status, file URL, and transaction_ref."
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/merge-pdfs",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "urls": "{{urls}}",
+          "expiration": "{{expiration}}",
+          "output_file": "{{output_file}}",
+          "cloud_storage": "{{cloud_storage}}",
+          "postaction_s3_filekey": "{{postaction_s3_filekey}}",
+          "postaction_s3_bucket": "{{postaction_s3_bucket}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "pdf.add-text": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 100000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 4194304,
+      "title": "Add text to a PDF",
+      "description": "Add page numbers, watermarks, or other text to a PDF. POST /v1/add-text-to-pdf. Success JSON contains a file URL. The source URL is a JSON field. This connector does not download PDF bytes.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "pdf_url",
+          "textSettings"
+        ],
+        "properties": {
+          "pdf_url": {
+            "type": "string",
+            "minLength": 1,
+            "description": "HTTPS URL of the PDF to annotate. Sent as JSON url. Not the connector host."
+          },
+          "textSettings": {
+            "type": "array",
+            "minItems": 1,
+            "description": "Text overlays. Placeholders {{pageNumber}}, {{totalPages}}, and {{currentIndex}} are passed through to CraftMyPDF.",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "page_selector",
+                "text",
+                "position"
+              ],
+              "properties": {
+                "page_selector": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Pages to mark, for example 1, 1,3-8, or 1-*."
+                },
+                "text": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Text to draw. May include CraftMyPDF page placeholders."
+                },
+                "position": {
+                  "type": "string",
+                  "enum": [
+                    "top-left",
+                    "top-center",
+                    "top-right",
+                    "middle-left",
+                    "center",
+                    "middle-right",
+                    "bottom-left",
+                    "bottom-center",
+                    "bottom-right"
+                  ],
+                  "description": "Anchor on the page."
+                },
+                "offset_x": {
+                  "type": "number",
+                  "description": "Horizontal offset from the anchor."
+                },
+                "offset_y": {
+                  "type": "number",
+                  "description": "Vertical offset from the anchor."
+                },
+                "font_size": {
+                  "type": "number",
+                  "minimum": 1,
+                  "description": "Font size in points."
+                },
+                "hex_color": {
+                  "type": "string",
+                  "minLength": 7,
+                  "maxLength": 7,
+                  "description": "Text color as #RRGGBB."
+                },
+                "font_family": {
+                  "type": "string",
+                  "enum": [
+                    "Courier",
+                    "Courier-Bold",
+                    "Courier-Oblique",
+                    "Courier-BoldOblique",
+                    "Helvetica",
+                    "Helvetica-Bold",
+                    "Helvetica-Oblique",
+                    "Helvetica-BoldOblique",
+                    "Times-Roman",
+                    "Times-Bold",
+                    "Times-Italic",
+                    "Times-BoldItalic",
+                    "Symbol",
+                    "ZapfDingbats"
+                  ],
+                  "description": "Built-in PDF font."
+                },
+                "opacity": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1,
+                  "description": "Opacity from 0 to 1."
+                },
+                "rotation": {
+                  "type": "number",
+                  "description": "Rotation in degrees."
+                }
+              }
+            }
+          },
+          "expiration": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 10080,
+            "description": "Generated file lifetime in minutes. Default 5. Range 1 to 10080."
+          },
+          "output_file": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Output file name. Default output.pdf."
+          },
+          "cloud_storage": {
+            "type": "integer",
+            "enum": [
+              0,
+              1
+            ],
+            "description": "1 uploads the file to CraftMyPDF CDN. 0 skips CDN upload when Post Actions use your S3 bucket."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Annotation JSON with status, file URL, and transaction_ref."
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/add-text-to-pdf",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "url": "{{pdf_url}}",
+          "textSettings": "{{textSettings}}",
+          "expiration": "{{expiration}}",
+          "output_file": "{{output_file}}",
+          "cloud_storage": "{{cloud_storage}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "pdf.add-watermark": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 100000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 4194304,
+      "title": "Add watermark to a PDF",
+      "description": "Overlay watermark text on every page. POST /v1/add-watermark. Success JSON contains a file URL. The source URL is a JSON field. This connector does not download PDF bytes.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "pdf_url",
+          "text"
+        ],
+        "properties": {
+          "pdf_url": {
+            "type": "string",
+            "minLength": 1,
+            "description": "HTTPS URL of the source PDF. Sent as JSON url. Not the connector host."
+          },
+          "text": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Watermark text drawn on every page."
+          },
+          "font_size": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Font size in points. Default 40."
+          },
+          "opacity": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1,
+            "description": "Opacity from 0 to 1. Default 0.5."
+          },
+          "rotation": {
+            "type": "integer",
+            "description": "Rotation in degrees. Default 45."
+          },
+          "hex_color": {
+            "type": "string",
+            "minLength": 7,
+            "maxLength": 7,
+            "description": "Watermark color as #RRGGBB. Default #c7c7c7."
+          },
+          "font_family": {
+            "type": "string",
+            "enum": [
+              "Courier",
+              "Courier-Bold",
+              "Courier-Oblique",
+              "Courier-BoldOblique",
+              "Helvetica",
+              "Helvetica-Bold",
+              "Helvetica-Oblique",
+              "Helvetica-BoldOblique",
+              "Times-Roman",
+              "Times-Bold",
+              "Times-Italic",
+              "Times-BoldItalic",
+              "Symbol",
+              "ZapfDingbats"
+            ],
+            "description": "Built-in PDF font. Default Helvetica."
+          },
+          "expiration": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 10080,
+            "description": "Generated file lifetime in minutes. Default 5. Range 1 to 10080."
+          },
+          "output_file": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Output file name. Default output.pdf."
+          },
+          "cloud_storage": {
+            "type": "integer",
+            "enum": [
+              0,
+              1
+            ],
+            "description": "1 uploads the file to CraftMyPDF CDN. 0 skips CDN upload when Post Actions use your S3 bucket."
+          },
+          "postaction_s3_bucket": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Override the Post Action S3 bucket."
+          },
+          "postaction_s3_filekey": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Post Action S3 object key without a file extension. Slash separates folders."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Watermark JSON with status, file URL, and transaction_ref."
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/add-watermark",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "url": "{{pdf_url}}",
+          "text": "{{text}}",
+          "font_size": "{{font_size}}",
+          "opacity": "{{opacity}}",
+          "rotation": "{{rotation}}",
+          "hex_color": "{{hex_color}}",
+          "font_family": "{{font_family}}",
+          "expiration": "{{expiration}}",
+          "output_file": "{{output_file}}",
+          "cloud_storage": "{{cloud_storage}}",
+          "postaction_s3_filekey": "{{postaction_s3_filekey}}",
+          "postaction_s3_bucket": "{{postaction_s3_bucket}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "pdf.update-fields": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 100000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 4194304,
+      "title": "Update fillable fields",
+      "description": "Set values on fillable PDF fields. POST /v1/update-pdf-fields. Success JSON contains a file URL and per-field status. The source URL is a JSON field. This connector does not download PDF bytes.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "pdf_url",
+          "fields"
+        ],
+        "properties": {
+          "pdf_url": {
+            "type": "string",
+            "minLength": 1,
+            "description": "HTTPS URL of a PDF with named form fields. Sent as JSON url. Not the connector host."
+          },
+          "fields": {
+            "type": "array",
+            "minItems": 1,
+            "description": "Field updates. id must match a field name in the PDF.",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "id",
+                "value"
+              ],
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Fillable field name."
+                },
+                "value": {
+                  "description": "New field value. Text and choices are strings. Checkboxes may be boolean.",
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "type": "number"
+                    }
+                  ]
+                },
+                "readOnly": {
+                  "type": "boolean",
+                  "description": "Lock the field after the update."
+                },
+                "fontSize": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "description": "Font size for a text field."
+                }
+              }
+            }
+          },
+          "expiration": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 10080,
+            "description": "Generated file lifetime in minutes. Default 5. Range 1 to 10080."
+          },
+          "output_file": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Output file name. Default output.pdf."
+          },
+          "cloud_storage": {
+            "type": "integer",
+            "enum": [
+              0,
+              1
+            ],
+            "description": "1 uploads the file to CraftMyPDF CDN. 0 skips CDN upload when Post Actions use your S3 bucket."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Field update JSON with status, file URL, and field_statuses."
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/update-pdf-fields",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "url": "{{pdf_url}}",
+          "fields": "{{fields}}",
+          "expiration": "{{expiration}}",
+          "output_file": "{{output_file}}",
+          "cloud_storage": "{{cloud_storage}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "editor-sessions.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 30000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 1048576,
+      "title": "Create editor session",
+      "description": "Create an embeddable template editor URL. POST /v1/create-editor-session. Success JSON contains the editor URL. backURL is a JSON field for the editor back button, not the connector host.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "template_id",
+          "expiration"
+        ],
+        "properties": {
+          "template_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Template to open in the editor."
+          },
+          "expiration": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Session lifetime in minutes. 1440 is 24 hours."
+          },
+          "canSave": {
+            "type": "boolean",
+            "description": "Allow saving the template. Default true."
+          },
+          "canCreatePDF": {
+            "type": "boolean",
+            "description": "Allow generating a PDF from the editor. Default true."
+          },
+          "canViewSettings": {
+            "type": "boolean",
+            "description": "Allow viewing editor settings. Default true."
+          },
+          "canPreview": {
+            "type": "boolean",
+            "description": "Allow preview. Default true."
+          },
+          "canEditJSON": {
+            "type": "boolean",
+            "description": "Allow editing template JSON. Default true."
+          },
+          "canShowHeader": {
+            "type": "boolean",
+            "description": "Show the CraftMyPDF header. Default true."
+          },
+          "canShowLayers": {
+            "type": "boolean",
+            "description": "Show the layers panel. Default true."
+          },
+          "canShowPropertyPanel": {
+            "type": "boolean",
+            "description": "Show the property panel. Default true."
+          },
+          "canShowHelp": {
+            "type": "boolean",
+            "description": "Show the help tab. Default true."
+          },
+          "canShowData": {
+            "type": "boolean",
+            "description": "Show the data tab. Default true."
+          },
+          "canShowExpressionDoc": {
+            "type": "boolean",
+            "description": "Show expression documentation. Default true."
+          },
+          "canShowPropertyBinding": {
+            "type": "boolean",
+            "description": "Show property binding. Default true."
+          },
+          "canShowBackURL": {
+            "type": "boolean",
+            "description": "Show the back button. Default true."
+          },
+          "jsonMode": {
+            "type": "integer",
+            "enum": [
+              1,
+              2
+            ],
+            "description": "1 is the JSON editor. 2 is the JSON viewer. Default 1."
+          },
+          "backURL": {
+            "type": "string",
+            "minLength": 1,
+            "description": "URL opened by the editor back button. Sent in the JSON body. Not the connector request URL."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Editor session JSON with url, expiration, and token_uuid."
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/create-editor-session",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "template_id": "{{template_id}}",
+          "expiration": "{{expiration}}",
+          "canSave": "{{canSave}}",
+          "canCreatePDF": "{{canCreatePDF}}",
+          "canViewSettings": "{{canViewSettings}}",
+          "canPreview": "{{canPreview}}",
+          "canEditJSON": "{{canEditJSON}}",
+          "canShowHeader": "{{canShowHeader}}",
+          "canShowLayers": "{{canShowLayers}}",
+          "canShowPropertyPanel": "{{canShowPropertyPanel}}",
+          "canShowHelp": "{{canShowHelp}}",
+          "canShowData": "{{canShowData}}",
+          "canShowExpressionDoc": "{{canShowExpressionDoc}}",
+          "canShowPropertyBinding": "{{canShowPropertyBinding}}",
+          "canShowBackURL": "{{canShowBackURL}}",
+          "jsonMode": "{{jsonMode}}",
+          "backURL": "{{backURL}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    }
+  }
+}

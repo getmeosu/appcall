@@ -1,0 +1,1118 @@
+{
+  "key": "enrich",
+  "name": "Enrich",
+  "version": "0.1.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "crm"
+  ],
+  "auth": {
+    "type": "api_key",
+    "scopes": [],
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "Enrich API key",
+          "required": true,
+          "secret": true
+        }
+      ]
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "dev.enrich.so"
+    ]
+  },
+  "models": [
+    "email",
+    "person",
+    "lead",
+    "credit",
+    "employee"
+  ],
+  "http": {
+    "baseUrl": "https://dev.enrich.so/api/v3",
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "x-api-key",
+      "value": "{{apiKey}}"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "Retry-After",
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "detail",
+        "error",
+        "title",
+        "message"
+      ]
+    },
+    "headers": {
+      "Accept": "application/json"
+    }
+  },
+  "operations": {
+    "email.find.batch": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 60000,
+      "maxInputBytes": 26214400,
+      "maxResponseBytes": 26214400,
+      "title": "Batch find work emails",
+      "description": "Submit one work-email batch. POST /email-finder/batch returns the queued batch JSON. This action does not poll status or fetch results.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "leads": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 500000,
+            "description": "People whose work emails to find. Enrich accepts up to 500000 leads on this route.",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "firstName",
+                "lastName",
+                "domain"
+              ],
+              "properties": {
+                "firstName": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Person's first name.",
+                  "maxLength": 100
+                },
+                "lastName": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Person's last name.",
+                  "maxLength": 100
+                },
+                "domain": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Company domain, without a URL path.",
+                  "maxLength": 253
+                }
+              }
+            }
+          }
+        },
+        "required": [
+          "leads"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "POST",
+        "path": "/email-finder/batch",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "leads": "{{leads}}"
+        }
+      }
+    },
+    "person.lookup.batch": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 60000,
+      "maxInputBytes": 26214400,
+      "maxResponseBytes": 26214400,
+      "title": "Batch lookup people by email",
+      "description": "Submit one reverse-lookup batch. POST /reverse-lookup/bulk-lookup returns the queued batch JSON. This action does not poll status or fetch results.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "emails": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 100000,
+            "description": "Email addresses to look up. Enrich accepts up to 100000 addresses on this route.",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Email address.",
+              "maxLength": 254
+            }
+          }
+        },
+        "required": [
+          "emails"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "POST",
+        "path": "/reverse-lookup/bulk-lookup",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "emails": "{{emails}}"
+        }
+      }
+    },
+    "email.validate.batch": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 60000,
+      "maxInputBytes": 26214400,
+      "maxResponseBytes": 26214400,
+      "title": "Batch validate emails",
+      "description": "Submit one validation batch. POST /email-validation/batch returns the queued batch JSON. This action does not poll status or fetch results.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "emails": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 500000,
+            "description": "Email addresses to validate. Enrich accepts up to 500000 addresses on this route.",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Email address.",
+              "maxLength": 254
+            }
+          }
+        },
+        "required": [
+          "emails"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "POST",
+        "path": "/email-validation/batch",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "emails": "{{emails}}"
+        }
+      }
+    },
+    "leads.count": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 60000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 5242880,
+      "title": "Count leads",
+      "description": "Count leads matching Lead Finder filters. POST /lead-finder/count returns JSON and does not return lead records.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "filters": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Lead Finder filters in Enrich camelCase. An empty object is accepted. Enrich validates unknown keys."
+          },
+          "excludeFilters": {
+            "type": "object",
+            "additionalProperties": false,
+            "description": "The five Lead Finder exclusion filters: personHeadline, companyHeadline, aboutUs, domain, and jobTitle.",
+            "properties": {
+              "personHeadline": {
+                "description": "Person headline keywords to exclude.",
+                "oneOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  {
+                    "type": "array",
+                    "maxItems": 10,
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  }
+                ]
+              },
+              "companyHeadline": {
+                "description": "Company headline keywords to exclude.",
+                "oneOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  {
+                    "type": "array",
+                    "maxItems": 10,
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  }
+                ]
+              },
+              "aboutUs": {
+                "description": "Company overview keywords to exclude.",
+                "oneOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  {
+                    "type": "array",
+                    "maxItems": 10,
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  }
+                ]
+              },
+              "domain": {
+                "description": "Company domains to exclude.",
+                "oneOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  {
+                    "type": "array",
+                    "maxItems": 5000,
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  }
+                ]
+              },
+              "jobTitle": {
+                "description": "Job titles to exclude.",
+                "oneOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  {
+                    "type": "array",
+                    "maxItems": 25,
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "required": [
+          "filters"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "POST",
+        "path": "/lead-finder/count",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "filters": "{{filters}}",
+          "excludeFilters": "{{excludeFilters}}"
+        }
+      }
+    },
+    "employees.find": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 60000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Find company employees",
+      "description": "Find one page of employees at a company. POST /people-search/employee-finder. Pagination is page and max_results, not a cursor.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "company_linkedin_url": {
+            "type": "string",
+            "minLength": 1,
+            "description": "LinkedIn company URL whose employees should be searched.",
+            "maxLength": 2048
+          },
+          "country": {
+            "type": "array",
+            "description": "Country names to filter by.",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "maxItems": 50
+          },
+          "continent": {
+            "type": "array",
+            "description": "Continent names to filter by.",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "sales_region": {
+            "type": "array",
+            "description": "Sales regions to filter by.",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "job_level": {
+            "type": "array",
+            "description": "Job levels to filter by.",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "job_function": {
+            "type": "array",
+            "description": "Job functions to filter by.",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "max_results": {
+            "type": "integer",
+            "description": "Profiles requested for this page, from 1 to 100.",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "page": {
+            "type": "integer",
+            "description": "Page number, starting at 1.",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "company_linkedin_url"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "POST",
+        "path": "/people-search/employee-finder",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "company_linkedin_url": "{{company_linkedin_url}}",
+          "country": "{{country}}",
+          "continent": "{{continent}}",
+          "sales_region": "{{sales_region}}",
+          "job_level": "{{job_level}}",
+          "job_function": "{{job_function}}",
+          "max_results": "{{max_results}}",
+          "page": "{{page}}"
+        }
+      }
+    },
+    "email.find": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 8192,
+      "maxResponseBytes": 1048576,
+      "title": "Find work email",
+      "description": "Find one professional email from a first name, last name, and company domain. POST /email-finder.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "firstName": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Person's first name.",
+            "maxLength": 100
+          },
+          "lastName": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Person's last name.",
+            "maxLength": 100
+          },
+          "domain": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Company domain, without a URL path.",
+            "maxLength": 253
+          }
+        },
+        "required": [
+          "firstName",
+          "lastName",
+          "domain"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "POST",
+        "path": "/email-finder",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "firstName": "{{firstName}}",
+          "lastName": "{{lastName}}",
+          "domain": "{{domain}}"
+        }
+      }
+    },
+    "credits.balance": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "title": "Get credit balance",
+      "description": "Return the connected organization's current Enrich credit balance. GET /wallets/balance.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/wallets/balance",
+        "success": [
+          200
+        ]
+      }
+    },
+    "leads.filter-options": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 26214400,
+      "title": "Get lead filter options",
+      "description": "Return Enrich's Lead Finder option catalog. GET /lead-finder/filter-options.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/lead-finder/filter-options",
+        "success": [
+          200
+        ]
+      }
+    },
+    "credits.transactions.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "title": "List credit transactions",
+      "description": "Return one page of credit transactions. GET /wallets/transactions. Pagination is page and limit. The type query is deduction, topup, adjustment, or refund.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "page": {
+            "type": "integer",
+            "description": "Page number, starting at 1.",
+            "minimum": 1
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Transactions in this page, from 1 to 100.",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "deduction",
+              "topup",
+              "adjustment",
+              "refund"
+            ],
+            "description": "Transaction type. Omit to include every type."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/wallets/transactions",
+        "success": [
+          200
+        ],
+        "query": {
+          "page": "{{page}}",
+          "limit": "{{limit}}",
+          "type": "{{type}}"
+        }
+      }
+    },
+    "person.lookup": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 8192,
+      "maxResponseBytes": 5242880,
+      "title": "Lookup person by email",
+      "description": "Look up one professional profile from an email address. POST /reverse-lookup/lookup.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "email": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Professional email address to look up.",
+            "maxLength": 254
+          }
+        },
+        "required": [
+          "email"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "POST",
+        "path": "/reverse-lookup/lookup",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "email": "{{email}}"
+        }
+      }
+    },
+    "company.icp.search": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 60000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Search company ICP",
+      "description": "Run one ranked ICP cascade search at a company. POST /people-search/waterfall-icp-search.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "company_linkedin_url": {
+            "type": "string",
+            "minLength": 1,
+            "description": "LinkedIn company URL whose employees should be ranked.",
+            "maxLength": 2048
+          },
+          "cascade": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 10,
+            "description": "Ordered ICP levels. Omit to use Enrich's default CEO/Founder, C-Suite, VP, then Director cascade.",
+            "items": {
+              "type": "object",
+              "additionalProperties": true,
+              "description": "One ICP cascade level. Documented keys are checked; additional provider keys are sent unchanged.",
+              "properties": {
+                "include_title": {
+                  "type": "array",
+                  "description": "Job titles to include.",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "exclude_title": {
+                  "type": "array",
+                  "description": "Job titles to exclude.",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "job_levels": {
+                  "type": "array",
+                  "description": "Job seniority levels to include.",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "job_functions": {
+                  "type": "array",
+                  "description": "Job functions to include.",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "skills": {
+                  "type": "array",
+                  "description": "Skills to match.",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "location": {
+                  "type": "array",
+                  "description": "Location codes, continent codes, or WORLD.",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "include_headline_search": {
+                  "type": "boolean",
+                  "description": "Also match include_title against the LinkedIn headline."
+                },
+                "priority_bonus": {
+                  "type": "integer",
+                  "description": "Seniority priority bonus from 0 to 30.",
+                  "minimum": 0,
+                  "maximum": 30
+                }
+              }
+            }
+          },
+          "max_results": {
+            "type": "integer",
+            "description": "Maximum ranked profiles to return, from 1 to 100.",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "min_score": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100,
+            "description": "Minimum normalized ICP score from 0 to 100."
+          }
+        },
+        "required": [
+          "company_linkedin_url"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "POST",
+        "path": "/people-search/waterfall-icp-search",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "company_linkedin_url": "{{company_linkedin_url}}",
+          "cascade": "{{cascade}}",
+          "max_results": "{{max_results}}",
+          "min_score": "{{min_score}}"
+        }
+      }
+    },
+    "leads.search": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 60000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 5242880,
+      "title": "Search leads",
+      "description": "Return one page of leads matching Lead Finder filters. POST /lead-finder/search. Pagination is page and pageSize.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "filters": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Lead Finder filters in Enrich camelCase. An empty object is accepted. Enrich validates unknown keys."
+          },
+          "excludeFilters": {
+            "type": "object",
+            "additionalProperties": false,
+            "description": "The five Lead Finder exclusion filters: personHeadline, companyHeadline, aboutUs, domain, and jobTitle.",
+            "properties": {
+              "personHeadline": {
+                "description": "Person headline keywords to exclude.",
+                "oneOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  {
+                    "type": "array",
+                    "maxItems": 10,
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  }
+                ]
+              },
+              "companyHeadline": {
+                "description": "Company headline keywords to exclude.",
+                "oneOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  {
+                    "type": "array",
+                    "maxItems": 10,
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  }
+                ]
+              },
+              "aboutUs": {
+                "description": "Company overview keywords to exclude.",
+                "oneOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  {
+                    "type": "array",
+                    "maxItems": 10,
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  }
+                ]
+              },
+              "domain": {
+                "description": "Company domains to exclude.",
+                "oneOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  {
+                    "type": "array",
+                    "maxItems": 5000,
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  }
+                ]
+              },
+              "jobTitle": {
+                "description": "Job titles to exclude.",
+                "oneOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  {
+                    "type": "array",
+                    "maxItems": 25,
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "description": "Page number, starting at 1.",
+            "minimum": 1
+          },
+          "pageSize": {
+            "type": "integer",
+            "description": "Leads in this page, from 1 to 100.",
+            "minimum": 1,
+            "maximum": 100
+          }
+        },
+        "required": [
+          "filters"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "POST",
+        "path": "/lead-finder/search",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "filters": "{{filters}}",
+          "excludeFilters": "{{excludeFilters}}",
+          "page": "{{page}}",
+          "pageSize": "{{pageSize}}"
+        }
+      }
+    },
+    "email.validate": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 8192,
+      "maxResponseBytes": 1048576,
+      "title": "Validate email",
+      "description": "Check one email address for deliverability. POST /email-validation.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "email": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Email address to validate.",
+            "maxLength": 254
+          }
+        },
+        "required": [
+          "email"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "POST",
+        "path": "/email-validation",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "email": "{{email}}"
+        }
+      }
+    }
+  }
+}

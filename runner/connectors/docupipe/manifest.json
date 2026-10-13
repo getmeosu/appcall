@@ -1,0 +1,786 @@
+{
+  "key": "docupipe",
+  "name": "DocuPipe",
+  "version": "0.1.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "utility"
+  ],
+  "auth": {
+    "type": "api_key",
+    "scopes": [],
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "DocuPipe API key",
+          "required": true,
+          "secret": true
+        }
+      ]
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "app.docupipe.ai"
+    ]
+  },
+  "models": [
+    "document",
+    "schema",
+    "standardization"
+  ],
+  "http": {
+    "baseUrl": "https://app.docupipe.ai",
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "X-API-Key",
+      "value": "{{apiKey}}"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "Retry-After",
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "detail.0",
+        "detail"
+      ]
+    },
+    "headers": {
+      "Accept": "application/json"
+    }
+  },
+  "operations": {
+    "schemas.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 60000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Create schema",
+      "description": "Create a reusable extraction schema from a JSON Schema and optional guidelines.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "schemaName": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Name of the new schema."
+          },
+          "jsonSchema": {
+            "type": "object",
+            "additionalProperties": true,
+            "minProperties": 1,
+            "description": "JSON Schema for the structured fields to extract."
+          },
+          "guidelines": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Optional extraction guidelines stored with the schema."
+          }
+        },
+        "required": [
+          "schemaName",
+          "jsonSchema"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "schemaId": {
+            "type": "string"
+          },
+          "jobId": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "success",
+          "schemaId",
+          "jobId",
+          "timestamp"
+        ]
+      },
+      "request": {
+        "method": "POST",
+        "path": "/schema",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "schemaName": "{{schemaName}}",
+          "jsonSchema": "{{jsonSchema}}",
+          "guidelines": "{{guidelines}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "success": "{{response.success}}",
+          "schemaId": "{{response.schemaId}}",
+          "jobId": "{{response.jobId}}",
+          "timestamp": "{{response.timestamp}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "documents.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 20000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "title": "Delete document",
+      "description": "Permanently delete one previously submitted document by ID.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "documentId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Document ID to delete."
+          }
+        },
+        "required": [
+          "documentId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "success": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "success"
+        ]
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/document/{{documentId}}",
+        "success": [
+          200
+        ],
+        "result": {
+          "success": "{{response.success}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "documents.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 26214400,
+      "title": "Get document",
+      "description": "Retrieve one processed document, including status, page count, metadata, and parsed content.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "documentId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Document ID returned when the document was submitted."
+          }
+        },
+        "required": [
+          "documentId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "documentId": {
+            "type": "string"
+          },
+          "dataset": {
+            "type": "string"
+          },
+          "filename": {
+            "type": "string"
+          },
+          "fileType": {
+            "type": "string",
+            "enum": [
+              "pdf",
+              "image",
+              "text",
+              "json",
+              "html",
+              "word",
+              "table"
+            ]
+          },
+          "fileExtension": {
+            "type": "string",
+            "enum": [
+              "pdf",
+              "png",
+              "jpeg",
+              "webp",
+              "tiff",
+              "jp2",
+              "txt",
+              "json",
+              "xml",
+              "html",
+              "doc",
+              "docx",
+              "csv",
+              "xlsx",
+              "xls",
+              "eml"
+            ]
+          },
+          "numPages": {
+            "type": "integer"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "processing",
+              "completed",
+              "error"
+            ]
+          },
+          "result": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "timestamp": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "documentId"
+        ]
+      },
+      "request": {
+        "method": "GET",
+        "path": "/document/{{documentId}}",
+        "success": [
+          200
+        ],
+        "result": {
+          "documentId": "{{response.documentId}}",
+          "dataset": "{{response.dataset}}",
+          "filename": "{{response.filename}}",
+          "fileType": "{{response.fileType}}",
+          "fileExtension": "{{response.fileExtension}}",
+          "numPages": "{{response.numPages}}",
+          "status": "{{response.status}}",
+          "result": "{{response.result}}",
+          "metadata": "{{response.metadata}}",
+          "timestamp": "{{response.timestamp}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "schemas.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 10485760,
+      "title": "Get schema",
+      "description": "Retrieve one extraction schema and its JSON Schema definition by ID.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "schemaId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Schema ID to retrieve."
+          }
+        },
+        "required": [
+          "schemaId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "schemaId": {
+            "type": "string"
+          },
+          "schemaName": {
+            "type": "string"
+          },
+          "jsonSchema": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "guidelines": {
+            "type": "string"
+          },
+          "jobId": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "schemaId"
+        ]
+      },
+      "request": {
+        "method": "GET",
+        "path": "/schema/{{schemaId}}",
+        "success": [
+          200
+        ],
+        "result": {
+          "schemaId": "{{response.schemaId}}",
+          "schemaName": "{{response.schemaName}}",
+          "jsonSchema": "{{response.jsonSchema}}",
+          "guidelines": "{{response.guidelines}}",
+          "jobId": "{{response.jobId}}",
+          "timestamp": "{{response.timestamp}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "standardizations.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 26214400,
+      "title": "Get standardization",
+      "description": "Retrieve one completed standardization as structured JSON, including extraction data and field metadata.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "standardizationId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Standardization ID to retrieve."
+          }
+        },
+        "required": [
+          "standardizationId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "standardizationId": {
+            "type": "string"
+          },
+          "documentId": {
+            "type": "string"
+          },
+          "data": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "schemaId": {
+            "type": "string"
+          },
+          "schemaName": {
+            "type": "string"
+          },
+          "jobId": {
+            "type": "string"
+          },
+          "dataset": {
+            "type": "string"
+          },
+          "filename": {
+            "type": "string"
+          },
+          "displayMode": {
+            "type": "string",
+            "enum": [
+              "auto",
+              "spatial",
+              "sections",
+              "image"
+            ]
+          },
+          "timestamp": {
+            "type": "string"
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "fieldMetadata": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "standardizationId",
+          "documentId",
+          "data"
+        ]
+      },
+      "request": {
+        "method": "GET",
+        "path": "/standardization/{{standardizationId}}",
+        "success": [
+          200
+        ],
+        "result": {
+          "standardizationId": "{{response.standardizationId}}",
+          "documentId": "{{response.documentId}}",
+          "data": "{{response.data}}",
+          "schemaId": "{{response.schemaId}}",
+          "schemaName": "{{response.schemaName}}",
+          "jobId": "{{response.jobId}}",
+          "dataset": "{{response.dataset}}",
+          "filename": "{{response.filename}}",
+          "displayMode": "{{response.displayMode}}",
+          "timestamp": "{{response.timestamp}}",
+          "metadata": "{{response.metadata}}",
+          "fieldMetadata": "{{response.fieldMetadata}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "schemas.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 26214400,
+      "title": "List schemas",
+      "description": "List extraction schemas for the workspace. Set excludePayload to false to include each JSON Schema.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000,
+            "description": "Maximum schemas to return. DocuPipe allows 1 to 1000."
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Number of records to skip."
+          },
+          "excludePayload": {
+            "type": "boolean",
+            "description": "When true, omit jsonSchema from each row. DocuPipe defaults this to true when omitted."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "type": "array",
+            "description": "One page of JSON objects from DocuPipe.",
+            "items": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
+      "request": {
+        "method": "GET",
+        "path": "/schemas",
+        "query": {
+          "limit": "{{limit}}",
+          "offset": "{{offset}}",
+          "exclude_payload": "{{excludePayload}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "items": "{{response}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "standardizations.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 262144,
+      "maxResponseBytes": 26214400,
+      "title": "List standardizations",
+      "description": "List structured extraction results filtered by schema, document, dataset, or up to 1000 comma-separated standardization IDs.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "schemaId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Schema ID filter."
+          },
+          "documentId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Document ID filter."
+          },
+          "dataset": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Dataset name filter."
+          },
+          "standardizationIds": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Comma-separated standardization IDs, at most 1000."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000,
+            "description": "Maximum standardizations to return. DocuPipe allows 1 to 1000."
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Number of records to skip."
+          },
+          "excludePayload": {
+            "type": "boolean",
+            "description": "When true, omit extracted data. DocuPipe defaults this to true when omitted."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "type": "array",
+            "description": "One page of JSON objects from DocuPipe.",
+            "items": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
+      "request": {
+        "method": "GET",
+        "path": "/standardizations",
+        "query": {
+          "schema_id": "{{schemaId}}",
+          "document_id": "{{documentId}}",
+          "dataset": "{{dataset}}",
+          "standardization_ids": "{{standardizationIds}}",
+          "limit": "{{limit}}",
+          "offset": "{{offset}}",
+          "exclude_payload": "{{excludePayload}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "items": "{{response}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "documents.standardize": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 60000,
+      "maxInputBytes": 262144,
+      "maxResponseBytes": 1048576,
+      "title": "Standardize document",
+      "description": "Start V3 structured extraction for one processed document and return the job and standardization IDs.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "documentId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Processed document to standardize."
+          },
+          "schemaId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Schema to extract against. Omit to let DocuPipe draft one."
+          },
+          "guidelines": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Extraction guidelines for this call. Maximum 50000 characters.",
+            "maxLength": 50000
+          },
+          "useMetadata": {
+            "type": "boolean",
+            "description": "Include document metadata during extraction."
+          },
+          "pages": {
+            "type": "array",
+            "maxItems": 3000,
+            "description": "Zero-indexed page numbers to standardize. Omit to use the whole document.",
+            "items": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 2999
+            }
+          },
+          "stdVersion": {
+            "type": "number",
+            "enum": [
+              3,
+              3.1,
+              3.2
+            ],
+            "description": "Standardization version. DocuPipe accepts 3, 3.1, or 3.2."
+          },
+          "effortLevel": {
+            "type": "string",
+            "enum": [
+              "standard",
+              "high"
+            ],
+            "description": "standard uses faster models. high uses stronger models."
+          },
+          "citations": {
+            "type": "boolean",
+            "description": "Cite each extracted value with page location and confidence."
+          },
+          "transformationIds": {
+            "type": "array",
+            "description": "Saved transformation IDs to apply, in order, after extraction.",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "timeout": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Webhook error-reporting timeout in seconds."
+          }
+        },
+        "required": [
+          "documentId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "jobId": {
+            "type": "string"
+          },
+          "standardizationId": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "processing",
+              "completed",
+              "error"
+            ]
+          },
+          "documentId": {
+            "type": "string"
+          },
+          "pageCount": {
+            "type": "integer"
+          },
+          "schemaId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "jobId",
+          "standardizationId",
+          "status",
+          "documentId",
+          "pageCount"
+        ]
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v3/standardize",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "documentId": "{{documentId}}",
+          "schemaId": "{{schemaId}}",
+          "guidelines": "{{guidelines}}",
+          "useMetadata": "{{useMetadata}}",
+          "pages": "{{pages}}",
+          "stdVersion": "{{stdVersion}}",
+          "effortLevel": "{{effortLevel}}",
+          "citations": "{{citations}}",
+          "transformationIds": "{{transformationIds}}",
+          "timeout": "{{timeout}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "jobId": "{{response.jobId}}",
+          "standardizationId": "{{response.standardizationId}}",
+          "status": "{{response.status}}",
+          "documentId": "{{response.documentId}}",
+          "pageCount": "{{response.pageCount}}",
+          "schemaId": "{{response.schemaId}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    }
+  }
+}

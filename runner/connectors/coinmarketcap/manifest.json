@@ -1,0 +1,1279 @@
+{
+  "key": "coinmarketcap",
+  "name": "CoinMarketCap",
+  "version": "0.1.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "utility"
+  ],
+  "auth": {
+    "type": "api_key",
+    "scopes": [],
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "CoinMarketCap Pro API key",
+          "required": true,
+          "secret": true
+        }
+      ]
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "pro-api.coinmarketcap.com"
+    ]
+  },
+  "models": [
+    "cryptocurrency",
+    "exchange",
+    "quote",
+    "global-metrics",
+    "api-key"
+  ],
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
+    }
+  },
+  "http": {
+    "baseUrl": "https://pro-api.coinmarketcap.com",
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "X-CMC_PRO_API_KEY",
+      "value": "{{apiKey}}"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "Retry-After",
+      "defaultRetryAfterSeconds": 60,
+      "messagePaths": [
+        "status.error_message",
+        "message"
+      ]
+    },
+    "headers": {
+      "Accept": "application/json"
+    }
+  },
+  "operations": {
+    "healthcheck": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 16777216,
+      "title": "Healthcheck",
+      "description": "Validate the CoinMarketCap Pro API key with GET /v1/key/info. CoinMarketCap publishes no separate health route. This is the same JSON call as key.info and is not a Composio tool.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ],
+            "additionalProperties": false,
+            "required": [
+              "status",
+              "data"
+            ],
+            "properties": {
+              "status": {
+                "type": "object"
+              },
+              "data": {
+                "type": [
+                  "object",
+                  "array"
+                ],
+                "items": {
+                  "type": "object"
+                }
+              }
+            },
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/key/info",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "cryptocurrency.listings.latest": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 16777216,
+      "title": "Cryptocurrency Listings Latest",
+      "description": "Fetch the latest ranked cryptocurrency listings with GET /v3/cryptocurrency/listings/latest. Returns a JSON envelope whose data array holds price, market cap, volume, and percent change. Filters and sort fields are the documented v3 query parameters.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "start": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100000,
+            "description": "1-based offset. Default on the API is 1."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 5000,
+            "description": "Page size from 1 to 5000. Default on the API is 100."
+          },
+          "price_min": {
+            "type": "number",
+            "description": "Minimum USD price filter."
+          },
+          "price_max": {
+            "type": "number",
+            "description": "Maximum USD price filter."
+          },
+          "market_cap_min": {
+            "type": "number",
+            "description": "Minimum market cap filter in USD."
+          },
+          "market_cap_max": {
+            "type": "number",
+            "description": "Maximum market cap filter in USD."
+          },
+          "volume_24h_min": {
+            "type": "number",
+            "description": "Minimum 24h USD volume filter."
+          },
+          "volume_24h_max": {
+            "type": "number",
+            "description": "Maximum 24h USD volume filter."
+          },
+          "circulating_supply_min": {
+            "type": "number",
+            "description": "Minimum circulating supply filter."
+          },
+          "circulating_supply_max": {
+            "type": "number",
+            "description": "Maximum circulating supply filter."
+          },
+          "percent_change_24h_min": {
+            "type": "number",
+            "description": "Minimum 24h percent change filter."
+          },
+          "percent_change_24h_max": {
+            "type": "number",
+            "description": "Maximum 24h percent change filter."
+          },
+          "convert": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000,
+            "description": "Comma-separated quote symbols. Cannot be combined with convert_id."
+          },
+          "convert_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000,
+            "description": "Comma-separated CoinMarketCap quote currency ids. Cannot be combined with convert."
+          },
+          "sort": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000,
+            "description": "Sort field. Documented values include market_cap, price, volume_24h, percent_change_24h, and name."
+          },
+          "sort_dir": {
+            "type": "string",
+            "enum": [
+              "asc",
+              "desc"
+            ],
+            "description": "Sort direction. Default on the API is desc."
+          },
+          "cryptocurrency_type": {
+            "type": "string",
+            "enum": [
+              "all",
+              "coins",
+              "tokens"
+            ],
+            "description": "Asset type filter. Default on the API is all."
+          },
+          "tag": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000,
+            "description": "Tag filter such as defi. Comma-separated tags are one value."
+          },
+          "aux": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000,
+            "description": "Comma-separated auxiliary fields to return."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ],
+            "additionalProperties": false,
+            "required": [
+              "status",
+              "data"
+            ],
+            "properties": {
+              "status": {
+                "type": "object"
+              },
+              "data": {
+                "type": [
+                  "object",
+                  "array"
+                ],
+                "items": {
+                  "type": "object"
+                }
+              }
+            },
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v3/cryptocurrency/listings/latest",
+        "success": [
+          200
+        ],
+        "query": {
+          "start": "{{start}}",
+          "limit": "{{limit}}",
+          "price_min": "{{price_min}}",
+          "price_max": "{{price_max}}",
+          "market_cap_min": "{{market_cap_min}}",
+          "market_cap_max": "{{market_cap_max}}",
+          "volume_24h_min": "{{volume_24h_min}}",
+          "volume_24h_max": "{{volume_24h_max}}",
+          "circulating_supply_min": "{{circulating_supply_min}}",
+          "circulating_supply_max": "{{circulating_supply_max}}",
+          "percent_change_24h_min": "{{percent_change_24h_min}}",
+          "percent_change_24h_max": "{{percent_change_24h_max}}",
+          "convert": "{{convert}}",
+          "convert_id": "{{convert_id}}",
+          "sort": "{{sort}}",
+          "sort_dir": "{{sort_dir}}",
+          "cryptocurrency_type": "{{cryptocurrency_type}}",
+          "tag": "{{tag}}",
+          "aux": "{{aux}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "cryptocurrency.map": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 16777216,
+      "title": "Cryptocurrency Map",
+      "description": "Map cryptocurrencies to CoinMarketCap ids with GET /v1/cryptocurrency/map. The response data array includes id, name, symbol, and slug. Documented filters are listing_status, start, limit, sort, symbol, and aux. id and slug are also sent when provided because the Composio tool documents them as comma-separated filters.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "listing_status": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000,
+            "description": "Comma-separated listing states: active, inactive, untracked. Default on the API is active."
+          },
+          "start": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100000,
+            "description": "1-based offset."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 5000,
+            "description": "Page size from 1 to 5000."
+          },
+          "sort": {
+            "type": "string",
+            "enum": [
+              "id",
+              "cmc_rank"
+            ],
+            "description": "Sort field. Documented values are id and cmc_rank."
+          },
+          "symbol": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000,
+            "description": "Comma-separated symbols such as BTC,ETH. When set, the API ignores the other filters."
+          },
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000,
+            "description": "Comma-separated CoinMarketCap ids such as 1,1027."
+          },
+          "slug": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000,
+            "description": "Comma-separated slugs such as bitcoin,ethereum."
+          },
+          "aux": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000,
+            "description": "Comma-separated auxiliary fields: platform, first_historical_data, last_historical_data, is_active, status."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ],
+            "additionalProperties": false,
+            "required": [
+              "status",
+              "data"
+            ],
+            "properties": {
+              "status": {
+                "type": "object"
+              },
+              "data": {
+                "type": [
+                  "object",
+                  "array"
+                ],
+                "items": {
+                  "type": "object"
+                }
+              }
+            },
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/cryptocurrency/map",
+        "success": [
+          200
+        ],
+        "query": {
+          "listing_status": "{{listing_status}}",
+          "start": "{{start}}",
+          "limit": "{{limit}}",
+          "sort": "{{sort}}",
+          "symbol": "{{symbol}}",
+          "id": "{{id}}",
+          "slug": "{{slug}}",
+          "aux": "{{aux}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "cryptocurrency.quotes.latest": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 16777216,
+      "title": "Cryptocurrency Quotes Latest",
+      "description": "Get latest market quotes with GET /v3/cryptocurrency/quotes/latest. Provide one of id, slug, or symbol. Success is a JSON envelope or, as the v3 schema also allows, a JSON array of quote objects. skip_invalid is the documented boolean that drops unknown identifiers instead of failing the call.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000,
+            "description": "Comma-separated CoinMarketCap cryptocurrency ids."
+          },
+          "slug": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000,
+            "description": "Comma-separated cryptocurrency slugs."
+          },
+          "symbol": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000,
+            "description": "Comma-separated symbols such as BTC,ETH."
+          },
+          "convert": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000,
+            "description": "Comma-separated conversion symbols. Cannot be combined with convert_id."
+          },
+          "convert_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000,
+            "description": "Comma-separated conversion currency ids. Cannot be combined with convert."
+          },
+          "aux": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000,
+            "description": "Comma-separated auxiliary fields."
+          },
+          "skip_invalid": {
+            "type": "boolean",
+            "description": "When true, unknown ids or symbols are omitted instead of failing the request."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ],
+            "additionalProperties": false,
+            "required": [
+              "status",
+              "data"
+            ],
+            "properties": {
+              "status": {
+                "type": "object"
+              },
+              "data": {
+                "type": [
+                  "object",
+                  "array"
+                ],
+                "items": {
+                  "type": "object"
+                }
+              }
+            },
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v3/cryptocurrency/quotes/latest",
+        "success": [
+          200
+        ],
+        "query": {
+          "id": "{{id}}",
+          "slug": "{{slug}}",
+          "symbol": "{{symbol}}",
+          "convert": "{{convert}}",
+          "convert_id": "{{convert_id}}",
+          "aux": "{{aux}}",
+          "skip_invalid": "{{skip_invalid}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "cryptocurrency.info": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 16777216,
+      "title": "Cryptocurrency Info",
+      "description": "Fetch static metadata with GET /v2/cryptocurrency/info. Provide one of id, slug, symbol, or address. Arrays are sent as one comma-separated query value. The JSON data object is keyed by the requested id or symbol.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "description": "CoinMarketCap cryptocurrency ids. An array is joined into one comma-separated id query value.",
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 4000
+              },
+              {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 500,
+                "items": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 200
+                    },
+                    {
+                      "type": "integer",
+                      "minimum": 1
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          "slug": {
+            "description": "Cryptocurrency slugs such as bitcoin. An array is joined into one comma-separated slug query value.",
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 4000
+              },
+              {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 500,
+                "items": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 200
+                    },
+                    {
+                      "type": "integer",
+                      "minimum": 1
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          "symbol": {
+            "description": "Symbols such as BTC. An array is joined into one comma-separated symbol query value.",
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 4000
+              },
+              {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 500,
+                "items": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 200
+                    },
+                    {
+                      "type": "integer",
+                      "minimum": 1
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          "address": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000,
+            "description": "Contract address alternative lookup."
+          },
+          "skip_invalid": {
+            "type": "boolean",
+            "description": "When true, unknown identifiers are omitted instead of failing the request."
+          },
+          "aux": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000,
+            "description": "Comma-separated auxiliary fields such as urls, logo, description, tags, platform, date_added, notice, status."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ],
+            "additionalProperties": false,
+            "required": [
+              "status",
+              "data"
+            ],
+            "properties": {
+              "status": {
+                "type": "object"
+              },
+              "data": {
+                "type": [
+                  "object",
+                  "array"
+                ],
+                "items": {
+                  "type": "object"
+                }
+              }
+            },
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/cryptocurrency/info",
+        "success": [
+          200
+        ],
+        "parameters": [
+          {
+            "wireName": "id",
+            "inputName": "id",
+            "in": "query",
+            "style": "form",
+            "explode": false,
+            "allowReserved": true
+          },
+          {
+            "wireName": "slug",
+            "inputName": "slug",
+            "in": "query",
+            "style": "form",
+            "explode": false,
+            "allowReserved": true
+          },
+          {
+            "wireName": "symbol",
+            "inputName": "symbol",
+            "in": "query",
+            "style": "form",
+            "explode": false,
+            "allowReserved": true
+          },
+          {
+            "wireName": "address",
+            "inputName": "address",
+            "in": "query",
+            "style": "form",
+            "explode": false,
+            "allowReserved": true
+          },
+          {
+            "wireName": "skip_invalid",
+            "inputName": "skip_invalid",
+            "in": "query",
+            "style": "form",
+            "explode": false,
+            "allowReserved": true
+          },
+          {
+            "wireName": "aux",
+            "inputName": "aux",
+            "in": "query",
+            "style": "form",
+            "explode": false,
+            "allowReserved": true
+          }
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "exchange.info": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 16777216,
+      "title": "Exchange Info",
+      "description": "Fetch exchange metadata with GET /v1/exchange/info. Provide id or slug. Arrays are sent as one comma-separated query value. The JSON data object is keyed by the requested id or slug.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "description": "CoinMarketCap exchange ids. An array is joined into one comma-separated id query value.",
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 4000
+              },
+              {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 500,
+                "items": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 200
+                    },
+                    {
+                      "type": "integer",
+                      "minimum": 1
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          "slug": {
+            "description": "Exchange slugs such as binance. An array is joined into one comma-separated slug query value.",
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 4000
+              },
+              {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 500,
+                "items": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 200
+                    },
+                    {
+                      "type": "integer",
+                      "minimum": 1
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          "aux": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000,
+            "description": "Comma-separated auxiliary fields such as urls, logo, description, date_launched, notice, status."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ],
+            "additionalProperties": false,
+            "required": [
+              "status",
+              "data"
+            ],
+            "properties": {
+              "status": {
+                "type": "object"
+              },
+              "data": {
+                "type": [
+                  "object",
+                  "array"
+                ],
+                "items": {
+                  "type": "object"
+                }
+              }
+            },
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/exchange/info",
+        "success": [
+          200
+        ],
+        "parameters": [
+          {
+            "wireName": "id",
+            "inputName": "id",
+            "in": "query",
+            "style": "form",
+            "explode": false,
+            "allowReserved": true
+          },
+          {
+            "wireName": "slug",
+            "inputName": "slug",
+            "in": "query",
+            "style": "form",
+            "explode": false,
+            "allowReserved": true
+          },
+          {
+            "wireName": "aux",
+            "inputName": "aux",
+            "in": "query",
+            "style": "form",
+            "explode": false,
+            "allowReserved": true
+          }
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "key.info": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 16777216,
+      "title": "API Key Info",
+      "description": "Read API key plan, rate limits, and usage with GET /v1/key/info. The call has no query parameters. Success is a JSON object with plan and usage under data.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ],
+            "additionalProperties": false,
+            "required": [
+              "status",
+              "data"
+            ],
+            "properties": {
+              "status": {
+                "type": "object"
+              },
+              "data": {
+                "type": [
+                  "object",
+                  "array"
+                ],
+                "items": {
+                  "type": "object"
+                }
+              }
+            },
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/key/info",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "global-metrics.quotes.latest": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 16777216,
+      "title": "Global Metrics Quotes Latest",
+      "description": "Read aggregate market cap, volume, and dominance with GET /v1/global-metrics/quotes/latest. convert and convert_id are the documented quote-currency parameters and cannot be combined.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "convert": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000,
+            "description": "Conversion symbol such as USD, BTC, or EUR."
+          },
+          "convert_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000,
+            "description": "CoinMarketCap id of the conversion currency. Cannot be combined with convert."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ],
+            "additionalProperties": false,
+            "required": [
+              "status",
+              "data"
+            ],
+            "properties": {
+              "status": {
+                "type": "object"
+              },
+              "data": {
+                "type": [
+                  "object",
+                  "array"
+                ],
+                "items": {
+                  "type": "object"
+                }
+              }
+            },
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/global-metrics/quotes/latest",
+        "success": [
+          200
+        ],
+        "query": {
+          "convert": "{{convert}}",
+          "convert_id": "{{convert_id}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "exchange.map": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 16777216,
+      "title": "Partner Map",
+      "description": "Map exchange names and slugs to CoinMarketCap ids with GET /v1/exchange/map. Composio calls this Partner Map. Its example slugs binance and gdax are exchange slugs, and the public API has no separate partners map route. listing_status, slug, start, and limit match the tool. sort, aux, and crypto_id are the other documented fields on this same GET.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "listing_status": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000,
+            "description": "Comma-separated listing states: active, inactive, untracked. Default on the API is active."
+          },
+          "slug": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000,
+            "description": "Comma-separated exchange slugs such as binance,gdax. When set, the API ignores the other filters."
+          },
+          "start": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100000,
+            "description": "1-based offset."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 5000,
+            "description": "Page size from 1 to 5000."
+          },
+          "sort": {
+            "type": "string",
+            "enum": [
+              "volume_24h",
+              "id"
+            ],
+            "description": "Sort field. Documented values are volume_24h and id."
+          },
+          "aux": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000,
+            "description": "Comma-separated auxiliary fields: first_historical_data, last_historical_data, is_active, status."
+          },
+          "crypto_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000,
+            "description": "Fiat or cryptocurrency id used to keep exchanges that list that asset. Example: 1 for Bitcoin."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ],
+            "additionalProperties": false,
+            "required": [
+              "status",
+              "data"
+            ],
+            "properties": {
+              "status": {
+                "type": "object"
+              },
+              "data": {
+                "type": [
+                  "object",
+                  "array"
+                ],
+                "items": {
+                  "type": "object"
+                }
+              }
+            },
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/exchange/map",
+        "success": [
+          200
+        ],
+        "query": {
+          "listing_status": "{{listing_status}}",
+          "slug": "{{slug}}",
+          "start": "{{start}}",
+          "limit": "{{limit}}",
+          "sort": "{{sort}}",
+          "aux": "{{aux}}",
+          "crypto_id": "{{crypto_id}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "tools.price-conversion": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 16777216,
+      "title": "Price Conversion",
+      "description": "Convert an amount with GET /v2/tools/price-conversion. amount is required and must be at least 1e-8. Provide id or symbol for the source currency, and convert or convert_id for the target. time is an optional ISO 8601 or Unix timestamp for a historical rate.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "amount": {
+            "type": "number",
+            "minimum": 1e-08,
+            "maximum": 1000000000000,
+            "description": "Amount to convert. Minimum 1e-8."
+          },
+          "id": {
+            "description": "CoinMarketCap id of the source currency, such as 1 for Bitcoin. Use id or symbol.",
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1
+              },
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 32
+              }
+            ]
+          },
+          "symbol": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000,
+            "description": "Source currency symbol such as BTC, ETH, or USD. Use symbol or id."
+          },
+          "time": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 40,
+            "description": "Historical timestamp in ISO 8601 or Unix seconds. Omit for the latest rate."
+          },
+          "convert": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000,
+            "description": "Target currency symbol such as USD. Use convert or convert_id."
+          },
+          "convert_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000,
+            "description": "Target CoinMarketCap currency id such as 2781 for USD. Use convert_id or convert."
+          }
+        },
+        "required": [
+          "amount"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ],
+            "additionalProperties": false,
+            "required": [
+              "status",
+              "data"
+            ],
+            "properties": {
+              "status": {
+                "type": "object"
+              },
+              "data": {
+                "type": [
+                  "object",
+                  "array"
+                ],
+                "items": {
+                  "type": "object"
+                }
+              }
+            },
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/tools/price-conversion",
+        "success": [
+          200
+        ],
+        "query": {
+          "amount": "{{amount}}",
+          "id": "{{id}}",
+          "symbol": "{{symbol}}",
+          "time": "{{time}}",
+          "convert": "{{convert}}",
+          "convert_id": "{{convert_id}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    }
+  }
+}

@@ -1,0 +1,567 @@
+{
+  "key": "cardclan",
+  "name": "CardClan",
+  "version": "0.1.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "email-marketing"
+  ],
+  "auth": {
+    "type": "api_key",
+    "scopes": [],
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "CardClan integration key",
+          "required": true,
+          "secret": true
+        }
+      ]
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "app.cardclan.io"
+    ]
+  },
+  "models": [
+    "workspace",
+    "card",
+    "email-account",
+    "workflow-card",
+    "integration-config"
+  ],
+  "http": {
+    "baseUrl": "https://app.cardclan.io/api",
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "Authorization",
+      "value": "Bearer {{apiKey}}"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "Retry-After",
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "message",
+        "error"
+      ]
+    },
+    "headers": {
+      "Accept": "application/json"
+    }
+  },
+  "operations": {
+    "workspaces.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "title": "List Workspaces",
+      "description": "List CardClan workspaces accessible to the integration key.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/integration/workspaces",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "cards.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "title": "List Cards",
+      "description": "List cards in one CardClan workspace. The official route is a body-less POST with the workspace query.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "workspace"
+        ],
+        "properties": {
+          "workspace": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "description": "Workspace ID returned by List Workspaces."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/integration/cards",
+        "query": {
+          "workspace": "{{workspace}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "email-accounts.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "title": "List Email Accounts",
+      "description": "List configured CardClan sender accounts that can be selected when sending a card.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/integration/email-accounts",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "workflow-cards.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "title": "List Workflow Cards",
+      "description": "List cards that have an active CardClan integration workflow.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/integration/workflow-cards",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "cards.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "title": "Get Card Details",
+      "description": "Get a card title, merge-tag requirements, and owning workspace by card ID.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "cardId"
+        ],
+        "properties": {
+          "cardId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "description": "Card ID returned by List Cards or List Workflow Cards."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/integration/card-details/{{cardId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "integration-configs.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 30000,
+      "maxInputBytes": 8192,
+      "maxResponseBytes": 1048576,
+      "title": "Create Integration Configuration",
+      "description": "Create one integration configuration for a card. The official body requires userId, workspaceId, and cardId. This call does not look up the user first.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "userId",
+          "workspaceId",
+          "cardId"
+        ],
+        "properties": {
+          "userId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "description": "CardClan user ID. The official create body requires it."
+          },
+          "workspaceId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "description": "Workspace ID returned by List Workspaces."
+          },
+          "cardId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "description": "Card ID returned by List Cards."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/integration/config",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "userId": "{{userId}}",
+          "workspaceId": "{{workspaceId}}",
+          "cardId": "{{cardId}}"
+        },
+        "success": [
+          201
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "cards.generate-url": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 30000,
+      "maxInputBytes": 262144,
+      "maxResponseBytes": 1048576,
+      "title": "Generate Personalized Card URL",
+      "description": "Generate a personalized viewing URL without sending email. The JSON body returns URL strings and does not download the cover image.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "card",
+          "integrationId",
+          "mergeTags"
+        ],
+        "properties": {
+          "card": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "description": "Card ID to personalize."
+          },
+          "integrationId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "description": "Integration configuration ID for the card."
+          },
+          "mergeTags": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 100,
+            "description": "Recipients. Each requires name and email. Extra card merge tags must be strings.",
+            "items": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 500
+              },
+              "required": [
+                "name",
+                "email"
+              ],
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 200,
+                  "description": "Recipient name."
+                },
+                "email": {
+                  "type": "string",
+                  "minLength": 3,
+                  "maxLength": 320,
+                  "description": "Recipient email."
+                },
+                "company": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 200,
+                  "description": "Optional company merge tag."
+                },
+                "position": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 200,
+                  "description": "Optional position merge tag."
+                }
+              }
+            }
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/integration/get-card-url",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "card": "{{card}}",
+          "integrationId": "{{integrationId}}",
+          "mergeTags": "{{mergeTags}}"
+        },
+        "success": [
+          201
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "cards.send": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 30000,
+      "maxInputBytes": 262144,
+      "maxResponseBytes": 1048576,
+      "title": "Send Card",
+      "description": "Personalize and email a card. confirmSend must be true and is not sent. The JSON response may include a tracking URL string and does not download image bytes.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "card",
+          "integrationId",
+          "mergeTags",
+          "confirmSend"
+        ],
+        "properties": {
+          "card": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "description": "Card ID to personalize and send."
+          },
+          "integrationId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "description": "Integration configuration ID for the card."
+          },
+          "emailAccount": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "description": "Sender account ID from List Email Accounts, or CardClan for the default sender. Omitted when unset."
+          },
+          "confirmSend": {
+            "type": "boolean",
+            "const": true,
+            "description": "Must be true to confirm immediate email delivery. Validated locally and not sent to CardClan."
+          },
+          "mergeTags": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 100,
+            "description": "Recipients to personalize and email. Each requires name and email. Extra card merge tags must be strings.",
+            "items": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 500
+              },
+              "required": [
+                "name",
+                "email"
+              ],
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 200,
+                  "description": "Recipient name."
+                },
+                "email": {
+                  "type": "string",
+                  "minLength": 3,
+                  "maxLength": 320,
+                  "description": "Recipient email."
+                },
+                "company": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 200,
+                  "description": "Optional company merge tag."
+                },
+                "position": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 200,
+                  "description": "Optional position merge tag."
+                }
+              }
+            }
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/integration/send-card",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "card": "{{card}}",
+          "integrationId": "{{integrationId}}",
+          "mergeTags": "{{mergeTags}}",
+          "emailAccount": "{{emailAccount}}"
+        },
+        "success": [
+          201
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    }
+  }
+}

@@ -1,0 +1,935 @@
+{
+  "key": "evenium",
+  "name": "Evenium",
+  "version": "0.1.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "calendar"
+  ],
+  "auth": {
+    "type": "api_key",
+    "scopes": [],
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "Evenium API key",
+          "required": true,
+          "secret": true
+        }
+      ]
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "evenium.com"
+    ]
+  },
+  "models": [
+    "contact",
+    "event"
+  ],
+  "http": {
+    "baseUrl": "https://evenium.com/api/1",
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "X-Evenium-Token",
+      "value": "{{apiKey}}"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "Retry-After",
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "message"
+      ]
+    },
+    "headers": {
+      "Accept": "application/json"
+    }
+  },
+  "operations": {
+    "contacts.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create Contact",
+      "description": "Create one contact in the Evenium address book with POST /api/1/contacts.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "customId": {
+            "type": "string",
+            "description": "External contact id from your CRM or database.",
+            "minLength": 1
+          },
+          "firstName": {
+            "type": "string",
+            "description": "Contact first name."
+          },
+          "lastName": {
+            "type": "string",
+            "description": "Contact last name."
+          },
+          "gender": {
+            "type": "string",
+            "description": "Contact gender.",
+            "enum": [
+              "MALE",
+              "FEMALE"
+            ]
+          },
+          "email": {
+            "type": "string",
+            "description": "Contact email address."
+          },
+          "company": {
+            "type": "string",
+            "description": "Company name."
+          },
+          "fields": {
+            "type": "array",
+            "description": "Custom contact fields. Phone, region, country, and organization are field entries, not top-level properties.",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "name",
+                "value"
+              ],
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "description": "Field name, such as FUNCTION, MOBILE_PHONE_NUMBER, ADDR_STATE, ADDR_COUNTRY, or COMPANY_DEPT.",
+                  "minLength": 1
+                },
+                "value": {
+                  "type": "string",
+                  "description": "Field value."
+                }
+              }
+            }
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": true,
+        "required": [
+          "contacts"
+        ],
+        "properties": {
+          "contacts": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/contacts",
+        "success": [
+          200,
+          201
+        ],
+        "result": "{{response}}",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "customId": "{{customId}}",
+          "firstName": "{{firstName}}",
+          "lastName": "{{lastName}}",
+          "gender": "{{gender}}",
+          "email": "{{email}}",
+          "company": "{{company}}",
+          "fields": "{{fields}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "contacts.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 5242880,
+      "title": "Get Contact",
+      "description": "Get one contact by Evenium id, id: prefix, or ext: prefix with GET /api/1/contacts/{contactId}.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "contactId": {
+            "type": "string",
+            "description": "Evenium contact id, id:123456, or ext:externalId.",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "contactId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": true,
+        "required": [
+          "id"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/contacts/{{contactId}}",
+        "success": [
+          200
+        ],
+        "result": "{{response}}"
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "contacts.getByCustomId": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 5242880,
+      "title": "Get Contact by Custom ID",
+      "description": "Get one contact by external id with GET /api/1/contacts/customId/{customId}.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "customId": {
+            "type": "string",
+            "description": "External contact id. Do not include the ext: prefix.",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "customId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": true,
+        "required": [
+          "id"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/contacts/customId/{{customId}}",
+        "success": [
+          200
+        ],
+        "result": "{{response}}"
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "contacts.events.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 5242880,
+      "title": "Get Contact Events",
+      "description": "List events a contact was invited to with GET /api/1/contacts/{contactId}/events. The JSON array is returned as events.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "contactId": {
+            "type": "string",
+            "description": "Evenium contact id, id:123456, or ext:externalId.",
+            "minLength": 1
+          },
+          "startsAfter": {
+            "type": "string",
+            "description": "RFC 3339 timestamp. Keep events whose startDate is after this instant.",
+            "minLength": 1
+          },
+          "startsBefore": {
+            "type": "string",
+            "description": "RFC 3339 timestamp. Keep events whose startDate is before this instant.",
+            "minLength": 1
+          },
+          "endsAfter": {
+            "type": "string",
+            "description": "RFC 3339 timestamp. Keep events whose endDate is after this instant.",
+            "minLength": 1
+          },
+          "endsBefore": {
+            "type": "string",
+            "description": "RFC 3339 timestamp. Keep events whose endDate is before this instant.",
+            "minLength": 1
+          },
+          "createdAfter": {
+            "type": "string",
+            "description": "RFC 3339 timestamp. Keep events whose creationDate is after this instant.",
+            "minLength": 1
+          },
+          "createdBefore": {
+            "type": "string",
+            "description": "RFC 3339 timestamp. Keep events whose creationDate is before this instant.",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "contactId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "events"
+        ],
+        "properties": {
+          "events": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/contacts/{{contactId}}/events",
+        "success": [
+          200
+        ],
+        "result": {
+          "events": "{{response}}"
+        },
+        "query": {
+          "startsAfter": "{{startsAfter}}",
+          "startsBefore": "{{startsBefore}}",
+          "endsAfter": "{{endsAfter}}",
+          "endsBefore": "{{endsBefore}}",
+          "createdAfter": "{{createdAfter}}",
+          "createdBefore": "{{createdBefore}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "contacts.events.listByCustomId": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 5242880,
+      "title": "Get Contact Events by Custom ID",
+      "description": "List events for an external contact id with GET /api/1/contacts/customId/{customId}/events. The JSON array is returned as events.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "customId": {
+            "type": "string",
+            "description": "External contact id. Do not include the ext: prefix.",
+            "minLength": 1
+          },
+          "startsAfter": {
+            "type": "string",
+            "description": "RFC 3339 timestamp. Keep events whose startDate is after this instant.",
+            "minLength": 1
+          },
+          "startsBefore": {
+            "type": "string",
+            "description": "RFC 3339 timestamp. Keep events whose startDate is before this instant.",
+            "minLength": 1
+          },
+          "endsAfter": {
+            "type": "string",
+            "description": "RFC 3339 timestamp. Keep events whose endDate is after this instant.",
+            "minLength": 1
+          },
+          "endsBefore": {
+            "type": "string",
+            "description": "RFC 3339 timestamp. Keep events whose endDate is before this instant.",
+            "minLength": 1
+          },
+          "createdAfter": {
+            "type": "string",
+            "description": "RFC 3339 timestamp. Keep events whose creationDate is after this instant.",
+            "minLength": 1
+          },
+          "createdBefore": {
+            "type": "string",
+            "description": "RFC 3339 timestamp. Keep events whose creationDate is before this instant.",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "customId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "events"
+        ],
+        "properties": {
+          "events": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/contacts/customId/{{customId}}/events",
+        "success": [
+          200
+        ],
+        "result": {
+          "events": "{{response}}"
+        },
+        "query": {
+          "startsAfter": "{{startsAfter}}",
+          "startsBefore": "{{startsBefore}}",
+          "endsAfter": "{{endsAfter}}",
+          "endsBefore": "{{endsBefore}}",
+          "createdAfter": "{{createdAfter}}",
+          "createdBefore": "{{createdBefore}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "contacts.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 5242880,
+      "title": "Get Contacts",
+      "description": "List organizer contacts with GET /api/1/contacts. Pagination is maxResults and firstResult. There is no search, order, page, or pageSize parameter.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "maxResults": {
+            "type": "integer",
+            "description": "Maximum number of rows to return. The organizer API defaults to 100.",
+            "minimum": 1
+          },
+          "firstResult": {
+            "type": "integer",
+            "description": "Zero-based index of the first row. The organizer API defaults to 0.",
+            "minimum": 0
+          },
+          "since": {
+            "type": "string",
+            "description": "RFC 3339 timestamp. Keep contacts updated after this instant.",
+            "minLength": 1
+          },
+          "lastName": {
+            "type": "string",
+            "description": "Last name filter. The organizer API matches lastName like this value.",
+            "minLength": 1
+          },
+          "firstName": {
+            "type": "string",
+            "description": "First name filter. The organizer API matches firstName like this value.",
+            "minLength": 1
+          },
+          "email": {
+            "type": "string",
+            "description": "Email filter. The organizer API matches email equal to this value.",
+            "minLength": 1
+          },
+          "company": {
+            "type": "string",
+            "description": "Company filter. The organizer API matches company like this value.",
+            "minLength": 1
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": true,
+        "required": [
+          "contacts"
+        ],
+        "properties": {
+          "contacts": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/contacts",
+        "success": [
+          200
+        ],
+        "result": "{{response}}",
+        "query": {
+          "maxResults": "{{maxResults}}",
+          "firstResult": "{{firstResult}}",
+          "since": "{{since}}",
+          "lastName": "{{lastName}}",
+          "firstName": "{{firstName}}",
+          "email": "{{email}}",
+          "company": "{{company}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "events.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 5242880,
+      "title": "Get Events",
+      "description": "List events with GET /api/1/events. Pagination is maxResults and firstResult. title and status are the documented filters. sort, direction, archived, includeDrafts, and includeDeleted are not organizer query parameters; status accepts DRAFT, ARCHIVED, and DELETED.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "maxResults": {
+            "type": "integer",
+            "description": "Maximum number of rows to return. The organizer API defaults to 100.",
+            "minimum": 1
+          },
+          "firstResult": {
+            "type": "integer",
+            "description": "Zero-based index of the first row. The organizer API defaults to 0.",
+            "minimum": 0
+          },
+          "startsAfter": {
+            "type": "string",
+            "description": "RFC 3339 timestamp. Keep events whose startDate is after this instant.",
+            "minLength": 1
+          },
+          "startsBefore": {
+            "type": "string",
+            "description": "RFC 3339 timestamp. Keep events whose startDate is before this instant.",
+            "minLength": 1
+          },
+          "endsAfter": {
+            "type": "string",
+            "description": "RFC 3339 timestamp. Keep events whose endDate is after this instant.",
+            "minLength": 1
+          },
+          "endsBefore": {
+            "type": "string",
+            "description": "RFC 3339 timestamp. Keep events whose endDate is before this instant.",
+            "minLength": 1
+          },
+          "createdAfter": {
+            "type": "string",
+            "description": "RFC 3339 timestamp. Keep events whose creationDate is after this instant.",
+            "minLength": 1
+          },
+          "createdBefore": {
+            "type": "string",
+            "description": "RFC 3339 timestamp. Keep events whose creationDate is before this instant.",
+            "minLength": 1
+          },
+          "title": {
+            "type": "string",
+            "description": "Title filter. The organizer API matches title like this value.",
+            "minLength": 1
+          },
+          "status": {
+            "type": "string",
+            "description": "Event status equal to this value, such as OPEN, FUTURE, DRAFT, ARCHIVED, or DELETED.",
+            "minLength": 1
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": true,
+        "required": [
+          "event"
+        ],
+        "properties": {
+          "event": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/events",
+        "success": [
+          200
+        ],
+        "result": "{{response}}",
+        "query": {
+          "maxResults": "{{maxResults}}",
+          "firstResult": "{{firstResult}}",
+          "startsAfter": "{{startsAfter}}",
+          "startsBefore": "{{startsBefore}}",
+          "endsAfter": "{{endsAfter}}",
+          "endsBefore": "{{endsBefore}}",
+          "createdAfter": "{{createdAfter}}",
+          "createdBefore": "{{createdBefore}}",
+          "title": "{{title}}",
+          "status": "{{status}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "contacts.import": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 5242880,
+      "title": "Import Contacts",
+      "description": "Create or update contacts in one call with PUT /api/1/contacts. Matching uses customId or email.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "contacts": {
+            "type": "array",
+            "minItems": 1,
+            "description": "Contacts to create or update.",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "customId": {
+                  "type": "string",
+                  "description": "External contact id from your CRM or database.",
+                  "minLength": 1
+                },
+                "firstName": {
+                  "type": "string",
+                  "description": "Contact first name."
+                },
+                "lastName": {
+                  "type": "string",
+                  "description": "Contact last name."
+                },
+                "gender": {
+                  "type": "string",
+                  "description": "Contact gender.",
+                  "enum": [
+                    "MALE",
+                    "FEMALE"
+                  ]
+                },
+                "email": {
+                  "type": "string",
+                  "description": "Contact email address."
+                },
+                "company": {
+                  "type": "string",
+                  "description": "Company name."
+                },
+                "fields": {
+                  "type": "array",
+                  "description": "Custom contact fields. Phone, region, country, and organization are field entries, not top-level properties.",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "name",
+                      "value"
+                    ],
+                    "properties": {
+                      "name": {
+                        "type": "string",
+                        "description": "Field name, such as FUNCTION, MOBILE_PHONE_NUMBER, ADDR_STATE, ADDR_COUNTRY, or COMPANY_DEPT.",
+                        "minLength": 1
+                      },
+                      "value": {
+                        "type": "string",
+                        "description": "Field value."
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "required": [
+          "contacts"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": true,
+        "required": [
+          "processed",
+          "messages"
+        ],
+        "properties": {
+          "processed": {
+            "type": "string"
+          },
+          "created": {
+            "type": "string"
+          },
+          "messages": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/contacts",
+        "success": [
+          200
+        ],
+        "result": "{{response}}",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "contacts": "{{contacts}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "contacts.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Update Contact",
+      "description": "Update one contact with PUT /api/1/contacts/{contactId}. Phone, region, country, and organization are sent inside fields.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "contactId": {
+            "type": "string",
+            "description": "Evenium contact id, id:123456, or ext:externalId.",
+            "minLength": 1
+          },
+          "email": {
+            "type": "string",
+            "description": "Replacement email address."
+          },
+          "company": {
+            "type": "string",
+            "description": "Replacement company name."
+          },
+          "firstName": {
+            "type": "string",
+            "description": "Replacement first name."
+          },
+          "lastName": {
+            "type": "string",
+            "description": "Replacement last name."
+          },
+          "fields": {
+            "type": "array",
+            "description": "Custom contact fields. Phone, region, country, and organization are field entries, not top-level properties.",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "name",
+                "value"
+              ],
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "description": "Field name, such as FUNCTION, MOBILE_PHONE_NUMBER, ADDR_STATE, ADDR_COUNTRY, or COMPANY_DEPT.",
+                  "minLength": 1
+                },
+                "value": {
+                  "type": "string",
+                  "description": "Field value."
+                }
+              }
+            }
+          }
+        },
+        "required": [
+          "contactId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": true,
+        "required": [
+          "id"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          }
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/contacts/{{contactId}}",
+        "success": [
+          200
+        ],
+        "result": "{{response}}",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "email": "{{email}}",
+          "company": "{{company}}",
+          "firstName": "{{firstName}}",
+          "lastName": "{{lastName}}",
+          "fields": "{{fields}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "contacts.updateByCustomId": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Update Contact by Custom ID",
+      "description": "Update one contact addressed as ext:{customId} with PUT /api/1/contacts/ext:{customId}. Contact resources accept that prefix, and the custom-id tool adds it. The raw custom id is not a free-form URL.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "customId": {
+            "type": "string",
+            "description": "External contact id. The ext: prefix is added in the path.",
+            "minLength": 1
+          },
+          "email": {
+            "type": "string",
+            "description": "Replacement email address."
+          },
+          "company": {
+            "type": "string",
+            "description": "Replacement company name."
+          },
+          "firstName": {
+            "type": "string",
+            "description": "Replacement first name."
+          },
+          "lastName": {
+            "type": "string",
+            "description": "Replacement last name."
+          },
+          "fields": {
+            "type": "array",
+            "description": "Custom contact fields. Phone, region, country, and organization are field entries, not top-level properties.",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "name",
+                "value"
+              ],
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "description": "Field name, such as FUNCTION, MOBILE_PHONE_NUMBER, ADDR_STATE, ADDR_COUNTRY, or COMPANY_DEPT.",
+                  "minLength": 1
+                },
+                "value": {
+                  "type": "string",
+                  "description": "Field value."
+                }
+              }
+            }
+          }
+        },
+        "required": [
+          "customId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": true,
+        "required": [
+          "id"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          }
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/contacts/ext:{{customId}}",
+        "success": [
+          200
+        ],
+        "result": "{{response}}",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "email": "{{email}}",
+          "company": "{{company}}",
+          "firstName": "{{firstName}}",
+          "lastName": "{{lastName}}",
+          "fields": "{{fields}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    }
+  }
+}

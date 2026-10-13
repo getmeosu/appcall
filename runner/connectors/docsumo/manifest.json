@@ -1,0 +1,678 @@
+{
+  "key": "docsumo",
+  "name": "Docsumo",
+  "version": "0.1.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "utility"
+  ],
+  "auth": {
+    "type": "api_key",
+    "scopes": [],
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "Docsumo API key",
+          "required": true,
+          "secret": true
+        }
+      ]
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "app.docsumo.com"
+    ]
+  },
+  "models": [
+    "document",
+    "document-type",
+    "folder",
+    "table",
+    "agent",
+    "case",
+    "account"
+  ],
+  "http": {
+    "baseUrl": "https://app.docsumo.com/api/v1",
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "apikey",
+      "value": "{{apiKey}}"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "Retry-After",
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "message",
+        "error"
+      ],
+      "bodyErrorPaths": [
+        "error"
+      ]
+    },
+    "headers": {
+      "Accept": "application/json"
+    }
+  },
+  "operations": {
+    "agents.cases.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 5242880,
+      "title": "List External Agent Cases",
+      "description": "List cases for one external-agent case type, with optional stage, assignee, workflow, and date filters.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "casetypeId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "description": "Case type id from List External Agents."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100,
+            "description": "Page size from 0 to 100."
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 1000000,
+            "description": "Number of cases to skip."
+          },
+          "sortBy": {
+            "type": "string",
+            "enum": [
+              "created_date.asc",
+              "created_date.desc",
+              "modified_date.asc",
+              "modified_date.desc"
+            ],
+            "description": "Sort field and direction."
+          },
+          "stageId": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 50,
+            "uniqueItems": true,
+            "description": "Stage ids. Repeated as stage_id.",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            }
+          },
+          "assignedTo": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 50,
+            "uniqueItems": true,
+            "description": "Assignee user ids. Repeated as assigned_to.",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            }
+          },
+          "workflowState": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 50,
+            "uniqueItems": true,
+            "description": "Workflow states. Repeated as workflow_state.",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            }
+          },
+          "createdDateFrom": {
+            "type": "string",
+            "minLength": 10,
+            "maxLength": 10,
+            "description": "Created-on-or-after date, DD/MM/YYYY."
+          },
+          "createdDateTo": {
+            "type": "string",
+            "minLength": 10,
+            "maxLength": 10,
+            "description": "Created-on-or-before date, DD/MM/YYYY."
+          },
+          "modifiedDateFrom": {
+            "type": "string",
+            "minLength": 10,
+            "maxLength": 10,
+            "description": "Modified-on-or-after date, DD/MM/YYYY."
+          },
+          "modifiedDateTo": {
+            "type": "string",
+            "minLength": 10,
+            "maxLength": 10,
+            "description": "Modified-on-or-before date, DD/MM/YYYY."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "casetypeId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/external/agents/{{casetypeId}}/cases",
+        "success": [
+          200
+        ],
+        "query": {
+          "limit": "{{limit}}",
+          "offset": "{{offset}}",
+          "sort_by": "{{sortBy}}",
+          "stage_id": "{{stageId}}",
+          "assigned_to": "{{assignedTo}}",
+          "workflow_state": "{{workflowState}}",
+          "created_date_from": "{{createdDateFrom}}",
+          "created_date_to": "{{createdDateTo}}",
+          "modified_date_from": "{{modifiedDateFrom}}",
+          "modified_date_to": "{{modifiedDateTo}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "agents.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "title": "List External Agents",
+      "description": "List external agents, optionally filtered to document-type or case-type agents.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "all",
+              "doctype",
+              "casetype"
+            ],
+            "description": "Agent type filter."
+          }
+        },
+        "additionalProperties": false,
+        "required": []
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/external/agents",
+        "success": [
+          200
+        ],
+        "query": {
+          "type": "{{type}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "analytics.mca": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 60000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "MCA Analysis",
+      "description": "Run merchant cash advance analysis on processed bank-statement document ids and return the JSON account summary.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "docIds": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 100,
+            "uniqueItems": true,
+            "description": "Processed bank-statement document ids.",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            }
+          },
+          "mcaListDbTable": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "description": "Database table name for the MCA merchant list."
+          },
+          "nonMcaListDbTable": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "description": "Database table name for the non-MCA merchant list."
+          },
+          "allowPartial": {
+            "type": "boolean",
+            "description": "Continue when some documents are not in a valid status."
+          },
+          "webhook": {
+            "type": "boolean",
+            "description": "Ask Docsumo to send a webhook after processing."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "docIds"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/skitty/analytics/account-summary/",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "doc_ids": "{{docIds}}",
+          "mca_list_db_table": "{{mcaListDbTable}}",
+          "non_mca_list_db_table": "{{nonMcaListDbTable}}"
+        },
+        "success": [
+          200
+        ],
+        "query": {
+          "allow_partial": "{{allowPartial}}",
+          "webhook": "{{webhook}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "document-types.list-enabled": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "title": "List Enabled Document Types",
+      "description": "List document types currently enabled on the account.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false,
+        "required": []
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/mew/documents/types/",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "document-types.user": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "title": "Get User Document Types",
+      "description": "Get the authenticated user, monthly document limits, and active document types.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false,
+        "required": []
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/eevee/apikey/limit/",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "documents.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 5242880,
+      "title": "List All Documents",
+      "description": "List documents, optionally filtered by view, folder, type, status, title, or created date.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "view": {
+            "type": "string",
+            "enum": [
+              "files",
+              "folder",
+              "all_files"
+            ],
+            "description": "files lists documents outside folders, folder lists one folder, all_files lists everything."
+          },
+          "folderId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "description": "Folder id. Required by Docsumo when view is folder."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 20,
+            "description": "Maximum documents to return, from 0 to 20."
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 1000000,
+            "description": "Number of documents to skip."
+          },
+          "docType": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "description": "Document type value from Get User Document Types."
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "reviewing",
+              "processed",
+              "erred"
+            ],
+            "description": "Processing status."
+          },
+          "q": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "description": "Partial title search."
+          },
+          "sortBy": {
+            "type": "string",
+            "enum": [
+              "created_date.asc",
+              "created_date.desc"
+            ],
+            "description": "Created-date sort."
+          },
+          "createdDate": {
+            "type": "string",
+            "minLength": 4,
+            "maxLength": 64,
+            "description": "Created-date filter such as gte:YYYY-MM-DD or lte:YYYY-MM-DD."
+          }
+        },
+        "additionalProperties": false,
+        "required": []
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/eevee/apikey/documents/all/",
+        "success": [
+          200
+        ],
+        "query": {
+          "view": "{{view}}",
+          "folder_id": "{{folderId}}",
+          "limit": "{{limit}}",
+          "offset": "{{offset}}",
+          "doc_type": "{{docType}}",
+          "status": "{{status}}",
+          "q": "{{q}}",
+          "sort_by": "{{sortBy}}",
+          "created_date": "{{createdDate}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "folders.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 8192,
+      "maxResponseBytes": 1048576,
+      "title": "Create Folder",
+      "description": "Create a folder for one document type.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "folderName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "description": "Name of the folder to create."
+          },
+          "type": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "description": "Document type stored in the folder."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "folderName",
+          "type"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/mew/folder/add/",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "folder_name": "{{folderName}}",
+          "type": "{{type}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "tables.add-row": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 5242880,
+      "title": "Add Table Row",
+      "description": "Append one empty row to a database table. Docsumo assigns the next id and blank fields.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "ddid": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "description": "Database table id."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "ddid"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/raichu/drop_down/db/addrow/{{ddid}}/",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "tables.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 5242880,
+      "title": "Get Table Data",
+      "description": "Get the rows stored in one database table.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "ddid": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "description": "Database table id."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "ddid"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/raichu/drop_down/db/get/{{ddid}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    }
+  }
+}

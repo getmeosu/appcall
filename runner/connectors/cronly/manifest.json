@@ -1,0 +1,515 @@
+{
+  "key": "cronly",
+  "name": "Cronly",
+  "version": "0.1.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "dev-tools"
+  ],
+  "auth": {
+    "type": "api_key",
+    "scopes": [],
+    "setup": {
+      "mode": "api_key",
+      "docsUrl": "https://docs.cronly.app/api/how-to-use-the-api",
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "Cronly API key",
+          "required": true,
+          "secret": true
+        }
+      ]
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "cronly.app"
+    ]
+  },
+  "models": [
+    "certificate",
+    "monitor",
+    "project",
+    "company"
+  ],
+  "http": {
+    "baseUrl": "https://cronly.app/api",
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "Authorization",
+      "value": "Bearer {{apiKey}}"
+    },
+    "errors": {
+      "messagePaths": [
+        "error",
+        "reason",
+        "message"
+      ]
+    },
+    "headers": {
+      "Accept": "application/json"
+    }
+  },
+  "operations": {
+    "certificates.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 1048576,
+      "title": "Create Certificate Monitor",
+      "description": "Create an SSL/TLS certificate-expiry monitor for a hostname and port. POST https://cronly.app/api/certificates. The nested company object is omitted so billing and integration secrets are not returned.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "hostname": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 253,
+            "description": "Resolvable hostname whose TLS certificate Cronly should monitor. Do not include a URL scheme, port, or path."
+          },
+          "port": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 65535,
+            "description": "TLS port to check, from 1 to 65535. Cronly defaults this to 443 when omitted."
+          },
+          "projectId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Optional positive numeric project ID to associate with the certificate monitor."
+          }
+        },
+        "required": [
+          "hostname"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "hostname",
+              "company_id",
+              "status",
+              "expires_at",
+              "last_checked_at",
+              "created_at",
+              "updated_at"
+            ],
+            "properties": {
+              "id": {
+                "type": "integer"
+              },
+              "hostname": {
+                "type": "string"
+              },
+              "port": {
+                "type": [
+                  "integer",
+                  "string"
+                ]
+              },
+              "project_id": {
+                "type": [
+                  "integer",
+                  "string",
+                  "null"
+                ]
+              },
+              "company_id": {
+                "type": "integer"
+              },
+              "status": {
+                "type": "string"
+              },
+              "expires_at": {
+                "type": "string"
+              },
+              "last_checked_at": {
+                "type": "string"
+              },
+              "created_at": {
+                "type": "string"
+              },
+              "updated_at": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/certificates",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "hostname": "{{hostname}}",
+          "port": "{{port}}",
+          "project_id": "{{projectId}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "data": {
+            "id": "{{response.id}}",
+            "hostname": "{{response.hostname}}",
+            "port": "{{response.port}}",
+            "project_id": "{{response.project_id}}",
+            "company_id": "{{response.company_id}}",
+            "status": "{{response.status}}",
+            "expires_at": "{{response.expires_at}}",
+            "last_checked_at": "{{response.last_checked_at}}",
+            "created_at": "{{response.created_at}}",
+            "updated_at": "{{response.updated_at}}"
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "monitors.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 1048576,
+      "title": "Create Monitor",
+      "description": "Create a cron-job heartbeat monitor and return its ID and sensitive pulse token. POST https://cronly.app/api/monitors.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "Human-readable monitor name."
+          },
+          "duration": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Expected completion window in minutes. Must be positive."
+          },
+          "schedule": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100,
+            "description": "Five-field cron expression describing the expected run schedule."
+          },
+          "timezone": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100,
+            "description": "IANA timezone used to evaluate the schedule."
+          },
+          "projectId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Optional positive numeric project ID to associate with the monitor."
+          }
+        },
+        "required": [
+          "name",
+          "duration",
+          "schedule",
+          "timezone"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "name",
+              "timezone",
+              "schedule",
+              "duration",
+              "company_id",
+              "token",
+              "created_at",
+              "updated_at"
+            ],
+            "properties": {
+              "id": {
+                "type": "integer"
+              },
+              "name": {
+                "type": "string"
+              },
+              "project_id": {
+                "type": [
+                  "integer",
+                  "string",
+                  "null"
+                ]
+              },
+              "timezone": {
+                "type": "string"
+              },
+              "schedule": {
+                "type": "string"
+              },
+              "duration": {
+                "type": [
+                  "integer",
+                  "string"
+                ]
+              },
+              "company_id": {
+                "type": "integer"
+              },
+              "token": {
+                "type": "string"
+              },
+              "created_at": {
+                "type": "string"
+              },
+              "updated_at": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/monitors",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "name": "{{name}}",
+          "timezone": "{{timezone}}",
+          "schedule": "{{schedule}}",
+          "duration": "{{duration}}",
+          "project_id": "{{projectId}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "projects.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "maxInputBytes": 8192,
+      "maxResponseBytes": 262144,
+      "title": "Create Project",
+      "description": "Create a project for organizing Cronly monitors and certificate checks. POST https://cronly.app/api/projects.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "Non-empty project name."
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "name",
+              "company_id",
+              "created_at",
+              "updated_at"
+            ],
+            "properties": {
+              "id": {
+                "type": "integer"
+              },
+              "name": {
+                "type": "string"
+              },
+              "company_id": {
+                "type": "integer"
+              },
+              "created_at": {
+                "type": "string"
+              },
+              "updated_at": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/projects",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "name": "{{name}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "companies.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 262144,
+      "title": "Get Company",
+      "description": "Return organization, timezone, mail, and trial fields for the connected Cronly account. GET https://cronly.app/api/companies. Billing and integration secrets are not returned.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {},
+        "required": []
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "name",
+              "timezone",
+              "ongoing_mails"
+            ],
+            "properties": {
+              "id": {
+                "type": "integer"
+              },
+              "name": {
+                "type": "string"
+              },
+              "timezone": {
+                "type": "string"
+              },
+              "ongoing_mails": {
+                "type": "boolean"
+              },
+              "trial_ends_at": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/companies",
+        "success": [
+          200
+        ],
+        "result": {
+          "data": {
+            "id": "{{response.id}}",
+            "name": "{{response.name}}",
+            "timezone": "{{response.timezone}}",
+            "ongoing_mails": "{{response.ongoing_mails}}",
+            "trial_ends_at": "{{response.trial_ends_at}}"
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "monitors.pulse": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "title": "Pulse Monitor",
+      "description": "Record a successful heartbeat for a monitor using its sensitive pulse token. GET https://cronly.app/api/monitors/pulse/{token}. Cronly does not require the API key for this call; the connector still sends the account bearer token and never accepts a free-form URL.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "pulseToken": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "description": "Sensitive per-monitor pulse token returned by monitor creation. Send it only to this pulse operation."
+          }
+        },
+        "required": [
+          "pulseToken"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/monitors/pulse/{{pulseToken}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    }
+  }
+}

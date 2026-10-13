@@ -1,0 +1,612 @@
+{
+  "key": "android-texter",
+  "name": "Android Texter",
+  "version": "0.1.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "messaging"
+  ],
+  "auth": {
+    "type": "api_key",
+    "scopes": [],
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "Android Texter API key",
+          "required": true,
+          "secret": true
+        }
+      ]
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "androidtexter.com"
+    ]
+  },
+  "models": [
+    "message",
+    "contact",
+    "device",
+    "quick-reply"
+  ],
+  "http": {
+    "baseUrl": "https://androidtexter.com/api",
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "X-API-Key",
+      "value": "{{apiKey}}"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "Retry-After",
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "error",
+        "message"
+      ]
+    },
+    "headers": {
+      "Accept": "application/json"
+    }
+  },
+  "operations": {
+    "contacts.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 5242880,
+      "title": "List Contacts",
+      "description": "List Android Texter contacts, optionally filtering by name or phone text and tag. The public API pages with page and limit.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "search": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Case-insensitive substring matched against name or phone."
+          },
+          "tag": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Exact contact tag to filter by."
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "1-indexed page. Omit for the first page."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Page size from 1 to 100. The API default is 50."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/contacts",
+        "query": {
+          "search": "{{search}}",
+          "tag": "{{tag}}",
+          "page": "{{page}}",
+          "limit": "{{limit}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "devices.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "title": "List Devices",
+      "description": "List Android devices linked to the account, including id and online state.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/devices",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "messages.history": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 5242880,
+      "title": "List Conversation History",
+      "description": "Return one newest-first page of inbound and outbound messages with one phone number. The public API uses page and limit.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "phone"
+        ],
+        "properties": {
+          "phone": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Other party's phone number. It is URL-encoded in the path. E.164 is preferred."
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "1-indexed page. Omit for the first page."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Maximum messages in this page, from 1 to 100."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/messages/history/{{phone}}",
+        "query": {
+          "page": "{{page}}",
+          "limit": "{{limit}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "messages.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 5242880,
+      "title": "List Messages",
+      "description": "List one newest-first page of inbound and outbound messages. Sent-only and received-only are separate routes and are not selected here.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "1-indexed page. Omit for the first page."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Maximum messages in this page, from 1 to 100."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/messages",
+        "query": {
+          "page": "{{page}}",
+          "limit": "{{limit}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "messages.send": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Send Message",
+      "description": "Queue one SMS or MMS to a phone number through a linked Android device. A queue acknowledgement does not prove delivery.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "phone",
+          "message"
+        ],
+        "properties": {
+          "phone": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Recipient phone number, preferably E.164."
+          },
+          "message": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1600,
+            "description": "SMS or MMS text, from 1 to 1600 characters."
+          },
+          "deviceId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Linked device id. Omit to let Android Texter choose an online device."
+          },
+          "mediaUrl": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Public media URL. When set, the send is queued as MMS."
+          },
+          "scheduledAt": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Optional RFC 3339 delivery time. Omit to queue immediately."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/messages/send",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "phone": "{{phone}}",
+          "message": "{{message}}",
+          "device_id": "{{deviceId}}",
+          "media_url": "{{mediaUrl}}",
+          "scheduled_at": "{{scheduledAt}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "messages.status": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "title": "Get Message Status",
+      "description": "Get the queued, sent, delivered, or failed status for a message id returned by Send Message.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "messageId"
+        ],
+        "properties": {
+          "messageId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Message id returned by Send Message."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/messages/status/{{messageId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "quick-replies.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Create Quick Reply",
+      "description": "Create a reusable quick-reply shortcut. The shortcut must be unique in the account.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "shortcut",
+          "title",
+          "body"
+        ],
+        "properties": {
+          "shortcut": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique short command for this quick reply."
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Human-readable title."
+          },
+          "body": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Reusable message text."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/quick-replies",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "shortcut": "{{shortcut}}",
+          "title": "{{title}}",
+          "body": "{{body}}"
+        },
+        "success": [
+          201
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "quick-replies.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "title": "Delete Quick Reply",
+      "description": "Permanently delete one saved quick reply by id.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "quickReplyId"
+        ],
+        "properties": {
+          "quickReplyId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Id of the quick reply to delete."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/quick-replies/{{quickReplyId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "quick-replies.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "title": "List Quick Replies",
+      "description": "List saved quick-reply shortcuts.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/quick-replies",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "quick-replies.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Update Quick Reply",
+      "description": "Replace an existing quick reply shortcut, title, and body.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "quickReplyId",
+          "shortcut",
+          "title",
+          "body"
+        ],
+        "properties": {
+          "quickReplyId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Id of the quick reply to replace."
+          },
+          "shortcut": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Replacement shortcut. It must stay unique in the account."
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Replacement title."
+          },
+          "body": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Replacement message text."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/quick-replies/{{quickReplyId}}",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "shortcut": "{{shortcut}}",
+          "title": "{{title}}",
+          "body": "{{body}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    }
+  }
+}

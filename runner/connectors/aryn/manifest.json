@@ -1,0 +1,434 @@
+{
+  "key": "aryn",
+  "name": "Aryn",
+  "version": "0.1.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "utility"
+  ],
+  "auth": {
+    "type": "api_key",
+    "scopes": [],
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "Aryn API key",
+          "required": true,
+          "secret": true
+        }
+      ]
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "api.aryn.cloud",
+      "api.aryn.ai",
+      "api.us.aryn.cloud",
+      "api.us.aryn.ai"
+    ]
+  },
+  "models": [
+    "docset",
+    "document",
+    "query-plan",
+    "async-task"
+  ],
+  "http": {
+    "baseUrl": "https://api.aryn.cloud",
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "Authorization",
+      "value": "Bearer {{apiKey}}"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "Retry-After",
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "detail",
+        "message",
+        "error"
+      ]
+    },
+    "headers": {
+      "Accept": "application/json"
+    }
+  },
+  "operations": {
+    "docsets.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 30000,
+      "maxInputBytes": 262144,
+      "maxResponseBytes": 1048576,
+      "title": "Create DocSet",
+      "description": "Create a DocSet with POST /v1/storage/docsets. Optional schema, prompts, and properties are JSON fields on that same body.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "description": "Name for the new DocSet."
+          },
+          "schema": {
+            "type": "object",
+            "description": "Optional DocSet schema. properties is a list of fields with name and field_type.",
+            "additionalProperties": false,
+            "required": [
+              "properties"
+            ],
+            "properties": {
+              "properties": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "name",
+                    "field_type"
+                  ],
+                  "properties": {
+                    "name": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "field_type": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "default": {
+                      "description": "Optional default value."
+                    },
+                    "description": {
+                      "type": "string"
+                    },
+                    "examples": {
+                      "type": "array"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "prompts": {
+            "type": "object",
+            "description": "Optional prompt dictionary.",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "properties": {
+            "type": "object",
+            "description": "Optional additional DocSet properties.",
+            "additionalProperties": true
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/storage/docsets",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "name": "{{name}}",
+          "properties": "{{properties}}",
+          "schema": "{{schema}}",
+          "prompts": "{{prompts}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "docsets.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 30000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "title": "Delete DocSet",
+      "description": "Delete a DocSet and its documents with DELETE /v1/storage/docsets/{docset_id}. The response is DocSet metadata JSON.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "docset_id"
+        ],
+        "properties": {
+          "docset_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "description": "DocSet id to delete. Composio names this docset_id. Format is typically aryn:ds-\u2026."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/v1/storage/docsets/{{docset_id}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "plans.generate": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 120000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Generate plan",
+      "description": "Generate a logical query plan with POST /v1/query/plan and do not run it. rag_mode limits the plan to RAG.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "docset_id",
+          "query"
+        ],
+        "properties": {
+          "docset_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "description": "DocSet to plan against. Format is typically aryn:ds-\u2026."
+          },
+          "query": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 8000,
+            "description": "Natural language query. The plan field is not sent."
+          },
+          "rag_mode": {
+            "type": "boolean",
+            "description": "When true, generate only a RAG plan."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/query/plan",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "docset_id": "{{docset_id}}",
+          "query": "{{query}}",
+          "rag_mode": "{{rag_mode}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "docsets.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "title": "Get DocSet Metadata",
+      "description": "Get DocSet metadata with GET /v1/storage/docsets/{docset_id}. Composio names the id docsetId.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "docset_id"
+        ],
+        "properties": {
+          "docset_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "description": "DocSet id. Composio names this docsetId."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/storage/docsets/{{docset_id}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "documents.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 60000,
+      "maxInputBytes": 8192,
+      "maxResponseBytes": 10485760,
+      "title": "Get Document by ID",
+      "description": "Get one document as JSON with GET /v1/storage/docsets/{docset_id}/docs/{doc_id}. include_elements and include_binary are query flags. include_binary adds a base64 binary_data string inside that JSON object. The original file download is a different route.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "docset_id",
+          "doc_id"
+        ],
+        "properties": {
+          "docset_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "description": "DocSet that contains the document."
+          },
+          "doc_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "description": "Document id. Format is typically aryn:f-\u2026."
+          },
+          "include_elements": {
+            "type": "boolean",
+            "description": "Include parsed elements. The API defaults this to true when omitted."
+          },
+          "include_binary": {
+            "type": "boolean",
+            "description": "Include base64 binary_data in the JSON document. The API defaults this to false when omitted."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/storage/docsets/{{docset_id}}/docs/{{doc_id}}",
+        "query": {
+          "include_elements": "{{include_elements}}",
+          "include_binary": "{{include_binary}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "tasks.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 1024,
+      "maxResponseBytes": 1048576,
+      "title": "List Async Tasks",
+      "description": "List outstanding DocParse partition tasks with GET /v1/async/list. The official List Async Tasks operation requires path_filter ^/v1/document/partition$. Add-doc tasks use a different required filter and are not this call.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {},
+        "required": []
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/async/list",
+        "query": {
+          "path_filter": "^/v1/document/partition$"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    }
+  }
+}

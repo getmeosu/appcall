@@ -1,0 +1,826 @@
+{
+  "key": "eranol",
+  "name": "Eranol",
+  "version": "0.1.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "utility",
+    "productivity"
+  ],
+  "auth": {
+    "type": "api_key",
+    "scopes": [],
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "Eranol API key",
+          "required": true,
+          "secret": true
+        }
+      ]
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "eranol.com"
+    ]
+  },
+  "models": [
+    "job",
+    "video",
+    "audio"
+  ],
+  "http": {
+    "baseUrl": "https://eranol.com/api/v1",
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "x-api-key",
+      "value": "{{apiKey}}"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "Retry-After",
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "message",
+        "error"
+      ]
+    },
+    "headers": {
+      "Accept": "application/json"
+    }
+  },
+  "operations": {
+    "videos.caption": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 30000,
+      "maxInputBytes": 262144,
+      "maxResponseBytes": 1048576,
+      "title": "Caption Video",
+      "description": "Transcribe a publicly downloadable video and burn styled captions. POST /ffmpeg/video/caption returns a JSON job.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "url": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Publicly downloadable video URL. Official field name is url."
+          },
+          "language": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Language code. Omit to let Eranol auto-detect the spoken language."
+          },
+          "position": {
+            "type": "string",
+            "enum": [
+              "bottom",
+              "top",
+              "center"
+            ],
+            "description": "Vertical caption position."
+          },
+          "font_size": {
+            "type": "integer",
+            "description": "Caption font size in pixels."
+          },
+          "font_color": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Caption text color as a supported color name or hex value."
+          },
+          "padding_top": {
+            "type": "integer",
+            "description": "Top padding in pixels."
+          },
+          "outline_color": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Caption outline color as a supported color name or hex value."
+          },
+          "outline_width": {
+            "type": "integer",
+            "description": "Caption outline width in pixels."
+          },
+          "padding_bottom": {
+            "type": "integer",
+            "description": "Bottom padding in pixels."
+          },
+          "max_words_per_line": {
+            "type": "integer",
+            "description": "Maximum words in each rendered caption line."
+          },
+          "max_segment_duration": {
+            "type": "number",
+            "description": "Maximum subtitle segment duration in seconds."
+          }
+        },
+        "required": [
+          "url"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "job_id",
+          "status"
+        ],
+        "properties": {
+          "job_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Job ID returned by Eranol."
+          },
+          "status": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Job state, for example pending."
+          },
+          "message": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Provider status message."
+          },
+          "job_type": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Eranol job type."
+          },
+          "result_url": {
+            "type": "string",
+            "minLength": 1,
+            "description": "URL of the job result endpoint. The connector does not follow it."
+          },
+          "status_url": {
+            "type": "string",
+            "minLength": 1,
+            "description": "URL of the job status endpoint. The connector does not follow it."
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/ffmpeg/video/caption",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "url": "{{url}}",
+          "language": "{{language}}",
+          "position": "{{position}}",
+          "font_size": "{{font_size}}",
+          "font_color": "{{font_color}}",
+          "padding_top": "{{padding_top}}",
+          "outline_color": "{{outline_color}}",
+          "outline_width": "{{outline_width}}",
+          "padding_bottom": "{{padding_bottom}}",
+          "max_words_per_line": "{{max_words_per_line}}",
+          "max_segment_duration": "{{max_segment_duration}}"
+        },
+        "result": {
+          "job_id": "{{response.job_id}}",
+          "status": "{{response.status}}",
+          "message": "{{response.message}}",
+          "job_type": "{{response.job_type}}",
+          "result_url": "{{response.result_url}}",
+          "status_url": "{{response.status_url}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "videos.concat": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 30000,
+      "maxInputBytes": 262144,
+      "maxResponseBytes": 1048576,
+      "title": "Concatenate Videos",
+      "description": "Join two or more ordered public video clips, optionally with one transition. POST /ffmpeg/video/concat returns a JSON array.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "clips": {
+            "type": "array",
+            "minItems": 2,
+            "description": "Two or more public video clips. Each clip needs a unique order value.",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "url",
+                "order"
+              ],
+              "properties": {
+                "url": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Publicly downloadable video URL."
+                },
+                "order": {
+                  "type": "integer",
+                  "description": "Unique order value. Eranol rejects duplicate order values."
+                }
+              }
+            }
+          },
+          "transition": {
+            "type": "object",
+            "additionalProperties": false,
+            "description": "Optional transition applied between consecutive clips.",
+            "properties": {
+              "type": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Transition name, for example fade or slideleft."
+              },
+              "duration": {
+                "type": "number",
+                "description": "Transition duration in seconds."
+              }
+            },
+            "required": [
+              "type"
+            ]
+          }
+        },
+        "required": [
+          "clips"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "description": "Official response example is a JSON array. Some Eranol use-case snippets show one object instead.",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/ffmpeg/video/concat",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "clips": "{{clips}}",
+          "transition": "{{transition}}"
+        },
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "audio.enhance": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 30000,
+      "maxInputBytes": 262144,
+      "maxResponseBytes": 1048576,
+      "title": "Enhance Audio",
+      "description": "Enhance speech in a public audio or video URL. POST /ffmpeg/audio/enhance returns a JSON job. Omit loudness_target, or pass null, to leave loudness normalization off.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "url": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Publicly downloadable audio or video URL. Official field name is url."
+          },
+          "voice_profile": {
+            "type": "string",
+            "enum": [
+              "none",
+              "natural",
+              "deep",
+              "bright"
+            ],
+            "description": "Voice tone profile."
+          },
+          "loudness_target": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "minimum": -31,
+            "maximum": -5,
+            "description": "Loudness target from -31 to -5 LUFS. Null leaves normalization disabled."
+          },
+          "post_filter": {
+            "type": "boolean",
+            "description": "Whether to apply Eranol's post-processing filter after enhancement."
+          },
+          "atten_limit_db": {
+            "type": "number",
+            "description": "Maximum noise attenuation in decibels, from 0 to 100. Official field name is atten_limit_db.",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "keep_video": {
+            "type": "boolean",
+            "description": "Whether to preserve the source video stream when url is a video."
+          },
+          "output_format": {
+            "type": "string",
+            "enum": [
+              "mp3",
+              "m4a",
+              "wav"
+            ],
+            "description": "Audio format for the enhanced output. This does not change the route."
+          }
+        },
+        "required": [
+          "url"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "job_id",
+          "status"
+        ],
+        "properties": {
+          "job_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Job ID returned by Eranol."
+          },
+          "status": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Job state, for example pending."
+          },
+          "message": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Provider status message."
+          },
+          "job_type": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Eranol job type."
+          },
+          "result_url": {
+            "type": "string",
+            "minLength": 1,
+            "description": "URL of the job result endpoint. The connector does not follow it."
+          },
+          "status_url": {
+            "type": "string",
+            "minLength": 1,
+            "description": "URL of the job status endpoint. The connector does not follow it."
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/ffmpeg/audio/enhance",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "url": "{{url}}",
+          "voice_profile": "{{voice_profile}}",
+          "loudness_target": "{{loudness_target}}",
+          "post_filter": "{{post_filter}}",
+          "atten_limit_db": "{{atten_limit_db}}",
+          "keep_video": "{{keep_video}}",
+          "output_format": "{{output_format}}"
+        },
+        "result": {
+          "job_id": "{{response.job_id}}",
+          "status": "{{response.status}}",
+          "message": "{{response.message}}",
+          "job_type": "{{response.job_type}}",
+          "result_url": "{{response.result_url}}",
+          "status_url": "{{response.status_url}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "videos.trim": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 30000,
+      "maxInputBytes": 262144,
+      "maxResponseBytes": 1048576,
+      "title": "Trim Video",
+      "description": "Create a lossless trim between start_sec and end_sec. POST /ffmpeg/video/trim returns a JSON job. end_sec must be greater than start_sec.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "url": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Publicly downloadable source video URL. Official field name is url."
+          },
+          "end_sec": {
+            "type": "number",
+            "description": "End time in seconds. Must be greater than start_sec.",
+            "minimum": 0
+          },
+          "start_sec": {
+            "type": "number",
+            "description": "Start time in seconds from the beginning of the video.",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "url",
+          "end_sec",
+          "start_sec"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "job_id",
+          "status"
+        ],
+        "properties": {
+          "job_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Job ID returned by Eranol."
+          },
+          "status": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Job state, for example pending."
+          },
+          "message": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Provider status message."
+          },
+          "job_type": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Eranol job type."
+          },
+          "result_url": {
+            "type": "string",
+            "minLength": 1,
+            "description": "URL of the job result endpoint. The connector does not follow it."
+          },
+          "status_url": {
+            "type": "string",
+            "minLength": 1,
+            "description": "URL of the job status endpoint. The connector does not follow it."
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/ffmpeg/video/trim",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "url": "{{url}}",
+          "end_sec": "{{end_sec}}",
+          "start_sec": "{{start_sec}}"
+        },
+        "result": {
+          "job_id": "{{response.job_id}}",
+          "status": "{{response.status}}",
+          "message": "{{response.message}}",
+          "job_type": "{{response.job_type}}",
+          "result_url": "{{response.result_url}}",
+          "status_url": "{{response.status_url}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "videos.watermark": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 30000,
+      "maxInputBytes": 262144,
+      "maxResponseBytes": 1048576,
+      "title": "Watermark Video",
+      "description": "Add an image watermark to a public video. POST /ffmpeg/video/watermark returns a JSON job.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "url": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Publicly downloadable source video URL. Official field name is url."
+          },
+          "watermark_url": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Publicly downloadable watermark image URL."
+          },
+          "position": {
+            "type": "string",
+            "enum": [
+              "top_left",
+              "top_right",
+              "top_center",
+              "bottom_left",
+              "bottom_right",
+              "bottom_center",
+              "center"
+            ],
+            "description": "Watermark placement."
+          },
+          "margin": {
+            "type": "integer",
+            "description": "Margin from the selected edges in pixels, from 0 to 500.",
+            "minimum": 0,
+            "maximum": 500
+          },
+          "opacity": {
+            "type": "number",
+            "description": "Watermark opacity from 0 to 1.",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "scale": {
+            "type": "number",
+            "description": "Watermark width as a fraction of the video width, from 0.01 to 1.",
+            "minimum": 0.01,
+            "maximum": 1
+          }
+        },
+        "required": [
+          "url",
+          "watermark_url"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "job_id",
+          "status"
+        ],
+        "properties": {
+          "job_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Job ID returned by Eranol."
+          },
+          "status": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Job state, for example pending."
+          },
+          "message": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Provider status message."
+          },
+          "job_type": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Eranol job type."
+          },
+          "result_url": {
+            "type": "string",
+            "minLength": 1,
+            "description": "URL of the job result endpoint. The connector does not follow it."
+          },
+          "status_url": {
+            "type": "string",
+            "minLength": 1,
+            "description": "URL of the job status endpoint. The connector does not follow it."
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/ffmpeg/video/watermark",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "url": "{{url}}",
+          "watermark_url": "{{watermark_url}}",
+          "position": "{{position}}",
+          "margin": "{{margin}}",
+          "opacity": "{{opacity}}",
+          "scale": "{{scale}}"
+        },
+        "result": {
+          "job_id": "{{response.job_id}}",
+          "status": "{{response.status}}",
+          "message": "{{response.message}}",
+          "job_type": "{{response.job_type}}",
+          "result_url": "{{response.result_url}}",
+          "status_url": "{{response.status_url}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "jobs.delete": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 262144,
+      "maxResponseBytes": 1048576,
+      "title": "Delete Job",
+      "description": "Cancel or delete an Eranol media job and remove its generated output. DELETE /ffmpeg/jobs/{job_id} returns JSON.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "jobId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Job ID to cancel or permanently delete."
+          }
+        },
+        "required": [
+          "jobId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "message",
+          "success"
+        ],
+        "properties": {
+          "message": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Deletion message."
+          },
+          "success": {
+            "type": "boolean",
+            "description": "Whether Eranol deleted the job."
+          }
+        }
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/ffmpeg/jobs/{{jobId}}",
+        "success": [
+          200
+        ],
+        "result": {
+          "message": "{{response.message}}",
+          "success": "{{response.success}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "jobs.result": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 262144,
+      "maxResponseBytes": 1048576,
+      "title": "Get Job Result",
+      "description": "Return a completed job download URL and output metadata, or status and progress while processing. GET /ffmpeg/result/{job_id} returns JSON. 202 is still processing.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "jobId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Job ID returned by an Eranol processing call."
+          }
+        },
+        "required": [
+          "jobId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "description": "Official response example is a JSON array. Some Eranol use-case snippets show one object instead.",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/ffmpeg/result/{{jobId}}",
+        "success": [
+          200,
+          202
+        ],
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "jobs.status": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 262144,
+      "maxResponseBytes": 1048576,
+      "title": "Get Job Status",
+      "description": "Return a media job state, progress, timestamps, error, and nested result metadata when present. GET /ffmpeg/status/{job_id} returns JSON.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "jobId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Job ID returned by an Eranol processing call."
+          }
+        },
+        "required": [
+          "jobId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "description": "Official response example is a JSON array. Some Eranol use-case snippets show one object instead.",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/ffmpeg/status/{{jobId}}",
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    }
+  }
+}

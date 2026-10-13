@@ -1,0 +1,920 @@
+{
+  "key": "airtop",
+  "name": "Airtop",
+  "version": "0.1.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "dev-tools"
+  ],
+  "auth": {
+    "type": "api_key",
+    "scopes": [],
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "Airtop API key",
+          "required": true,
+          "secret": true
+        }
+      ]
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "api.airtop.ai"
+    ]
+  },
+  "models": [
+    "session",
+    "window",
+    "page"
+  ],
+  "http": {
+    "baseUrl": "https://api.airtop.ai/api/v1",
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "Authorization",
+      "value": "Bearer {{apiKey}}"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "Retry-After",
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "detail",
+        "title",
+        "message",
+        "errors.0.message"
+      ]
+    },
+    "headers": {
+      "Accept": "application/json"
+    }
+  },
+  "operations": {
+    "healthcheck": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "title": "Healthcheck",
+      "description": "Validate the Airtop API key by listing one session.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/sessions",
+        "query": {
+          "limit": 1
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "sessions.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 1048576,
+      "title": "List Sessions",
+      "description": "List Airtop browser sessions. Filters are the documented sessionIds, status, offset, and limit query parameters.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "sessionIds": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "awaitingCapacity",
+              "initializing",
+              "running",
+              "ended",
+              "completed",
+              "cancelled",
+              "all"
+            ]
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": -1
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/sessions",
+        "query": {
+          "sessionIds": "{{sessionIds}}",
+          "status": "{{status}}",
+          "offset": "{{offset}}",
+          "limit": "{{limit}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "sessions.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 60000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Create Session",
+      "description": "Create an Airtop browser session with POST /sessions. Returns the session JSON as created. It does not poll until the session is running.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "configuration": {
+            "type": "object",
+            "additionalProperties": false,
+            "minProperties": 1,
+            "properties": {
+              "extensionIds": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 32,
+                "items": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 128
+                }
+              },
+              "profileName": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              },
+              "proxy": {
+                "oneOf": [
+                  {
+                    "type": "boolean"
+                  },
+                  {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 2048
+                  },
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "country": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 32
+                      },
+                      "sticky": {
+                        "type": "boolean"
+                      }
+                    }
+                  },
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "url"
+                    ],
+                    "properties": {
+                      "url": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 2048
+                      },
+                      "username": {
+                        "type": "string",
+                        "maxLength": 256
+                      },
+                      "password": {
+                        "type": "string",
+                        "maxLength": 256
+                      }
+                    }
+                  },
+                  {
+                    "type": "array",
+                    "minItems": 1,
+                    "maxItems": 32,
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "domainPattern",
+                        "relay"
+                      ],
+                      "properties": {
+                        "domainPattern": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 512
+                        },
+                        "relay": {
+                          "oneOf": [
+                            {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 2048
+                            },
+                            {
+                              "type": "object",
+                              "additionalProperties": false,
+                              "properties": {
+                                "country": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 32
+                                },
+                                "sticky": {
+                                  "type": "boolean"
+                                }
+                              }
+                            },
+                            {
+                              "type": "object",
+                              "additionalProperties": false,
+                              "required": [
+                                "url"
+                              ],
+                              "properties": {
+                                "url": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 2048
+                                },
+                                "username": {
+                                  "type": "string",
+                                  "maxLength": 256
+                                },
+                                "password": {
+                                  "type": "string",
+                                  "maxLength": 256
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  }
+                ]
+              },
+              "record": {
+                "type": "boolean"
+              },
+              "solveCaptcha": {
+                "type": "boolean"
+              },
+              "timeoutMinutes": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 10080
+              }
+            }
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/sessions",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "configuration": "{{configuration}}"
+        },
+        "success": [
+          201
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "windows.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 8192,
+      "maxResponseBytes": 1048576,
+      "title": "List Windows",
+      "description": "List browser windows in one running Airtop session.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "sessionId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          }
+        },
+        "required": [
+          "sessionId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/sessions/{{sessionId}}/windows",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "windows.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 300000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Create Window",
+      "description": "Create a browser window in a running Airtop session and optionally load an initial URL.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "sessionId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "url": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096
+          },
+          "waitUntil": {
+            "type": "string",
+            "enum": [
+              "load",
+              "domContentLoaded",
+              "complete",
+              "noWait"
+            ]
+          },
+          "waitUntilTimeoutSeconds": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "screenResolution": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 32
+          }
+        },
+        "required": [
+          "sessionId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/sessions/{{sessionId}}/windows",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "screenResolution": "{{screenResolution}}",
+          "url": "{{url}}",
+          "waitUntil": "{{waitUntil}}",
+          "waitUntilTimeoutSeconds": "{{waitUntilTimeoutSeconds}}"
+        },
+        "success": [
+          201
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "windows.close": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 20000,
+      "maxInputBytes": 8192,
+      "maxResponseBytes": 1048576,
+      "title": "Close Window",
+      "description": "Close one browser window without terminating its Airtop session.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "sessionId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "windowId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          }
+        },
+        "required": [
+          "sessionId",
+          "windowId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/sessions/{{sessionId}}/windows/{{windowId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "windows.navigate": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 300000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 1048576,
+      "title": "Navigate Window",
+      "description": "Navigate an existing Airtop browser window to a URL.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "sessionId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "windowId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "url": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096
+          },
+          "waitUntil": {
+            "type": "string",
+            "enum": [
+              "load",
+              "domContentLoaded",
+              "complete",
+              "noWait"
+            ]
+          },
+          "waitUntilTimeoutSeconds": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "sessionId",
+          "windowId",
+          "url"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/sessions/{{sessionId}}/windows/{{windowId}}",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "url": "{{url}}",
+          "waitUntil": "{{waitUntil}}",
+          "waitUntilTimeoutSeconds": "{{waitUntilTimeoutSeconds}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "windows.click": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 300000,
+      "maxInputBytes": 262144,
+      "maxResponseBytes": 10485760,
+      "title": "Click Element",
+      "description": "Click an element described in natural language. clickType is sent as configuration.clickType.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "sessionId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "windowId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "elementDescription": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096
+          },
+          "clientRequestId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "costThresholdCredits": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "timeThresholdSeconds": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "waitForNavigation": {
+            "type": "boolean"
+          },
+          "configuration": {
+            "type": "object",
+            "additionalProperties": false,
+            "minProperties": 1,
+            "properties": {
+              "clickType": {
+                "type": "string",
+                "enum": [
+                  "click",
+                  "doubleClick",
+                  "rightClick"
+                ]
+              }
+            }
+          }
+        },
+        "required": [
+          "sessionId",
+          "windowId",
+          "elementDescription"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/sessions/{{sessionId}}/windows/{{windowId}}/click",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "clientRequestId": "{{clientRequestId}}",
+          "configuration": "{{configuration}}",
+          "costThresholdCredits": "{{costThresholdCredits}}",
+          "elementDescription": "{{elementDescription}}",
+          "timeThresholdSeconds": "{{timeThresholdSeconds}}",
+          "waitForNavigation": "{{waitForNavigation}}"
+        },
+        "success": [
+          201
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "windows.type": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 300000,
+      "maxInputBytes": 262144,
+      "maxResponseBytes": 10485760,
+      "title": "Type Text",
+      "description": "Type text into an element described in natural language.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "sessionId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "windowId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "text": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 65536
+          },
+          "elementDescription": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096
+          },
+          "clearInputField": {
+            "type": "boolean"
+          },
+          "pressEnterKey": {
+            "type": "boolean"
+          },
+          "pressTabKey": {
+            "type": "boolean"
+          },
+          "clientRequestId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "costThresholdCredits": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "timeThresholdSeconds": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "waitForNavigation": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "sessionId",
+          "windowId",
+          "text"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/sessions/{{sessionId}}/windows/{{windowId}}/type",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "clearInputField": "{{clearInputField}}",
+          "clientRequestId": "{{clientRequestId}}",
+          "costThresholdCredits": "{{costThresholdCredits}}",
+          "elementDescription": "{{elementDescription}}",
+          "pressEnterKey": "{{pressEnterKey}}",
+          "pressTabKey": "{{pressTabKey}}",
+          "text": "{{text}}",
+          "timeThresholdSeconds": "{{timeThresholdSeconds}}",
+          "waitForNavigation": "{{waitForNavigation}}"
+        },
+        "success": [
+          201
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "windows.query": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 300000,
+      "maxInputBytes": 262144,
+      "maxResponseBytes": 10485760,
+      "title": "Query Page",
+      "description": "Ask Airtop about the current page. outputSchema and includeVisualAnalysis are sent under configuration.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "sessionId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "windowId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "prompt": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 65536
+          },
+          "clientRequestId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "costThresholdCredits": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "timeThresholdSeconds": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "followPaginationLinks": {
+            "type": "boolean"
+          },
+          "configuration": {
+            "type": "object",
+            "additionalProperties": false,
+            "minProperties": 1,
+            "properties": {
+              "outputSchema": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 65536
+              },
+              "experimental": {
+                "type": "object",
+                "additionalProperties": false,
+                "minProperties": 1,
+                "properties": {
+                  "includeVisualAnalysis": {
+                    "type": "string",
+                    "enum": [
+                      "auto",
+                      "disabled",
+                      "enabled"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "required": [
+          "sessionId",
+          "windowId",
+          "prompt"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/sessions/{{sessionId}}/windows/{{windowId}}/page-query",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "clientRequestId": "{{clientRequestId}}",
+          "configuration": "{{configuration}}",
+          "costThresholdCredits": "{{costThresholdCredits}}",
+          "followPaginationLinks": "{{followPaginationLinks}}",
+          "prompt": "{{prompt}}",
+          "timeThresholdSeconds": "{{timeThresholdSeconds}}"
+        },
+        "success": [
+          201
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    }
+  }
+}

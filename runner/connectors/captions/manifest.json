@@ -1,0 +1,490 @@
+{
+  "key": "captions",
+  "name": "Captions",
+  "version": "0.1.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "utility"
+  ],
+  "auth": {
+    "type": "api_key",
+    "scopes": [],
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "Mirage API key",
+          "required": true,
+          "secret": true
+        }
+      ]
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "api.mirage.app"
+    ]
+  },
+  "models": [
+    "video",
+    "caption-template"
+  ],
+  "http": {
+    "baseUrl": "https://api.mirage.app",
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "x-api-key",
+      "value": "{{apiKey}}"
+    },
+    "headers": {
+      "Accept": "application/json"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "Retry-After",
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "detail",
+        "message"
+      ]
+    }
+  },
+  "operations": {
+    "healthcheck": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "title": "Healthcheck",
+      "description": "Validate the Mirage API key by listing one video.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "status",
+                "created_at",
+                "video_id"
+              ],
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "status": {
+                  "type": "string"
+                },
+                "created_at": {
+                  "type": "integer"
+                },
+                "video_id": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/videos",
+        "query": {
+          "limit": 1
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "videos.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 5242880,
+      "title": "List Videos",
+      "description": "List Mirage video jobs for the API key. The response is a JSON array, returned as data.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Maximum videos to return on this page, from 1 to 100."
+          },
+          "order": {
+            "type": "string",
+            "enum": [
+              "asc",
+              "desc"
+            ],
+            "description": "Sort videos by creation time."
+          },
+          "after": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "description": "Return videos strictly after this video id. Composio calls this cursor. Omit it for the first page."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "status",
+                "created_at",
+                "video_id"
+              ],
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "status": {
+                  "type": "string"
+                },
+                "created_at": {
+                  "type": "integer"
+                },
+                "video_id": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/videos",
+        "query": {
+          "limit": "{{limit}}",
+          "order": "{{order}}",
+          "after": "{{after}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "videos.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "title": "Get Video Status",
+      "description": "Get the status, progress, and error details for one Mirage video job.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "video_id"
+        ],
+        "properties": {
+          "video_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "description": "Video job id in video_* format."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": [
+              "status",
+              "created_at",
+              "video_id"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "object": {
+                "type": "string"
+              },
+              "status": {
+                "type": "string"
+              },
+              "created_at": {
+                "type": "integer"
+              },
+              "completed_at": {
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              },
+              "progress": {
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              },
+              "model": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "video_id": {
+                "type": "string"
+              },
+              "source_video_id": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "caption_template_id": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "generation_mode": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "aspect_ratio": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/videos/{{video_id}}",
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "caption-templates.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 5242880,
+      "title": "List Caption Templates",
+      "description": "List one page of Mirage caption style templates, including names and preview video URLs.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Maximum caption templates to return on this page, from 1 to 100."
+          },
+          "after": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "description": "Return templates strictly after this template id. Composio calls this cursor. Omit it for the first page."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data",
+          "has_more"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "id",
+                "name",
+                "created_at"
+              ],
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "created_at": {
+                  "type": "integer"
+                },
+                "object": {
+                  "type": "string"
+                },
+                "preview_url": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              }
+            }
+          },
+          "has_more": {
+            "type": "boolean"
+          },
+          "object": {
+            "type": "string"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/videos/captions/templates",
+        "query": {
+          "limit": "{{limit}}",
+          "after": "{{after}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response.data}}",
+          "has_more": "{{response.has_more}}",
+          "object": "{{response.object}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "caption-templates.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "title": "Get Caption Template",
+      "description": "Get one Mirage caption style by id, including its name and preview video URL.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "template_id"
+        ],
+        "properties": {
+          "template_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "description": "Caption template id in ctpl_* format."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": [
+              "id",
+              "name",
+              "created_at"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "created_at": {
+                "type": "integer"
+              },
+              "object": {
+                "type": "string"
+              },
+              "preview_url": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/videos/captions/templates/{{template_id}}",
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    }
+  }
+}

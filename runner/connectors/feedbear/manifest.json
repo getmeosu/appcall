@@ -1,0 +1,747 @@
+{
+  "key": "feedbear",
+  "name": "FeedBear",
+  "version": "0.1.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "productivity"
+  ],
+  "auth": {
+    "type": "api_key",
+    "scopes": [],
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "FeedBear API key",
+          "required": true,
+          "secret": true
+        }
+      ]
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "app.feedbear.com"
+    ]
+  },
+  "models": [
+    "board",
+    "item",
+    "comment",
+    "status",
+    "changelog-entry"
+  ],
+  "http": {
+    "baseUrl": "https://app.feedbear.com/api/v1",
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "Authorization",
+      "value": "Bearer {{apiKey}}"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "Retry-After",
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "error.message",
+        "message",
+        "error"
+      ]
+    },
+    "headers": {
+      "Accept": "application/json"
+    }
+  },
+  "operations": {
+    "boards.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 1048576,
+      "title": "List Boards",
+      "description": "List boards in the connected FeedBear project. GET /boards returns one JSON page. Pass meta.next_cursor back as cursor. Set includePrivate to include private team-only boards.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Maximum boards in this page. FeedBear does not document a default or maximum."
+          },
+          "cursor": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Opaque page cursor. Send the previous response meta.next_cursor. The query name is cursor."
+          },
+          "includePrivate": {
+            "type": "boolean",
+            "description": "When true, include private team-only boards. Sent as include_private."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "meta": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/boards",
+        "query": {
+          "limit": "{{limit}}",
+          "cursor": "{{cursor}}",
+          "include_private": "{{includePrivate}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response.data}}",
+          "meta": "{{response.meta}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "items.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 1048576,
+      "title": "List Board Items",
+      "description": "List or search feedback items on one board. GET /boards/:board_id/items returns one JSON page. Filters are status_id, search, and sort. Pass meta.next_cursor back as cursor.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "boardId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Board ID returned by List Boards."
+          },
+          "statusId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Return only items with this status ID. Sent as status_id."
+          },
+          "search": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Search text used to filter board items."
+          },
+          "sort": {
+            "type": "string",
+            "enum": [
+              "trend_score",
+              "total_upvotes",
+              "created_at",
+              "comments_count"
+            ],
+            "description": "Sort field. FeedBear does not document a direction or default."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Maximum items in this page. FeedBear does not document a default or maximum."
+          },
+          "cursor": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Opaque page cursor. Send the previous response meta.next_cursor. The query name is cursor."
+          }
+        },
+        "required": [
+          "boardId"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "meta": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/boards/{{boardId}}/items",
+        "query": {
+          "status_id": "{{statusId}}",
+          "search": "{{search}}",
+          "sort": "{{sort}}",
+          "limit": "{{limit}}",
+          "cursor": "{{cursor}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response.data}}",
+          "meta": "{{response.meta}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "items.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 1048576,
+      "title": "Get Board Item",
+      "description": "Get one feedback item. GET /boards/:board_id/items/:id returns the item JSON document. includeVoters is the documented include_voters query on this same route.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "boardId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Board ID containing the item."
+          },
+          "itemId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Item ID to retrieve."
+          },
+          "includeVoters": {
+            "type": "boolean",
+            "description": "When true, include voters. Sent as include_voters."
+          }
+        },
+        "required": [
+          "boardId",
+          "itemId"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object"
+          },
+          "meta": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/boards/{{boardId}}/items/{{itemId}}",
+        "query": {
+          "include_voters": "{{includeVoters}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response.data}}",
+          "meta": "{{response.meta}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "items.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Create Board Item",
+      "description": "Create a feedback item on a board without notifying users. POST /boards/:board_id/items sends a JSON item document and returns the created item.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "boardId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Board ID on which to create the item."
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Title of the new feedback item."
+          },
+          "content": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Optional HTML content. Omitted when unset."
+          },
+          "statusId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Optional initial status ID. Sent as status_id. Omitted when unset."
+          },
+          "externalId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Optional caller-defined external identifier. Sent as external_id. Duplicates can return HTTP 409."
+          },
+          "isPrivate": {
+            "type": "boolean",
+            "description": "Whether the new item is private. Sent as is_private. Omitted to use FeedBear's default."
+          },
+          "commentsDisabled": {
+            "type": "boolean",
+            "description": "Whether comments are disabled. Sent as comments_disabled. Omitted to use FeedBear's default."
+          }
+        },
+        "required": [
+          "boardId",
+          "title"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object"
+          },
+          "meta": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/boards/{{boardId}}/items",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "item": {
+            "title": "{{title}}",
+            "content": "{{content}}",
+            "status_id": "{{statusId}}",
+            "external_id": "{{externalId}}",
+            "is_private": "{{isPrivate}}",
+            "comments_disabled": "{{commentsDisabled}}"
+          }
+        },
+        "success": [
+          201
+        ],
+        "result": {
+          "data": "{{response.data}}",
+          "meta": "{{response.meta}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "items.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Update Board Item",
+      "description": "Update selected fields of a board item without notifying voters. PATCH /boards/:board_id/items/:id sends a JSON item document containing only the fields that were provided.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "boardId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Board ID containing the item."
+          },
+          "itemId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Item ID to update."
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Replacement title. Omitted when unset."
+          },
+          "content": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Replacement HTML content. Omitted when unset."
+          },
+          "statusId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Replacement status ID. Sent as status_id. Omitted when unset."
+          },
+          "externalId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Replacement external identifier. Sent as external_id. Omitted when unset."
+          },
+          "isPrivate": {
+            "type": "boolean",
+            "description": "Replacement privacy state. Sent as is_private. Omitted when unset."
+          },
+          "commentsDisabled": {
+            "type": "boolean",
+            "description": "Replacement comments-disabled state. Sent as comments_disabled. Omitted when unset."
+          }
+        },
+        "required": [
+          "boardId",
+          "itemId"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object"
+          },
+          "meta": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/boards/{{boardId}}/items/{{itemId}}",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "item": {
+            "title": "{{title}}",
+            "content": "{{content}}",
+            "status_id": "{{statusId}}",
+            "external_id": "{{externalId}}",
+            "is_private": "{{isPrivate}}",
+            "comments_disabled": "{{commentsDisabled}}"
+          }
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response.data}}",
+          "meta": "{{response.meta}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "comments.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 1048576,
+      "title": "List Item Comments",
+      "description": "List non-spam comments on an item, newest first. GET /boards/:board_id/items/:id/comments returns one JSON page. Pass meta.next_cursor back as cursor.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "boardId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Board ID containing the item."
+          },
+          "itemId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Item ID whose comments to list."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Maximum comments in this page. FeedBear does not document a default or maximum."
+          },
+          "cursor": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Opaque page cursor. Send the previous response meta.next_cursor. The query name is cursor."
+          },
+          "includePrivate": {
+            "type": "boolean",
+            "description": "When true, include comments from private content. Sent as include_private."
+          }
+        },
+        "required": [
+          "boardId",
+          "itemId"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "meta": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/boards/{{boardId}}/items/{{itemId}}/comments",
+        "query": {
+          "limit": "{{limit}}",
+          "cursor": "{{cursor}}",
+          "include_private": "{{includePrivate}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response.data}}",
+          "meta": "{{response.meta}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "comments.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Add Item Comment",
+      "description": "Publish a public comment on an item as the API key creator. POST /boards/:board_id/items/:id/comments sends a JSON comment document with body and returns the created comment. This may notify post participants.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "boardId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Board ID containing the item."
+          },
+          "itemId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Item ID on which to publish the comment."
+          },
+          "commentBody": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Public comment text. Simple HTML is allowed. Sent as comment.body."
+          }
+        },
+        "required": [
+          "boardId",
+          "itemId",
+          "commentBody"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object"
+          },
+          "meta": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/boards/{{boardId}}/items/{{itemId}}/comments",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "comment": {
+            "body": "{{commentBody}}"
+          }
+        },
+        "success": [
+          201
+        ],
+        "result": {
+          "data": "{{response.data}}",
+          "meta": "{{response.meta}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "statuses.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 1048576,
+      "title": "List Statuses",
+      "description": "List the statuses configured for the connected FeedBear project. GET /statuses returns the status collection as JSON.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "meta": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/statuses",
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response.data}}",
+          "meta": "{{response.meta}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "changelog.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 1048576,
+      "title": "List Changelog Entries",
+      "description": "List published changelog entries, newest first. GET /changelog_entries returns one JSON page and excludes draft and scheduled entries. Pass meta.next_cursor back as cursor.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Maximum published entries in this page. FeedBear does not document a default or maximum."
+          },
+          "cursor": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Opaque page cursor. Send the previous response meta.next_cursor. The query name is cursor."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "meta": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/changelog_entries",
+        "query": {
+          "limit": "{{limit}}",
+          "cursor": "{{cursor}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response.data}}",
+          "meta": "{{response.meta}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    }
+  }
+}

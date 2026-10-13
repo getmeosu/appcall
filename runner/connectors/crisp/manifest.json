@@ -1,0 +1,1158 @@
+{
+  "key": "crisp",
+  "name": "Crisp",
+  "version": "0.1.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "crm"
+  ],
+  "auth": {
+    "type": "api_key",
+    "scopes": [],
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "tokenIdentifier",
+          "label": "Crisp token identifier",
+          "required": true,
+          "secret": true
+        },
+        {
+          "key": "tokenKey",
+          "label": "Crisp token key",
+          "required": true,
+          "secret": true
+        },
+        {
+          "key": "tier",
+          "label": "Crisp token tier (website or plugin)",
+          "required": true,
+          "secret": false
+        },
+        {
+          "key": "websiteId",
+          "label": "Crisp website ID",
+          "required": true,
+          "secret": false
+        }
+      ]
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "api.crisp.chat"
+    ]
+  },
+  "models": [
+    "conversation",
+    "message",
+    "people",
+    "inbox",
+    "operator"
+  ],
+  "http": {
+    "baseUrl": "https://api.crisp.chat/v1",
+    "auth": {
+      "field": "tokenIdentifier",
+      "in": "header",
+      "name": "Authorization",
+      "basic": {
+        "username": "{{tokenIdentifier}}",
+        "password": "{{tokenKey}}"
+      }
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "Retry-After",
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "reason",
+        "message",
+        "error"
+      ],
+      "bodyErrorPaths": [
+        "error"
+      ]
+    },
+    "headers": {
+      "Accept": "application/json",
+      "X-Crisp-Tier": "{{tier}}"
+    }
+  },
+  "operations": {
+    "conversations.assign": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 262144,
+      "title": "Assign Conversation",
+      "description": "Assign a conversation to one operator, or clear the assignment. Crisp PATCH /website/{website_id}/conversation/{session_id}/routing accepts assigned.user_id, and a blank user_id removes the operator. silent suppresses the assignment notification.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "sessionId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Crisp conversation session ID."
+          },
+          "operation": {
+            "type": "string",
+            "enum": [
+              "assign",
+              "unassign"
+            ],
+            "description": "assign sets the operator. unassign sends a blank user_id, which Crisp documents as no operator."
+          },
+          "operatorId": {
+            "type": "string",
+            "description": "Operator user ID for assign. Must be empty for unassign."
+          },
+          "silent": {
+            "type": "boolean",
+            "description": "When true, do not notify the newly assigned operator."
+          }
+        },
+        "required": [
+          "sessionId",
+          "operation",
+          "operatorId"
+        ],
+        "oneOf": [
+          {
+            "required": [
+              "operatorId"
+            ],
+            "properties": {
+              "operation": {
+                "const": "assign"
+              },
+              "operatorId": {
+                "minLength": 1
+              }
+            }
+          },
+          {
+            "required": [
+              "operatorId"
+            ],
+            "properties": {
+              "operation": {
+                "const": "unassign"
+              },
+              "operatorId": {
+                "maxLength": 0
+              }
+            }
+          }
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "error",
+          "reason",
+          "data"
+        ],
+        "properties": {
+          "error": {
+            "type": "boolean"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "data": {}
+        }
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/website/{{websiteId}}/conversation/{{sessionId}}/routing",
+        "success": [
+          200
+        ],
+        "body": {
+          "assigned": {
+            "user_id": "{{operatorId}}"
+          },
+          "silent": "{{silent}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "result": {
+          "error": "{{response.error}}",
+          "reason": "{{response.reason}}",
+          "data": "{{response.data}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "conversations.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 8192,
+      "maxResponseBytes": 1048576,
+      "title": "Get Conversation",
+      "description": "Get one conversation's status, assignment, inbox, visitor metadata, unread counts, and latest-message summary.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "sessionId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Crisp conversation session ID."
+          }
+        },
+        "required": [
+          "sessionId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "error",
+          "reason",
+          "data"
+        ],
+        "properties": {
+          "error": {
+            "type": "boolean"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "data": {}
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/website/{{websiteId}}/conversation/{{sessionId}}",
+        "success": [
+          200
+        ],
+        "result": {
+          "error": "{{response.error}}",
+          "reason": "{{response.reason}}",
+          "data": "{{response.data}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "conversations.inbox.move": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 262144,
+      "title": "Move Conversation to Inbox",
+      "description": "Move a conversation to one inbox. Crisp's sample body is {\"inbox_id\": null}, which removes inbox categorization. A string inbox_id selects that inbox.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "sessionId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Crisp conversation session ID."
+          },
+          "inbox": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "inbox_id"
+            ],
+            "description": "Crisp inbox body. inbox_id is the destination inbox ID, or null to clear it.",
+            "properties": {
+              "inbox_id": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "required": [
+          "sessionId",
+          "inbox"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "error",
+          "reason",
+          "data"
+        ],
+        "properties": {
+          "error": {
+            "type": "boolean"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "data": {}
+        }
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/website/{{websiteId}}/conversation/{{sessionId}}/inbox",
+        "success": [
+          200
+        ],
+        "body": "{{inbox}}",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "result": {
+          "error": "{{response.error}}",
+          "reason": "{{response.reason}}",
+          "data": "{{response.data}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "conversations.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 32768,
+      "maxResponseBytes": 5242880,
+      "title": "List Conversations",
+      "description": "List or search workspace conversations on GET /website/{website_id}/conversations/{page_number}. Filters are Crisp query flags on that single route. A 206 response is a partial JSON page.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "pageNumber": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Page number starting at 1. Crisp requires it in the path."
+          },
+          "perPage": {
+            "type": "integer",
+            "minimum": 20,
+            "maximum": 50,
+            "description": "Page size. Crisp allows 20 to 50 and defaults to 20 when omitted."
+          },
+          "searchQuery": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Text, segment name, or filter expression, according to searchType."
+          },
+          "searchType": {
+            "type": "string",
+            "enum": [
+              "text",
+              "segment",
+              "filter"
+            ],
+            "description": "How Crisp interprets searchQuery."
+          },
+          "searchOperator": {
+            "type": "string",
+            "enum": [
+              "and",
+              "or"
+            ],
+            "description": "Boolean operator used when searchType is filter."
+          },
+          "includeEmpty": {
+            "type": "string",
+            "enum": [
+              "0",
+              "1"
+            ],
+            "description": "1 includes conversations with no messages. 0 excludes them."
+          },
+          "inboxId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Return only conversations in this inbox. Crisp also accepts all."
+          },
+          "filterUnread": {
+            "type": "string",
+            "enum": [
+              "0",
+              "1"
+            ],
+            "description": "1 returns only conversations with unread messages."
+          },
+          "filterResolved": {
+            "type": "string",
+            "enum": [
+              "0",
+              "1"
+            ],
+            "description": "1 returns only resolved conversations."
+          },
+          "filterNotResolved": {
+            "type": "string",
+            "enum": [
+              "0",
+              "1"
+            ],
+            "description": "1 returns only conversations that are not resolved."
+          },
+          "filterMention": {
+            "type": "string",
+            "enum": [
+              "0",
+              "1"
+            ],
+            "description": "1 returns only conversations that mention the operator."
+          },
+          "assignedOperatorId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Return only conversations assigned to this operator user ID."
+          },
+          "filterUnassigned": {
+            "type": "string",
+            "enum": [
+              "0",
+              "1"
+            ],
+            "description": "1 returns only conversations with no assigned operator."
+          },
+          "updatedAfter": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Only conversations updated at or after this ISO 8601 timestamp."
+          },
+          "updatedBefore": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Only conversations updated at or before this ISO 8601 timestamp."
+          },
+          "orderDateCreated": {
+            "type": "string",
+            "enum": [
+              "0",
+              "1"
+            ],
+            "description": "1 orders by creation date. This is Crisp's created_at sort."
+          },
+          "orderDateUpdated": {
+            "type": "string",
+            "enum": [
+              "0",
+              "1"
+            ],
+            "description": "1 orders by update date. This is Crisp's updated_at sort."
+          },
+          "orderDateWaiting": {
+            "type": "string",
+            "enum": [
+              "0",
+              "1"
+            ],
+            "description": "1 orders by longest wait and excludes conversations that are not waiting."
+          }
+        },
+        "required": [
+          "pageNumber"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "error",
+          "reason",
+          "data"
+        ],
+        "properties": {
+          "error": {
+            "type": "boolean"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "data": {}
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/website/{{websiteId}}/conversations/{{pageNumber}}",
+        "success": [
+          200,
+          206
+        ],
+        "query": {
+          "per_page": "{{perPage}}",
+          "search_query": "{{searchQuery}}",
+          "search_type": "{{searchType}}",
+          "search_operator": "{{searchOperator}}",
+          "include_empty": "{{includeEmpty}}",
+          "filter_inbox_id": "{{inboxId}}",
+          "filter_unread": "{{filterUnread}}",
+          "filter_resolved": "{{filterResolved}}",
+          "filter_not_resolved": "{{filterNotResolved}}",
+          "filter_mention": "{{filterMention}}",
+          "filter_assigned": "{{assignedOperatorId}}",
+          "filter_unassigned": "{{filterUnassigned}}",
+          "filter_date_start": "{{updatedAfter}}",
+          "filter_date_end": "{{updatedBefore}}",
+          "order_date_created": "{{orderDateCreated}}",
+          "order_date_updated": "{{orderDateUpdated}}",
+          "order_date_waiting": "{{orderDateWaiting}}"
+        },
+        "result": {
+          "error": "{{response.error}}",
+          "reason": "{{response.reason}}",
+          "data": "{{response.data}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "conversations.messages.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 5242880,
+      "title": "List Conversation Messages",
+      "description": "Return one batch of messages. timestamp_before pages older, timestamp_after pages newer, and timestamp_around centers on a millisecond timestamp. A 206 response is a partial JSON page.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "sessionId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Crisp conversation session ID."
+          },
+          "timestampBefore": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Return an older batch ending before this Unix timestamp in milliseconds."
+          },
+          "timestampAfter": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Return a newer batch starting after this Unix timestamp in milliseconds."
+          },
+          "timestampAround": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Return a batch centered on this Unix timestamp in milliseconds."
+          }
+        },
+        "required": [
+          "sessionId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "error",
+          "reason",
+          "data"
+        ],
+        "properties": {
+          "error": {
+            "type": "boolean"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "data": {}
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/website/{{websiteId}}/conversation/{{sessionId}}/messages",
+        "success": [
+          200,
+          206
+        ],
+        "query": {
+          "timestamp_before": "{{timestampBefore}}",
+          "timestamp_after": "{{timestampAfter}}",
+          "timestamp_around": "{{timestampAround}}"
+        },
+        "result": {
+          "error": "{{response.error}}",
+          "reason": "{{response.reason}}",
+          "data": "{{response.data}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "conversations.messages.send": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "maxInputBytes": 262144,
+      "maxResponseBytes": 1048576,
+      "title": "Send Conversation Message",
+      "description": "Send a visitor-visible text reply on POST /website/{website_id}/conversation/{session_id}/message. The body is a text message from an operator. This send is not reversible.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "sessionId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Crisp conversation session ID."
+          },
+          "origin": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Delivery origin. Crisp requires chat, email, or a Crisp URN such as urn:crisp.im:slack:0."
+          },
+          "content": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Plain-text reply visible to the visitor."
+          },
+          "mentions": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "description": "Operator or team IDs to mention."
+          },
+          "fingerprint": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Caller-managed fingerprint used to avoid duplicate messages."
+          }
+        },
+        "required": [
+          "sessionId",
+          "origin",
+          "content"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "error",
+          "reason",
+          "data"
+        ],
+        "properties": {
+          "error": {
+            "type": "boolean"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "data": {}
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/website/{{websiteId}}/conversation/{{sessionId}}/message",
+        "success": [
+          200
+        ],
+        "body": {
+          "type": "text",
+          "from": "operator",
+          "origin": "{{origin}}",
+          "content": "{{content}}",
+          "mentions": "{{mentions}}",
+          "fingerprint": "{{fingerprint}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "result": {
+          "error": "{{response.error}}",
+          "reason": "{{response.reason}}",
+          "data": "{{response.data}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "conversations.meta.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Update Conversation Meta",
+      "description": "Update visitor details, subject, segments, or custom data on PATCH /website/{website_id}/conversation/{session_id}/meta. Omitted fields stay unchanged. A null subject clears it. custom data is Crisp's data object.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "sessionId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Crisp conversation session ID."
+          },
+          "meta": {
+            "type": "object",
+            "additionalProperties": false,
+            "minProperties": 1,
+            "description": "Fields to change. Include only the Crisp meta keys that should be written.",
+            "properties": {
+              "nickname": {
+                "type": "string",
+                "description": "Visitor display name."
+              },
+              "email": {
+                "type": "string",
+                "description": "Visitor email address."
+              },
+              "phone": {
+                "type": "string",
+                "description": "Visitor phone number."
+              },
+              "address": {
+                "type": "string",
+                "description": "Visitor postal address."
+              },
+              "subject": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "description": "Conversation subject. Null clears it."
+              },
+              "segments": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "description": "Complete segment list for the conversation."
+              },
+              "data": {
+                "type": "object",
+                "additionalProperties": true,
+                "description": "Custom visitor data stored as Crisp meta data."
+              }
+            }
+          }
+        },
+        "required": [
+          "sessionId",
+          "meta"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "error",
+          "reason",
+          "data"
+        ],
+        "properties": {
+          "error": {
+            "type": "boolean"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "data": {}
+        }
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/website/{{websiteId}}/conversation/{{sessionId}}/meta",
+        "success": [
+          200
+        ],
+        "body": "{{meta}}",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "result": {
+          "error": "{{response.error}}",
+          "reason": "{{response.reason}}",
+          "data": "{{response.data}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "conversations.state.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 8192,
+      "maxResponseBytes": 262144,
+      "title": "Update Conversation State",
+      "description": "Set a conversation to pending, unresolved, or resolved on PATCH /website/{website_id}/conversation/{session_id}/state.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "sessionId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Crisp conversation session ID."
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "unresolved",
+              "resolved"
+            ],
+            "description": "New support state."
+          }
+        },
+        "required": [
+          "sessionId",
+          "state"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "error",
+          "reason",
+          "data"
+        ],
+        "properties": {
+          "error": {
+            "type": "boolean"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "data": {}
+        }
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/website/{{websiteId}}/conversation/{{sessionId}}/state",
+        "success": [
+          200
+        ],
+        "body": {
+          "state": "{{state}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "result": {
+          "error": "{{response.error}}",
+          "reason": "{{response.reason}}",
+          "data": "{{response.data}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "inboxes.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 8192,
+      "maxResponseBytes": 5242880,
+      "title": "List Inboxes",
+      "description": "List configured Crisp inboxes and their operator and team membership. A 206 response is a partial JSON page.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "pageNumber": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Page number starting at 1. Crisp requires it in the path."
+          }
+        },
+        "required": [
+          "pageNumber"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "error",
+          "reason",
+          "data"
+        ],
+        "properties": {
+          "error": {
+            "type": "boolean"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "data": {}
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/website/{{websiteId}}/inboxes/list/{{pageNumber}}",
+        "success": [
+          200,
+          206
+        ],
+        "result": {
+          "error": "{{response.error}}",
+          "reason": "{{response.reason}}",
+          "data": "{{response.data}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "operators.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 5242880,
+      "title": "List Operators",
+      "description": "List workspace operators and pending members with their IDs, roles, and availability.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {},
+        "required": []
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "error",
+          "reason",
+          "data"
+        ],
+        "properties": {
+          "error": {
+            "type": "boolean"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "data": {}
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/website/{{websiteId}}/operators/list",
+        "success": [
+          200
+        ],
+        "result": {
+          "error": "{{response.error}}",
+          "reason": "{{response.reason}}",
+          "data": "{{response.data}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "people.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 8192,
+      "maxResponseBytes": 1048576,
+      "title": "Get People Profile",
+      "description": "Get one customer profile. Crisp documents a single route, GET /website/{website_id}/people/profile/{people_id}, and the people_id segment may be the people ID or the exact email.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "peopleId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Crisp people ID or exact email. Both use the same path segment."
+          }
+        },
+        "required": [
+          "peopleId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "error",
+          "reason",
+          "data"
+        ],
+        "properties": {
+          "error": {
+            "type": "boolean"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "data": {}
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/website/{{websiteId}}/people/profile/{{peopleId}}",
+        "success": [
+          200
+        ],
+        "result": {
+          "error": "{{response.error}}",
+          "reason": "{{response.reason}}",
+          "data": "{{response.data}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "people.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 32768,
+      "maxResponseBytes": 5242880,
+      "title": "List People Profiles",
+      "description": "List or search customer profiles on GET /website/{website_id}/people/profiles/{page_number}. Date bounds are creation timestamps. A 206 response is a partial JSON page.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "pageNumber": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Page number starting at 1. Crisp requires it in the path."
+          },
+          "perPage": {
+            "type": "integer",
+            "minimum": 20,
+            "maximum": 50,
+            "description": "Page size. Crisp allows 20 to 50 and defaults to 20 when omitted."
+          },
+          "sortField": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Profile field to sort by, such as nickname or created_at."
+          },
+          "sortOrder": {
+            "type": "string",
+            "enum": [
+              "ascending",
+              "descending"
+            ],
+            "description": "Sort direction."
+          },
+          "searchOperator": {
+            "type": "string",
+            "enum": [
+              "and",
+              "or"
+            ],
+            "description": "Boolean operator for searchFilter."
+          },
+          "searchFilter": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Crisp search filter object encoded as a string."
+          },
+          "searchText": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Quick-search text such as a name or email."
+          },
+          "createdAfter": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Only profiles created at or after this ISO 8601 timestamp."
+          },
+          "createdBefore": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Only profiles created at or before this ISO 8601 timestamp."
+          }
+        },
+        "required": [
+          "pageNumber"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "error",
+          "reason",
+          "data"
+        ],
+        "properties": {
+          "error": {
+            "type": "boolean"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "data": {}
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/website/{{websiteId}}/people/profiles/{{pageNumber}}",
+        "success": [
+          200,
+          206
+        ],
+        "query": {
+          "per_page": "{{perPage}}",
+          "sort_field": "{{sortField}}",
+          "sort_order": "{{sortOrder}}",
+          "search_operator": "{{searchOperator}}",
+          "search_filter": "{{searchFilter}}",
+          "search_text": "{{searchText}}",
+          "filter_date_start": "{{createdAfter}}",
+          "filter_date_end": "{{createdBefore}}"
+        },
+        "result": {
+          "error": "{{response.error}}",
+          "reason": "{{response.reason}}",
+          "data": "{{response.data}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    }
+  }
+}

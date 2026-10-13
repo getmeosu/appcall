@@ -1,0 +1,2149 @@
+{
+  "key": "reddit",
+  "name": "Reddit",
+  "version": "0.2.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "description": "Reddit OAuth Data API: identity, preferences, scopes, subreddit metadata, listings, search, comments, submit, edit, delete, vote, and inbox replies.",
+  "categories": [
+    "social"
+  ],
+  "provenance": {
+    "source": {
+      "url": "https://github.com/oomol-lab/open-connector",
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"
+    }
+  },
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
+    }
+  },
+  "auth": {
+    "type": "oauth2",
+    "scopes": [
+      "identity",
+      "read",
+      "submit",
+      "vote",
+      "edit",
+      "flair",
+      "modflair"
+    ],
+    "setup": {
+      "mode": "oauth2",
+      "fields": [
+        {
+          "key": "accessToken",
+          "label": "Reddit OAuth2 access token",
+          "secret": true,
+          "required": true
+        }
+      ]
+    },
+    "oauth": {
+      "authorizeUrl": "https://www.reddit.com/api/v1/authorize",
+      "tokenUrl": "https://www.reddit.com/api/v1/access_token",
+      "pkce": false,
+      "supportsRefresh": true,
+      "clientAuth": "basic"
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "oauth.reddit.com",
+      "www.reddit.com"
+    ]
+  },
+  "http": {
+    "baseUrl": "https://oauth.reddit.com",
+    "auth": {
+      "field": "accessToken",
+      "in": "header",
+      "name": "Authorization",
+      "value": "Bearer {{accessToken}}"
+    },
+    "headers": {
+      "Accept": "application/json",
+      "User-Agent": "web:appcall-reddit:0.1.0"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "x-ratelimit-reset",
+      "retryAfterKind": "seconds",
+      "defaultRetryAfterSeconds": 60,
+      "messagePaths": [
+        "json.errors.0.1",
+        "message",
+        "error"
+      ],
+      "bodyErrorPaths": [
+        "json.errors"
+      ]
+    }
+  },
+  "models": [
+    "account",
+    "subreddit",
+    "listing",
+    "comment",
+    "post",
+    "preference",
+    "flair"
+  ],
+  "operations": {
+    "healthcheck": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "sideEffect": "read",
+      "title": "Healthcheck",
+      "description": "Verify the Reddit OAuth2 access token by reading GET /api/v1/me for the authenticated account.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/me",
+        "success": [
+          200
+        ],
+        "result": {
+          "status": "ok",
+          "id": "{{response.id}}",
+          "name": "{{response.name}}"
+        },
+        "echo": {
+          "status": "ok"
+        }
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json"
+    },
+    "me.get": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Get authenticated account",
+      "description": "Read the authenticated Reddit account profile from GET /api/v1/me. Requires the identity scope.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "account": {
+            "type": "object",
+            "description": "Authenticated Reddit account object returned by /api/v1/me."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/me",
+        "success": [
+          200
+        ],
+        "result": {
+          "account": "{{response}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "subreddit.about": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Get subreddit about",
+      "description": "Read public metadata for one subreddit from GET /r/{subreddit}/about. Requires the read scope.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "subreddit": {
+            "type": "string",
+            "description": "Subreddit name without the r/ prefix.",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "subreddit"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "subreddit": {
+            "type": "object",
+            "description": "Reddit about payload (kind t5 plus data)."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/r/{{subreddit}}/about",
+        "query": {
+          "raw_json": 1
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "subreddit": "{{response}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "listings.hot": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 2097152,
+      "sideEffect": "read",
+      "title": "List hot posts",
+      "description": "List hot posts in a subreddit from GET /r/{subreddit}/hot. Requires the read scope. Paginate with after from data.after; do not assume a short page is the last page.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "subreddit": {
+            "type": "string",
+            "description": "Subreddit name without the r/ prefix.",
+            "minLength": 1
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Maximum number of posts to return, from 1 through 100.",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "after": {
+            "type": "string",
+            "description": "Fullname cursor after which to continue the listing."
+          },
+          "before": {
+            "type": "string",
+            "description": "Fullname cursor before which to continue the listing."
+          }
+        },
+        "required": [
+          "subreddit"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "listing": {
+            "type": "object",
+            "description": "Reddit Listing of hot posts."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/r/{{subreddit}}/hot",
+        "query": {
+          "raw_json": 1,
+          "limit": "{{limit}}",
+          "after": "{{after}}",
+          "before": "{{before}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "listing": "{{response}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "listings.new": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 2097152,
+      "sideEffect": "read",
+      "title": "List new posts",
+      "description": "List newest posts in a subreddit from GET /r/{subreddit}/new. Requires the read scope. Paginate with after from data.after; do not assume a short page is the last page.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "subreddit": {
+            "type": "string",
+            "description": "Subreddit name without the r/ prefix.",
+            "minLength": 1
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Maximum number of posts to return, from 1 through 100.",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "after": {
+            "type": "string",
+            "description": "Fullname cursor after which to continue the listing."
+          },
+          "before": {
+            "type": "string",
+            "description": "Fullname cursor before which to continue the listing."
+          }
+        },
+        "required": [
+          "subreddit"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "listing": {
+            "type": "object",
+            "description": "Reddit Listing of new posts."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/r/{{subreddit}}/new",
+        "query": {
+          "raw_json": 1,
+          "limit": "{{limit}}",
+          "after": "{{after}}",
+          "before": "{{before}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "listing": "{{response}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "comments.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 2097152,
+      "sideEffect": "read",
+      "title": "List post comments",
+      "description": "Read a Reddit post and its comment tree from GET /comments/{article}. Requires the read scope. Nested replies live under each comment's replies listing; remaining branches may collapse into more placeholders.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "article": {
+            "type": "string",
+            "description": "Base-36 Reddit post ID without the t3_ prefix.",
+            "minLength": 1
+          },
+          "sort": {
+            "type": "string",
+            "description": "Comment sort order.",
+            "enum": [
+              "confidence",
+              "top",
+              "new",
+              "controversial",
+              "old",
+              "random",
+              "qa",
+              "live"
+            ]
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Maximum number of comments to return.",
+            "minimum": 1
+          },
+          "depth": {
+            "type": "integer",
+            "description": "Maximum depth of comment subtrees to return.",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "article"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "listings": {
+            "description": "Two-element array: post listing then comment listing."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/comments/{{article}}",
+        "query": {
+          "raw_json": 1,
+          "sort": "{{sort}}",
+          "limit": "{{limit}}",
+          "depth": "{{depth}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "listings": "{{response}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "posts.submit": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Submit a post",
+      "description": "Create a text or link post with POST /api/submit. Requires the submit scope. kind is required because native templates cannot infer self versus link. Confirm subreddit, title, and body before calling; Reddit may still remove the post via automod.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "subreddit": {
+            "type": "string",
+            "description": "Subreddit name without the r/ prefix.",
+            "minLength": 1
+          },
+          "title": {
+            "type": "string",
+            "description": "Post title, at most 300 characters.",
+            "minLength": 1,
+            "maxLength": 300
+          },
+          "kind": {
+            "type": "string",
+            "description": "Post type: self for markdown text, link for a URL.",
+            "enum": [
+              "self",
+              "link"
+            ]
+          },
+          "text": {
+            "type": "string",
+            "description": "Markdown body for a self post."
+          },
+          "url": {
+            "type": "string",
+            "description": "Destination URL for a link post."
+          },
+          "flairId": {
+            "type": "string",
+            "description": "Link flair template ID for this subreddit."
+          },
+          "flairText": {
+            "type": "string",
+            "description": "Custom link flair text when the template allows it."
+          },
+          "nsfw": {
+            "type": "boolean",
+            "description": "Whether the post should be marked not safe for work."
+          },
+          "spoiler": {
+            "type": "boolean",
+            "description": "Whether the post should be marked as a spoiler."
+          },
+          "sendReplies": {
+            "type": "boolean",
+            "description": "Whether Reddit should send inbox replies for the post."
+          }
+        },
+        "required": [
+          "subreddit",
+          "title",
+          "kind"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "Reddit submit JSON envelope."
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/api/submit",
+        "headers": {
+          "Content-Type": "application/x-www-form-urlencoded"
+        },
+        "bodyEncoding": "form",
+        "body": {
+          "api_type": "json",
+          "sr": "{{subreddit}}",
+          "title": "{{title}}",
+          "kind": "{{kind}}",
+          "text": "{{text}}",
+          "url": "{{url}}",
+          "flair_id": "{{flairId}}",
+          "flair_text": "{{flairText}}",
+          "nsfw": "{{nsfw}}",
+          "spoiler": "{{spoiler}}",
+          "sendreplies": "{{sendReplies}}",
+          "resubmit": true
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "vote": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "sideEffect": "write",
+      "title": "Vote on content",
+      "description": "Cast or clear a vote with POST /api/vote. Requires the vote scope. dir is 1 upvote, -1 downvote, or 0 to clear. Use only an explicit human instruction for a single fullname.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Fullname of the post (t3_) or comment (t1_) to vote on.",
+            "minLength": 1
+          },
+          "dir": {
+            "type": "integer",
+            "description": "Vote direction: 1 upvote, -1 downvote, 0 clear.",
+            "enum": [
+              -1,
+              0,
+              1
+            ]
+          },
+          "rank": {
+            "type": "integer",
+            "description": "Optional rank of the item in the listing where the vote was cast.",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "id",
+          "dir"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "success"
+        ]
+      },
+      "request": {
+        "method": "POST",
+        "path": "/api/vote",
+        "headers": {
+          "Content-Type": "application/x-www-form-urlencoded"
+        },
+        "bodyEncoding": "form",
+        "body": {
+          "id": "{{id}}",
+          "dir": "{{dir}}",
+          "rank": "{{rank}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "success": true
+        }
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json"
+    },
+    "comments.delete": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "sideEffect": "destructive",
+      "title": "Delete a comment",
+      "description": "Delete one comment you authored with POST /api/del on oauth.reddit.com. Requires the edit scope. id is the comment fullname (t1_). Reddit does not offer a DELETE method for this. The removal cannot be undone.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Fullname of the comment to delete, prefixed with t1_.",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "success"
+        ]
+      },
+      "request": {
+        "method": "POST",
+        "path": "/api/del",
+        "query": {
+          "raw_json": 1
+        },
+        "headers": {
+          "Content-Type": "application/x-www-form-urlencoded"
+        },
+        "bodyEncoding": "form",
+        "body": {
+          "id": "{{id}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "success": true
+        }
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json"
+    },
+    "posts.delete": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "sideEffect": "destructive",
+      "title": "Delete a post",
+      "description": "Delete one link or self post you authored with POST /api/del on oauth.reddit.com. Requires the edit scope. id is the post fullname (t3_). This is the same official method as comment deletion. The removal cannot be undone.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Fullname of the post to delete, prefixed with t3_.",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "success"
+        ]
+      },
+      "request": {
+        "method": "POST",
+        "path": "/api/del",
+        "query": {
+          "raw_json": 1
+        },
+        "headers": {
+          "Content-Type": "application/x-www-form-urlencoded"
+        },
+        "bodyEncoding": "form",
+        "body": {
+          "id": "{{id}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "success": true
+        }
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json"
+    },
+    "content.edit": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Edit comment or self-post text",
+      "description": "Replace the markdown body of a comment or self-post with POST /api/editusertext. Requires the edit scope. thingId is the fullname (t1_ or t3_). Link posts have no body to edit. Confirm the text before calling.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "thingId": {
+            "type": "string",
+            "description": "Fullname of the comment (t1_) or self-post (t3_) to edit.",
+            "minLength": 1
+          },
+          "text": {
+            "type": "string",
+            "description": "Replacement raw markdown body.",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "thingId",
+          "text"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "Reddit editusertext JSON envelope."
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/api/editusertext",
+        "query": {
+          "raw_json": 1
+        },
+        "headers": {
+          "Content-Type": "application/x-www-form-urlencoded"
+        },
+        "bodyEncoding": "form",
+        "body": {
+          "api_type": "json",
+          "thing_id": "{{thingId}}",
+          "text": "{{text}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "comments.more": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 8192,
+      "maxResponseBytes": 2097152,
+      "sideEffect": "read",
+      "title": "Expand more comments",
+      "description": "Load comment stubs omitted from a thread with GET /api/morechildren. Requires the read scope. linkId is the parent post fullname (t3_). children is a comma-separated list of comment id36s without the t1_ prefix, at most 100. Only one call may be in flight.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "linkId": {
+            "type": "string",
+            "description": "Fullname of the link whose comment tree is being expanded.",
+            "minLength": 1
+          },
+          "children": {
+            "type": "string",
+            "description": "Comma-separated comment id36s to fetch, without the t1_ prefix.",
+            "minLength": 1
+          },
+          "sort": {
+            "type": "string",
+            "description": "Comment sort used by the thread.",
+            "enum": [
+              "confidence",
+              "top",
+              "new",
+              "controversial",
+              "old",
+              "random",
+              "qa",
+              "live"
+            ]
+          },
+          "depth": {
+            "type": "integer",
+            "description": "Maximum depth of returned subtrees.",
+            "minimum": 0
+          },
+          "limitChildren": {
+            "type": "boolean",
+            "description": "When true, return only the requested children and not their descendants."
+          },
+          "moreId": {
+            "type": "string",
+            "description": "Optional id of the MoreComments object this call replaces."
+          }
+        },
+        "required": [
+          "linkId",
+          "children"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "morechildren JSON envelope. Expanded comments are under json.data.things."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/morechildren",
+        "query": {
+          "raw_json": 1,
+          "api_type": "json",
+          "link_id": "{{linkId}}",
+          "children": "{{children}}",
+          "sort": "{{sort}}",
+          "depth": "{{depth}}",
+          "limit_children": "{{limitChildren}}",
+          "id": "{{moreId}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "listings.front": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 2097152,
+      "sideEffect": "read",
+      "title": "List front-page posts",
+      "description": "List the front page from GET /{sort} on oauth.reddit.com. Requires the read scope. sort is best, hot, new, rising, top, or controversial. t applies only to top and controversial. Paginate with after from data.after; do not assume a short page is the last page.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "sort": {
+            "type": "string",
+            "description": "Front-page listing sort.",
+            "enum": [
+              "best",
+              "hot",
+              "new",
+              "rising",
+              "top",
+              "controversial"
+            ]
+          },
+          "time": {
+            "type": "string",
+            "description": "Time window for top or controversial. Ignored by other sorts.",
+            "enum": [
+              "hour",
+              "day",
+              "week",
+              "month",
+              "year",
+              "all"
+            ]
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Maximum number of items to return, from 1 through 100.",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "after": {
+            "type": "string",
+            "description": "Fullname cursor after which to continue the listing."
+          },
+          "before": {
+            "type": "string",
+            "description": "Fullname cursor before which to continue the listing."
+          }
+        },
+        "required": [
+          "sort"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "listing": {
+            "type": "object",
+            "description": "Reddit Listing of front-page posts."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/{{sort}}",
+        "query": {
+          "raw_json": 1,
+          "t": "{{time}}",
+          "limit": "{{limit}}",
+          "after": "{{after}}",
+          "before": "{{before}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "listing": "{{response}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "listings.controversial": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 2097152,
+      "sideEffect": "read",
+      "title": "List controversial posts",
+      "description": "List controversial posts from GET /controversial. Requires the read scope. This is the front-page controversial listing; pass t to choose hour, day, week, month, year, or all. Paginate with after from data.after.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "time": {
+            "type": "string",
+            "description": "Time window for the controversial listing.",
+            "enum": [
+              "hour",
+              "day",
+              "week",
+              "month",
+              "year",
+              "all"
+            ]
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Maximum number of items to return, from 1 through 100.",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "after": {
+            "type": "string",
+            "description": "Fullname cursor after which to continue the listing."
+          },
+          "before": {
+            "type": "string",
+            "description": "Fullname cursor before which to continue the listing."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "listing": {
+            "type": "object",
+            "description": "Reddit Listing of controversial posts."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/controversial",
+        "query": {
+          "raw_json": 1,
+          "t": "{{time}}",
+          "limit": "{{limit}}",
+          "after": "{{after}}",
+          "before": "{{before}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "listing": "{{response}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "me.prefs": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 2097152,
+      "sideEffect": "read",
+      "title": "Get account preferences",
+      "description": "Read the authenticated user's preference settings from GET /api/v1/me/prefs. Requires the identity scope. This does not change preferences; PATCH /api/v1/me/prefs is a different call and needs the account scope.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "prefs": {
+            "type": "object",
+            "description": "Reddit preference object returned by /api/v1/me/prefs."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/me/prefs",
+        "query": {
+          "raw_json": 1
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "prefs": "{{response}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "users.about": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Get user about",
+      "description": "Read public profile data for a Reddit user from GET /user/{username}/about. Requires the read scope. The payload is a t2 thing with karma and account metadata. This is not GET /api/v1/me.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "username": {
+            "type": "string",
+            "description": "Reddit username without the u/ prefix.",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "username"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "user": {
+            "type": "object",
+            "description": "Reddit t2 about payload for the user."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/user/{{username}}/about",
+        "query": {
+          "raw_json": 1
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "user": "{{response}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "listings.top": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 2097152,
+      "sideEffect": "read",
+      "title": "List top posts",
+      "description": "List top posts in a subreddit from GET /r/{subreddit}/top. Requires the read scope. t selects hour, day, week, month, year, or all. Paginate with after from data.after; do not assume a short page is the last page.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "subreddit": {
+            "type": "string",
+            "description": "Subreddit name without the r/ prefix.",
+            "minLength": 1
+          },
+          "time": {
+            "type": "string",
+            "description": "Time window for the top listing.",
+            "enum": [
+              "hour",
+              "day",
+              "week",
+              "month",
+              "year",
+              "all"
+            ]
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Maximum number of items to return, from 1 through 100.",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "after": {
+            "type": "string",
+            "description": "Fullname cursor after which to continue the listing."
+          },
+          "before": {
+            "type": "string",
+            "description": "Fullname cursor before which to continue the listing."
+          }
+        },
+        "required": [
+          "subreddit"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "listing": {
+            "type": "object",
+            "description": "Reddit Listing of top posts."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/r/{{subreddit}}/top",
+        "query": {
+          "raw_json": 1,
+          "t": "{{time}}",
+          "limit": "{{limit}}",
+          "after": "{{after}}",
+          "before": "{{before}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "listing": "{{response}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "oauth.scopes": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Describe OAuth scopes",
+      "description": "Read Reddit OAuth2 scope descriptions from GET /api/v1/scopes. Any valid token may call it. Omit scopes to list every scope. Pass a comma-separated subset to describe only those scopes; unknown names return HTTP 400.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "scopes": {
+            "type": "string",
+            "description": "Optional comma-separated scope ids to describe. Omit to return every scope."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "scopes": {
+            "type": "object",
+            "description": "Map of scope id to Reddit's scope description object."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/scopes",
+        "query": {
+          "raw_json": 1,
+          "scopes": "{{scopes}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "scopes": "{{response}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "subreddit.rules": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Get subreddit rules",
+      "description": "Read the rules configured for a subreddit from GET /r/{subreddit}/about/rules. Requires the read scope. The JSON object contains a rules array plus site rules. This is not the subreddit about document.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "subreddit": {
+            "type": "string",
+            "description": "Subreddit name without the r/ prefix.",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "subreddit"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "rules": {
+            "type": "object",
+            "description": "Subreddit rules payload from /about/rules."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/r/{{subreddit}}/about/rules",
+        "query": {
+          "raw_json": 1
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "rules": "{{response}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "subreddits.search": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 2097152,
+      "sideEffect": "read",
+      "title": "Search subreddits",
+      "description": "Search subreddits by title and description with GET /subreddits/search. Requires the read scope. q is the query. sort is relevance or activity. Paginate with after from data.after.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "q": {
+            "type": "string",
+            "description": "Search query matched against subreddit title and description.",
+            "minLength": 1
+          },
+          "sort": {
+            "type": "string",
+            "description": "Result ordering.",
+            "enum": [
+              "relevance",
+              "activity"
+            ]
+          },
+          "includeOver18": {
+            "type": "boolean",
+            "description": "When true, include subreddits marked over 18."
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Maximum number of items to return, from 1 through 100.",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "after": {
+            "type": "string",
+            "description": "Fullname cursor after which to continue the listing."
+          },
+          "before": {
+            "type": "string",
+            "description": "Fullname cursor before which to continue the listing."
+          }
+        },
+        "required": [
+          "q"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "listing": {
+            "type": "object",
+            "description": "Reddit Listing of matching subreddits."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/subreddits/search",
+        "query": {
+          "raw_json": 1,
+          "q": "{{q}}",
+          "sort": "{{sort}}",
+          "include_over_18": "{{includeOver18}}",
+          "limit": "{{limit}}",
+          "after": "{{after}}",
+          "before": "{{before}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "listing": "{{response}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "flair.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 2097152,
+      "sideEffect": "read",
+      "title": "List user flair assignments",
+      "description": "List user flair assignments in a subreddit with GET /r/{subreddit}/api/flairlist. Requires the modflair scope and moderator access. name filters to one username. Paginate with after; limit may be as high as 1000.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "subreddit": {
+            "type": "string",
+            "description": "Subreddit name without the r/ prefix.",
+            "minLength": 1
+          },
+          "name": {
+            "type": "string",
+            "description": "Optional username to filter the flair list."
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Maximum number of items to return, from 1 through 1000.",
+            "minimum": 1,
+            "maximum": 1000
+          },
+          "after": {
+            "type": "string",
+            "description": "Fullname cursor after which to continue the listing."
+          },
+          "before": {
+            "type": "string",
+            "description": "Fullname cursor before which to continue the listing."
+          }
+        },
+        "required": [
+          "subreddit"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "flair": {
+            "type": "object",
+            "description": "Flair list payload with users plus next and prev cursors."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/r/{{subreddit}}/api/flairlist",
+        "query": {
+          "raw_json": 1,
+          "name": "{{name}}",
+          "limit": "{{limit}}",
+          "after": "{{after}}",
+          "before": "{{before}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "flair": "{{response}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "username.available": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "sideEffect": "read",
+      "title": "Check username availability",
+      "description": "Check whether a username is available for registration with GET /api/username_available. The official response is a JSON boolean. user is the candidate name, not an authenticated account lookup.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "user": {
+            "type": "string",
+            "description": "Candidate username to test.",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "user"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "available": {
+            "type": "boolean",
+            "description": "True when the username is available."
+          }
+        },
+        "required": [
+          "available"
+        ]
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/username_available",
+        "query": {
+          "raw_json": 1,
+          "user": "{{user}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "available": "{{response}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "feeds.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 2097152,
+      "sideEffect": "read",
+      "title": "List a custom feed",
+      "description": "List posts in a multireddit from GET /user/{username}/m/{customFeed}. Requires the read scope. This is the public custom-feed listing, not the multi metadata object at GET /api/multi/{multipath}. Paginate with after from data.after.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "username": {
+            "type": "string",
+            "description": "Owner of the custom feed, without the u/ prefix.",
+            "minLength": 1
+          },
+          "customFeed": {
+            "type": "string",
+            "description": "Custom feed (multireddit) name.",
+            "minLength": 1
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Maximum number of items to return, from 1 through 100.",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "after": {
+            "type": "string",
+            "description": "Fullname cursor after which to continue the listing."
+          },
+          "before": {
+            "type": "string",
+            "description": "Fullname cursor before which to continue the listing."
+          }
+        },
+        "required": [
+          "username",
+          "customFeed"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "listing": {
+            "type": "object",
+            "description": "Reddit Listing of posts in the custom feed."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/user/{{username}}/m/{{customFeed}}",
+        "query": {
+          "raw_json": 1,
+          "limit": "{{limit}}",
+          "after": "{{after}}",
+          "before": "{{before}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "listing": "{{response}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "moderation.queue": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 2097152,
+      "sideEffect": "read",
+      "title": "List a moderation queue",
+      "description": "List moderator items from GET /r/{subreddit}/about/{location}. Requires the read scope plus the posts moderator permission. location is reports, spam, modqueue, unmoderated, or edited. only may be links, comments, or chat_comments. Paginate with after.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "subreddit": {
+            "type": "string",
+            "description": "Subreddit name without the r/ prefix.",
+            "minLength": 1
+          },
+          "location": {
+            "type": "string",
+            "description": "Moderation listing to read.",
+            "enum": [
+              "reports",
+              "spam",
+              "modqueue",
+              "unmoderated",
+              "edited"
+            ]
+          },
+          "only": {
+            "type": "string",
+            "description": "Restrict the queue to one item kind.",
+            "enum": [
+              "links",
+              "comments",
+              "chat_comments"
+            ]
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Maximum number of items to return, from 1 through 100.",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "after": {
+            "type": "string",
+            "description": "Fullname cursor after which to continue the listing."
+          },
+          "before": {
+            "type": "string",
+            "description": "Fullname cursor before which to continue the listing."
+          }
+        },
+        "required": [
+          "subreddit",
+          "location"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "listing": {
+            "type": "object",
+            "description": "Reddit Listing of items in the moderation queue."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/r/{{subreddit}}/about/{{location}}",
+        "query": {
+          "raw_json": 1,
+          "only": "{{only}}",
+          "limit": "{{limit}}",
+          "after": "{{after}}",
+          "before": "{{before}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "listing": "{{response}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "comments.subreddit": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 2097152,
+      "sideEffect": "read",
+      "title": "List subreddit comments",
+      "description": "List recent comments in a subreddit from GET /r/{subreddit}/comments. Requires the read scope. The response is one Listing of t1 comments, not the two-listing comment tree returned by GET /comments/{article}. Paginate with after from data.after.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "subreddit": {
+            "type": "string",
+            "description": "Subreddit name without the r/ prefix.",
+            "minLength": 1
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Maximum number of items to return, from 1 through 100.",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "after": {
+            "type": "string",
+            "description": "Fullname cursor after which to continue the listing."
+          },
+          "before": {
+            "type": "string",
+            "description": "Fullname cursor before which to continue the listing."
+          }
+        },
+        "required": [
+          "subreddit"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "listing": {
+            "type": "object",
+            "description": "Reddit Listing of recent comments in the subreddit."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/r/{{subreddit}}/comments",
+        "query": {
+          "raw_json": 1,
+          "limit": "{{limit}}",
+          "after": "{{after}}",
+          "before": "{{before}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "listing": "{{response}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "subreddit.moderators": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "List subreddit moderators",
+      "description": "List moderators of a subreddit from GET /r/{subreddit}/about/moderators. Requires the read scope. The response is a UserList. user optionally filters to one moderator name. Paginate with after when the list is longer than limit.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "subreddit": {
+            "type": "string",
+            "description": "Subreddit name without the r/ prefix.",
+            "minLength": 1
+          },
+          "user": {
+            "type": "string",
+            "description": "Optional moderator username to filter for."
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Maximum number of items to return, from 1 through 100.",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "after": {
+            "type": "string",
+            "description": "Fullname cursor after which to continue the listing."
+          },
+          "before": {
+            "type": "string",
+            "description": "Fullname cursor before which to continue the listing."
+          }
+        },
+        "required": [
+          "subreddit"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "moderators": {
+            "type": "object",
+            "description": "UserList of subreddit moderators."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/r/{{subreddit}}/about/moderators",
+        "query": {
+          "raw_json": 1,
+          "user": "{{user}}",
+          "limit": "{{limit}}",
+          "after": "{{after}}",
+          "before": "{{before}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "moderators": "{{response}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "flair.linkTemplates": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "List post flair templates",
+      "description": "List link flair templates for a subreddit from GET /r/{subreddit}/api/link_flair_v2. Requires the flair scope. Reddit returns a JSON array and omits templates the caller cannot assign. This is not the moderator flair assignment list.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "subreddit": {
+            "type": "string",
+            "description": "Subreddit name without the r/ prefix.",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "subreddit"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "flairs": {
+            "description": "Array of link flair templates from link_flair_v2."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/r/{{subreddit}}/api/link_flair_v2",
+        "query": {
+          "raw_json": 1
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "flairs": "{{response}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "comments.create": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Post a comment",
+      "description": "Submit a comment with POST /api/comment. parent is a t3_ fullname for a top-level comment or a t1_ fullname for a reply; both require the submit scope. A t4_ parent replies to private mail and needs the privatemessages scope, which this connector does not request. text is raw markdown. Confirm parent and text before calling.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "parent": {
+            "type": "string",
+            "description": "Fullname of the link (t3_) or comment (t1_) being replied to.",
+            "minLength": 1
+          },
+          "text": {
+            "type": "string",
+            "description": "Raw markdown body of the comment.",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "parent",
+          "text"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "Reddit comment JSON envelope. The new comment is under json.data.things."
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/api/comment",
+        "query": {
+          "raw_json": 1
+        },
+        "headers": {
+          "Content-Type": "application/x-www-form-urlencoded"
+        },
+        "bodyEncoding": "form",
+        "body": {
+          "api_type": "json",
+          "parent": "{{parent}}",
+          "text": "{{text}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "listings.bySort": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 2097152,
+      "sideEffect": "read",
+      "title": "List subreddit posts by sort",
+      "description": "List posts in a subreddit from GET /r/{subreddit}/{sort}. Requires the read scope. sort is hot, new, rising, top, or controversial. t applies to top and controversial. This is a listing, not one post; a single post is GET /comments/{article}. Paginate with after from data.after.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "subreddit": {
+            "type": "string",
+            "description": "Subreddit name without the r/ prefix.",
+            "minLength": 1
+          },
+          "sort": {
+            "type": "string",
+            "description": "Listing sort for the subreddit.",
+            "enum": [
+              "hot",
+              "new",
+              "rising",
+              "top",
+              "controversial"
+            ]
+          },
+          "time": {
+            "type": "string",
+            "description": "Time window for top or controversial. Ignored by other sorts.",
+            "enum": [
+              "hour",
+              "day",
+              "week",
+              "month",
+              "year",
+              "all"
+            ]
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Maximum number of items to return, from 1 through 100.",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "after": {
+            "type": "string",
+            "description": "Fullname cursor after which to continue the listing."
+          },
+          "before": {
+            "type": "string",
+            "description": "Fullname cursor before which to continue the listing."
+          }
+        },
+        "required": [
+          "subreddit",
+          "sort"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "listing": {
+            "type": "object",
+            "description": "Reddit Listing of posts for the requested sort."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/r/{{subreddit}}/{{sort}}",
+        "query": {
+          "raw_json": 1,
+          "t": "{{time}}",
+          "limit": "{{limit}}",
+          "after": "{{after}}",
+          "before": "{{before}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "listing": "{{response}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "things.info": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 8192,
+      "maxResponseBytes": 2097152,
+      "sideEffect": "read",
+      "title": "Fetch things by fullname",
+      "description": "Fetch links, comments, or subreddits by fullname with GET /api/info. Requires the read scope. id is a comma-separated list of fullnames. A specific comment is a single t1_ fullname. url is an optional alternative lookup for links that share that URL.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Comma-separated fullnames (t1_, t3_, or t5_) to fetch.",
+            "minLength": 1
+          },
+          "url": {
+            "type": "string",
+            "description": "Optional URL whose submitted links should be returned."
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "listing": {
+            "type": "object",
+            "description": "Reddit Listing of the requested things."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/info",
+        "query": {
+          "raw_json": 1,
+          "id": "{{id}}",
+          "url": "{{url}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "listing": "{{response}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "search.all": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 2097152,
+      "sideEffect": "read",
+      "title": "Search across Reddit",
+      "description": "Search links across Reddit with GET /search. Requires the read scope. q is at most 512 characters. sort is relevance, hot, top, new, or comments. type is an optional comma-separated mix of sr, link, and user. t limits top results. Paginate with after from data.after.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "q": {
+            "type": "string",
+            "description": "Search query, at most 512 characters.",
+            "minLength": 1,
+            "maxLength": 512
+          },
+          "sort": {
+            "type": "string",
+            "description": "Result ordering.",
+            "enum": [
+              "relevance",
+              "hot",
+              "top",
+              "new",
+              "comments"
+            ]
+          },
+          "time": {
+            "type": "string",
+            "description": "Time window when sort is top.",
+            "enum": [
+              "hour",
+              "day",
+              "week",
+              "month",
+              "year",
+              "all"
+            ]
+          },
+          "type": {
+            "type": "string",
+            "description": "Optional comma-separated result types: sr, link, user."
+          },
+          "restrictSr": {
+            "type": "boolean",
+            "description": "When true, restrict the search to the current subreddit context."
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Maximum number of items to return, from 1 through 100.",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "after": {
+            "type": "string",
+            "description": "Fullname cursor after which to continue the listing."
+          },
+          "before": {
+            "type": "string",
+            "description": "Fullname cursor before which to continue the listing."
+          }
+        },
+        "required": [
+          "q"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "listing": {
+            "type": "object",
+            "description": "Reddit Listing of search results."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/search",
+        "query": {
+          "raw_json": 1,
+          "q": "{{q}}",
+          "sort": "{{sort}}",
+          "t": "{{time}}",
+          "type": "{{type}}",
+          "restrict_sr": "{{restrictSr}}",
+          "limit": "{{limit}}",
+          "after": "{{after}}",
+          "before": "{{before}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "listing": "{{response}}"
+        }
+      },
+      "responseFormat": "json"
+    },
+    "replies.toggle": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "sideEffect": "write",
+      "title": "Toggle inbox replies",
+      "description": "Enable or disable inbox replies for a link or comment with POST /api/sendreplies. Requires the edit scope. id is the fullname (t3_ or t1_). state true enables replies and false disables them.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Fullname of the link (t3_) or comment (t1_).",
+            "minLength": 1
+          },
+          "state": {
+            "type": "boolean",
+            "description": "True to enable inbox replies, false to disable them."
+          }
+        },
+        "required": [
+          "id",
+          "state"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "success"
+        ]
+      },
+      "request": {
+        "method": "POST",
+        "path": "/api/sendreplies",
+        "query": {
+          "raw_json": 1
+        },
+        "headers": {
+          "Content-Type": "application/x-www-form-urlencoded"
+        },
+        "bodyEncoding": "form",
+        "body": {
+          "id": "{{id}}",
+          "state": "{{state}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "success": true
+        }
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json"
+    }
+  }
+}

@@ -1,0 +1,801 @@
+{
+  "key": "billsby",
+  "name": "Billsby",
+  "version": "0.1.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "payments"
+  ],
+  "auth": {
+    "type": "api_key",
+    "scopes": [],
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "Billsby API key",
+          "required": true,
+          "secret": true
+        },
+        {
+          "key": "companyDomain",
+          "label": "Billsby company subdomain",
+          "required": true,
+          "secret": false
+        }
+      ]
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "public.billsby.com"
+    ]
+  },
+  "models": [
+    "customer",
+    "subscription",
+    "product",
+    "plan"
+  ],
+  "http": {
+    "baseUrl": "https://public.billsby.com/api/v1/rest/core",
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "ApiKey",
+      "value": "{{apiKey}}"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "Retry-After",
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "errorMessage",
+        "message",
+        "error"
+      ]
+    },
+    "headers": {
+      "Accept": "application/json"
+    }
+  },
+  "operations": {
+    "customers.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create Customer",
+      "description": "Create a Billsby customer without a subscription or payment card. POST /{companyDomain}/customers sends firstName, lastName, email, and the billing address as top-level addressLine1, addressLine2, city, state, country, and postCode fields.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "firstName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "Customer first name."
+          },
+          "lastName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "Customer last name."
+          },
+          "email": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 320,
+            "description": "Customer email address."
+          },
+          "billingAddress": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "addressLine1",
+              "city",
+              "state",
+              "country",
+              "postCode"
+            ],
+            "properties": {
+              "addressLine1": {
+                "type": "string",
+                "minLength": 1,
+                "description": "First address line."
+              },
+              "addressLine2": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Second address line, when present."
+              },
+              "city": {
+                "type": "string",
+                "minLength": 1,
+                "description": "City."
+              },
+              "state": {
+                "type": "string",
+                "minLength": 1,
+                "description": "State or region. Billsby expects a two-letter code for US addresses."
+              },
+              "country": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Country. Billsby documents an ISO 3166-1 alpha-3 code."
+              },
+              "postCode": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Postal code."
+              }
+            },
+            "description": "Billing address. Create sends these fields at the top level of the JSON body; update sends this object as billingAddress."
+          }
+        },
+        "required": [
+          "firstName",
+          "lastName",
+          "email",
+          "billingAddress"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "JSON object returned by Billsby."
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/{{companyDomain}}/customers",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "firstName": "{{firstName}}",
+          "lastName": "{{lastName}}",
+          "email": "{{email}}",
+          "addressLine1": "{{billingAddress.addressLine1}}",
+          "addressLine2": "{{billingAddress.addressLine2}}",
+          "city": "{{billingAddress.city}}",
+          "state": "{{billingAddress.state}}",
+          "country": "{{billingAddress.country}}",
+          "postCode": "{{billingAddress.postCode}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "customers.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 5242880,
+      "title": "Get Customer",
+      "description": "Get billing, contact, payment-status, and account details for one Billsby customer.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "customerUniqueId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "description": "Billsby customer unique ID, usually obtained from List Customers or Create Customer."
+          }
+        },
+        "required": [
+          "customerUniqueId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "JSON object returned by Billsby."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/{{companyDomain}}/customers/{{customerUniqueId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "customers.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Update Customer",
+      "description": "Replace the editable contact and billing-address details for an existing Billsby customer. PUT /{companyDomain}/customers/{customerUniqueId} expects the complete desired values, not a partial patch.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "customerUniqueId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "description": "Billsby customer unique ID to update."
+          },
+          "firstName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "Complete desired first name."
+          },
+          "lastName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "Complete desired last name."
+          },
+          "email": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 320,
+            "description": "Customer email address."
+          },
+          "phoneNumber": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 32,
+            "description": "Phone number without a leading zero, per Billsby documentation."
+          },
+          "phoneNumberDialCode": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 8,
+            "description": "International phone dial code, such as +1."
+          },
+          "phoneNumberDialCountry": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "description": "Phone dial country, if the customer has a phone number."
+          },
+          "billingAddress": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "addressLine1",
+              "city",
+              "state",
+              "country",
+              "postCode"
+            ],
+            "properties": {
+              "addressLine1": {
+                "type": "string",
+                "minLength": 1,
+                "description": "First address line."
+              },
+              "addressLine2": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Second address line, when present."
+              },
+              "city": {
+                "type": "string",
+                "minLength": 1,
+                "description": "City."
+              },
+              "state": {
+                "type": "string",
+                "minLength": 1,
+                "description": "State or region. Billsby expects a two-letter code for US addresses."
+              },
+              "country": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Country. Billsby documents an ISO 3166-1 alpha-3 code."
+              },
+              "postCode": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Postal code."
+              }
+            },
+            "description": "Billing address. Create sends these fields at the top level of the JSON body; update sends this object as billingAddress."
+          }
+        },
+        "required": [
+          "customerUniqueId",
+          "firstName",
+          "lastName",
+          "email",
+          "billingAddress"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "JSON object returned by Billsby."
+          }
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/{{companyDomain}}/customers/{{customerUniqueId}}",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "firstName": "{{firstName}}",
+          "lastName": "{{lastName}}",
+          "email": "{{email}}",
+          "phoneNumber": "{{phoneNumber}}",
+          "phoneNumberDialCode": "{{phoneNumberDialCode}}",
+          "phoneNumberDialCountry": "{{phoneNumberDialCountry}}",
+          "billingAddress": "{{billingAddress}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "customers.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 5242880,
+      "title": "List Customers",
+      "description": "Return one page of customers for the connected Billsby company. page and pageSize are required by the Billsby API. search is an optional partial customer name.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "page": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Page index Billsby should return. The response echoes it as currentPage."
+          },
+          "pageSize": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Number of records in the page. Billsby allows at most 100."
+          },
+          "search": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "Partial customer name to match. Omit to list the page without a name filter."
+          }
+        },
+        "required": [
+          "page",
+          "pageSize"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "JSON object returned by Billsby."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/{{companyDomain}}/customers",
+        "success": [
+          200
+        ],
+        "query": {
+          "page": "{{page}}",
+          "pageSize": "{{pageSize}}",
+          "search": "{{search}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "customers.subscriptions.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 5242880,
+      "title": "List Customer Subscriptions",
+      "description": "List all subscriptions belonging to one Billsby customer. The Billsby response is a JSON array of subscription records.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "customerUniqueId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "description": "Billsby customer unique ID whose subscriptions should be returned."
+          }
+        },
+        "required": [
+          "customerUniqueId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            },
+            "description": "JSON array returned by Billsby."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/{{companyDomain}}/customers/{{customerUniqueId}}/subscriptions",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "subscriptions.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 5242880,
+      "title": "Get Subscription",
+      "description": "Get billing schedule, customer, product, plan, pricing, status, and revenue details for one Billsby subscription.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "subscriptionUniqueId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "description": "Billsby subscription unique ID, usually obtained from List Subscriptions."
+          }
+        },
+        "required": [
+          "subscriptionUniqueId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "JSON object returned by Billsby."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/{{companyDomain}}/subscriptions/{{subscriptionUniqueId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "subscriptions.shipping-address.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 5242880,
+      "title": "Get Subscription Shipping Address",
+      "description": "Get the shipping address associated with one Billsby subscription.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "subscriptionUniqueId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "description": "Billsby subscription unique ID whose shipping address should be returned."
+          }
+        },
+        "required": [
+          "subscriptionUniqueId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "JSON object returned by Billsby."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/{{companyDomain}}/subscriptions/{{subscriptionUniqueId}}/shippingAddress",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "subscriptions.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 5242880,
+      "title": "List Subscriptions",
+      "description": "Return one page of company subscriptions. page and pageSize are required. Optional filters use Billsby's query names: orderBy, orderByDescending, isActive, isInFreeTrial, productName, and planName.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "page": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Page index Billsby should return. The response echoes it as currentPage."
+          },
+          "pageSize": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Number of records in the page. Billsby allows at most 100."
+          },
+          "orderBy": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "description": "Subscription property to order by, using Billsby's casing, such as CreatedOn."
+          },
+          "orderByDescending": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 32,
+            "description": "Ordering direction for orderBy. Billsby documents a string such as Descending."
+          },
+          "isActive": {
+            "type": "boolean",
+            "description": "When set, filter by active status."
+          },
+          "isInFreeTrial": {
+            "type": "boolean",
+            "description": "When set, filter by free-trial status."
+          },
+          "productName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "Filter subscriptions by matching product name."
+          },
+          "planName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "Filter subscriptions by matching plan name."
+          }
+        },
+        "required": [
+          "page",
+          "pageSize"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "JSON object returned by Billsby."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/{{companyDomain}}/subscriptions",
+        "success": [
+          200
+        ],
+        "query": {
+          "page": "{{page}}",
+          "pageSize": "{{pageSize}}",
+          "orderBy": "{{orderBy}}",
+          "orderByDescending": "{{orderByDescending}}",
+          "isActive": "{{isActive}}",
+          "isInFreeTrial": "{{isInFreeTrial}}",
+          "productName": "{{productName}}",
+          "planName": "{{planName}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "products.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 5242880,
+      "title": "List Products",
+      "description": "Return one page of Billsby products. page and pageSize are required. search is an optional partial product name. visibilityType is 0 public, 1 hidden, 2 internal, or 3 off-sale.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "page": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Page index Billsby should return. The response echoes it as currentPage."
+          },
+          "pageSize": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Number of records in the page. Billsby allows at most 100."
+          },
+          "search": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "Partial product name to match. Omit to list the page without a name filter."
+          },
+          "visibilityType": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 3,
+            "description": "Billsby visibility code: 0 public, 1 hidden, 2 internal, or 3 off-sale."
+          }
+        },
+        "required": [
+          "page",
+          "pageSize"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "JSON object returned by Billsby."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/{{companyDomain}}/products",
+        "success": [
+          200
+        ],
+        "query": {
+          "page": "{{page}}",
+          "pageSize": "{{pageSize}}",
+          "search": "{{search}}",
+          "visibilityType": "{{visibilityType}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "products.plans.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 5242880,
+      "title": "List Product Plans",
+      "description": "List the plans and billing cycles configured for one Billsby product. The Billsby response is a JSON array of plans.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "productId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Billsby product ID, usually obtained from List Products."
+          }
+        },
+        "required": [
+          "productId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            },
+            "description": "JSON array returned by Billsby."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/{{companyDomain}}/products/{{productId}}/plans",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    }
+  }
+}

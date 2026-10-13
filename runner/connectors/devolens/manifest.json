@@ -1,0 +1,1093 @@
+{
+  "key": "devolens",
+  "name": "Devolens",
+  "version": "0.1.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "dev-tools"
+  ],
+  "auth": {
+    "type": "api_key",
+    "scopes": [],
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "token",
+          "label": "Cryptolens access token",
+          "required": true,
+          "secret": true
+        }
+      ]
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "api.cryptolens.io"
+    ]
+  },
+  "models": [
+    "product",
+    "license-key",
+    "customer",
+    "license-template",
+    "user",
+    "message",
+    "reseller",
+    "web-api-log",
+    "daily-aggregate"
+  ],
+  "http": {
+    "baseUrl": "https://api.cryptolens.io/api",
+    "auth": {
+      "field": "token",
+      "in": "query",
+      "name": "token"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "Retry-After",
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "message"
+      ],
+      "bodyErrorPaths": [
+        "message"
+      ]
+    },
+    "headers": {
+      "Accept": "application/json"
+    }
+  },
+  "operations": {
+    "license-key.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get License Key",
+      "description": "Retrieve one Cryptolens license key with GET https://api.cryptolens.io/api/key/GetKey. ProductId and Key are required. includeMetadata sets Metadata, which adds activation and device-count metadata. The token needs the Get Key method. Sign is left off so the license stays a JSON object.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "productId",
+          "licenseKey"
+        ],
+        "properties": {
+          "productId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Product ID that owns the license key."
+          },
+          "licenseKey": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "description": "License key string to retrieve."
+          },
+          "includeMetadata": {
+            "type": "boolean",
+            "description": "When true, set Metadata so the response includes activation and device-count metadata."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": true,
+            "required": [
+              "licenseKey",
+              "result",
+              "message"
+            ],
+            "properties": {
+              "licenseKey": {
+                "type": "object",
+                "additionalProperties": true
+              },
+              "metadata": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "additionalProperties": true
+              },
+              "result": {
+                "type": "integer",
+                "enum": [
+                  0
+                ]
+              },
+              "message": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/key/GetKey",
+        "query": {
+          "ProductId": "{{productId}}",
+          "Key": "{{licenseKey}}",
+          "Metadata": "{{includeMetadata}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "redactResponseKeys": [
+        "password",
+        "Password"
+      ]
+    },
+    "customers.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List Customers",
+      "description": "Search or list Cryptolens customers with GET https://api.cryptolens.io/api/customer/GetCustomers. Owned customers are in customers. Reseller-visible groups are in resellerCustomers and visibleCustomers. The token needs Get Customers. ModelVersion is omitted so the default response does not include customer secrets.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Maximum number of customers to return. Omit for the provider default, which is unbounded."
+          },
+          "search": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 512,
+            "description": "Text matched against customer name, company, email, or secret."
+          },
+          "customerId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Exact numeric customer ID to retrieve."
+          },
+          "newestFirst": {
+            "type": "boolean",
+            "description": "When true, set SortByCreatedDescending so newer customers are first."
+          },
+          "includeIdInSearch": {
+            "type": "boolean",
+            "description": "When true, a numeric search string may also match customer IDs."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": true,
+            "required": [
+              "customers",
+              "resellerCustomers",
+              "visibleCustomers",
+              "result",
+              "message"
+            ],
+            "properties": {
+              "customers": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              },
+              "resellerCustomers": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              },
+              "visibleCustomers": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              },
+              "result": {
+                "type": "integer",
+                "enum": [
+                  0
+                ]
+              },
+              "message": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/customer/GetCustomers",
+        "query": {
+          "Limit": "{{limit}}",
+          "Search": "{{search}}",
+          "CustomerId": "{{customerId}}",
+          "SortByCreatedDescending": "{{newestFirst}}",
+          "IncludeIdInSearch": "{{includeIdInSearch}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "redactResponseKeys": [
+        "password",
+        "Password"
+      ]
+    },
+    "usage.daily-aggregates.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List Daily Usage Aggregates",
+      "description": "Return one page of daily Cryptolens usage aggregates with GET https://api.cryptolens.io/api/ai/GetDailyAggregates. Start and End are inclusive YYYY-MM-DD dates. nextCursor is StartingAfter, the forward id cursor. Repeat the same filters to continue. The token needs Usage Analytics.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000,
+            "description": "Maximum aggregate records in this page. The provider default is 100 and the maximum is 1000."
+          },
+          "endDate": {
+            "type": "string",
+            "minLength": 10,
+            "maxLength": 10,
+            "description": "Inclusive end date in YYYY-MM-DD format."
+          },
+          "productId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Only return aggregates for this product ID."
+          },
+          "startDate": {
+            "type": "string",
+            "minLength": 10,
+            "maxLength": 10,
+            "description": "Inclusive start date in YYYY-MM-DD format."
+          },
+          "nextCursor": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Forward cursor. Pass the id of the last aggregate from the previous page. Omit for the first page."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": true,
+            "required": [
+              "aggregates",
+              "result",
+              "message"
+            ],
+            "properties": {
+              "aggregates": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              },
+              "result": {
+                "type": "integer",
+                "enum": [
+                  0
+                ]
+              },
+              "message": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/ai/GetDailyAggregates",
+        "query": {
+          "Limit": "{{limit}}",
+          "End": "{{endDate}}",
+          "ProductId": "{{productId}}",
+          "Start": "{{startDate}}",
+          "StartingAfter": "{{nextCursor}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "redactResponseKeys": [
+        "password",
+        "Password"
+      ]
+    },
+    "license-keys.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List License Keys",
+      "description": "List one page of license keys for a Cryptolens product with GET https://api.cryptolens.io/api/product/GetKeys. nextCursor is the 1-based Page value; use 1 for the first page and increase it while the page is below pageCount. searchQuery is the product-page license filter. The token needs Get Keys.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "productId"
+        ],
+        "properties": {
+          "orderBy": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "description": "Sort as a field name plus optional ascending or descending, for example Created descending. Common fields include ID, Created, Expires, Period, F1-F8, and Block."
+          },
+          "globalId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Exact numeric license-key global ID for a faster lookup within the product."
+          },
+          "productId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Product ID whose license keys should be returned."
+          },
+          "nextCursor": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "1-based page number sent as Page. Use 1 for the first page."
+          },
+          "searchQuery": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2048,
+            "description": "Cryptolens license filter, for example id < 10, key.contains(\"ITVBC\"), or block = false. Combine conditions with and or or."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": true,
+            "required": [
+              "licenseKeys",
+              "returned",
+              "total",
+              "pageCount",
+              "result",
+              "message"
+            ],
+            "properties": {
+              "licenseKeys": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              },
+              "returned": {
+                "type": "integer"
+              },
+              "total": {
+                "type": "integer"
+              },
+              "pageCount": {
+                "type": "integer"
+              },
+              "result": {
+                "type": "integer",
+                "enum": [
+                  0
+                ]
+              },
+              "message": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/product/GetKeys",
+        "query": {
+          "OrderBy": "{{orderBy}}",
+          "GlobalId": "{{globalId}}",
+          "ProductId": "{{productId}}",
+          "Page": "{{nextCursor}}",
+          "SearchQuery": "{{searchQuery}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "redactResponseKeys": [
+        "password",
+        "Password"
+      ]
+    },
+    "license-templates.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List License Templates",
+      "description": "Return the license templates on the connected Cryptolens account with GET https://api.cryptolens.io/api/licensetemplate/GetLicenseTemplates. The token needs Get License Templates.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": true,
+            "required": [
+              "licenseTemplates",
+              "result",
+              "message"
+            ],
+            "properties": {
+              "licenseTemplates": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              },
+              "result": {
+                "type": "integer",
+                "enum": [
+                  0
+                ]
+              },
+              "message": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/licensetemplate/GetLicenseTemplates",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "redactResponseKeys": [
+        "password",
+        "Password"
+      ]
+    },
+    "license-users.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List License Users",
+      "description": "Return registered Cryptolens license users with GET https://api.cryptolens.io/api/userauth/GetUsers. customerId limits the list to one customer. The token needs the UserAuthAdmin method group.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "customerId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Only return users associated with this numeric customer ID."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": true,
+            "required": [
+              "users",
+              "result",
+              "message"
+            ],
+            "properties": {
+              "users": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              },
+              "result": {
+                "type": "integer",
+                "enum": [
+                  0
+                ]
+              },
+              "message": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/userauth/GetUsers",
+        "query": {
+          "CustomerId": "{{customerId}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "redactResponseKeys": [
+        "password",
+        "Password"
+      ]
+    },
+    "messages.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List Messages",
+      "description": "Return Cryptolens account messages with GET https://api.cryptolens.io/api/message/GetMessages. channel selects one channel. createdAfter is the Time unix timestamp and is exclusive. The token needs Get Messages.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "channel": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "description": "Only return messages from this channel."
+          },
+          "createdAfter": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Only return messages created strictly after this Unix timestamp."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": true,
+            "required": [
+              "messages",
+              "result",
+              "message"
+            ],
+            "properties": {
+              "messages": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              },
+              "result": {
+                "type": "integer",
+                "enum": [
+                  0
+                ]
+              },
+              "message": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/message/GetMessages",
+        "query": {
+          "Channel": "{{channel}}",
+          "Time": "{{createdAfter}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "redactResponseKeys": [
+        "password",
+        "Password"
+      ]
+    },
+    "products.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List Products",
+      "description": "Return the Cryptolens products visible to the access token with GET https://api.cryptolens.io/api/product/GetProducts. Use the product id with the license-key tools. The token needs Get Products. Product password fields are removed from the result.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": true,
+            "required": [
+              "products",
+              "result",
+              "message"
+            ],
+            "properties": {
+              "products": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              },
+              "result": {
+                "type": "integer",
+                "enum": [
+                  0
+                ]
+              },
+              "message": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/product/GetProducts",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "redactResponseKeys": [
+        "password",
+        "Password"
+      ]
+    },
+    "resellers.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List Resellers",
+      "description": "Search or list Cryptolens resellers with GET https://api.cryptolens.io/api/reseller/GetResellers. resellerId is an exact id and must not be combined with search. The token needs the Reseller method group.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Maximum number of resellers to return. Omit for the provider default, which is unbounded."
+          },
+          "search": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 512,
+            "description": "Text matched against reseller name, phone, email, or description."
+          },
+          "resellerId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Exact reseller ID. Do not combine with search."
+          }
+        },
+        "allOf": [
+          {
+            "anyOf": [
+              {
+                "properties": {
+                  "resellerId": {
+                    "type": "null"
+                  }
+                }
+              },
+              {
+                "properties": {
+                  "search": {
+                    "type": "null"
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": true,
+            "required": [
+              "resellers",
+              "result",
+              "message"
+            ],
+            "properties": {
+              "resellers": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              },
+              "result": {
+                "type": "integer",
+                "enum": [
+                  0
+                ]
+              },
+              "message": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/reseller/GetResellers",
+        "query": {
+          "Limit": "{{limit}}",
+          "Search": "{{search}}",
+          "ResellerId": "{{resellerId}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "redactResponseKeys": [
+        "password",
+        "Password"
+      ]
+    },
+    "web-api-logs.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List Web API Logs",
+      "description": "Return one page of Cryptolens Web API logs with GET https://api.cryptolens.io/api/ai/GetWebAPILog. eventTypes are integer state codes sent as one JSON array in States, for example 3010 for CreateKey. timeFilter is the Time JSON object of unix bounds gt, gte, lt, and lte. nextCursor is StartingAfter: a log id, or the request unix time when timeFilter is set. licenseKey requires productId. The token needs Get Web API Log.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000,
+            "description": "Maximum logs in this page. The provider default is 10 and the maximum is 1000."
+          },
+          "productId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Only return logs for this product ID. Required when licenseKey is set."
+          },
+          "eventTypes": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 64,
+            "uniqueItems": true,
+            "description": "Integer Cryptolens state codes to include, sent as the States JSON array. 3010 is CreateKey and 2010 is a successful activation.",
+            "items": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 99999
+            }
+          },
+          "licenseKey": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "description": "Only return logs for this license key. Requires productId."
+          },
+          "nextCursor": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Forward cursor sent as StartingAfter. It is a log id, or a request Unix timestamp when timeFilter is set."
+          },
+          "timeFilter": {
+            "type": "object",
+            "additionalProperties": false,
+            "minProperties": 1,
+            "description": "Unix timestamp bounds for the request time. At least one of gt, gte, lt, or lte is required.",
+            "properties": {
+              "gt": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "Request time strictly greater than this Unix timestamp."
+              },
+              "gte": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "Request time greater than or equal to this Unix timestamp."
+              },
+              "lt": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "Request time strictly less than this Unix timestamp."
+              },
+              "lte": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "Request time less than or equal to this Unix timestamp."
+              }
+            }
+          },
+          "machineCode": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "description": "Exact case-sensitive machine code to filter on."
+          },
+          "friendlyName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "description": "Case-insensitive substring of the machine friendly name."
+          },
+          "includeAnomalyClassification": {
+            "type": "boolean",
+            "description": "When true, include anomaly-classification fields. The subscription must support them."
+          }
+        },
+        "allOf": [
+          {
+            "anyOf": [
+              {
+                "properties": {
+                  "licenseKey": {
+                    "type": "null"
+                  }
+                }
+              },
+              {
+                "required": [
+                  "productId"
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": true,
+            "required": [
+              "logs",
+              "result",
+              "message"
+            ],
+            "properties": {
+              "logs": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              },
+              "result": {
+                "type": "integer",
+                "enum": [
+                  0
+                ]
+              },
+              "message": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/ai/GetWebAPILog",
+        "query": {
+          "Limit": "{{limit}}",
+          "ProductId": "{{productId}}",
+          "Key": "{{licenseKey}}",
+          "StartingAfter": "{{nextCursor}}",
+          "MachineCode": "{{machineCode}}",
+          "FriendlyName": "{{friendlyName}}",
+          "AnomalyClassification": "{{includeAnomalyClassification}}"
+        },
+        "parameters": [
+          {
+            "wireName": "States",
+            "inputName": "eventTypes",
+            "in": "query",
+            "style": "form",
+            "explode": false,
+            "allowReserved": false,
+            "contentMediaType": "application/json"
+          },
+          {
+            "wireName": "Time",
+            "inputName": "timeFilter",
+            "in": "query",
+            "style": "form",
+            "explode": false,
+            "allowReserved": false,
+            "contentMediaType": "application/json"
+          }
+        ],
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "redactResponseKeys": [
+        "password",
+        "Password"
+      ]
+    }
+  }
+}

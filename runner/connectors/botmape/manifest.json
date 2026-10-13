@@ -1,0 +1,536 @@
+{
+  "key": "botmape",
+  "name": "BotMape",
+  "version": "0.1.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "utility",
+    "crm"
+  ],
+  "auth": {
+    "type": "api_key",
+    "scopes": [],
+    "setup": {
+      "mode": "api_key",
+      "docsUrl": "https://botmape.com/api-docs",
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "BotMape API key",
+          "required": true,
+          "secret": true
+        }
+      ]
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "botmape.com"
+    ]
+  },
+  "models": [
+    "agent",
+    "knowledge",
+    "message",
+    "analytics"
+  ],
+  "http": {
+    "baseUrl": "https://botmape.com",
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "X-API-Key",
+      "value": "{{apiKey}}"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "Retry-After",
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "message",
+        "error"
+      ]
+    },
+    "headers": {
+      "Accept": "application/json"
+    }
+  },
+  "operations": {
+    "agents.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "title": "List AI Agents",
+      "description": "Return every AI agent owned by the API key, including the IDs used by agent, chat, and knowledge calls.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            },
+            "description": "AI agents owned by the connected account."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/chatbots",
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "agents.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "title": "Get AI Agent",
+      "description": "Return one AI agent's configuration, behavior prompt, appearance, and active state.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "aiAgentId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Numeric AI agent ID returned by List AI Agents."
+          }
+        },
+        "required": [
+          "aiAgentId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "AI agent configuration."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/chatbots/{{aiAgentId}}",
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "agents.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Create AI Agent",
+      "description": "Create a lasting BotMape AI agent. The public API documents no delete-agent route, so confirmPermanentCreation must be true and is not sent upstream.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100,
+            "description": "Permanent AI agent display name."
+          },
+          "description": {
+            "type": "string",
+            "description": "Brief statement of the agent's purpose."
+          },
+          "primaryColor": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 32,
+            "description": "Widget theme color, such as #6366f1."
+          },
+          "systemPrompt": {
+            "type": "string",
+            "description": "Behavior and personality instructions."
+          },
+          "welcomeMessage": {
+            "type": "string",
+            "description": "Initial greeting shown to visitors."
+          },
+          "confirmPermanentCreation": {
+            "type": "boolean",
+            "const": true,
+            "description": "Must be true. Confirms there is no documented delete-agent API. Not sent to BotMape."
+          }
+        },
+        "required": [
+          "name",
+          "confirmPermanentCreation"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "Created AI agent."
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/api/chatbots",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "name": "{{name}}",
+          "description": "{{description}}",
+          "welcomeMessage": "{{welcomeMessage}}",
+          "systemPrompt": "{{systemPrompt}}",
+          "primaryColor": "{{primaryColor}}"
+        },
+        "success": [
+          200,
+          201
+        ],
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "agents.send-message": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 60000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 2097152,
+      "title": "Send Message to AI Agent",
+      "description": "Send a visitor message to one AI agent, starting or continuing a conversation, and return the generated reply.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "aiAgentId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Numeric AI agent ID returned by List AI Agents."
+          },
+          "message": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Non-empty visitor message."
+          },
+          "conversationId": {
+            "type": "string",
+            "description": "Existing conversation ID. Omit to start a new conversation."
+          },
+          "visitorId": {
+            "type": "string",
+            "description": "Stable external visitor identifier."
+          },
+          "visitorName": {
+            "type": "string",
+            "description": "Visitor display name."
+          },
+          "visitorEmail": {
+            "type": "string",
+            "description": "Visitor email address."
+          }
+        },
+        "required": [
+          "aiAgentId",
+          "message"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "Generated reply and conversation ID."
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/api/chat/{{aiAgentId}}",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "message": "{{message}}",
+          "conversationId": "{{conversationId}}",
+          "visitorId": "{{visitorId}}",
+          "visitorName": "{{visitorName}}",
+          "visitorEmail": "{{visitorEmail}}"
+        },
+        "success": [
+          200,
+          201
+        ],
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "knowledge.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 5242880,
+      "title": "List Knowledge Entries",
+      "description": "Return every knowledge-base entry attached to one AI agent, including entry IDs needed for deletion.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "aiAgentId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Numeric AI agent ID returned by List AI Agents."
+          }
+        },
+        "required": [
+          "aiAgentId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            },
+            "description": "Knowledge entries for the AI agent."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/chatbots/{{aiAgentId}}/knowledge",
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "knowledge.add": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 60000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 2097152,
+      "title": "Add Knowledge",
+      "description": "Add and embed one training text entry in an AI agent's knowledge base, with optional source metadata.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "aiAgentId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Numeric AI agent ID returned by List AI Agents."
+          },
+          "content": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Non-empty training content to embed."
+          },
+          "metadata": {
+            "type": "object",
+            "description": "Optional free-form metadata such as category, source, or tags."
+          }
+        },
+        "required": [
+          "aiAgentId",
+          "content"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "Knowledge embed result."
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/api/chatbots/{{aiAgentId}}/knowledge",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "content": "{{content}}",
+          "metadata": "{{metadata}}"
+        },
+        "success": [
+          200,
+          201
+        ],
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "knowledge.delete": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "title": "Delete Knowledge Entry",
+      "description": "Permanently delete one knowledge-base entry from an AI agent.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "aiAgentId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Numeric AI agent ID returned by List AI Agents."
+          },
+          "knowledgeEntryId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Knowledge entry ID from List Knowledge Entries."
+          }
+        },
+        "required": [
+          "aiAgentId",
+          "knowledgeEntryId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "Deletion acknowledgement."
+          }
+        }
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/api/chatbots/{{aiAgentId}}/knowledge/{{knowledgeEntryId}}",
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "analytics.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 5242880,
+      "title": "Get Platform Analytics",
+      "description": "Return account-wide message and conversation totals, daily activity, averages, and per-agent statistics.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "Account-wide analytics."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/analytics",
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    }
+  }
+}

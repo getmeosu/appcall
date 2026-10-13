@@ -1,0 +1,1301 @@
+{
+  "key": "bluepillow",
+  "name": "Blue Pillow Hotels & Stays",
+  "version": "0.1.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "utility"
+  ],
+  "auth": {
+    "type": "api_key",
+    "scopes": [],
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "Blue Pillow API key",
+          "required": true,
+          "secret": true
+        }
+      ]
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "api.b2a.bluepillow.com"
+    ]
+  },
+  "models": [
+    "destination",
+    "property",
+    "stay",
+    "offer",
+    "booking"
+  ],
+  "http": {
+    "baseUrl": "https://api.b2a.bluepillow.com/v1",
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "Authorization",
+      "value": "Bearer {{apiKey}}"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "Retry-After",
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "error.message",
+        "message",
+        "detail"
+      ]
+    },
+    "headers": {
+      "Accept": "application/json"
+    }
+  },
+  "operations": {
+    "healthcheck": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 5000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "title": "Healthcheck",
+      "description": "Validate the Blue Pillow API key against the documented liveness endpoint.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "JSON object returned by Blue Pillow."
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/health",
+        "success": [
+          200
+        ]
+      }
+    },
+    "properties.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 2097152,
+      "title": "Get Property",
+      "description": "Get canonical details and optional review enrichments for one property. Live availability stays on search or recommendation.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "property_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Blue Pillow property id, normally prefixed prop_.",
+            "maxLength": 200
+          },
+          "include": {
+            "type": "array",
+            "minItems": 1,
+            "description": "Review enrichments. reviews_extended supersedes reviews_sample. Sent as one comma-separated query value.",
+            "items": {
+              "type": "string",
+              "enum": [
+                "reviews_aggregate",
+                "reviews_sample",
+                "reviews_extended"
+              ]
+            }
+          },
+          "currency": {
+            "type": "string",
+            "minLength": 3,
+            "description": "ISO 4217 pricing currency. Defaults from user_country, then USD.",
+            "maxLength": 3
+          },
+          "language": {
+            "type": "string",
+            "minLength": 2,
+            "description": "Two-letter lowercase language code.",
+            "maxLength": 2
+          },
+          "user_country": {
+            "type": "string",
+            "minLength": 2,
+            "description": "ISO 3166 alpha-2 country for booking-link locale and default currency.",
+            "maxLength": 2
+          }
+        },
+        "required": [
+          "property_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "JSON object returned by Blue Pillow."
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/properties/{{property_id}}",
+        "success": [
+          200
+        ],
+        "query": {
+          "user_country": "{{user_country}}",
+          "language": "{{language}}",
+          "currency": "{{currency}}"
+        },
+        "parameters": [
+          {
+            "wireName": "include",
+            "inputName": "include",
+            "in": "query",
+            "style": "simple",
+            "explode": false,
+            "allowReserved": false
+          }
+        ]
+      }
+    },
+    "destinations.resolve": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 1048576,
+      "title": "Resolve Destination",
+      "description": "Resolve a place name into destination ids for stay search, including ambiguity and confidence.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 2,
+            "description": "Place name to resolve, such as a city, neighborhood, airport, or point of interest.",
+            "maxLength": 100
+          },
+          "country": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Optional country bias used to disambiguate the place name.",
+            "maxLength": 100
+          },
+          "language": {
+            "type": "string",
+            "minLength": 2,
+            "description": "Language for destination names and display labels.",
+            "maxLength": 2,
+            "enum": [
+              "en",
+              "it",
+              "fr",
+              "de",
+              "es",
+              "pt",
+              "nl",
+              "ko",
+              "pl",
+              "ja"
+            ]
+          },
+          "destination_type": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Restrict candidates to one destination type.",
+            "maxLength": 20,
+            "enum": [
+              "city",
+              "neighborhood",
+              "airport",
+              "poi",
+              "area"
+            ]
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "JSON object returned by Blue Pillow."
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "POST",
+        "path": "/destinations/resolve",
+        "success": [
+          200
+        ],
+        "body": {
+          "name": "{{name}}",
+          "country": "{{country}}",
+          "type": "{{destination_type}}",
+          "language": "{{language}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    "destinations.discoverNear": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 1048576,
+      "title": "Discover Destinations Near Coordinates",
+      "description": "Find cities, neighborhoods, airports, or points of interest near geographic coordinates.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "language": {
+            "type": "string",
+            "minLength": 2,
+            "description": "Language for destination names and display labels.",
+            "maxLength": 2,
+            "enum": [
+              "en",
+              "it",
+              "fr",
+              "de",
+              "es",
+              "pt",
+              "nl",
+              "ko",
+              "pl",
+              "ja"
+            ]
+          },
+          "latitude": {
+            "type": "number",
+            "minimum": -90,
+            "maximum": 90,
+            "description": "Latitude from -90 to 90."
+          },
+          "longitude": {
+            "type": "number",
+            "minimum": -180,
+            "maximum": 180,
+            "description": "Longitude from -180 to 180."
+          },
+          "radius_km": {
+            "type": "number",
+            "exclusiveMinimum": 0,
+            "description": "Positive search radius in kilometers."
+          },
+          "destination_type": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Restrict candidates to one destination type.",
+            "maxLength": 20,
+            "enum": [
+              "city",
+              "neighborhood",
+              "airport",
+              "poi",
+              "area"
+            ]
+          }
+        },
+        "required": [
+          "latitude",
+          "longitude"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "JSON object returned by Blue Pillow."
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "POST",
+        "path": "/destinations/discover-near",
+        "success": [
+          200
+        ],
+        "body": {
+          "lat": "{{latitude}}",
+          "lon": "{{longitude}}",
+          "radius_km": "{{radius_km}}",
+          "type": "{{destination_type}}",
+          "language": "{{language}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    "stays.search": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 60000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Search Stays",
+      "description": "Search one page of ranked live stay inventory with availability, prices, OTA offers, and an opaque cursor.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "idempotency_key": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Idempotency-Key required by this Blue Pillow endpoint.",
+            "maxLength": 200
+          },
+          "sort": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Ranking order for results.",
+            "maxLength": 32,
+            "enum": [
+              "score_desc",
+              "price_asc",
+              "rating_desc",
+              "conversion_desc"
+            ]
+          },
+          "dates": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "check_in": {
+                "type": "string",
+                "minLength": 10,
+                "description": "ISO 8601 check-in date.",
+                "maxLength": 10
+              },
+              "check_out": {
+                "type": "string",
+                "minLength": 10,
+                "description": "ISO 8601 check-out date. Must be after check_in.",
+                "maxLength": 10
+              }
+            },
+            "required": [
+              "check_in",
+              "check_out"
+            ],
+            "description": "Stay dates."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Maximum results in this page, from 1 to 100."
+          },
+          "guests": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "adults": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 16,
+                "description": "Adult count from 1 to 16."
+              },
+              "children_ages": {
+                "type": "array",
+                "description": "One age per child.",
+                "items": {
+                  "type": "integer",
+                  "minimum": 0
+                }
+              },
+              "rooms": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 9,
+                "description": "Room count from 1 to 9."
+              }
+            },
+            "required": [
+              "adults"
+            ],
+            "description": "Room occupancy. adults is required when guests is sent."
+          },
+          "filters": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "price_max_eur": {
+                "type": "number",
+                "minimum": 0
+              },
+              "min_rating": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 5
+              },
+              "property_types": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "hotel",
+                    "aparthotel",
+                    "apartment",
+                    "villa",
+                    "bnb",
+                    "hostel",
+                    "resort"
+                  ]
+                }
+              }
+            },
+            "description": "Optional search filters applied before ranking."
+          },
+          "currency": {
+            "type": "string",
+            "minLength": 3,
+            "description": "Uppercase ISO 4217 currency for returned prices.",
+            "maxLength": 3
+          },
+          "language": {
+            "type": "string",
+            "minLength": 2,
+            "description": "Two-letter lowercase response language code.",
+            "maxLength": 2
+          },
+          "location": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "destination_id",
+                  "poi_id",
+                  "coordinates",
+                  "bbox",
+                  "property_id"
+                ],
+                "description": "How value is interpreted."
+              },
+              "value": {
+                "description": "Id string, or a coordinates or bbox object, matching type.",
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  {
+                    "type": "object"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "type",
+              "value"
+            ],
+            "description": "Location. Destination ids come from Resolve Destination or Discover Destinations Near."
+          },
+          "next_cursor": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Opaque cursor from a previous search. Continuation may send this field alone.",
+            "maxLength": 4096
+          },
+          "user_country": {
+            "type": "string",
+            "minLength": 2,
+            "description": "Uppercase ISO 3166 alpha-2 country for locale and default currency.",
+            "maxLength": 2
+          }
+        },
+        "required": [
+          "idempotency_key"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "JSON object returned by Blue Pillow."
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "POST",
+        "path": "/search/stays",
+        "success": [
+          200
+        ],
+        "body": {
+          "location": "{{location}}",
+          "dates": "{{dates}}",
+          "guests": "{{guests}}",
+          "filters": "{{filters}}",
+          "sort": "{{sort}}",
+          "page": {
+            "limit": "{{limit}}",
+            "cursor": "{{next_cursor}}"
+          },
+          "user_country": "{{user_country}}",
+          "language": "{{language}}",
+          "currency": "{{currency}}"
+        },
+        "headers": {
+          "Content-Type": "application/json",
+          "Idempotency-Key": "{{idempotency_key}}"
+        }
+      }
+    },
+    "stays.recommend": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 60000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Recommend Stay",
+      "description": "Rank a location to one recommended stay plus alternatives. Validate an offer before booking handoff when price or availability is unknown.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "idempotency_key": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Idempotency-Key required by this Blue Pillow endpoint.",
+            "maxLength": 200
+          },
+          "dates": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "check_in": {
+                "type": "string",
+                "minLength": 10,
+                "description": "ISO 8601 check-in date.",
+                "maxLength": 10
+              },
+              "check_out": {
+                "type": "string",
+                "minLength": 10,
+                "description": "ISO 8601 check-out date. Must be after check_in.",
+                "maxLength": 10
+              }
+            },
+            "required": [
+              "check_in",
+              "check_out"
+            ],
+            "description": "Stay dates."
+          },
+          "guests": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "adults": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 16,
+                "description": "Adult count from 1 to 16."
+              },
+              "children_ages": {
+                "type": "array",
+                "description": "One age per child.",
+                "items": {
+                  "type": "integer",
+                  "minimum": 0
+                }
+              },
+              "rooms": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 9,
+                "description": "Room count from 1 to 9."
+              }
+            },
+            "required": [
+              "adults"
+            ],
+            "description": "Room occupancy. adults is required when guests is sent."
+          },
+          "context": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "end_user_country": {
+                "type": "string",
+                "minLength": 2,
+                "description": "ISO 3166-1 alpha-2 country.",
+                "maxLength": 2
+              },
+              "currency": {
+                "type": "string",
+                "minLength": 3,
+                "description": "ISO 4217 currency.",
+                "maxLength": 3
+              },
+              "language": {
+                "type": "string",
+                "minLength": 2,
+                "description": "Response language.",
+                "maxLength": 2
+              },
+              "user_hash": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Opaque end-user hash.",
+                "maxLength": 200
+              },
+              "agent_profile": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Agent profile label.",
+                "maxLength": 200
+              }
+            },
+            "required": [
+              "end_user_country",
+              "currency"
+            ],
+            "description": "Locale and agent context. When supplied, end_user_country and currency are both required."
+          },
+          "location": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "destination_id",
+                  "poi_id",
+                  "coordinates",
+                  "bbox",
+                  "property_id"
+                ],
+                "description": "How value is interpreted."
+              },
+              "value": {
+                "description": "Id string, or a coordinates or bbox object, matching type.",
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  {
+                    "type": "object"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "type",
+              "value"
+            ],
+            "description": "Location. Destination ids come from Resolve Destination or Discover Destinations Near."
+          },
+          "constraints": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "price_max_eur": {
+                "type": "number",
+                "minimum": 0,
+                "description": "Maximum total price in EUR."
+              },
+              "price_min_eur": {
+                "type": "number",
+                "minimum": 0,
+                "description": "Minimum total price in EUR."
+              },
+              "min_rating": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 5,
+                "description": "Minimum rating on a 0-5 scale."
+              },
+              "property_types": {
+                "type": "array",
+                "description": "Preferred property types. Blue Pillow boosts these rather than excluding every other type.",
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "hotel",
+                    "apartment",
+                    "house",
+                    "villa",
+                    "bb",
+                    "hostel",
+                    "farmstay",
+                    "holiday-home"
+                  ]
+                }
+              },
+              "required_amenities": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "cancellation": {
+                "type": "string",
+                "enum": [
+                  "any",
+                  "free",
+                  "non_refundable"
+                ]
+              },
+              "preferred_otas": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "Booking",
+                    "Agoda",
+                    "Expedia",
+                    "TripCom",
+                    "Vrbo",
+                    "HotelsDotCom",
+                    "HotelPlanner",
+                    "Priceline",
+                    "Hotwire",
+                    "Orbitz",
+                    "Kayak",
+                    "Trivago",
+                    "Hostelworld",
+                    "MrAndMrsSmith",
+                    "Nuitee",
+                    "Direct",
+                    "Eps",
+                    "HotelBeds",
+                    "NextPax",
+                    "TuiVillas",
+                    "HomeStay",
+                    "BelVilla",
+                    "Other"
+                  ]
+                }
+              },
+              "excluded_otas": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "Booking",
+                    "Agoda",
+                    "Expedia",
+                    "TripCom",
+                    "Vrbo",
+                    "HotelsDotCom",
+                    "HotelPlanner",
+                    "Priceline",
+                    "Hotwire",
+                    "Orbitz",
+                    "Kayak",
+                    "Trivago",
+                    "Hostelworld",
+                    "MrAndMrsSmith",
+                    "Nuitee",
+                    "Direct",
+                    "Eps",
+                    "HotelBeds",
+                    "NextPax",
+                    "TuiVillas",
+                    "HomeStay",
+                    "BelVilla",
+                    "Other"
+                  ]
+                }
+              }
+            },
+            "description": "Optional price, rating, property, amenity, cancellation, and OTA constraints."
+          }
+        },
+        "required": [
+          "idempotency_key",
+          "dates",
+          "guests",
+          "location"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "JSON object returned by Blue Pillow."
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "POST",
+        "path": "/decide",
+        "success": [
+          200
+        ],
+        "body": {
+          "location": "{{location}}",
+          "dates": "{{dates}}",
+          "guests": "{{guests}}",
+          "constraints": "{{constraints}}",
+          "context": "{{context}}"
+        },
+        "headers": {
+          "Content-Type": "application/json",
+          "Idempotency-Key": "{{idempotency_key}}"
+        }
+      }
+    },
+    "offers.recommend": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 60000,
+      "maxInputBytes": 32768,
+      "maxResponseBytes": 2097152,
+      "title": "Recommend Offer for Property",
+      "description": "Compare live OTA offers and recommend the best offer for a property the user already selected. This endpoint has no locale or currency input.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "idempotency_key": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Idempotency-Key required by this Blue Pillow endpoint.",
+            "maxLength": 200
+          },
+          "dates": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "check_in": {
+                "type": "string",
+                "minLength": 10,
+                "description": "ISO 8601 check-in date.",
+                "maxLength": 10
+              },
+              "check_out": {
+                "type": "string",
+                "minLength": 10,
+                "description": "ISO 8601 check-out date. Must be after check_in.",
+                "maxLength": 10
+              }
+            },
+            "required": [
+              "check_in",
+              "check_out"
+            ],
+            "description": "Stay dates."
+          },
+          "guests": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "adults": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 16,
+                "description": "Adult count from 1 to 16."
+              },
+              "children_ages": {
+                "type": "array",
+                "description": "One age per child.",
+                "items": {
+                  "type": "integer",
+                  "minimum": 0
+                }
+              },
+              "rooms": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 9,
+                "description": "Room count from 1 to 9."
+              }
+            },
+            "required": [
+              "adults"
+            ],
+            "description": "Room occupancy. adults is required when guests is sent."
+          },
+          "property_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Blue Pillow property id, normally prefixed prop_.",
+            "maxLength": 200
+          }
+        },
+        "required": [
+          "idempotency_key",
+          "dates",
+          "guests",
+          "property_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "JSON object returned by Blue Pillow."
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "POST",
+        "path": "/recommendations/by-hotel",
+        "success": [
+          200
+        ],
+        "body": {
+          "property_id": "{{property_id}}",
+          "dates": "{{dates}}",
+          "guests": "{{guests}}"
+        },
+        "headers": {
+          "Content-Type": "application/json",
+          "Idempotency-Key": "{{idempotency_key}}"
+        }
+      }
+    },
+    "offers.validate": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 60000,
+      "maxInputBytes": 32768,
+      "maxResponseBytes": 1048576,
+      "title": "Validate Offer",
+      "description": "Re-price a previously seen EUR offer and report whether it remains valid within the provider two-percent tolerance.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "idempotency_key": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Idempotency-Key required by this Blue Pillow endpoint.",
+            "maxLength": 200
+          },
+          "dates": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "check_in": {
+                "type": "string",
+                "minLength": 10,
+                "description": "ISO 8601 check-in date.",
+                "maxLength": 10
+              },
+              "check_out": {
+                "type": "string",
+                "minLength": 10,
+                "description": "ISO 8601 check-out date. Must be after check_in.",
+                "maxLength": 10
+              }
+            },
+            "required": [
+              "check_in",
+              "check_out"
+            ],
+            "description": "Stay dates."
+          },
+          "guests": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "adults": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 16,
+                "description": "Adult count from 1 to 16."
+              },
+              "children_ages": {
+                "type": "array",
+                "description": "One age per child.",
+                "items": {
+                  "type": "integer",
+                  "minimum": 0
+                }
+              },
+              "rooms": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 9,
+                "description": "Room count from 1 to 9."
+              }
+            },
+            "required": [
+              "adults"
+            ],
+            "description": "Room occupancy. adults is required when guests is sent."
+          },
+          "property_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Blue Pillow property id, normally prefixed prop_.",
+            "maxLength": 200
+          },
+          "offer_to_compare": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "ota": {
+                "type": "string",
+                "minLength": 1,
+                "description": "OTA name for the observed EUR offer.",
+                "maxLength": 64
+              },
+              "total_eur": {
+                "type": "number",
+                "minimum": 0,
+                "description": "Previously observed total in EUR."
+              }
+            },
+            "required": [
+              "total_eur"
+            ],
+            "description": "Previously observed offer expressed in EUR."
+          }
+        },
+        "required": [
+          "idempotency_key",
+          "dates",
+          "guests",
+          "property_id",
+          "offer_to_compare"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "JSON object returned by Blue Pillow."
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "POST",
+        "path": "/validate",
+        "success": [
+          200
+        ],
+        "body": {
+          "property_id": "{{property_id}}",
+          "dates": "{{dates}}",
+          "guests": "{{guests}}",
+          "offer_to_compare": "{{offer_to_compare}}"
+        },
+        "headers": {
+          "Content-Type": "application/json",
+          "Idempotency-Key": "{{idempotency_key}}"
+        }
+      }
+    },
+    "bookings.handoff": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 60000,
+      "maxInputBytes": 32768,
+      "maxResponseBytes": 262144,
+      "title": "Create Booking Handoff",
+      "description": "Create only a tracked Blue Pillow handoff link so the user can continue booking. This does not reserve a room, confirm a reservation, or collect payment.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "idempotency_key": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Idempotency-Key required by this Blue Pillow endpoint.",
+            "maxLength": 200
+          },
+          "ota": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Preferred OTA from a current offer. Omit it to let Blue Pillow choose the best price.",
+            "maxLength": 64
+          },
+          "dates": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "check_in": {
+                "type": "string",
+                "minLength": 10,
+                "description": "ISO 8601 check-in date.",
+                "maxLength": 10
+              },
+              "check_out": {
+                "type": "string",
+                "minLength": 10,
+                "description": "ISO 8601 check-out date. Must be after check_in.",
+                "maxLength": 10
+              }
+            },
+            "required": [
+              "check_in",
+              "check_out"
+            ],
+            "description": "Stay dates."
+          },
+          "guests": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "adults": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 16,
+                "description": "Adult count from 1 to 16."
+              },
+              "children_ages": {
+                "type": "array",
+                "description": "One age per child.",
+                "items": {
+                  "type": "integer",
+                  "minimum": 0
+                }
+              },
+              "rooms": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 9,
+                "description": "Room count from 1 to 9."
+              }
+            },
+            "required": [
+              "adults"
+            ],
+            "description": "Room occupancy. adults is required when guests is sent."
+          },
+          "property_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Blue Pillow property id, normally prefixed prop_.",
+            "maxLength": 200
+          }
+        },
+        "required": [
+          "idempotency_key",
+          "dates",
+          "guests",
+          "property_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "JSON object returned by Blue Pillow."
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "POST",
+        "path": "/bookings/initiate",
+        "success": [
+          200
+        ],
+        "body": {
+          "property_id": "{{property_id}}",
+          "dates": "{{dates}}",
+          "guests": "{{guests}}",
+          "ota": "{{ota}}"
+        },
+        "headers": {
+          "Content-Type": "application/json",
+          "Idempotency-Key": "{{idempotency_key}}"
+        }
+      }
+    }
+  }
+}

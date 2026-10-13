@@ -1,0 +1,735 @@
+{
+  "key": "baserow",
+  "name": "Baserow",
+  "version": "0.1.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "productivity"
+  ],
+  "auth": {
+    "type": "api_key",
+    "scopes": [],
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "Baserow JWT access token",
+          "required": true,
+          "secret": true
+        }
+      ]
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "api.baserow.io"
+    ]
+  },
+  "models": [
+    "user",
+    "data-source",
+    "form",
+    "builder",
+    "settings",
+    "user-source",
+    "auth-provider",
+    "application",
+    "table",
+    "template"
+  ],
+  "http": {
+    "baseUrl": "https://api.baserow.io",
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "Authorization",
+      "value": "JWT {{apiKey}}"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "Retry-After",
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "detail",
+        "error",
+        "message"
+      ]
+    },
+    "headers": {
+      "Accept": "application/json"
+    }
+  },
+  "operations": {
+    "users.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Create User",
+      "description": "Create a Baserow user with POST /api/user/. Official JSON body fields are name, email, password, and optional language, authenticate, workspace_invitation_token, template_id, and captcha_token. Success is the JSON user object, including access and refresh tokens when authenticate is true.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 60,
+            "description": "The user's display name."
+          },
+          "email": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 254,
+            "description": "Email address used as the username."
+          },
+          "password": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096,
+            "description": "The user's password."
+          },
+          "language": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 10,
+            "description": "ISO 639 language code, optionally with a variant, such as en-GB."
+          },
+          "authenticate": {
+            "type": "boolean",
+            "description": "When true, the JSON response includes a JWT access token and refresh token."
+          },
+          "workspaceInvitationToken": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096,
+            "description": "Accept this workspace invitation instead of installing a template."
+          },
+          "templateId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Template to install after signup. Ignored when a workspace invitation token is set."
+          },
+          "captchaToken": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 8192,
+            "description": "Captcha response token. Required by Baserow only when captcha is enabled."
+          }
+        },
+        "required": [
+          "name",
+          "email",
+          "password"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/api/user/",
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "name": "{{name}}",
+          "email": "{{email}}",
+          "password": "{{password}}",
+          "language": "{{language}}",
+          "authenticate": "{{authenticate}}",
+          "workspace_invitation_token": "{{workspaceInvitationToken}}",
+          "template_id": "{{templateId}}",
+          "captcha_token": "{{captchaToken}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "data-sources.dispatch": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Dispatch Builder Page Data Source",
+      "description": "Dispatch one unpublished builder page data source with POST /api/builder/data-source/{dataSourceId}/dispatch/. Optional metadata is a JSON object. Optional clientSessionId is sent as the ClientSessionId header for undo and redo. Success is the service result as a JSON object or array.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "dataSourceId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Data source to dispatch."
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Dispatch metadata object."
+          },
+          "clientSessionId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Client session id sent as the ClientSessionId header.",
+            "maxLength": 255
+          }
+        },
+        "required": [
+          "dataSourceId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/api/builder/data-source/{{dataSourceId}}/dispatch/",
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response}}"
+        },
+        "headers": {
+          "Content-Type": "application/json",
+          "ClientSessionId": "{{clientSessionId}}"
+        },
+        "body": {
+          "metadata": "{{metadata}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "data-sources.dispatch-public": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Dispatch Public Builder Page Data Source",
+      "description": "Dispatch one published builder page data source with POST /api/builder/domains/published/data-source/{dataSourceId}/dispatch/. Optional metadata is a JSON object. Optional clientSessionId is the ClientSessionId header. Success is the service result as a JSON object or array.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "dataSourceId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Published data source to dispatch."
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Dispatch metadata object."
+          },
+          "clientSessionId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Client session id sent as the ClientSessionId header.",
+            "maxLength": 255
+          }
+        },
+        "required": [
+          "dataSourceId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/api/builder/domains/published/data-source/{{dataSourceId}}/dispatch/",
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response}}"
+        },
+        "headers": {
+          "Content-Type": "application/json",
+          "ClientSessionId": "{{clientSessionId}}"
+        },
+        "body": {
+          "metadata": "{{metadata}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "forms.metadata": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get Form View Metadata",
+      "description": "Read public form-view metadata with GET /api/database/views/form/{slug}/submit/. The form must be publicly shared or the caller must have access to the workspace. Success is one JSON object describing the form fields.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "slug": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Public form view slug.",
+            "maxLength": 255
+          }
+        },
+        "required": [
+          "slug"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/database/views/form/{{slug}}/submit/",
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "builders.get-public": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get Public Builder by Domain Name",
+      "description": "Read the published builder for one domain name with GET /api/builder/domains/published/by_name/{domainName}/. domainName is a hostname such as demo.baserow.io, not a URL. The connector host stays api.baserow.io. Success is one JSON builder object.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "domainName": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Published builder domain name, such as demo.baserow.io.",
+            "maxLength": 253
+          }
+        },
+        "required": [
+          "domainName"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/builder/domains/published/by_name/{{domainName}}/",
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "data-sources.record-names": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get Record Names for Builder Page Data Source",
+      "description": "Read record display names with GET /api/builder/data-source/{dataSourceId}/record-names/. recordIds is the comma-separated record_ids query. Success is a JSON object mapping record ids to names.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "dataSourceId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Data source whose record names are requested."
+          },
+          "recordIds": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Comma-separated record ids.",
+            "maxLength": 4096
+          }
+        },
+        "required": [
+          "dataSourceId",
+          "recordIds"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/builder/data-source/{{dataSourceId}}/record-names/",
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response}}"
+        },
+        "query": {
+          "record_ids": "{{recordIds}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "settings.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get Settings",
+      "description": "Read instance settings with GET /api/settings/. Success is one JSON object of admin-configured signup, verification, and workspace settings.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/settings/",
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "user-sources.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "List Application User Sources",
+      "description": "List user sources for one application with GET /api/application/{applicationId}/user-sources/. Success is a JSON array, returned under data.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "applicationId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Application whose user sources are listed."
+          }
+        },
+        "required": [
+          "applicationId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/application/{{applicationId}}/user-sources/",
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "auth-providers.login-options": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "List Auth Providers Login Options",
+      "description": "List configured authentication login options with GET /api/auth-provider/login-options/. Success is one JSON object keyed by provider type.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/auth-provider/login-options/",
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "databases.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "List Databases",
+      "description": "List applications the JWT user can access with GET /api/applications/. Baserow has no databases-only route and this tool publishes no workspace id. Databases are the objects whose type is database. Success is a JSON array, returned under data.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/applications/",
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "tables.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "List Tables in Database",
+      "description": "List tables in one database with GET /api/database/tables/database/{databaseId}/. Success is a JSON array of table objects, returned under data.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "databaseId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Database whose tables are listed."
+          }
+        },
+        "required": [
+          "databaseId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/database/tables/database/{{databaseId}}/",
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "templates.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "List Templates",
+      "description": "List template categories and their templates with GET /api/templates/. Success is a JSON array, returned under data.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/templates/",
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    }
+  }
+}

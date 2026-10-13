@@ -1,0 +1,1449 @@
+{
+  "key": "eversign",
+  "name": "Eversign",
+  "version": "0.1.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "productivity"
+  ],
+  "auth": {
+    "type": "api_key",
+    "scopes": [],
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "Xodo Sign API access key",
+          "required": true,
+          "secret": true
+        }
+      ]
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "api.eversign.com"
+    ]
+  },
+  "models": [
+    "business",
+    "document",
+    "template",
+    "signer",
+    "bulk-job",
+    "audit-log"
+  ],
+  "http": {
+    "baseUrl": "https://api.eversign.com",
+    "auth": {
+      "field": "apiKey",
+      "in": "query",
+      "name": "access_key",
+      "value": "{{apiKey}}"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "Retry-After",
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "error.info",
+        "error.type",
+        "info",
+        "message"
+      ],
+      "bodyErrorPaths": [
+        "error"
+      ]
+    },
+    "headers": {
+      "Accept": "application/json"
+    }
+  },
+  "operations": {
+    "businesses.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 5242880,
+      "title": "List businesses",
+      "description": "List Xodo Sign businesses for the access key. GET /business returns a JSON array and does not take business_id.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            },
+            "description": "Businesses returned by GET /business."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/business",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "documents.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 8192,
+      "maxResponseBytes": 5242880,
+      "title": "List documents",
+      "description": "List documents for one business. GET /document returns a JSON array. type, limit, and page are the documented filters.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "business_id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Xodo Sign business id. Required on every call except list businesses."
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "all",
+              "my_action_required",
+              "waiting_for_others",
+              "completed",
+              "drafts",
+              "cancelled"
+            ]
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 500,
+            "description": "Page size. The default result cap is 500."
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Page index starting at 1."
+          }
+        },
+        "required": [
+          "business_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            },
+            "description": "Documents returned by GET /document."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/document",
+        "query": {
+          "type": "{{type}}",
+          "limit": "{{limit}}",
+          "page": "{{page}}",
+          "business_id": "{{business_id}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "templates.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 8192,
+      "maxResponseBytes": 5242880,
+      "title": "List templates",
+      "description": "List templates for one business. GET /document with type templates, templates_archived, or template_drafts returns a JSON array.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "business_id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Xodo Sign business id. Required on every call except list businesses."
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "templates",
+              "templates_archived",
+              "template_drafts"
+            ],
+            "description": "Which template set to list."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 500
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "business_id",
+          "type"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            },
+            "description": "Templates returned by GET /document."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/document",
+        "query": {
+          "type": "{{type}}",
+          "limit": "{{limit}}",
+          "page": "{{page}}",
+          "business_id": "{{business_id}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "documents.audit-log": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 8192,
+      "maxResponseBytes": 5242880,
+      "title": "Get document audit log",
+      "description": "Read one document audit log. GET /document/{document_hash}/audit_log returns a JSON array of events, not PDF bytes.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "business_id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Xodo Sign business id. Required on every call except list businesses."
+          },
+          "document_hash": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "description": "Document or template hash."
+          }
+        },
+        "required": [
+          "business_id",
+          "document_hash"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            },
+            "description": "Audit events returned as a JSON array."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/document/{{document_hash}}/audit_log",
+        "query": {
+          "business_id": "{{business_id}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "bulk-jobs.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 8192,
+      "maxResponseBytes": 5242880,
+      "title": "List bulk jobs",
+      "description": "List bulk sending jobs for one business. GET /bulk_job returns a JSON object with pagination and data.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "business_id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Xodo Sign business id. Required on every call except list businesses."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 1000,
+            "description": "Maximum jobs to return. Default 100."
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Jobs to skip."
+          }
+        },
+        "required": [
+          "business_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "Bulk job list with pagination and data."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/bulk_job",
+        "query": {
+          "limit": "{{limit}}",
+          "offset": "{{offset}}",
+          "business_id": "{{business_id}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "bulk-jobs.status": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 8192,
+      "maxResponseBytes": 5242880,
+      "title": "Get bulk job status",
+      "description": "Read one bulk job status. GET /bulk_job/{bulk_job_id}/status returns a JSON object with document counts.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "business_id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Xodo Sign business id. Required on every call except list businesses."
+          },
+          "bulk_job_id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Bulk job id."
+          }
+        },
+        "required": [
+          "business_id",
+          "bulk_job_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "Bulk job status object."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/bulk_job/{{bulk_job_id}}/status",
+        "query": {
+          "business_id": "{{business_id}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "documents.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 60000,
+      "maxInputBytes": 26214400,
+      "maxResponseBytes": 26214400,
+      "title": "Create document",
+      "description": "Create a document, or a document from a template when template_id is set. Both are POST /document and return the document JSON object.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "business_id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Xodo Sign business id. Required on every call except list businesses."
+          },
+          "sandbox": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 1,
+            "description": "Set to 1 to enable. The Xodo Sign API uses 0 or 1, not a boolean."
+          },
+          "is_draft": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 1,
+            "description": "Set to 1 to enable. The Xodo Sign API uses 0 or 1, not a boolean."
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500,
+            "description": "Document title."
+          },
+          "message": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 5000,
+            "description": "Message sent with the document."
+          },
+          "use_signer_order": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 1,
+            "description": "Set to 1 to enable. The Xodo Sign API uses 0 or 1, not a boolean."
+          },
+          "reminders": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 1,
+            "description": "Set to 1 to enable. The Xodo Sign API uses 0 or 1, not a boolean."
+          },
+          "require_all_signers": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 1,
+            "description": "Set to 1 to enable. The Xodo Sign API uses 0 or 1, not a boolean."
+          },
+          "custom_requester_name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "Verified custom requester name."
+          },
+          "custom_requester_email": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 320,
+            "description": "Verified custom requester email."
+          },
+          "redirect": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2048,
+            "description": "Completion redirect stored by Xodo Sign. AppCall does not request it."
+          },
+          "redirect_decline": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2048,
+            "description": "Decline redirect stored by Xodo Sign. AppCall does not request it."
+          },
+          "client": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "Internal client reference."
+          },
+          "expires": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Expiration as a Unix timestamp."
+          },
+          "embedded_signing_enabled": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 1,
+            "description": "Set to 1 to enable. The Xodo Sign API uses 0 or 1, not a boolean."
+          },
+          "flexible_signing": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 1,
+            "description": "Set to 1 to enable. The Xodo Sign API uses 0 or 1, not a boolean."
+          },
+          "use_hidden_tags": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 1,
+            "description": "Set to 1 to enable. The Xodo Sign API uses 0 or 1, not a boolean."
+          },
+          "template_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "description": "Template hash. Sending it uses the template on this same POST /document route."
+          },
+          "files": {
+            "type": "array",
+            "maxItems": 20,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 255,
+                  "description": "File name."
+                },
+                "file_id": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 128,
+                  "description": "Existing Xodo Sign file id. AppCall does not upload bytes."
+                },
+                "file_url": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 2048,
+                  "description": "URL the Xodo Sign API fetches. AppCall does not request this URL."
+                },
+                "file_base64": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Base64 file contents inside the JSON body. Not a multipart upload."
+                }
+              },
+              "required": [
+                "name"
+              ]
+            }
+          },
+          "signers": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 50,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "id": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "description": "Signer id. Number signers from 1."
+                },
+                "role": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 100,
+                  "description": "Template signer role name, such as Client."
+                },
+                "name": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 200,
+                  "description": "Signer full name."
+                },
+                "email": {
+                  "type": "string",
+                  "minLength": 3,
+                  "maxLength": 320,
+                  "description": "Signer email address."
+                },
+                "order": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "description": "Signing order when use_signer_order is 1."
+                },
+                "pin": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 32,
+                  "description": "Signer PIN."
+                },
+                "signer_authentication_sms_enabled": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 1,
+                  "description": "Set to 1 to enable. The Xodo Sign API uses 0 or 1, not a boolean."
+                },
+                "signer_authentication_phone_number": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 32,
+                  "description": "SMS authentication phone number."
+                },
+                "message": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 5000,
+                  "description": "Message shown to this signer."
+                },
+                "deliver_email": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 1,
+                  "description": "Set to 1 to enable. The Xodo Sign API uses 0 or 1, not a boolean."
+                },
+                "language": {
+                  "type": "string",
+                  "minLength": 2,
+                  "maxLength": 8,
+                  "description": "Two-letter language code."
+                },
+                "required": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 1,
+                  "description": "Set to 1 to enable. The Xodo Sign API uses 0 or 1, not a boolean."
+                }
+              }
+            }
+          },
+          "recipients": {
+            "type": "array",
+            "maxItems": 50,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "role": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 100,
+                  "description": "CC role name."
+                },
+                "name": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 200,
+                  "description": "CC full name."
+                },
+                "email": {
+                  "type": "string",
+                  "minLength": 3,
+                  "maxLength": 320,
+                  "description": "CC email address."
+                },
+                "language": {
+                  "type": "string",
+                  "minLength": 2,
+                  "maxLength": 8,
+                  "description": "Two-letter language code."
+                },
+                "required": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 1,
+                  "description": "Set to 1 to enable. The Xodo Sign API uses 0 or 1, not a boolean."
+                }
+              }
+            }
+          },
+          "meta": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Custom string metadata stored on the document."
+          },
+          "fields": {
+            "type": "array",
+            "maxItems": 20,
+            "description": "One field array per file. Use an empty array for a file with no fields.",
+            "items": {
+              "type": "array",
+              "maxItems": 200,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 32,
+                    "description": "Field type, such as signature, text, date_signed, or checkbox."
+                  },
+                  "x": {
+                    "type": "number"
+                  },
+                  "y": {
+                    "type": "number"
+                  },
+                  "width": {
+                    "type": "number",
+                    "minimum": 0
+                  },
+                  "height": {
+                    "type": "number",
+                    "minimum": 0
+                  },
+                  "page": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "signer": {
+                    "description": "Signer id, or OWNER for a no-signer field."
+                  },
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200,
+                    "description": "Field label."
+                  },
+                  "identifier": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200,
+                    "description": "Field identifier."
+                  },
+                  "required": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 1,
+                    "description": "Set to 1 to enable. The Xodo Sign API uses 0 or 1, not a boolean."
+                  },
+                  "readonly": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 1,
+                    "description": "Set to 1 to enable. The Xodo Sign API uses 0 or 1, not a boolean."
+                  },
+                  "merge": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 1,
+                    "description": "Set to 1 to enable. The Xodo Sign API uses 0 or 1, not a boolean."
+                  },
+                  "validation_type": {
+                    "type": "string",
+                    "enum": [
+                      "email_address",
+                      "letters_only",
+                      "numbers_only"
+                    ]
+                  },
+                  "text_style": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 8,
+                    "description": "Any combination of B, U, and I."
+                  },
+                  "text_font": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 32,
+                    "description": "Font identifier, such as arial."
+                  },
+                  "text_size": {
+                    "description": "Font size as a string or number."
+                  },
+                  "text_color": {
+                    "type": "string",
+                    "minLength": 4,
+                    "maxLength": 7,
+                    "description": "HEX color, such as #000000."
+                  },
+                  "value": {
+                    "description": "Prefilled text, 1 for a checked box, or a dropdown option."
+                  },
+                  "options": {
+                    "type": "array",
+                    "maxItems": 100,
+                    "items": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 200
+                    }
+                  },
+                  "group": {
+                    "type": "integer",
+                    "description": "Numeric radio group id."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "required": [
+          "business_id",
+          "signers"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "Created document object."
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/document",
+        "query": {
+          "business_id": "{{business_id}}"
+        },
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "sandbox": "{{sandbox}}",
+          "is_draft": "{{is_draft}}",
+          "title": "{{title}}",
+          "message": "{{message}}",
+          "use_signer_order": "{{use_signer_order}}",
+          "reminders": "{{reminders}}",
+          "require_all_signers": "{{require_all_signers}}",
+          "custom_requester_name": "{{custom_requester_name}}",
+          "custom_requester_email": "{{custom_requester_email}}",
+          "redirect": "{{redirect}}",
+          "redirect_decline": "{{redirect_decline}}",
+          "client": "{{client}}",
+          "expires": "{{expires}}",
+          "embedded_signing_enabled": "{{embedded_signing_enabled}}",
+          "flexible_signing": "{{flexible_signing}}",
+          "use_hidden_tags": "{{use_hidden_tags}}",
+          "template_id": "{{template_id}}",
+          "files": "{{files}}",
+          "signers": "{{signers}}",
+          "recipients": "{{recipients}}",
+          "meta": "{{meta}}",
+          "fields": "{{fields}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "templates.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 60000,
+      "maxInputBytes": 26214400,
+      "maxResponseBytes": 26214400,
+      "title": "Create template",
+      "description": "Create a template with POST /document. The body always sets is_template to 1 and returns the template JSON object.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "business_id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Xodo Sign business id. Required on every call except list businesses."
+          },
+          "sandbox": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 1,
+            "description": "Set to 1 to enable. The Xodo Sign API uses 0 or 1, not a boolean."
+          },
+          "is_draft": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 1,
+            "description": "Set to 1 to enable. The Xodo Sign API uses 0 or 1, not a boolean."
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500,
+            "description": "Template title."
+          },
+          "message": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 5000,
+            "description": "Template message."
+          },
+          "use_signer_order": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 1,
+            "description": "Set to 1 to enable. The Xodo Sign API uses 0 or 1, not a boolean."
+          },
+          "reminders": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 1,
+            "description": "Set to 1 to enable. The Xodo Sign API uses 0 or 1, not a boolean."
+          },
+          "require_all_signers": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 1,
+            "description": "Set to 1 to enable. The Xodo Sign API uses 0 or 1, not a boolean."
+          },
+          "files": {
+            "type": "array",
+            "maxItems": 20,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 255,
+                  "description": "File name."
+                },
+                "file_id": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 128,
+                  "description": "Existing Xodo Sign file id. AppCall does not upload bytes."
+                },
+                "file_url": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 2048,
+                  "description": "URL the Xodo Sign API fetches. AppCall does not request this URL."
+                },
+                "file_base64": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Base64 file contents inside the JSON body. Not a multipart upload."
+                }
+              },
+              "required": [
+                "name"
+              ]
+            }
+          },
+          "signers": {
+            "type": "array",
+            "maxItems": 50,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "id": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "description": "Signer id. Number signers from 1."
+                },
+                "role": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 100,
+                  "description": "Template signer role name, such as Client."
+                },
+                "name": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 200,
+                  "description": "Signer full name."
+                },
+                "email": {
+                  "type": "string",
+                  "minLength": 3,
+                  "maxLength": 320,
+                  "description": "Signer email address."
+                },
+                "order": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "description": "Signing order when use_signer_order is 1."
+                },
+                "pin": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 32,
+                  "description": "Signer PIN."
+                },
+                "signer_authentication_sms_enabled": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 1,
+                  "description": "Set to 1 to enable. The Xodo Sign API uses 0 or 1, not a boolean."
+                },
+                "signer_authentication_phone_number": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 32,
+                  "description": "SMS authentication phone number."
+                },
+                "message": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 5000,
+                  "description": "Message shown to this signer."
+                },
+                "deliver_email": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 1,
+                  "description": "Set to 1 to enable. The Xodo Sign API uses 0 or 1, not a boolean."
+                },
+                "language": {
+                  "type": "string",
+                  "minLength": 2,
+                  "maxLength": 8,
+                  "description": "Two-letter language code."
+                },
+                "required": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 1,
+                  "description": "Set to 1 to enable. The Xodo Sign API uses 0 or 1, not a boolean."
+                }
+              }
+            }
+          },
+          "recipients": {
+            "type": "array",
+            "maxItems": 50,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "role": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 100,
+                  "description": "CC role name."
+                },
+                "name": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 200,
+                  "description": "CC full name."
+                },
+                "email": {
+                  "type": "string",
+                  "minLength": 3,
+                  "maxLength": 320,
+                  "description": "CC email address."
+                },
+                "language": {
+                  "type": "string",
+                  "minLength": 2,
+                  "maxLength": 8,
+                  "description": "Two-letter language code."
+                },
+                "required": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 1,
+                  "description": "Set to 1 to enable. The Xodo Sign API uses 0 or 1, not a boolean."
+                }
+              }
+            }
+          },
+          "meta": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Custom string metadata stored on the document."
+          },
+          "fields": {
+            "type": "array",
+            "maxItems": 20,
+            "description": "One field array per file. Use an empty array for a file with no fields.",
+            "items": {
+              "type": "array",
+              "maxItems": 200,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 32,
+                    "description": "Field type, such as signature, text, date_signed, or checkbox."
+                  },
+                  "x": {
+                    "type": "number"
+                  },
+                  "y": {
+                    "type": "number"
+                  },
+                  "width": {
+                    "type": "number",
+                    "minimum": 0
+                  },
+                  "height": {
+                    "type": "number",
+                    "minimum": 0
+                  },
+                  "page": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "signer": {
+                    "description": "Signer id, or OWNER for a no-signer field."
+                  },
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200,
+                    "description": "Field label."
+                  },
+                  "identifier": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200,
+                    "description": "Field identifier."
+                  },
+                  "required": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 1,
+                    "description": "Set to 1 to enable. The Xodo Sign API uses 0 or 1, not a boolean."
+                  },
+                  "readonly": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 1,
+                    "description": "Set to 1 to enable. The Xodo Sign API uses 0 or 1, not a boolean."
+                  },
+                  "merge": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 1,
+                    "description": "Set to 1 to enable. The Xodo Sign API uses 0 or 1, not a boolean."
+                  },
+                  "validation_type": {
+                    "type": "string",
+                    "enum": [
+                      "email_address",
+                      "letters_only",
+                      "numbers_only"
+                    ]
+                  },
+                  "text_style": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 8,
+                    "description": "Any combination of B, U, and I."
+                  },
+                  "text_font": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 32,
+                    "description": "Font identifier, such as arial."
+                  },
+                  "text_size": {
+                    "description": "Font size as a string or number."
+                  },
+                  "text_color": {
+                    "type": "string",
+                    "minLength": 4,
+                    "maxLength": 7,
+                    "description": "HEX color, such as #000000."
+                  },
+                  "value": {
+                    "description": "Prefilled text, 1 for a checked box, or a dropdown option."
+                  },
+                  "options": {
+                    "type": "array",
+                    "maxItems": 100,
+                    "items": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 200
+                    }
+                  },
+                  "group": {
+                    "type": "integer",
+                    "description": "Numeric radio group id."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "required": [
+          "business_id",
+          "title"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "Created template object."
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/document",
+        "query": {
+          "business_id": "{{business_id}}"
+        },
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "is_template": 1,
+          "sandbox": "{{sandbox}}",
+          "is_draft": "{{is_draft}}",
+          "title": "{{title}}",
+          "message": "{{message}}",
+          "use_signer_order": "{{use_signer_order}}",
+          "reminders": "{{reminders}}",
+          "require_all_signers": "{{require_all_signers}}",
+          "files": "{{files}}",
+          "signers": "{{signers}}",
+          "recipients": "{{recipients}}",
+          "meta": "{{meta}}",
+          "fields": "{{fields}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "signers.reassign": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 30000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 5242880,
+      "title": "Reassign signer",
+      "description": "Replace a signer on a document. POST /reassign sends a JSON body and returns a JSON success object.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "business_id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Xodo Sign business id. Required on every call except list businesses."
+          },
+          "document_hash": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "description": "Document or template hash."
+          },
+          "signer_id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Id of the signer to replace."
+          },
+          "new_signer_name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "Name of the new signer."
+          },
+          "new_signer_email": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 320,
+            "description": "Email of the new signer."
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000,
+            "description": "Optional reason for the reassignment."
+          }
+        },
+        "required": [
+          "business_id",
+          "document_hash",
+          "signer_id",
+          "new_signer_name",
+          "new_signer_email"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "Reassign result. Success is success true."
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/reassign",
+        "query": {
+          "business_id": "{{business_id}}"
+        },
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "document_hash": "{{document_hash}}",
+          "signer_id": "{{signer_id}}",
+          "new_signer_name": "{{new_signer_name}}",
+          "new_signer_email": "{{new_signer_email}}",
+          "reason": "{{reason}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "documents.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 30000,
+      "maxInputBytes": 8192,
+      "maxResponseBytes": 5242880,
+      "title": "Delete, trash, or cancel a document",
+      "description": "Delete, trash, or cancel one document or template. All three are DELETE /document. Omit both flags to delete. Set trash or cancel to 1 for that flag. Send at most one flag.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "business_id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Xodo Sign business id. Required on every call except list businesses."
+          },
+          "document_hash": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "description": "Document or template hash."
+          },
+          "cancel": {
+            "type": "integer",
+            "enum": [
+              1
+            ],
+            "description": "Set to 1 to cancel a pending document instead of deleting it."
+          },
+          "trash": {
+            "type": "integer",
+            "enum": [
+              1
+            ],
+            "description": "Set to 1 to trash the document or template instead of deleting it."
+          }
+        },
+        "required": [
+          "business_id",
+          "document_hash"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "Delete result. Success is success true."
+          }
+        }
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/document",
+        "query": {
+          "document_hash": "{{document_hash}}",
+          "cancel": "{{cancel}}",
+          "trash": "{{trash}}",
+          "business_id": "{{business_id}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    }
+  }
+}

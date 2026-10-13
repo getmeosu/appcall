@@ -1,0 +1,955 @@
+{
+  "key": "debitura",
+  "name": "Debitura",
+  "version": "0.1.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "accounting"
+  ],
+  "auth": {
+    "type": "api_key",
+    "scopes": [],
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "Debitura API key",
+          "required": true,
+          "secret": true
+        }
+      ]
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "customer-api.debitura.com"
+    ]
+  },
+  "models": [
+    "case",
+    "division",
+    "payment",
+    "task",
+    "coverage"
+  ],
+  "http": {
+    "baseUrl": "https://customer-api.debitura.com",
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "XApiKey",
+      "value": "{{apiKey}}"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterPaths": [
+        "retryAfter"
+      ],
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "message",
+        "error",
+        "detail",
+        "businessErrors.0.message"
+      ]
+    },
+    "headers": {
+      "Accept": "application/json"
+    }
+  },
+  "operations": {
+    "coverage.check-eligibility": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 8192,
+      "maxResponseBytes": 1048576,
+      "title": "Check Case Eligibility",
+      "description": "Check whether Debitura covers a debtor jurisdiction and amount and return the matched partner and power-of-attorney status. POST /coverage/check-eligibility does not create a case and does not check the debt-collection agreement.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "countryAlpha2": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 2,
+            "description": "Debtor country, ISO 3166-1 alpha-2."
+          },
+          "stateAlpha2": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 2,
+            "description": "US state code. Required by Debitura when countryAlpha2 is US."
+          },
+          "debtorType": {
+            "type": "string",
+            "enum": [
+              "Company",
+              "Private"
+            ],
+            "description": "Debtor type."
+          },
+          "amount": {
+            "type": "number",
+            "minimum": 0.01,
+            "description": "Amount to recover."
+          },
+          "currencyCode": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 3,
+            "description": "ISO 4217 currency code."
+          }
+        },
+        "required": [
+          "countryAlpha2",
+          "debtorType",
+          "amount",
+          "currencyCode"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": [
+              "isEligible"
+            ],
+            "properties": {
+              "isEligible": {
+                "type": "boolean"
+              },
+              "jurisdiction": {
+                "type": "object"
+              },
+              "partner": {
+                "type": "object"
+              },
+              "powerOfAttorneyStatus": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/coverage/check-eligibility",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "countryAlpha2": "{{countryAlpha2}}",
+          "stateAlpha2": "{{stateAlpha2}}",
+          "debtorType": "{{debtorType}}",
+          "amount": "{{amount}}",
+          "currencyCode": "{{currencyCode}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "divisions.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Create Division",
+      "description": "Create a creditor division with its company, address, and office contact profile. POST /divisions returns the created division as JSON.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "companyName": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Division company name."
+          },
+          "registrationNumber": {
+            "type": "string",
+            "description": "Company registration number. Omitted when unset."
+          },
+          "address": {
+            "type": "string",
+            "description": "Street address. Omitted when unset."
+          },
+          "zipCode": {
+            "type": "string",
+            "description": "Postal code. Omitted when unset."
+          },
+          "state": {
+            "type": "string",
+            "description": "State or region. Omitted when unset."
+          },
+          "city": {
+            "type": "string",
+            "minLength": 1,
+            "description": "City."
+          },
+          "countryCode": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 2,
+            "description": "ISO 3166-1 alpha-2 country code."
+          },
+          "officeEmail": {
+            "type": "string",
+            "description": "Office email. Omitted when unset."
+          },
+          "officePhone": {
+            "type": "string",
+            "description": "Office phone. Omitted when unset."
+          },
+          "idempotencyKey": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255,
+            "description": "Optional Idempotency-Key header for a safe retry. Not sent when omitted."
+          }
+        },
+        "required": [
+          "companyName",
+          "city",
+          "countryCode"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": [
+              "id",
+              "companyName",
+              "city",
+              "isArchived"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "companyName": {
+                "type": "string"
+              },
+              "city": {
+                "type": "string"
+              },
+              "isArchived": {
+                "type": "boolean"
+              }
+            }
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/divisions",
+        "headers": {
+          "Content-Type": "application/json",
+          "Idempotency-Key": "{{idempotencyKey}}"
+        },
+        "body": {
+          "companyName": "{{companyName}}",
+          "registrationNumber": "{{registrationNumber}}",
+          "address": "{{address}}",
+          "zipCode": "{{zipCode}}",
+          "state": "{{state}}",
+          "city": "{{city}}",
+          "countryCode": "{{countryCode}}",
+          "officeEmail": "{{officeEmail}}",
+          "officePhone": "{{officePhone}}"
+        },
+        "success": [
+          201
+        ],
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "divisions.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 5242880,
+      "title": "List Divisions",
+      "description": "List creditor divisions. GET /divisions returns one page. Archived divisions are excluded unless includeArchived is true.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "1-based page. Sent as the lowercase page query used by GET /divisions."
+          },
+          "pageSize": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Page size. Sent as pageSize. Documented maximum is 100."
+          },
+          "includeArchived": {
+            "type": "boolean",
+            "description": "When true, include archived divisions."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": [
+              "page",
+              "divisions"
+            ],
+            "properties": {
+              "page": {
+                "type": "object"
+              },
+              "divisions": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/divisions",
+        "query": {
+          "page": "{{page}}",
+          "pageSize": "{{pageSize}}",
+          "includeArchived": "{{includeArchived}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "divisions.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Update Division",
+      "description": "Fully replace a creditor division company, address, and office contact profile. PUT /divisions/{id} requires every required profile field.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "description": "Division id."
+          },
+          "companyName": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Division company name."
+          },
+          "registrationNumber": {
+            "type": "string",
+            "description": "Company registration number. Omitted when unset."
+          },
+          "address": {
+            "type": "string",
+            "description": "Street address. Omitted when unset."
+          },
+          "zipCode": {
+            "type": "string",
+            "description": "Postal code. Omitted when unset."
+          },
+          "state": {
+            "type": "string",
+            "description": "State or region. Omitted when unset."
+          },
+          "city": {
+            "type": "string",
+            "minLength": 1,
+            "description": "City."
+          },
+          "countryCode": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 2,
+            "description": "ISO 3166-1 alpha-2 country code."
+          },
+          "officeEmail": {
+            "type": "string",
+            "description": "Office email. Omitted when unset."
+          },
+          "officePhone": {
+            "type": "string",
+            "description": "Office phone. Omitted when unset."
+          }
+        },
+        "required": [
+          "id",
+          "companyName",
+          "city",
+          "countryCode"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": [
+              "id",
+              "companyName",
+              "city",
+              "isArchived"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "companyName": {
+                "type": "string"
+              },
+              "city": {
+                "type": "string"
+              },
+              "isArchived": {
+                "type": "boolean"
+              }
+            }
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/divisions/{{id}}",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "companyName": "{{companyName}}",
+          "registrationNumber": "{{registrationNumber}}",
+          "address": "{{address}}",
+          "zipCode": "{{zipCode}}",
+          "state": "{{state}}",
+          "city": "{{city}}",
+          "countryCode": "{{countryCode}}",
+          "officeEmail": "{{officeEmail}}",
+          "officePhone": "{{officePhone}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "payments.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 5242880,
+      "title": "List Payments",
+      "description": "List payments across all creditor cases. GET /Payments returns one page. Case-scoped payments are a different route and are not called.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "1-based page. Sent as the Page query parameter."
+          },
+          "pageSize": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Page size. Sent as PageSize. Documented maximum is 100."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": [
+              "page",
+              "payments"
+            ],
+            "properties": {
+              "page": {
+                "type": "object"
+              },
+              "payments": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/Payments",
+        "query": {
+          "Page": "{{page}}",
+          "PageSize": "{{pageSize}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "tasks.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 8192,
+      "maxResponseBytes": 5242880,
+      "title": "List Tasks",
+      "description": "List the creditor action-item queue across cases. GET /tasks returns one page with solutionUrl and, when present, a machine-readable action hint. It does not call the hinted route.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "Open",
+              "Solved"
+            ],
+            "description": "Task status. Omitted uses the API default Open."
+          },
+          "type": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            },
+            "description": "Repeatable task type filter. Known types: ReplyToChat, ClientInputRequired, MoreInfoNeeded, SelectQuoteWinner, IncumbentLegalQuotePending, ReviewQuotes, ReviewPartner, SignContract, AssignBankAccount, CaseValidationNeedsInfo, Generic, RespondToComplaint."
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "1-based page. Sent as Page."
+          },
+          "pageSize": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Page size. Sent as PageSize. Maximum 100."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": [
+              "page",
+              "tasks"
+            ],
+            "properties": {
+              "page": {
+                "type": "object"
+              },
+              "tasks": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/tasks",
+        "query": {
+          "status": "{{status}}",
+          "type": "{{type}}",
+          "Page": "{{page}}",
+          "PageSize": "{{pageSize}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "cases.preview": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 5242880,
+      "title": "Preview Case",
+      "description": "Preview eligibility, partner assignment, blocking signing actions, jurisdiction, and estimated pricing without creating a case. POST /cases/preview is one JSON call. Eligibility alone does not mean the case can be submitted.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "amountToRecover": {
+            "type": "number",
+            "minimum": 0.01,
+            "description": "Total principal. Omit when claimLines is sent. Debitura rejects combining them."
+          },
+          "currencyCode": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 3,
+            "description": "ISO 4217 currency code."
+          },
+          "debtor": {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "Company",
+                  "Private"
+                ],
+                "description": "Debtor type."
+              },
+              "countryAlpha2": {
+                "type": "string",
+                "minLength": 2,
+                "maxLength": 2,
+                "description": "ISO 3166-1 alpha-2 country code."
+              },
+              "stateAlpha2": {
+                "type": "string",
+                "minLength": 2,
+                "maxLength": 2,
+                "description": "US state code. Required by Debitura for US debtors."
+              }
+            },
+            "required": [
+              "type",
+              "countryAlpha2"
+            ],
+            "additionalProperties": false
+          },
+          "amountToRecoverOver6Months": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Portion of the claim more than 6 months overdue. Omit when claimLines is sent."
+          },
+          "amountToRecoverOver12Months": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Portion more than 12 months overdue. Required together with the 24-month bucket when either is sent."
+          },
+          "amountToRecoverOver24Months": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Portion more than 24 months overdue. Required together with the 12-month bucket when either is sent."
+          },
+          "claimLines": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 1000,
+            "items": {
+              "type": "object",
+              "properties": {
+                "dueDate": {
+                  "type": "string",
+                  "minLength": 10,
+                  "maxLength": 40,
+                  "description": "Invoice due date. Date only, on or after 2000-01-01 and not in the future."
+                },
+                "amount": {
+                  "type": "number",
+                  "minimum": 0.01,
+                  "description": "Outstanding balance on this invoice."
+                },
+                "reference": {
+                  "type": "string",
+                  "description": "Caller invoice number. Used for validation errors only."
+                }
+              },
+              "required": [
+                "amount",
+                "dueDate"
+              ],
+              "additionalProperties": false
+            },
+            "description": "Unpaid invoices. When sent, omit amountToRecover, the age buckets, and dueDate."
+          },
+          "dueDate": {
+            "type": "string",
+            "minLength": 10,
+            "maxLength": 40,
+            "description": "Single invoice due date. Mutually exclusive with age buckets and claimLines."
+          }
+        },
+        "required": [
+          "currencyCode",
+          "debtor"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": [
+              "isEligible",
+              "requiredActions",
+              "jurisdiction"
+            ],
+            "properties": {
+              "isEligible": {
+                "type": "boolean"
+              },
+              "requiredActions": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              },
+              "jurisdiction": {
+                "type": "object"
+              },
+              "partnerAssignment": {
+                "type": "object"
+              },
+              "pricingPreview": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/cases/preview",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "amountToRecover": "{{amountToRecover}}",
+          "currencyCode": "{{currencyCode}}",
+          "debtor": {
+            "type": "{{debtor.type}}",
+            "countryAlpha2": "{{debtor.countryAlpha2}}",
+            "stateAlpha2": "{{debtor.stateAlpha2}}"
+          },
+          "amountToRecoverOver6Months": "{{amountToRecoverOver6Months}}",
+          "amountToRecoverOver12Months": "{{amountToRecoverOver12Months}}",
+          "amountToRecoverOver24Months": "{{amountToRecoverOver24Months}}",
+          "claimLines": "{{claimLines}}",
+          "dueDate": "{{dueDate}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "cases.search": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Search Cases",
+      "description": "Search the creditor's collection cases by lifecycle status, case ids, debtor ids, division ids, and sort. GET /cases returns one page.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "1-based page. Sent as Page."
+          },
+          "pageSize": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Page size. Sent as PageSize. Documented maximum is 100."
+          },
+          "statuses": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            },
+            "description": "Lifecycle statuses. Valid names include PendingContractSigning, PendingVerificationInternal, PendingVerification, NeedsAdditionalDetails, Leads, LeadsQuoteGiven, Active, Paused, Closed, and Merged. Description forms are also accepted. Repeated as Statuses."
+          },
+          "ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64,
+              "description": "Debitura resource id."
+            },
+            "description": "Case ids. Repeated as Ids."
+          },
+          "debtorIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64,
+              "description": "Debitura resource id."
+            },
+            "description": "Debtor ids. Repeated as DebtorIds."
+          },
+          "divisionIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64,
+              "description": "Debitura resource id."
+            },
+            "description": "Division ids. Repeated as DivisionIds."
+          },
+          "sort": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "description": "Sort as Field:asc or Field:desc. Fields include DateCreated, DateUpdated, DateFinished, DateCollectionStarted, DueDate, Date, GrossAmount, Remainder, InterestFees, CollectionFees, ReminderFees, Lifecycle, and CloseCode."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": [
+              "page",
+              "cases"
+            ],
+            "properties": {
+              "page": {
+                "type": "object"
+              },
+              "cases": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/cases",
+        "query": {
+          "Page": "{{page}}",
+          "PageSize": "{{pageSize}}",
+          "Statuses": "{{statuses}}",
+          "Ids": "{{ids}}",
+          "DebtorIds": "{{debtorIds}}",
+          "DivisionIds": "{{divisionIds}}",
+          "Sort": "{{sort}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    }
+  }
+}

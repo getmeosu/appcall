@@ -1,0 +1,497 @@
+{
+  "key": "elai",
+  "name": "Elai",
+  "version": "0.1.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "utility"
+  ],
+  "auth": {
+    "type": "api_key",
+    "scopes": [],
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "Elai API token",
+          "required": true,
+          "secret": true
+        }
+      ]
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "apis.elai.io"
+    ]
+  },
+  "models": [
+    "video",
+    "avatar",
+    "voice"
+  ],
+  "http": {
+    "baseUrl": "https://apis.elai.io/api/v1",
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "Authorization",
+      "value": "Bearer {{apiKey}}"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "Retry-After",
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "message",
+        "error"
+      ]
+    },
+    "headers": {
+      "Accept": "application/json"
+    }
+  },
+  "operations": {
+    "videos.copy": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 30000,
+      "maxInputBytes": 8192,
+      "maxResponseBytes": 10485760,
+      "title": "Copy Video",
+      "description": "Create a draft copy of an existing video or template with one POST /videos/copy JSON call. Set createTemplate to store the copy as a template. The response is the new draft document and does not include video bytes.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "sourceVideoId"
+        ],
+        "properties": {
+          "sourceVideoId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "description": "ID of the video or template to duplicate."
+          },
+          "folderId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "description": "Destination folder ID. Omitted when unset, which uses the account root."
+          },
+          "createTemplate": {
+            "type": "boolean",
+            "description": "Create the copy as a reusable template instead of a regular draft."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "video"
+        ],
+        "properties": {
+          "video": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/videos/copy",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "sourceId": "{{sourceVideoId}}",
+          "folderId": "{{folderId}}",
+          "createTemplate": "{{createTemplate}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "video": "{{response}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "voices.duration": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 65536,
+      "title": "Estimate Speech Duration",
+      "description": "Estimate spoken seconds for narration text with one PATCH /voices/duration JSON call. Provider must be lowercase elevenlabs, azure, or google. The response is JSON and does not return audio bytes.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "text",
+          "language",
+          "provider",
+          "voiceId"
+        ],
+        "properties": {
+          "text": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 20000,
+            "description": "Narration text whose approximate spoken duration should be calculated."
+          },
+          "language": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "description": "Elai language name supported by the selected voice, such as English."
+          },
+          "provider": {
+            "type": "string",
+            "enum": [
+              "elevenlabs",
+              "azure",
+              "google"
+            ],
+            "description": "Voice provider. Must be lowercase."
+          },
+          "voiceId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "Elai voice ID, or an avatar default voice, without a provider prefix."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "approxDuration"
+        ],
+        "properties": {
+          "approxDuration": {
+            "type": "number"
+          }
+        }
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/voices/duration",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "voice": "{{voiceId}}",
+          "provider": "{{provider}}",
+          "language": "{{language}}",
+          "text": "{{text}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "approxDuration": "{{response.approxDuration}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "videos.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 10485760,
+      "title": "Get Video",
+      "description": "Get one video with one body-less GET /videos/{videoId}. The JSON document includes status, slides, and any render URL. Elai has no include_slides query. createMissingStories is the documented optional backfill flag. Video bytes are not downloaded.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "videoId"
+        ],
+        "properties": {
+          "videoId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "description": "Elai video or template ID."
+          },
+          "createMissingStories": {
+            "type": "boolean",
+            "description": "When set, send createMissingStories so Elai backfills story data on slides that lack it."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "video"
+        ],
+        "properties": {
+          "video": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/videos/{{videoId}}",
+        "query": {
+          "createMissingStories": "{{createMissingStories}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "video": "{{response}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "avatars.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 10485760,
+      "title": "List Avatars",
+      "description": "List available avatars with one body-less GET /avatars. realtimeCompatible true sends realtime=true. Gender, search, limit, and offset are not public query parameters, so this returns the JSON catalog Elai sends. Preview URLs in the JSON are not downloaded.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "realtimeCompatible": {
+            "type": "boolean",
+            "const": true,
+            "description": "When true, ask Elai for only Realtime-compatible avatars. Omit to return the catalog."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "avatars"
+        ],
+        "properties": {
+          "avatars": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/avatars",
+        "query": {
+          "realtime": "{{realtimeCompatible}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "avatars": "{{response}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "videos.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 10485760,
+      "title": "List Videos",
+      "description": "List videos or templates with one body-less GET /videos. Pagination is the documented page integer. videoType template selects templates; omit it for regular videos. The story filter is not a server parameter. Summaries may include a render URL and do not download video bytes.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "statuses": {
+            "type": "array",
+            "maxItems": 6,
+            "description": "Return videos in any of these lifecycle states.",
+            "items": {
+              "type": "string",
+              "enum": [
+                "draft",
+                "validating",
+                "rendering",
+                "moderation",
+                "error",
+                "ready"
+              ]
+            }
+          },
+          "tags": {
+            "type": "array",
+            "maxItems": 20,
+            "description": "Return only videos matching these Elai tags.",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            }
+          },
+          "videoType": {
+            "type": "string",
+            "enum": [
+              "template"
+            ],
+            "description": "Return templates. Omit to return regular videos. story is not a server filter."
+          },
+          "sort": {
+            "type": "array",
+            "maxItems": 8,
+            "description": "Sort fields in priority order. Prefix + for ascending or - for descending. Supported fields are name, createdAt, and updatedAt.",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 32
+            }
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 10000,
+            "description": "Selection page. Elai does not document an opaque cursor."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Maximum video summaries on this page."
+          },
+          "deleted": {
+            "type": "boolean",
+            "description": "True returns only deleted videos, false returns only active videos, and omission returns both."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "videos",
+          "total",
+          "page",
+          "pages"
+        ],
+        "properties": {
+          "videos": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "total": {
+            "type": "integer"
+          },
+          "page": {
+            "type": "integer"
+          },
+          "pages": {
+            "type": "integer"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/videos",
+        "query": {
+          "status": "{{statuses}}",
+          "tags": "{{tags}}",
+          "type": "{{videoType}}",
+          "sort": "{{sort}}",
+          "page": "{{page}}",
+          "limit": "{{limit}}",
+          "deleted": "{{deleted}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "videos": "{{response.videos}}",
+          "total": "{{response.total}}",
+          "page": "{{response.page}}",
+          "pages": "{{response.pages}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "videos.render": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 30000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "title": "Render Video",
+      "description": "Queue rendering for one prepared video with one body-less POST /videos/render/{videoId}. confirmPaidRender must be true and is not sent. The JSON response is an acceptance object, not the MP4. Poll Get Video for status and the final URL.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "videoId",
+          "confirmPaidRender"
+        ],
+        "properties": {
+          "videoId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "description": "Prepared video ID to render."
+          },
+          "confirmPaidRender": {
+            "type": "boolean",
+            "const": true,
+            "description": "Must be true to confirm that rendering consumes paid minutes. Validated locally and not sent to Elai."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "accepted"
+        ],
+        "properties": {
+          "accepted": {
+            "type": "boolean"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/videos/render/{{videoId}}",
+        "success": [
+          200
+        ],
+        "result": {
+          "accepted": "{{response.accepted}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    }
+  }
+}

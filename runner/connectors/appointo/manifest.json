@@ -1,0 +1,779 @@
+{
+  "key": "appointo",
+  "name": "Appointo",
+  "version": "0.1.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "scheduling"
+  ],
+  "auth": {
+    "type": "api_key",
+    "scopes": [],
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "Appointo API token",
+          "required": true,
+          "secret": true
+        }
+      ]
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "app.appointo.me"
+    ]
+  },
+  "models": [
+    "product",
+    "booking",
+    "appointment",
+    "subscription-contract"
+  ],
+  "http": {
+    "baseUrl": "https://app.appointo.me/api",
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "APPOINTO-TOKEN",
+      "value": "{{apiKey}}"
+    },
+    "headers": {
+      "Accept": "application/json"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "Retry-After",
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "message",
+        "error_code"
+      ]
+    }
+  },
+  "operations": {
+    "healthcheck": {
+      "kind": "action",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "title": "Authenticate Appointo API token",
+      "description": "Validate the APPOINTO-TOKEN header with GET /products?limit=1, the documented first authenticated request.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "required": [],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/products",
+        "query": {
+          "limit": 1
+        },
+        "success": [
+          200
+        ]
+      }
+    },
+    "bookings.cancel": {
+      "kind": "action",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "timeoutMs": 30000,
+      "maxInputBytes": 262144,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "destructive",
+      "title": "Cancel booking",
+      "description": "Cancel an entire booking or selected customers with PUT /bookings/cancel.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "booking_id": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "customer_ids": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 100,
+            "items": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        },
+        "required": [
+          "booking_id"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/bookings/cancel",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "booking_id": "{{booking_id}}",
+          "customer_ids": "{{customer_ids}}"
+        },
+        "success": [
+          200
+        ]
+      }
+    },
+    "bookings.create": {
+      "kind": "action",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "timeoutMs": 30000,
+      "maxInputBytes": 262144,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Create booking",
+      "description": "Create a customer booking with POST /bookings after a timeslot is known.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "appointment_id": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "timestring": {
+            "type": "string",
+            "minLength": 1
+          },
+          "quantity": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "email": {
+            "type": "string",
+            "minLength": 3
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "phone": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "appointment_id",
+          "timestring",
+          "email",
+          "name"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/bookings",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "appointment_id": "{{appointment_id}}",
+          "timestring": "{{timestring}}",
+          "quantity": "{{quantity}}",
+          "email": "{{email}}",
+          "name": "{{name}}",
+          "phone": "{{phone}}"
+        },
+        "success": [
+          200
+        ]
+      }
+    },
+    "appointments.availability": {
+      "kind": "action",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "timeoutMs": 15000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "Get appointment availability",
+      "description": "Fetch calendar availability for one appointment between start_date and an optional end_date.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "appointment_id": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "start_date": {
+            "type": "string",
+            "minLength": 10,
+            "maxLength": 10
+          },
+          "end_date": {
+            "type": "string",
+            "minLength": 10,
+            "maxLength": 10
+          },
+          "impersonated_tms": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 100,
+            "items": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        },
+        "required": [
+          "appointment_id",
+          "start_date"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/appointments/{{appointment_id}}/calendar_availability",
+        "query": {
+          "start_date": "{{start_date}}",
+          "end_date": "{{end_date}}",
+          "impersonated_tms": "{{impersonated_tms}}"
+        },
+        "success": [
+          200
+        ]
+      }
+    },
+    "appointments.list": {
+      "kind": "action",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "timeoutMs": 15000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "List appointments",
+      "description": "List appointments, optionally filtered by appointment, product, search term, and page.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "appointment_id": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "product_id": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "search_term": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/appointments",
+        "query": {
+          "appointment_id": "{{appointment_id}}",
+          "product_id": "{{product_id}}",
+          "limit": "{{limit}}",
+          "offset": "{{offset}}",
+          "search_term": "{{search_term}}"
+        },
+        "success": [
+          200
+        ]
+      }
+    },
+    "bookings.list": {
+      "kind": "action",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "timeoutMs": 15000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "List bookings",
+      "description": "List bookings filtered by status, booking id, search term, and page.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "past",
+              "upcoming"
+            ]
+          },
+          "booking_id": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "search_term": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/bookings",
+        "query": {
+          "limit": "{{limit}}",
+          "offset": "{{offset}}",
+          "status": "{{status}}",
+          "booking_id": "{{booking_id}}",
+          "search_term": "{{search_term}}"
+        },
+        "success": [
+          200
+        ]
+      }
+    },
+    "products.list": {
+      "kind": "action",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "timeoutMs": 15000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "List products",
+      "description": "List Appointo products with an optional name search and paging.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "search_term": {
+            "type": "string",
+            "minLength": 1
+          },
+          "offset": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/products",
+        "query": {
+          "limit": "{{limit}}",
+          "search_term": "{{search_term}}",
+          "offset": "{{offset}}"
+        },
+        "success": [
+          200
+        ]
+      }
+    },
+    "subscription-contracts.list": {
+      "kind": "action",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "timeoutMs": 15000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "List subscription contracts",
+      "description": "List subscription contracts from GET /appointment_subscriptions.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "search_term": {
+            "type": "string",
+            "minLength": 1
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/appointment_subscriptions",
+        "query": {
+          "search_term": "{{search_term}}",
+          "limit": "{{limit}}",
+          "offset": "{{offset}}"
+        },
+        "success": [
+          200
+        ]
+      }
+    },
+    "bookings.reschedule": {
+      "kind": "action",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "timeoutMs": 30000,
+      "maxInputBytes": 262144,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Reschedule booking",
+      "description": "Move a booking, or selected customers, to a new ISO 8601 timeslot with PUT /bookings/reschedule.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "booking_id": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "timestring": {
+            "type": "string",
+            "minLength": 1
+          },
+          "customer_ids": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 100,
+            "items": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          "override": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "booking_id",
+          "timestring"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/bookings/reschedule",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "booking_id": "{{booking_id}}",
+          "timestring": "{{timestring}}",
+          "customer_ids": "{{customer_ids}}",
+          "override": "{{override}}"
+        },
+        "success": [
+          200
+        ]
+      }
+    },
+    "bookings.update": {
+      "kind": "action",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "timeoutMs": 30000,
+      "maxInputBytes": 262144,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Update booking buffers",
+      "description": "Update start and end buffer minutes for one booking with PUT /bookings/{booking_id}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "booking_id": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "start_buffer_time": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "end_buffer_time": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "booking_id"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/bookings/{{booking_id}}",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "booking_id": "{{booking_id}}",
+          "start_buffer_time": "{{start_buffer_time}}",
+          "end_buffer_time": "{{end_buffer_time}}"
+        },
+        "success": [
+          200
+        ]
+      }
+    },
+    "appointments.upsert-config": {
+      "kind": "action",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "write",
+      "title": "Upsert appointment configuration",
+      "description": "Replace availability config, weekly slots, and date overrides with PUT /appointments/{appointment_id}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "appointment_id": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "config": {
+            "type": "object"
+          },
+          "availabilities": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "override": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        },
+        "required": [
+          "appointment_id",
+          "config",
+          "availabilities",
+          "override"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/appointments/{{appointment_id}}",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "config": "{{config}}",
+          "availabilities": "{{availabilities}}",
+          "override": "{{override}}"
+        },
+        "success": [
+          200
+        ]
+      }
+    }
+  }
+}

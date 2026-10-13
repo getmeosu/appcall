@@ -1,0 +1,695 @@
+{
+  "key": "checkflow",
+  "name": "CheckFlow",
+  "version": "0.1.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "productivity"
+  ],
+  "auth": {
+    "type": "api_key",
+    "scopes": [],
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "CheckFlow API key",
+          "required": true,
+          "secret": true
+        }
+      ]
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "app.checkflow.io"
+    ]
+  },
+  "models": [
+    "tag",
+    "checklist",
+    "task",
+    "template",
+    "team",
+    "analytics",
+    "webhook"
+  ],
+  "http": {
+    "baseUrl": "https://app.checkflow.io",
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "X-API-KEY",
+      "value": "{{apiKey}}"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "Retry-After",
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "message",
+        "error"
+      ]
+    },
+    "headers": {
+      "Accept": "application/json"
+    }
+  },
+  "operations": {
+    "tags.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 10000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 1048576,
+      "title": "Create Tag",
+      "description": "Create a team tag by name, or return the existing same-name tag, with POST /api/tag.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Tag name to create or look up exactly."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": [
+              "key",
+              "name"
+            ],
+            "properties": {
+              "key": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/api/tag",
+        "success": [
+          200
+        ],
+        "query": {
+          "name": "{{name}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "checklists.find": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 5242880,
+      "title": "Find Checklists",
+      "description": "Find one page of checklist summaries for a template with GET /api/checklist/find.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "templateKey": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Template key whose checklist instances to search."
+          },
+          "checklistName": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Optional full or partial checklist name filter."
+          },
+          "tag": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Optional full or partial tag name filter."
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ALL",
+              "SCHEDULED",
+              "INPROGRESS",
+              "RECENTLYCOMPLETE",
+              "COMPLETE"
+            ],
+            "description": "Checklist lifecycle status to include."
+          },
+          "pageSize": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 10,
+            "description": "Results per page. CheckFlow allows 1 through 10."
+          },
+          "pageNumber": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "1-based page number. Omit to use the first page."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "templateKey"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ],
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/checklist/find",
+        "success": [
+          200
+        ],
+        "query": {
+          "templateKey": "{{templateKey}}",
+          "checklistName": "{{checklistName}}",
+          "tag": "{{tag}}",
+          "status": "{{status}}",
+          "pageSize": "{{pageSize}}",
+          "pageNumber": "{{pageNumber}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "analytics.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 5242880,
+      "title": "Get Analytics",
+      "description": "Return checklist and task activity for a date range with GET /api/analytics/all.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "periodStartDate": {
+            "type": "string",
+            "minLength": 10,
+            "maxLength": 10,
+            "description": "First date to include, formatted as YYYY-MM-DD."
+          },
+          "periodEndDate": {
+            "type": "string",
+            "minLength": 10,
+            "maxLength": 10,
+            "description": "Last date to include, formatted as YYYY-MM-DD. Omit to use the current date."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "periodStartDate"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ],
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/analytics/all",
+        "success": [
+          200
+        ],
+        "query": {
+          "periodStartDate": "{{periodStartDate}}",
+          "periodEndDate": "{{periodEndDate}}"
+        },
+        "headers": {
+          "X-API-VERSION": "2.0"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "tasks.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 1048576,
+      "title": "Get Task Details",
+      "description": "Get one checklist task, including controls, comments, and assignees, with GET /api/task/details.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "checklistId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Numeric checklist ID containing the task."
+          },
+          "taskKey": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Template task key identifying the task within the checklist."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "checklistId",
+          "taskKey"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ],
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/task/details",
+        "success": [
+          200
+        ],
+        "query": {
+          "checklistId": "{{checklistId}}",
+          "taskKey": "{{taskKey}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "team.directory": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 1048576,
+      "title": "Get Team Directory",
+      "description": "Return active team members and groups, including group membership, with GET /api/team/members-and-groups.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "nameContains": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Optional case-insensitive name fragment for members and groups."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": [
+              "members",
+              "groups"
+            ],
+            "properties": {
+              "members": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              },
+              "groups": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/team/members-and-groups",
+        "success": [
+          200
+        ],
+        "query": {
+          "nameContains": "{{nameContains}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "checklists.details": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 5242880,
+      "title": "List Checklist Details",
+      "description": "Return one page of checklist instances, including tasks and controls, with GET /api/checklist/details.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "templateKey": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Template key whose checklist instances to inspect."
+          },
+          "checklistKey": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Optional checklist key that narrows the result to one instance."
+          },
+          "checklistName": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Optional full or partial checklist name filter."
+          },
+          "tag": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Optional full or partial tag name filter."
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ALL",
+              "SCHEDULED",
+              "INPROGRESS",
+              "RECENTLYCOMPLETE",
+              "COMPLETE"
+            ],
+            "description": "Checklist lifecycle status to include."
+          },
+          "pageSize": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 10,
+            "description": "Results per page. CheckFlow allows 1 through 10."
+          },
+          "pageNumber": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "1-based page number. Omit to use the first page."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "templateKey"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ],
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/checklist/details",
+        "success": [
+          200
+        ],
+        "query": {
+          "templateKey": "{{templateKey}}",
+          "checklistKey": "{{checklistKey}}",
+          "checklistName": "{{checklistName}}",
+          "tag": "{{tag}}",
+          "status": "{{status}}",
+          "pageSize": "{{pageSize}}",
+          "pageNumber": "{{pageNumber}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "tags.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 1048576,
+      "title": "List Tags",
+      "description": "List the tags available to the connected CheckFlow team with GET /api/tag/tags.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/tag/tags",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "templates.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 1048576,
+      "title": "List Templates",
+      "description": "List active checklist templates and their keys with GET /api/template/templates.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/template/templates",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "templates.tasks": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 1048576,
+      "title": "List Template Tasks",
+      "description": "List the task keys and names defined by one checklist template with GET /api/template/tasks.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "templateKey": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Template key returned by List Templates."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "templateKey"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/template/tasks",
+        "success": [
+          200
+        ],
+        "query": {
+          "templateKey": "{{templateKey}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "webhooks.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 1048576,
+      "title": "List Webhook Subscriptions",
+      "description": "List webhook subscriptions, optionally filtered by source and event type, with GET /api/web-hook/subscriptions.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "source": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Subscription source to include. Omit to use ALL."
+          },
+          "eventType": {
+            "type": "string",
+            "enum": [
+              "ALL",
+              "new_checklist",
+              "task_completed",
+              "file_uploaded",
+              "data_set.record.created",
+              "data_set.record.updated",
+              "data_set.record.deleted"
+            ],
+            "description": "Event type to include."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ],
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/web-hook/subscriptions",
+        "success": [
+          200
+        ],
+        "query": {
+          "source": "{{source}}",
+          "eventType": "{{eventType}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    }
+  }
+}

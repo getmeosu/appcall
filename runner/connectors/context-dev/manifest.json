@@ -1,0 +1,1327 @@
+{
+  "key": "context-dev",
+  "name": "Context.dev",
+  "version": "0.1.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "dev-tools"
+  ],
+  "auth": {
+    "type": "api_key",
+    "scopes": [],
+    "setup": {
+      "mode": "api_key",
+      "docsUrl": "https://docs.context.dev/account/api-keys",
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "Context.dev API key",
+          "required": true,
+          "secret": true
+        }
+      ]
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "api.context.dev"
+    ]
+  },
+  "models": [
+    "brand",
+    "styleguide",
+    "batch",
+    "monitor",
+    "extraction",
+    "scrape"
+  ],
+  "http": {
+    "baseUrl": "https://api.context.dev/v1",
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "Authorization",
+      "value": "Bearer {{apiKey}}"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "message",
+        "error_code"
+      ]
+    },
+    "headers": {
+      "Accept": "application/json"
+    }
+  },
+  "operations": {
+    "web.extract": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 300000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 5242880,
+      "title": "Extract Structured Web Data",
+      "description": "Crawl from one public URL and return JSON matching the caller schema via POST /v1/web/extract.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "Starting HTTP or HTTPS URL to crawl.",
+            "minLength": 1,
+            "maxLength": 2048
+          },
+          "schema": {
+            "type": "object",
+            "minProperties": 1,
+            "description": "JSON Schema for the object to extract. This is a schema, not an example."
+          },
+          "instructions": {
+            "type": "string",
+            "description": "Optional extraction guidance, up to 2000 characters.",
+            "minLength": 1,
+            "maxLength": 2000
+          },
+          "factCheck": {
+            "type": "boolean",
+            "description": "Require every returned value to be grounded in page content."
+          },
+          "followSubdomains": {
+            "type": "boolean",
+            "description": "Follow links on subdomains of the starting domain."
+          },
+          "maxPages": {
+            "type": "integer",
+            "description": "Maximum pages to analyze, from 1 through 50.",
+            "minimum": 1,
+            "maximum": 50
+          },
+          "maxDepth": {
+            "type": "integer",
+            "description": "Maximum link depth from the starting URL. 0 analyzes only the starting page.",
+            "minimum": 0,
+            "maximum": 50
+          },
+          "includeFrames": {
+            "type": "boolean",
+            "description": "Include rendered iframe content before extraction."
+          },
+          "maxAgeMs": {
+            "type": "integer",
+            "description": "Maximum cached scrape age in milliseconds, from 0 through 2592000000.",
+            "minimum": 0,
+            "maximum": 2592000000
+          },
+          "waitForMs": {
+            "type": "integer",
+            "description": "Milliseconds to wait after each page load, from 0 through 30000.",
+            "minimum": 0,
+            "maximum": 30000
+          },
+          "settleAnimations": {
+            "type": "boolean",
+            "description": "Wait briefly for CSS animations to settle before reading each page."
+          },
+          "stopAfterMs": {
+            "type": "integer",
+            "description": "Soft crawl time budget in milliseconds, from 10000 through 110000.",
+            "minimum": 10000,
+            "maximum": 110000
+          },
+          "zdr": {
+            "type": "string",
+            "description": "enabled requests zero data retention. The organization must have that feature turned on.",
+            "enum": [
+              "enabled",
+              "disabled"
+            ]
+          },
+          "tags": {
+            "type": "array",
+            "description": "Up to 20 usage tags, each 1-50 characters.",
+            "maxItems": 20,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 50
+            }
+          }
+        },
+        "required": [
+          "url",
+          "schema"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "description": "Context.dev JSON object wrapped for the action result.",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "JSON object returned by Context.dev."
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/web/extract",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "url": "{{url}}",
+          "schema": "{{schema}}",
+          "instructions": "{{instructions}}",
+          "factCheck": "{{factCheck}}",
+          "followSubdomains": "{{followSubdomains}}",
+          "maxPages": "{{maxPages}}",
+          "maxDepth": "{{maxDepth}}",
+          "includeFrames": "{{includeFrames}}",
+          "maxAgeMs": "{{maxAgeMs}}",
+          "waitForMs": "{{waitForMs}}",
+          "settleAnimations": "{{settleAnimations}}",
+          "stopAfterMs": "{{stopAfterMs}}",
+          "zdr": "{{zdr}}",
+          "tags": "{{tags}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "brand.retrieve": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 300000,
+      "maxInputBytes": 131072,
+      "maxResponseBytes": 2097152,
+      "title": "Get Brand",
+      "description": "Retrieve one brand profile with POST /v1/brand/retrieve. Set type and exactly one identifier: domain, name, email, ticker, directUrl, or transactionInfo.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "type": {
+            "type": "string",
+            "description": "Lookup discriminator.",
+            "enum": [
+              "by_domain",
+              "by_name",
+              "by_email",
+              "by_ticker",
+              "by_direct_url",
+              "by_transaction"
+            ]
+          },
+          "domain": {
+            "type": "string",
+            "description": "Domain for by_domain, such as stripe.com.",
+            "minLength": 1,
+            "maxLength": 253
+          },
+          "name": {
+            "type": "string",
+            "description": "Company name for by_name.",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "countryGl": {
+            "type": "string",
+            "description": "Optional country hint for name or transaction lookup.",
+            "minLength": 2,
+            "maxLength": 2
+          },
+          "email": {
+            "type": "string",
+            "description": "Work email for by_email.",
+            "minLength": 3,
+            "maxLength": 320
+          },
+          "ticker": {
+            "type": "string",
+            "description": "Stock ticker for by_ticker.",
+            "minLength": 1,
+            "maxLength": 16
+          },
+          "tickerExchange": {
+            "type": "string",
+            "description": "Exchange for a ticker lookup. Omit to let Context.dev default to NASDAQ.",
+            "minLength": 1,
+            "maxLength": 32
+          },
+          "directUrl": {
+            "type": "string",
+            "description": "Exact HTTP or HTTPS page for by_direct_url.",
+            "minLength": 1,
+            "maxLength": 2048
+          },
+          "transactionInfo": {
+            "type": "string",
+            "description": "Card or bank descriptor for by_transaction.",
+            "minLength": 3,
+            "maxLength": 500
+          },
+          "city": {
+            "type": "string",
+            "description": "City hint for a transaction lookup.",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "mcc": {
+            "description": "Merchant category code hint for a transaction lookup.",
+            "type": [
+              "string",
+              "number"
+            ]
+          },
+          "phone": {
+            "description": "Phone hint for a transaction lookup.",
+            "type": [
+              "string",
+              "number"
+            ]
+          },
+          "highConfidenceOnly": {
+            "type": "boolean",
+            "description": "For a transaction lookup, require extra match verification."
+          },
+          "forceLanguage": {
+            "type": "string",
+            "description": "Provider language name for the profile text, such as english or french.",
+            "minLength": 1,
+            "maxLength": 40
+          },
+          "maxSpeed": {
+            "type": "boolean",
+            "description": "Prefer a faster, less complete profile. Not used for by_direct_url."
+          },
+          "maxAgeMs": {
+            "type": "integer",
+            "description": "Maximum cached brand age in milliseconds. The provider clamps this from one day to one year, and 0 refreshes.",
+            "minimum": 0,
+            "maximum": 31536000000
+          },
+          "timeoutOpts": {
+            "type": "object",
+            "additionalProperties": false,
+            "description": "Provider deadline. milliseconds is required when this object is set.",
+            "required": [
+              "milliseconds"
+            ],
+            "properties": {
+              "milliseconds": {
+                "type": "integer",
+                "description": "Deadline in milliseconds.",
+                "minimum": 1000,
+                "maximum": 300000
+              },
+              "behavior": {
+                "type": "string",
+                "description": "fail rejects at the deadline. return-partial returns what is ready.",
+                "enum": [
+                  "fail",
+                  "return-partial"
+                ]
+              }
+            }
+          },
+          "tags": {
+            "type": "array",
+            "description": "Up to 20 usage tags, each 1-50 characters.",
+            "maxItems": 20,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 50
+            }
+          }
+        },
+        "required": [
+          "type"
+        ],
+        "oneOf": [
+          {
+            "required": [
+              "domain"
+            ]
+          },
+          {
+            "required": [
+              "name"
+            ]
+          },
+          {
+            "required": [
+              "email"
+            ]
+          },
+          {
+            "required": [
+              "ticker"
+            ]
+          },
+          {
+            "required": [
+              "directUrl"
+            ]
+          },
+          {
+            "required": [
+              "transactionInfo"
+            ]
+          }
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "description": "Context.dev JSON object wrapped for the action result.",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "JSON object returned by Context.dev."
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/brand/retrieve",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "type": "{{type}}",
+          "domain": "{{domain}}",
+          "name": "{{name}}",
+          "country_gl": "{{countryGl}}",
+          "email": "{{email}}",
+          "ticker": "{{ticker}}",
+          "ticker_exchange": "{{tickerExchange}}",
+          "direct_url": "{{directUrl}}",
+          "transaction_info": "{{transactionInfo}}",
+          "city": "{{city}}",
+          "mcc": "{{mcc}}",
+          "phone": "{{phone}}",
+          "high_confidence_only": "{{highConfidenceOnly}}",
+          "force_language": "{{forceLanguage}}",
+          "maxSpeed": "{{maxSpeed}}",
+          "maxAgeMs": "{{maxAgeMs}}",
+          "timeoutOpts": "{{timeoutOpts}}",
+          "tags": "{{tags}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "monitors.limits": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "title": "Get Monitor Limits",
+      "description": "Return the organization plan and monitor usage versus its monitor limit via GET /v1/monitors/limits.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "description": "Context.dev JSON object wrapped for the action result.",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "JSON object returned by Context.dev."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/monitors/limits",
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "web.styleguide": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 300000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 10485760,
+      "title": "Get Website Styleguide",
+      "description": "Extract colors, typography, and component styles from one domain or one direct URL via GET /v1/web/styleguide.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "domain": {
+            "type": "string",
+            "description": "Domain to inspect, such as example.com. Do not also send directUrl.",
+            "minLength": 3,
+            "maxLength": 253
+          },
+          "directUrl": {
+            "type": "string",
+            "description": "Exact HTTP or HTTPS page to inspect. Do not also send domain.",
+            "minLength": 1,
+            "maxLength": 2048
+          },
+          "maxAgeMs": {
+            "type": "integer",
+            "description": "Maximum cached styleguide age in milliseconds. 0 refreshes.",
+            "minimum": 0,
+            "maximum": 31536000000
+          },
+          "timeoutOpts": {
+            "type": "object",
+            "additionalProperties": false,
+            "description": "Provider deadline. milliseconds is required when this object is set.",
+            "required": [
+              "milliseconds"
+            ],
+            "properties": {
+              "milliseconds": {
+                "type": "integer",
+                "description": "Deadline in milliseconds.",
+                "minimum": 1000,
+                "maximum": 300000
+              },
+              "behavior": {
+                "type": "string",
+                "description": "fail rejects at the deadline. return-partial returns what is ready.",
+                "enum": [
+                  "fail",
+                  "return-partial"
+                ]
+              }
+            }
+          },
+          "colorScheme": {
+            "type": "string",
+            "description": "Browser color scheme to emulate.",
+            "enum": [
+              "light",
+              "dark"
+            ]
+          },
+          "zdr": {
+            "type": "string",
+            "description": "enabled requests zero data retention. The organization must have that feature turned on.",
+            "enum": [
+              "enabled",
+              "disabled"
+            ]
+          },
+          "tags": {
+            "type": "array",
+            "description": "Up to 20 usage tags, each 1-50 characters.",
+            "maxItems": 20,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 50
+            }
+          }
+        },
+        "oneOf": [
+          {
+            "required": [
+              "domain"
+            ]
+          },
+          {
+            "required": [
+              "directUrl"
+            ]
+          }
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "description": "Context.dev JSON object wrapped for the action result.",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "JSON object returned by Context.dev."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/web/styleguide",
+        "parameters": [
+          {
+            "wireName": "domain",
+            "inputName": "domain",
+            "in": "query",
+            "style": "form",
+            "explode": false,
+            "allowReserved": false
+          },
+          {
+            "wireName": "directUrl",
+            "inputName": "directUrl",
+            "in": "query",
+            "style": "form",
+            "explode": false,
+            "allowReserved": false
+          },
+          {
+            "wireName": "maxAgeMs",
+            "inputName": "maxAgeMs",
+            "in": "query",
+            "style": "form",
+            "explode": false,
+            "allowReserved": false
+          },
+          {
+            "wireName": "timeoutOpts",
+            "inputName": "timeoutOpts",
+            "in": "query",
+            "style": "deepObject",
+            "explode": true,
+            "allowReserved": false
+          },
+          {
+            "wireName": "colorScheme",
+            "inputName": "colorScheme",
+            "in": "query",
+            "style": "form",
+            "explode": false,
+            "allowReserved": false
+          },
+          {
+            "wireName": "zdr",
+            "inputName": "zdr",
+            "in": "query",
+            "style": "form",
+            "explode": false,
+            "allowReserved": false
+          },
+          {
+            "wireName": "tags",
+            "inputName": "tags",
+            "in": "query",
+            "style": "form",
+            "explode": false,
+            "allowReserved": false
+          }
+        ],
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "batches.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "List Batches",
+      "description": "List asynchronous web batches from newest to oldest via GET /v1/batch/list.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "description": "Maximum batches in this page, from 1 through 100.",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "cursor": {
+            "type": "string",
+            "description": "Opaque next_cursor from the previous page.",
+            "minLength": 1,
+            "maxLength": 512
+          },
+          "status": {
+            "type": "string",
+            "description": "Filter by batch lifecycle status.",
+            "enum": [
+              "queued",
+              "running",
+              "cancelling",
+              "completed",
+              "cancelled",
+              "failed"
+            ]
+          },
+          "query": {
+            "type": "string",
+            "description": "Search batch id, source URL or domain, and tags. Sent as the q query parameter.",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "searchType": {
+            "type": "string",
+            "description": "prefix matches as you type. exact matches full tokens.",
+            "enum": [
+              "prefix",
+              "exact"
+            ]
+          },
+          "tags": {
+            "type": "array",
+            "description": "Filter to batches that have any of these tags.",
+            "maxItems": 20,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 50
+            }
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "description": "Context.dev JSON object wrapped for the action result.",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "JSON object returned by Context.dev."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/batch/list",
+        "parameters": [
+          {
+            "wireName": "limit",
+            "inputName": "limit",
+            "in": "query",
+            "style": "form",
+            "explode": false,
+            "allowReserved": false
+          },
+          {
+            "wireName": "cursor",
+            "inputName": "cursor",
+            "in": "query",
+            "style": "form",
+            "explode": false,
+            "allowReserved": false
+          },
+          {
+            "wireName": "status",
+            "inputName": "status",
+            "in": "query",
+            "style": "form",
+            "explode": false,
+            "allowReserved": false
+          },
+          {
+            "wireName": "q",
+            "inputName": "query",
+            "in": "query",
+            "style": "form",
+            "explode": false,
+            "allowReserved": false
+          },
+          {
+            "wireName": "search_type",
+            "inputName": "searchType",
+            "in": "query",
+            "style": "form",
+            "explode": false,
+            "allowReserved": false
+          },
+          {
+            "wireName": "tags",
+            "inputName": "tags",
+            "in": "query",
+            "style": "form",
+            "explode": false,
+            "allowReserved": false
+          }
+        ],
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "monitors.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 2097152,
+      "title": "List Monitors",
+      "description": "List web monitors for the connected organization via GET /v1/monitors.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "Free-text term matched against searchFields. Sent as the q query parameter.",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "searchFields": {
+            "type": "array",
+            "description": "Fields searched by query. Sent as search_by.",
+            "maxItems": 4,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 50,
+              "enum": [
+                "name",
+                "url",
+                "instructions",
+                "tags"
+              ]
+            }
+          },
+          "searchType": {
+            "type": "string",
+            "description": "prefix matches as you type. exact matches full tokens.",
+            "enum": [
+              "prefix",
+              "exact"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "description": "Filter by monitor lifecycle status.",
+            "enum": [
+              "active",
+              "paused",
+              "failed"
+            ]
+          },
+          "targetType": {
+            "type": "string",
+            "description": "Filter by monitor target type.",
+            "enum": [
+              "page",
+              "sitemap",
+              "extract"
+            ]
+          },
+          "changeDetectionType": {
+            "type": "string",
+            "description": "Filter by change-detection strategy.",
+            "enum": [
+              "exact",
+              "semantic"
+            ]
+          },
+          "tags": {
+            "type": "array",
+            "description": "Filter to monitors that have any of these tags.",
+            "maxItems": 20,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 50
+            }
+          },
+          "tag": {
+            "type": "string",
+            "description": "Filter to monitors that have this one tag.",
+            "minLength": 1,
+            "maxLength": 50
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Maximum monitors in this page, from 1 through 100.",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "cursor": {
+            "type": "string",
+            "description": "Opaque next_cursor from the previous page.",
+            "minLength": 1,
+            "maxLength": 512
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "description": "Context.dev JSON object wrapped for the action result.",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "JSON object returned by Context.dev."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/monitors",
+        "parameters": [
+          {
+            "wireName": "q",
+            "inputName": "query",
+            "in": "query",
+            "style": "form",
+            "explode": false,
+            "allowReserved": false
+          },
+          {
+            "wireName": "search_by",
+            "inputName": "searchFields",
+            "in": "query",
+            "style": "form",
+            "explode": false,
+            "allowReserved": false
+          },
+          {
+            "wireName": "search_type",
+            "inputName": "searchType",
+            "in": "query",
+            "style": "form",
+            "explode": false,
+            "allowReserved": false
+          },
+          {
+            "wireName": "status",
+            "inputName": "status",
+            "in": "query",
+            "style": "form",
+            "explode": false,
+            "allowReserved": false
+          },
+          {
+            "wireName": "target_type",
+            "inputName": "targetType",
+            "in": "query",
+            "style": "form",
+            "explode": false,
+            "allowReserved": false
+          },
+          {
+            "wireName": "change_detection_type",
+            "inputName": "changeDetectionType",
+            "in": "query",
+            "style": "form",
+            "explode": false,
+            "allowReserved": false
+          },
+          {
+            "wireName": "tags",
+            "inputName": "tags",
+            "in": "query",
+            "style": "form",
+            "explode": false,
+            "allowReserved": false
+          },
+          {
+            "wireName": "tag",
+            "inputName": "tag",
+            "in": "query",
+            "style": "form",
+            "explode": false,
+            "allowReserved": false
+          },
+          {
+            "wireName": "limit",
+            "inputName": "limit",
+            "in": "query",
+            "style": "form",
+            "explode": false,
+            "allowReserved": false
+          },
+          {
+            "wireName": "cursor",
+            "inputName": "cursor",
+            "in": "query",
+            "style": "form",
+            "explode": false,
+            "allowReserved": false
+          }
+        ],
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "web.scrapeMarkdown": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 300000,
+      "maxInputBytes": 262144,
+      "maxResponseBytes": 10485760,
+      "title": "Scrape Webpage to Markdown",
+      "description": "Render one public URL and return Markdown via POST /v1/web/scrape with formats.markdown fixed to true. This operation does not request HTML, bytes, screenshots, or other formats.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "Public HTTP or HTTPS URL to render.",
+            "minLength": 1,
+            "maxLength": 2048
+          },
+          "markdownParams": {
+            "type": "object",
+            "additionalProperties": false,
+            "description": "Markdown conversion options.",
+            "properties": {
+              "includeLinks": {
+                "type": "boolean",
+                "description": "Preserve hyperlinks in the Markdown."
+              },
+              "includeImages": {
+                "type": "boolean",
+                "description": "Include image references in the Markdown."
+              },
+              "inlineImages": {
+                "type": "string",
+                "description": "How to represent inline images.",
+                "enum": [
+                  "placeholder",
+                  "preserve"
+                ]
+              }
+            }
+          },
+          "sharedParams": {
+            "type": "object",
+            "additionalProperties": false,
+            "description": "Browser and content filters shared by the scrape.",
+            "properties": {
+              "country": {
+                "type": "string",
+                "description": "Two-letter proxy country code, such as US.",
+                "minLength": 2,
+                "maxLength": 2
+              },
+              "waitFor": {
+                "type": "integer",
+                "description": "Milliseconds to wait after page load, from 0 through 30000.",
+                "minimum": 0,
+                "maximum": 30000
+              },
+              "settleAnimations": {
+                "type": "boolean",
+                "description": "Wait briefly for CSS animations to settle."
+              },
+              "mainContentOnly": {
+                "type": "boolean",
+                "description": "Omit headers, footers, sidebars, and navigation."
+              },
+              "includeSelectors": {
+                "type": "array",
+                "maxItems": 50,
+                "items": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 512
+                },
+                "description": "Keep only content matching these CSS selectors."
+              },
+              "excludeSelectors": {
+                "type": "array",
+                "maxItems": 50,
+                "items": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 512
+                },
+                "description": "Remove content matching these CSS selectors."
+              },
+              "includeFrames": {
+                "type": "boolean",
+                "description": "Include rendered iframe content."
+              }
+            }
+          },
+          "maxAgeMs": {
+            "type": "integer",
+            "description": "Maximum cached result age in milliseconds. 0 forces a fresh scrape.",
+            "minimum": 0,
+            "maximum": 2592000000
+          },
+          "zdr": {
+            "type": "string",
+            "description": "enabled requests zero data retention. The organization must have that feature turned on.",
+            "enum": [
+              "enabled",
+              "disabled"
+            ]
+          },
+          "timeoutOpts": {
+            "type": "object",
+            "additionalProperties": false,
+            "description": "Scrape deadline. milliseconds is required when this object is set.",
+            "required": [
+              "milliseconds"
+            ],
+            "properties": {
+              "milliseconds": {
+                "type": "integer",
+                "description": "Deadline in milliseconds, from 1 through 300000.",
+                "minimum": 1,
+                "maximum": 300000
+              },
+              "behavior": {
+                "type": "string",
+                "description": "fail rejects at the deadline. return-partial returns outputs that finished.",
+                "enum": [
+                  "fail",
+                  "return-partial"
+                ]
+              }
+            }
+          },
+          "tags": {
+            "type": "array",
+            "description": "Up to 20 usage tags, each 1-50 characters.",
+            "maxItems": 20,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 50
+            }
+          }
+        },
+        "required": [
+          "url"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "description": "Context.dev JSON object wrapped for the action result.",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "JSON object returned by Context.dev."
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/web/scrape",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "url": "{{url}}",
+          "formats": {
+            "markdown": true
+          },
+          "markdownParams": "{{markdownParams}}",
+          "sharedParams": "{{sharedParams}}",
+          "maxAgeMs": "{{maxAgeMs}}",
+          "zdr": "{{zdr}}",
+          "timeoutOpts": "{{timeoutOpts}}",
+          "tags": "{{tags}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "brand.search": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 262144,
+      "title": "Search Brands",
+      "description": "Prefix-search the brand index by company name or domain and return up to 10 matches via GET /v1/brand/search.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "Name or domain prefix to match, from 1 through 100 characters.",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "autocomplete": {
+            "type": "boolean",
+            "description": "True matches prefixes. False matches whole words."
+          },
+          "queryBy": {
+            "type": "array",
+            "description": "Fields to match: name, domain, or both.",
+            "maxItems": 2,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 50,
+              "enum": [
+                "name",
+                "domain"
+              ]
+            }
+          },
+          "typoTolerance": {
+            "type": "integer",
+            "description": "Maximum typos, from 0 through 2. 0 disables typo tolerance.",
+            "minimum": 0,
+            "maximum": 2
+          },
+          "tags": {
+            "type": "array",
+            "description": "Up to 20 usage tags, each 1-50 characters.",
+            "maxItems": 20,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 50
+            }
+          }
+        },
+        "required": [
+          "query"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "description": "Context.dev JSON object wrapped for the action result.",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "JSON object returned by Context.dev."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/brand/search",
+        "parameters": [
+          {
+            "wireName": "query",
+            "inputName": "query",
+            "in": "query",
+            "style": "form",
+            "explode": false,
+            "allowReserved": false
+          },
+          {
+            "wireName": "autocomplete",
+            "inputName": "autocomplete",
+            "in": "query",
+            "style": "form",
+            "explode": false,
+            "allowReserved": false
+          },
+          {
+            "wireName": "queryBy",
+            "inputName": "queryBy",
+            "in": "query",
+            "style": "form",
+            "explode": false,
+            "allowReserved": false
+          },
+          {
+            "wireName": "typoTolerance",
+            "inputName": "typoTolerance",
+            "in": "query",
+            "style": "form",
+            "explode": false,
+            "allowReserved": false
+          },
+          {
+            "wireName": "tags",
+            "inputName": "tags",
+            "in": "query",
+            "style": "form",
+            "explode": false,
+            "allowReserved": false
+          }
+        ],
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    }
+  }
+}

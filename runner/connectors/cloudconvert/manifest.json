@@ -1,0 +1,804 @@
+{
+  "key": "cloudconvert",
+  "name": "CloudConvert",
+  "version": "0.1.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "utility"
+  ],
+  "auth": {
+    "type": "api_key",
+    "scopes": [],
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "CloudConvert API key",
+          "required": true,
+          "secret": true
+        }
+      ]
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "api.cloudconvert.com"
+    ]
+  },
+  "models": [
+    "user",
+    "task",
+    "webhook",
+    "operation",
+    "format"
+  ],
+  "http": {
+    "baseUrl": "https://api.cloudconvert.com/v2",
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "Authorization",
+      "value": "Bearer {{apiKey}}"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "Retry-After",
+      "defaultRetryAfterSeconds": 60,
+      "messagePaths": [
+        "message",
+        "code",
+        "error"
+      ]
+    },
+    "headers": {
+      "Accept": "application/json"
+    }
+  },
+  "operations": {
+    "export.google-cloud-storage.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Create Export Google Cloud Storage Task",
+      "description": "Create one export/google-cloud-storage task with POST /export/google-cloud-storage. The JSON response is the task resource, not the exported file bytes.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "input",
+          "projectId",
+          "bucket",
+          "clientEmail",
+          "privateKey"
+        ],
+        "properties": {
+          "input": {
+            "description": "ID of the task whose output should be exported. An array exports more than one task.",
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              },
+              {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 50,
+                "items": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 256
+                }
+              }
+            ]
+          },
+          "projectId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "Google Cloud project ID, such as api-project-123."
+          },
+          "bucket": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 222,
+            "description": "Google Cloud Storage bucket name."
+          },
+          "clientEmail": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 320,
+            "description": "Service account client email."
+          },
+          "privateKey": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 16384,
+            "description": "PEM private key of the service account. Sent only as a JSON field to CloudConvert."
+          },
+          "file": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1024,
+            "description": "Object name, including path, to create in the bucket."
+          },
+          "filePrefix": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1024,
+            "description": "Prefix used instead of file when exporting multiple files."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "JSON task envelope returned by CloudConvert."
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/export/google-cloud-storage",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "input": "{{input}}",
+          "project_id": "{{projectId}}",
+          "bucket": "{{bucket}}",
+          "client_email": "{{clientEmail}}",
+          "private_key": "{{privateKey}}",
+          "file": "{{file}}",
+          "file_prefix": "{{filePrefix}}"
+        },
+        "success": [
+          200,
+          201
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "export.s3.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Create Export S3 Task",
+      "description": "Create one export/s3 task with POST /export/s3. endpoint is a JSON field CloudConvert uses for an S3-compatible API. AppCall does not request that URL. The response is the task resource, not the object bytes.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "input",
+          "bucket",
+          "region",
+          "accessKeyId",
+          "secretAccessKey"
+        ],
+        "properties": {
+          "input": {
+            "description": "ID of the task whose output should be exported. An array exports more than one task.",
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              },
+              {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 50,
+                "items": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 256
+                }
+              }
+            ]
+          },
+          "bucket": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255,
+            "description": "Amazon S3 bucket where the file is stored."
+          },
+          "region": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "description": "S3 region, such as us-west-2 or eu-central-1."
+          },
+          "endpoint": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2048,
+            "description": "Optional custom S3 API endpoint forwarded to CloudConvert. It is not an AppCall request URL."
+          },
+          "key": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1024,
+            "description": "S3 object key. Printf-style placeholders are allowed when exporting multiple files."
+          },
+          "keyPrefix": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1024,
+            "description": "Prefix used instead of key when exporting multiple files."
+          },
+          "accessKeyId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "description": "AWS access key ID with s3:PutObject permission."
+          },
+          "secretAccessKey": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "description": "AWS secret access key."
+          },
+          "sessionToken": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096,
+            "description": "AWS session token for temporary credentials."
+          },
+          "acl": {
+            "type": "string",
+            "enum": [
+              "private",
+              "public-read",
+              "public-read-write",
+              "authenticated-read",
+              "bucket-owner-read",
+              "bucket-owner-full-control"
+            ],
+            "description": "S3 ACL. CloudConvert defaults this to private when omitted."
+          },
+          "cacheControl": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "description": "Cache-Control header stored on the object, such as max-age=172800."
+          },
+          "contentDisposition": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "description": "Content-Disposition header, such as attachment or inline."
+          },
+          "contentType": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "description": "Content-Type header. CloudConvert detects it when omitted."
+          },
+          "metadata": {
+            "type": "object",
+            "maxProperties": 32,
+            "additionalProperties": {
+              "type": "string",
+              "maxLength": 1024
+            },
+            "description": "Additional S3 metadata key-value pairs."
+          },
+          "serverSideEncryption": {
+            "type": "string",
+            "enum": [
+              "AES256",
+              "aws:kms"
+            ],
+            "description": "S3 server-side encryption algorithm."
+          },
+          "tagging": {
+            "type": "object",
+            "maxProperties": 32,
+            "additionalProperties": {
+              "type": "string",
+              "maxLength": 256
+            },
+            "description": "S3 object tags."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "JSON task envelope returned by CloudConvert."
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/export/s3",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "input": "{{input}}",
+          "bucket": "{{bucket}}",
+          "region": "{{region}}",
+          "endpoint": "{{endpoint}}",
+          "key": "{{key}}",
+          "key_prefix": "{{keyPrefix}}",
+          "access_key_id": "{{accessKeyId}}",
+          "secret_access_key": "{{secretAccessKey}}",
+          "session_token": "{{sessionToken}}",
+          "acl": "{{acl}}",
+          "cache_control": "{{cacheControl}}",
+          "content_disposition": "{{contentDisposition}}",
+          "content_type": "{{contentType}}",
+          "metadata": "{{metadata}}",
+          "server_side_encryption": "{{serverSideEncryption}}",
+          "tagging": "{{tagging}}"
+        },
+        "success": [
+          200,
+          201
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "webhooks.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 1048576,
+      "title": "Create Webhook",
+      "description": "Create a webhook with POST /webhooks. url is the notification target CloudConvert will call. It is a JSON body field, not an AppCall request URL. One event is sent as the required events array.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "url",
+          "event"
+        ],
+        "properties": {
+          "url": {
+            "type": "string",
+            "minLength": 12,
+            "maxLength": 2048,
+            "description": "HTTPS URL where CloudConvert sends job notifications. AppCall does not request this URL."
+          },
+          "event": {
+            "type": "string",
+            "enum": [
+              "job.created",
+              "job.finished",
+              "job.failed"
+            ],
+            "description": "Job event to subscribe to. Sent as a one-element events array."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "JSON webhook envelope returned by CloudConvert, including the generated signing secret."
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/webhooks",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "url": "{{url}}",
+          "events": [
+            "{{event}}"
+          ]
+        },
+        "success": [
+          200,
+          201
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "operations.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 26214400,
+      "title": "List Operations",
+      "description": "List CloudConvert operations, engines, and options with GET /operations. include is a comma-separated list such as options or options,engine_versions.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "filterOperation": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "description": "Operation name, such as convert, optimize, or capture-website."
+          },
+          "filterInputFormat": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "description": "Only operations that accept this input format."
+          },
+          "filterOutputFormat": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "description": "Only operations that produce this output format."
+          },
+          "filterEngine": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "description": "Engine name, such as imagemagick or office."
+          },
+          "filterEngineVersion": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "description": "Engine version."
+          },
+          "alternatives": {
+            "type": "boolean",
+            "description": "When true, include alternative engines. CloudConvert defaults this to false."
+          },
+          "include": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "description": "Comma-separated extras. Official values include options, options.details, and engine_versions."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "JSON envelope whose data array lists operations."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/operations",
+        "query": {
+          "filter[operation]": "{{filterOperation}}",
+          "filter[input_format]": "{{filterInputFormat}}",
+          "filter[output_format]": "{{filterOutputFormat}}",
+          "filter[engine]": "{{filterEngine}}",
+          "filter[engine_version]": "{{filterEngineVersion}}",
+          "alternatives": "{{alternatives}}",
+          "include": "{{include}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "formats.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 26214400,
+      "title": "List Supported Formats",
+      "description": "List supported conversion formats with GET /convert/formats. include values are sent as one comma-separated query parameter.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "filterInputFormat": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "description": "Only conversions that accept this input format."
+          },
+          "filterOutputFormat": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "description": "Only conversions that produce this output format."
+          },
+          "filterEngine": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "description": "Engine name, such as office or imagemagick."
+          },
+          "filterEngineVersion": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "description": "Engine version."
+          },
+          "alternatives": {
+            "type": "boolean",
+            "description": "When true, include alternative conversion engines."
+          },
+          "include": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 3,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "enum": [
+                "options",
+                "options.details",
+                "engine_versions"
+              ]
+            },
+            "description": "Extra conversion data. Sent joined by commas."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "JSON envelope whose data array lists conversion formats."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/convert/formats",
+        "query": {
+          "filter[input_format]": "{{filterInputFormat}}",
+          "filter[output_format]": "{{filterOutputFormat}}",
+          "filter[engine]": "{{filterEngine}}",
+          "filter[engine_version]": "{{filterEngineVersion}}",
+          "alternatives": "{{alternatives}}"
+        },
+        "parameters": [
+          {
+            "wireName": "include",
+            "inputName": "include",
+            "in": "query",
+            "style": "form",
+            "explode": false,
+            "allowReserved": false
+          }
+        ],
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "tasks.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 5242880,
+      "title": "List Tasks",
+      "description": "List tasks with GET /tasks. Finished tasks may include file URLs inside the JSON result. Those URLs are not downloaded.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "jobId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "description": "Only tasks that belong to this job ID."
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "waiting",
+              "processing",
+              "finished",
+              "error"
+            ],
+            "description": "Task status filter."
+          },
+          "operation": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "description": "Operation name, such as convert, import/s3, or export/url."
+          },
+          "include": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "description": "Comma-separated extras. The list endpoint documents retries and depends_on_tasks."
+          },
+          "perPage": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000,
+            "description": "Page size. CloudConvert defaults to 100 and allows at most 1000."
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100000,
+            "description": "Page number to return."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "JSON envelope of tasks, including links and meta when CloudConvert sends them."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/tasks",
+        "query": {
+          "filter[job_id]": "{{jobId}}",
+          "filter[status]": "{{status}}",
+          "filter[operation]": "{{operation}}",
+          "include": "{{include}}",
+          "per_page": "{{perPage}}",
+          "page": "{{page}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "webhooks.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 5242880,
+      "title": "List Webhooks",
+      "description": "List webhooks with GET /users/me/webhooks. filterUrl is a query filter on the fixed CloudConvert host, not a request target.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "filterUrl": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2048,
+            "description": "Only webhooks registered with this notification URL."
+          },
+          "perPage": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000,
+            "description": "Page size. CloudConvert defaults to 100 and allows at most 1000."
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100000,
+            "description": "Page number to return."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "JSON envelope of webhooks."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/users/me/webhooks",
+        "query": {
+          "filter[url]": "{{filterUrl}}",
+          "per_page": "{{perPage}}",
+          "page": "{{page}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "users.show": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 262144,
+      "title": "Show User",
+      "description": "Show the authenticated user with GET /users/me. Requires the user.read scope. Returns id, username, email, credits, and created_at.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "JSON user envelope returned by CloudConvert."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/users/me",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    }
+  }
+}

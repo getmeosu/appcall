@@ -1,0 +1,612 @@
+{
+  "key": "dynamic-mockups",
+  "name": "Dynamic Mockups",
+  "version": "0.1.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "productivity",
+    "utility"
+  ],
+  "auth": {
+    "type": "api_key",
+    "scopes": [],
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "Dynamic Mockups API key",
+          "required": true,
+          "secret": true
+        }
+      ]
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "app.dynamicmockups.com"
+    ]
+  },
+  "models": [
+    "mockup",
+    "product",
+    "motion"
+  ],
+  "http": {
+    "baseUrl": "https://app.dynamicmockups.com/api/v1",
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "x-api-key",
+      "value": "{{apiKey}}"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "Retry-After",
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "message",
+        "error"
+      ]
+    },
+    "headers": {
+      "Accept": "application/json"
+    }
+  },
+  "operations": {
+    "mockanything.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 60000,
+      "maxInputBytes": 131072,
+      "maxResponseBytes": 5242880,
+      "title": "Create MockAnything Mockup",
+      "description": "Create one MockAnything mockup with POST /mock-anything/create. Send exactly one JSON source, prompt or image_url. Image file bytes are not accepted. The call returns a task_id and does not poll status.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255,
+            "description": "Optional saved mockup name."
+          },
+          "model": {
+            "type": "string",
+            "enum": [
+              "nano_banana_2",
+              "nano_banana_lite",
+              "seedream_4_0",
+              "seedream_4_5",
+              "gpt_image_2"
+            ],
+            "description": "Prompt-generation model. Required by the provider when style is set."
+          },
+          "style": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "description": "Style id from GET /mock-anything/styles. Applies only with prompt and model."
+          },
+          "prompt": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 8000,
+            "description": "Text prompt. Provide exactly one of prompt or image_url."
+          },
+          "image_url": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000,
+            "description": "Public image URL used as the mockup image. Provide exactly one of prompt or image_url."
+          },
+          "enhance_prompt": {
+            "type": "boolean",
+            "description": "Whether the provider should enhance the prompt before generation."
+          },
+          "product": {
+            "type": "object",
+            "additionalProperties": false,
+            "description": "Optional POD product context. Only the prompt flow uses it.",
+            "properties": {
+              "uuid": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 64,
+                "description": "POD product UUID from Search MockAnything Products."
+              },
+              "selected_size": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 50,
+                "description": "Exact product size label."
+              },
+              "color_name": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 255,
+                "description": "Exact product color name."
+              },
+              "decorations": {
+                "type": "array",
+                "maxItems": 20,
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "location": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 128
+                    },
+                    "position_id": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 128
+                    },
+                    "source": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 128
+                    },
+                    "decoration_method": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 64
+                    },
+                    "imprint_size": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "width": {
+                          "type": "number",
+                          "minimum": 0
+                        },
+                        "height": {
+                          "type": "number",
+                          "minimum": 0
+                        },
+                        "unit": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 16
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "collections": {
+            "type": "array",
+            "maxItems": 20,
+            "description": "Collections to attach. Each item should contain exactly one of uuid or name.",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "minProperties": 1,
+              "maxProperties": 1,
+              "properties": {
+                "uuid": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64
+                },
+                "name": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 255
+                }
+              }
+            }
+          },
+          "catalog_uuid": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "description": "Catalog UUID in which to save the mockup."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "JSON object returned by POST /mock-anything/create."
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/mock-anything/create",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "prompt": "{{prompt}}",
+          "image_url": "{{image_url}}",
+          "enhance_prompt": "{{enhance_prompt}}",
+          "product": "{{product}}",
+          "model": "{{model}}",
+          "style": "{{style}}",
+          "name": "{{name}}",
+          "collections": "{{collections}}",
+          "catalog_uuid": "{{catalog_uuid}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "mockanything.product.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "title": "Get MockAnything Product",
+      "description": "Get one POD product's sizes, colors, and decoration locations with GET /mock-anything/products/{product_uuid}.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "product_uuid"
+        ],
+        "properties": {
+          "product_uuid": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "description": "Product UUID returned by Search MockAnything Products."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "JSON object returned by GET /mock-anything/products/{uuid}."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/mock-anything/products/{{product_uuid}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "mockanything.status.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 5242880,
+      "title": "Get MockAnything Status",
+      "description": "Check one MockAnything task once with GET /mock-anything/status/{task_id}. A completed task may include an image URL. This call does not poll.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "task_id"
+        ],
+        "properties": {
+          "task_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "description": "Task UUID returned by Create MockAnything Mockup."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "JSON object returned by GET /mock-anything/status/{taskId}."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/mock-anything/status/{{task_id}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "motion.status.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "title": "Get Motion Mockup Status",
+      "description": "Check one MotionMockups job once with GET /motion-mockups/status/{request_id}. A completed job returns MP4 metadata including a video URL, not video bytes. This call does not poll.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "request_id"
+        ],
+        "properties": {
+          "request_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "description": "Request ID returned by Submit Motion Mockup."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "JSON object returned by GET /motion-mockups/status/{requestId}."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/motion-mockups/status/{{request_id}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "mockups.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 8192,
+      "maxResponseBytes": 5242880,
+      "title": "List Mockups",
+      "description": "List renderable mockup templates with GET /mockups. Optional filters are catalog_uuid, collection_uuid, include_all_catalogs, and name. Thumbnail fields are URLs, not image bytes.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255,
+            "description": "Optional mockup name filter."
+          },
+          "catalog_uuid": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "description": "Only return mockups in this catalog UUID."
+          },
+          "collection_uuid": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "description": "Only return mockups in this collection UUID."
+          },
+          "include_all_catalogs": {
+            "type": "boolean",
+            "description": "When true, search every accessible catalog instead of the default catalog."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "JSON object returned by GET /mockups. The provider data field is an array of mockups."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/mockups",
+        "query": {
+          "catalog_uuid": "{{catalog_uuid}}",
+          "collection_uuid": "{{collection_uuid}}",
+          "include_all_catalogs": "{{include_all_catalogs}}",
+          "name": "{{name}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "mockanything.products.search": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "title": "Search MockAnything Products",
+      "description": "Fuzzy-search POD products with GET /mock-anything/products. The provider may return up to about 50 matches and does not paginate this route.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "query"
+        ],
+        "properties": {
+          "query": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "Non-empty fuzzy search text, preferably a brand, style code, or product name."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "JSON object returned by GET /mock-anything/products. The provider data field is an array of products."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/mock-anything/products",
+        "query": {
+          "query": "{{query}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "motion.submit": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 30000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 1048576,
+      "title": "Submit Motion Mockup",
+      "description": "Queue one image-to-video job with POST /motion-mockups/submit and return its request_id. start_image_url is a public URL in the JSON body, not an uploaded file. This call does not poll status.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "start_image_url"
+        ],
+        "properties": {
+          "start_image_url": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000,
+            "description": "Publicly reachable source-image URL to animate."
+          },
+          "model": {
+            "type": "string",
+            "enum": [
+              "kling_v2.6",
+              "kling_v3_pro"
+            ],
+            "description": "MotionMockups model. Omit to use the provider default."
+          },
+          "prompt": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2500,
+            "description": "Desired-motion prompt. Omit to let the provider generate one from the image."
+          },
+          "negative_prompt": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000,
+            "description": "Content or motion to avoid."
+          },
+          "duration": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 60,
+            "description": "Video duration in seconds. Allowed values depend on the model."
+          },
+          "aspect_ratio": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 16,
+            "description": "Aspect ratio supported by the selected model."
+          },
+          "generate_audio": {
+            "type": "boolean",
+            "description": "Whether to generate audio."
+          },
+          "skip_discovery": {
+            "type": "boolean",
+            "description": "When true and prompt is omitted, skip image auto-prompting."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "JSON object returned by POST /motion-mockups/submit."
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/motion-mockups/submit",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "start_image_url": "{{start_image_url}}",
+          "model": "{{model}}",
+          "prompt": "{{prompt}}",
+          "negative_prompt": "{{negative_prompt}}",
+          "duration": "{{duration}}",
+          "aspect_ratio": "{{aspect_ratio}}",
+          "generate_audio": "{{generate_audio}}",
+          "skip_discovery": "{{skip_discovery}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    }
+  }
+}

@@ -1,0 +1,1446 @@
+{
+  "key": "coinranking",
+  "name": "Coinranking",
+  "version": "0.1.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "utility"
+  ],
+  "auth": {
+    "type": "api_key",
+    "scopes": [],
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "Coinranking API key",
+          "required": true,
+          "secret": true
+        }
+      ]
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "api.coinranking.com"
+    ]
+  },
+  "models": [
+    "coin",
+    "reference-currency",
+    "tag",
+    "stats",
+    "search"
+  ],
+  "http": {
+    "baseUrl": "https://api.coinranking.com/v2",
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "x-access-token",
+      "value": "{{apiKey}}"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "Retry-After",
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "message",
+        "type"
+      ]
+    },
+    "headers": {
+      "Accept": "application/json"
+    }
+  },
+  "operations": {
+    "coins.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 5242880,
+      "title": "Get Coin Details",
+      "description": "Retrieve one coin from Coinranking. GET /v2/coin/{uuid} returns price, market cap, supply, links, sparkline, and description as JSON.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "uuid": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "description": "Coinranking coin UUID. Example: Qwsogvtv82FCd for Bitcoin."
+          },
+          "timePeriod": {
+            "type": "string",
+            "enum": [
+              "1h",
+              "3h",
+              "12h",
+              "24h",
+              "7d",
+              "30d",
+              "3m",
+              "1y",
+              "3y",
+              "5y"
+            ],
+            "description": "Window for change and sparkline. Official values: 1h, 3h, 12h, 24h, 7d, 30d, 3m, 1y, 3y, 5y."
+          },
+          "referenceCurrencyUuid": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "description": "UUID of the reference currency. Defaults to US Dollar (yhjMzLPhuIDl) when omitted."
+          }
+        },
+        "required": [
+          "uuid"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "status",
+          "data"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "description": "Coinranking status. success on a 200 response."
+          },
+          "data": {
+            "type": "object",
+            "description": "Coinranking data object. Nested lists stay inside this object so outputSchema.type remains object."
+          },
+          "pagination": {
+            "type": "object",
+            "description": "Cursor pagination when the endpoint returns it."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/coin/{{uuid}}",
+        "success": [
+          200
+        ],
+        "result": {
+          "status": "{{response.status}}",
+          "data": "{{response.data}}",
+          "pagination": "{{response.pagination}}"
+        },
+        "query": {
+          "timePeriod": "{{timePeriod}}",
+          "referenceCurrencyUuid": "{{referenceCurrencyUuid}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "coins.fiat-prices": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 5242880,
+      "title": "Get Coin Fiat Prices",
+      "description": "Retrieve one coin's price in every fiat reference currency. GET /v2/coin/{uuid}/fiat-prices returns a JSON prices list. Coinranking requires a Professional plan for this route.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "uuid": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "description": "Coinranking coin UUID. Example: Qwsogvtv82FCd for Bitcoin."
+          }
+        },
+        "required": [
+          "uuid"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "status",
+          "data"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "description": "Coinranking status. success on a 200 response."
+          },
+          "data": {
+            "type": "object",
+            "description": "Coinranking data object. Nested lists stay inside this object so outputSchema.type remains object."
+          },
+          "pagination": {
+            "type": "object",
+            "description": "Cursor pagination when the endpoint returns it."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/coin/{{uuid}}/fiat-prices",
+        "success": [
+          200
+        ],
+        "result": {
+          "status": "{{response.status}}",
+          "data": "{{response.data}}",
+          "pagination": "{{response.pagination}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "coins.history": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 10485760,
+      "title": "Get Coin History",
+      "description": "Retrieve historical prices for one coin. Composio names the UUID id. The current public history route is GET /v2/coin/{id}/price-history, which returns a JSON history list. There is no separate documented /history path.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "description": "Coin UUID. Composio calls this id. Example: Qwsogvtv82FCd for Bitcoin."
+          },
+          "timePeriod": {
+            "type": "string",
+            "enum": [
+              "24h",
+              "7d",
+              "30d",
+              "1y",
+              "5y"
+            ],
+            "description": "History window accepted by this tool: 24h, 7d, 30d, 1y, or 5y."
+          },
+          "referenceCurrencyUuid": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "description": "UUID of the reference currency. Defaults to US Dollar (yhjMzLPhuIDl) when omitted."
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "status",
+          "data"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "description": "Coinranking status. success on a 200 response."
+          },
+          "data": {
+            "type": "object",
+            "description": "Coinranking data object. Nested lists stay inside this object so outputSchema.type remains object."
+          },
+          "pagination": {
+            "type": "object",
+            "description": "Cursor pagination when the endpoint returns it."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/coin/{{id}}/price-history",
+        "success": [
+          200
+        ],
+        "result": {
+          "status": "{{response.status}}",
+          "data": "{{response.data}}",
+          "pagination": "{{response.pagination}}"
+        },
+        "query": {
+          "timePeriod": "{{timePeriod}}",
+          "referenceCurrencyUuid": "{{referenceCurrencyUuid}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "coins.price": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 5242880,
+      "title": "Get Coin Price",
+      "description": "Retrieve the current price or the nearest historical price for one coin. GET /v2/coin/{uuid}/price returns JSON price and timestamp. timestamp is Unix seconds.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "uuid": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "description": "Coinranking coin UUID. Example: Qwsogvtv82FCd for Bitcoin."
+          },
+          "timestamp": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9999999999,
+            "description": "Unix timestamp in seconds. Omit it for the latest price."
+          },
+          "referenceCurrencyUuid": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "description": "UUID of the reference currency. Defaults to US Dollar (yhjMzLPhuIDl) when omitted."
+          }
+        },
+        "required": [
+          "uuid"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "status",
+          "data"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "description": "Coinranking status. success on a 200 response."
+          },
+          "data": {
+            "type": "object",
+            "description": "Coinranking data object. Nested lists stay inside this object so outputSchema.type remains object."
+          },
+          "pagination": {
+            "type": "object",
+            "description": "Cursor pagination when the endpoint returns it."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/coin/{{uuid}}/price",
+        "success": [
+          200
+        ],
+        "result": {
+          "status": "{{response.status}}",
+          "data": "{{response.data}}",
+          "pagination": "{{response.pagination}}"
+        },
+        "query": {
+          "timestamp": "{{timestamp}}",
+          "referenceCurrencyUuid": "{{referenceCurrencyUuid}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "coins.price-history": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 10485760,
+      "title": "Get Coin Price History",
+      "description": "Retrieve price history points for one coin. GET /v2/coin/{uuid}/price-history returns JSON change and history. Official timePeriod includes all on Startup and Professional plans.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "uuid": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "description": "Coinranking coin UUID. Example: Qwsogvtv82FCd for Bitcoin."
+          },
+          "timePeriod": {
+            "type": "string",
+            "enum": [
+              "1h",
+              "3h",
+              "12h",
+              "24h",
+              "7d",
+              "30d",
+              "3m",
+              "1y",
+              "3y",
+              "5y",
+              "all"
+            ],
+            "description": "History window. Official values include 1h, 3h, 12h, 24h, 7d, 30d, 3m, 1y, 3y, 5y, and all."
+          },
+          "referenceCurrencyUuid": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "description": "UUID of the reference currency. Defaults to US Dollar (yhjMzLPhuIDl) when omitted."
+          }
+        },
+        "required": [
+          "uuid"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "status",
+          "data"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "description": "Coinranking status. success on a 200 response."
+          },
+          "data": {
+            "type": "object",
+            "description": "Coinranking data object. Nested lists stay inside this object so outputSchema.type remains object."
+          },
+          "pagination": {
+            "type": "object",
+            "description": "Cursor pagination when the endpoint returns it."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/coin/{{uuid}}/price-history",
+        "success": [
+          200
+        ],
+        "result": {
+          "status": "{{response.status}}",
+          "data": "{{response.data}}",
+          "pagination": "{{response.pagination}}"
+        },
+        "query": {
+          "timePeriod": "{{timePeriod}}",
+          "referenceCurrencyUuid": "{{referenceCurrencyUuid}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "coins.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 10485760,
+      "title": "Get Coins",
+      "description": "List coins with price, market cap, rank, and sparkline. GET /v2/coins returns a JSON data object. Tier, tag, UUID, and symbol filters use repeated [] query keys. Coinranking does not document a search query on this route.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "referenceCurrencyUuid": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "description": "UUID of the reference currency. Defaults to US Dollar (yhjMzLPhuIDl) when omitted."
+          },
+          "timePeriod": {
+            "type": "string",
+            "enum": [
+              "1h",
+              "3h",
+              "12h",
+              "24h",
+              "7d",
+              "30d",
+              "3m",
+              "1y",
+              "3y",
+              "5y"
+            ],
+            "description": "Window for change and sparkline."
+          },
+          "orderBy": {
+            "type": "string",
+            "enum": [
+              "price",
+              "marketCap",
+              "24hVolume",
+              "change",
+              "listedAt"
+            ],
+            "description": "Sort field. Default on Coinranking is marketCap."
+          },
+          "orderDirection": {
+            "type": "string",
+            "enum": [
+              "asc",
+              "desc"
+            ],
+            "description": "Sort direction. Default is desc."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 5000,
+            "description": "Page size. Official range is 0-5000. Free plans cap lower."
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 5000,
+            "description": "Deprecated offset pagination. Maximum documented offset is 5000. Do not combine with cursor."
+          },
+          "cursor": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096,
+            "description": "Cursor from a previous nextCursor or previousCursor. Do not combine with offset."
+          },
+          "tiers": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 3,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "enum": [
+                "1",
+                "2",
+                "3"
+              ]
+            },
+            "description": "Tier filter sent as repeated tiers[] parameters. 1 is the highest quality tier."
+          },
+          "tags": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 50,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128,
+              "description": "Tag slug such as defi or stablecoin."
+            },
+            "description": "Tag filter sent as repeated tags[] parameters."
+          },
+          "uuids": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 100,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64,
+              "description": "Coin UUID."
+            },
+            "description": "UUID filter sent as repeated uuids[] parameters."
+          },
+          "symbols": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 50,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 32,
+              "description": "Ticker symbol such as BTC. Symbols are not unique."
+            },
+            "description": "Symbol filter sent as repeated symbols[] parameters."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "status",
+          "data"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "description": "Coinranking status. success on a 200 response."
+          },
+          "data": {
+            "type": "object",
+            "description": "Coinranking data object. Nested lists stay inside this object so outputSchema.type remains object."
+          },
+          "pagination": {
+            "type": "object",
+            "description": "Cursor pagination when the endpoint returns it."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/coins",
+        "success": [
+          200
+        ],
+        "result": {
+          "status": "{{response.status}}",
+          "data": "{{response.data}}",
+          "pagination": "{{response.pagination}}"
+        },
+        "query": {
+          "referenceCurrencyUuid": "{{referenceCurrencyUuid}}",
+          "timePeriod": "{{timePeriod}}",
+          "orderBy": "{{orderBy}}",
+          "orderDirection": "{{orderDirection}}",
+          "limit": "{{limit}}",
+          "offset": "{{offset}}",
+          "cursor": "{{cursor}}"
+        },
+        "parameters": [
+          {
+            "wireName": "tiers[]",
+            "inputName": "tiers",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "allowReserved": false
+          },
+          {
+            "wireName": "tags[]",
+            "inputName": "tags",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "allowReserved": false
+          },
+          {
+            "wireName": "uuids[]",
+            "inputName": "uuids",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "allowReserved": false
+          },
+          {
+            "wireName": "symbols[]",
+            "inputName": "symbols",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "allowReserved": false
+          }
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "coins.trading-volume-history": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 10485760,
+      "title": "Get Coin Trading Volume History",
+      "description": "Retrieve historical trading volume for one coin. GET /v2/coin/{uuid}/trading-volume-history returns a JSON history list. Coinranking requires a Professional plan for this route.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "uuid": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "description": "Coinranking coin UUID. Example: Qwsogvtv82FCd for Bitcoin."
+          },
+          "referenceCurrencyUuid": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "description": "UUID of the reference currency. Defaults to US Dollar (yhjMzLPhuIDl) when omitted."
+          },
+          "interval": {
+            "type": "string",
+            "enum": [
+              "hour",
+              "day",
+              "week",
+              "month"
+            ],
+            "description": "Aggregation interval. Default is day."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 5000,
+            "description": "Number of history entries. Official range is 1-5000."
+          }
+        },
+        "required": [
+          "uuid"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "status",
+          "data"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "description": "Coinranking status. success on a 200 response."
+          },
+          "data": {
+            "type": "object",
+            "description": "Coinranking data object. Nested lists stay inside this object so outputSchema.type remains object."
+          },
+          "pagination": {
+            "type": "object",
+            "description": "Cursor pagination when the endpoint returns it."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/coin/{{uuid}}/trading-volume-history",
+        "success": [
+          200
+        ],
+        "result": {
+          "status": "{{response.status}}",
+          "data": "{{response.data}}",
+          "pagination": "{{response.pagination}}"
+        },
+        "query": {
+          "referenceCurrencyUuid": "{{referenceCurrencyUuid}}",
+          "interval": "{{interval}}",
+          "limit": "{{limit}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "reference-currencies.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 32768,
+      "maxResponseBytes": 5242880,
+      "title": "Get Reference Currencies",
+      "description": "List reference currencies used to price coins. GET /v2/reference-currencies returns JSON currencies plus pagination. types is sent as repeated types[] parameters.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 5000,
+            "description": "Page size. Official range is 0-5000. Default is 20."
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 5000,
+            "description": "Offset pagination. Do not combine with cursor."
+          },
+          "cursor": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096,
+            "description": "Cursor from a previous page. Do not combine with offset."
+          },
+          "search": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "Match currency names or symbols, for example USD."
+          },
+          "types": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 6,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "enum": [
+                "coin",
+                "fiat",
+                "denominator",
+                "commodities",
+                "indices",
+                "stocks"
+              ]
+            },
+            "description": "Currency types sent as repeated types[] parameters."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "status",
+          "data"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "description": "Coinranking status. success on a 200 response."
+          },
+          "data": {
+            "type": "object",
+            "description": "Coinranking data object. Nested lists stay inside this object so outputSchema.type remains object."
+          },
+          "pagination": {
+            "type": "object",
+            "description": "Cursor pagination when the endpoint returns it."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/reference-currencies",
+        "success": [
+          200
+        ],
+        "result": {
+          "status": "{{response.status}}",
+          "data": "{{response.data}}",
+          "pagination": "{{response.pagination}}"
+        },
+        "query": {
+          "limit": "{{limit}}",
+          "offset": "{{offset}}",
+          "cursor": "{{cursor}}",
+          "search": "{{search}}"
+        },
+        "parameters": [
+          {
+            "wireName": "types[]",
+            "inputName": "types",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "allowReserved": false
+          }
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "stats.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 5242880,
+      "title": "Get Global Crypto Market Stats",
+      "description": "Retrieve global cryptocurrency market statistics. GET /v2/stats returns a JSON data object. referenceCurrencyUuid is the documented optional pricing currency.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "referenceCurrencyUuid": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "description": "UUID of the reference currency. Defaults to US Dollar (yhjMzLPhuIDl) when omitted."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "status",
+          "data"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "description": "Coinranking status. success on a 200 response."
+          },
+          "data": {
+            "type": "object",
+            "description": "Coinranking data object. Nested lists stay inside this object so outputSchema.type remains object."
+          },
+          "pagination": {
+            "type": "object",
+            "description": "Cursor pagination when the endpoint returns it."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/stats",
+        "success": [
+          200
+        ],
+        "result": {
+          "status": "{{response.status}}",
+          "data": "{{response.data}}",
+          "pagination": "{{response.pagination}}"
+        },
+        "query": {
+          "referenceCurrencyUuid": "{{referenceCurrencyUuid}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "stats.coins": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get Stats for Selected Coins",
+      "description": "Retrieve aggregate statistics for a selection of coins. GET /v2/stats/coins returns a JSON stats object. uuids is sent as repeated uuids[] parameters. A tag filter takes precedence over uuids.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "uuids": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 100,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64,
+              "description": "Coin UUID to include."
+            },
+            "description": "Coin UUIDs sent as repeated uuids[] parameters."
+          },
+          "timePeriod": {
+            "type": "string",
+            "enum": [
+              "1h",
+              "3h",
+              "12h",
+              "24h",
+              "7d",
+              "30d",
+              "3m",
+              "1y",
+              "3y",
+              "5y"
+            ],
+            "description": "Window for change metrics."
+          },
+          "referenceCurrencyUuid": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "description": "UUID of the reference currency. Defaults to US Dollar (yhjMzLPhuIDl) when omitted."
+          },
+          "tag": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "description": "Tag slug. When set, Coinranking applies it instead of uuids."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "status",
+          "data"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "description": "Coinranking status. success on a 200 response."
+          },
+          "data": {
+            "type": "object",
+            "description": "Coinranking data object. Nested lists stay inside this object so outputSchema.type remains object."
+          },
+          "pagination": {
+            "type": "object",
+            "description": "Cursor pagination when the endpoint returns it."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/stats/coins",
+        "success": [
+          200
+        ],
+        "result": {
+          "status": "{{response.status}}",
+          "data": "{{response.data}}",
+          "pagination": "{{response.pagination}}"
+        },
+        "query": {
+          "timePeriod": "{{timePeriod}}",
+          "referenceCurrencyUuid": "{{referenceCurrencyUuid}}",
+          "tag": "{{tag}}"
+        },
+        "parameters": [
+          {
+            "wireName": "uuids[]",
+            "inputName": "uuids",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "allowReserved": false
+          }
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "tags.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 5242880,
+      "title": "Get Tag Details",
+      "description": "Retrieve one cryptocurrency tag. GET /v2/tag/{slug} returns a JSON tag object with market metrics.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "slug": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "description": "Tag slug such as defi, nft, or stablecoin."
+          },
+          "timePeriod": {
+            "type": "string",
+            "enum": [
+              "1h",
+              "3h",
+              "12h",
+              "24h",
+              "7d",
+              "30d",
+              "3m",
+              "1y",
+              "3y",
+              "5y"
+            ],
+            "description": "Window for change metrics."
+          },
+          "referenceCurrencyUuid": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "description": "UUID of the reference currency. Defaults to US Dollar (yhjMzLPhuIDl) when omitted."
+          }
+        },
+        "required": [
+          "slug"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "status",
+          "data"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "description": "Coinranking status. success on a 200 response."
+          },
+          "data": {
+            "type": "object",
+            "description": "Coinranking data object. Nested lists stay inside this object so outputSchema.type remains object."
+          },
+          "pagination": {
+            "type": "object",
+            "description": "Cursor pagination when the endpoint returns it."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/tag/{{slug}}",
+        "success": [
+          200
+        ],
+        "result": {
+          "status": "{{response.status}}",
+          "data": "{{response.data}}",
+          "pagination": "{{response.pagination}}"
+        },
+        "query": {
+          "timePeriod": "{{timePeriod}}",
+          "referenceCurrencyUuid": "{{referenceCurrencyUuid}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "tags.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 5242880,
+      "title": "Get Tags",
+      "description": "List cryptocurrency tags. GET /v2/tags returns a JSON tags list and pagination. Filters are optional; omitting them returns the default page.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "referenceCurrencyUuid": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "description": "UUID of the reference currency. Defaults to US Dollar (yhjMzLPhuIDl) when omitted."
+          },
+          "timePeriod": {
+            "type": "string",
+            "enum": [
+              "1h",
+              "3h",
+              "12h",
+              "24h",
+              "7d",
+              "30d",
+              "3m",
+              "1y",
+              "3y",
+              "5y"
+            ],
+            "description": "Window for change metrics."
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "category",
+              "ecosystem"
+            ],
+            "description": "Limit the list to categories or ecosystems."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 5000,
+            "description": "Page size. Official maximum is 5000. Default is 50."
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 5000,
+            "description": "Offset pagination. Do not combine with cursor."
+          },
+          "cursor": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096,
+            "description": "Cursor from a previous page. Do not combine with offset."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "status",
+          "data"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "description": "Coinranking status. success on a 200 response."
+          },
+          "data": {
+            "type": "object",
+            "description": "Coinranking data object. Nested lists stay inside this object so outputSchema.type remains object."
+          },
+          "pagination": {
+            "type": "object",
+            "description": "Cursor pagination when the endpoint returns it."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/tags",
+        "success": [
+          200
+        ],
+        "result": {
+          "status": "{{response.status}}",
+          "data": "{{response.data}}",
+          "pagination": "{{response.pagination}}"
+        },
+        "query": {
+          "referenceCurrencyUuid": "{{referenceCurrencyUuid}}",
+          "timePeriod": "{{timePeriod}}",
+          "type": "{{type}}",
+          "limit": "{{limit}}",
+          "offset": "{{offset}}",
+          "cursor": "{{cursor}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "coins.trending": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 10485760,
+      "title": "Get Trending Coins",
+      "description": "List trending coins ranked by Coinranking engagement. GET /v2/coins/trending returns a JSON coins list. tiers is sent as repeated tiers[] parameters.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "referenceCurrencyUuid": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "description": "UUID of the reference currency. Defaults to US Dollar (yhjMzLPhuIDl) when omitted."
+          },
+          "timePeriod": {
+            "type": "string",
+            "enum": [
+              "1h",
+              "3h",
+              "12h",
+              "24h",
+              "7d",
+              "30d",
+              "3m",
+              "1y",
+              "3y",
+              "5y"
+            ],
+            "description": "Window for change and sparkline."
+          },
+          "tiers": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 3,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "enum": [
+                "1",
+                "2",
+                "3"
+              ]
+            },
+            "description": "Tier filter sent as repeated tiers[] parameters."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 5000,
+            "description": "Page size. Official range is 1-5000. Default is 50."
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 5000,
+            "description": "Number of trending coins to skip."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "status",
+          "data"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "description": "Coinranking status. success on a 200 response."
+          },
+          "data": {
+            "type": "object",
+            "description": "Coinranking data object. Nested lists stay inside this object so outputSchema.type remains object."
+          },
+          "pagination": {
+            "type": "object",
+            "description": "Cursor pagination when the endpoint returns it."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/coins/trending",
+        "success": [
+          200
+        ],
+        "result": {
+          "status": "{{response.status}}",
+          "data": "{{response.data}}",
+          "pagination": "{{response.pagination}}"
+        },
+        "query": {
+          "referenceCurrencyUuid": "{{referenceCurrencyUuid}}",
+          "timePeriod": "{{timePeriod}}",
+          "limit": "{{limit}}",
+          "offset": "{{offset}}"
+        },
+        "parameters": [
+          {
+            "wireName": "tiers[]",
+            "inputName": "tiers",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "allowReserved": false
+          }
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "search.suggestions": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 32768,
+      "maxResponseBytes": 5242880,
+      "title": "Search Suggestions",
+      "description": "Search coins, exchanges, markets, fiat, and categories by name, symbol, or contract address. GET /v2/search-suggestions returns one JSON object of suggestion lists. types is sent as repeated types[] parameters.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "query": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "description": "Search text. A name fragment, symbol, or full contract address."
+          },
+          "referenceCurrencyUuid": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "description": "UUID of the reference currency. Defaults to US Dollar (yhjMzLPhuIDl) when omitted."
+          },
+          "types": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 9,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "enum": [
+                "coins",
+                "exchanges",
+                "markets",
+                "fiat",
+                "categories",
+                "commodities",
+                "indices",
+                "stocks",
+                "all"
+              ]
+            },
+            "description": "Suggestion buckets sent as repeated types[] parameters. Default is all."
+          }
+        },
+        "required": [
+          "query"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "status",
+          "data"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "description": "Coinranking status. success on a 200 response."
+          },
+          "data": {
+            "type": "object",
+            "description": "Coinranking data object. Nested lists stay inside this object so outputSchema.type remains object."
+          },
+          "pagination": {
+            "type": "object",
+            "description": "Cursor pagination when the endpoint returns it."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/search-suggestions",
+        "success": [
+          200
+        ],
+        "result": {
+          "status": "{{response.status}}",
+          "data": "{{response.data}}",
+          "pagination": "{{response.pagination}}"
+        },
+        "query": {
+          "query": "{{query}}",
+          "referenceCurrencyUuid": "{{referenceCurrencyUuid}}"
+        },
+        "parameters": [
+          {
+            "wireName": "types[]",
+            "inputName": "types",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "allowReserved": false
+          }
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    }
+  }
+}

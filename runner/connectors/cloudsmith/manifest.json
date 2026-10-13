@@ -1,0 +1,772 @@
+{
+  "key": "cloudsmith",
+  "name": "Cloudsmith",
+  "version": "0.1.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "dev-tools"
+  ],
+  "auth": {
+    "type": "api_key",
+    "scopes": [],
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "Cloudsmith API key",
+          "required": true,
+          "secret": true
+        }
+      ]
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "api.cloudsmith.io"
+    ]
+  },
+  "models": [
+    "user",
+    "organization",
+    "repository",
+    "package",
+    "quota",
+    "rate-limit",
+    "audit-log",
+    "vulnerability"
+  ],
+  "http": {
+    "baseUrl": "https://api.cloudsmith.io",
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "X-Api-Key",
+      "value": "{{apiKey}}"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "X-RateLimit-Reset",
+      "retryAfterKind": "unix",
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "detail",
+        "message",
+        "error"
+      ]
+    },
+    "headers": {
+      "Accept": "application/json"
+    }
+  },
+  "operations": {
+    "healthcheck": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 5000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "title": "Healthcheck",
+      "description": "Validate the Cloudsmith API key by reading the authenticated user.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/user/self/",
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response}}"
+        }
+      }
+    },
+    "users.current": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "title": "Get Current User",
+      "description": "Return the identity authenticated by the Cloudsmith API key.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/user/self/",
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response}}"
+        }
+      }
+    },
+    "packages.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 8192,
+      "maxResponseBytes": 1048576,
+      "title": "Get Package",
+      "description": "Get metadata, status, checksums, licensing, and security state for one package. This returns JSON metadata, not package file bytes.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "owner": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255,
+            "description": "Namespace slug that owns the resource."
+          },
+          "repo": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255,
+            "description": "Repository slug."
+          },
+          "identifier": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255,
+            "description": "Stable identifier or slug. For packages, prefer identifier_perm."
+          },
+          "include_connected_repositories": {
+            "type": "boolean",
+            "description": "Also search active connected target repositories. Download URLs are rewritten for the requested repository."
+          }
+        },
+        "required": [
+          "owner",
+          "repo",
+          "identifier"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/packages/{{owner}}/{{repo}}/{{identifier}}/",
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response}}"
+        },
+        "query": {
+          "include_connected_repositories": "{{include_connected_repositories}}"
+        }
+      }
+    },
+    "quota.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 262144,
+      "title": "Get Quota",
+      "description": "Return current storage and bandwidth usage and allowances for a namespace. This does not infer a billing plan name.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "owner": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255,
+            "description": "Namespace slug that owns the resource."
+          }
+        },
+        "required": [
+          "owner"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/quota/{{owner}}/",
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response}}"
+        }
+      }
+    },
+    "rates.limits": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 262144,
+      "title": "Get Rate Limits",
+      "description": "Return Cloudsmith per-resource request limits, remaining counts, intervals, and reset times for the authenticated principal.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/rates/limits/",
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response}}"
+        }
+      }
+    },
+    "repositories.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 8192,
+      "maxResponseBytes": 1048576,
+      "title": "Get Repository",
+      "description": "Get configuration, visibility, usage, and capability details for one repository. Signing key material is removed from the result.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "owner": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255,
+            "description": "Namespace slug that owns the resource."
+          },
+          "identifier": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255,
+            "description": "Repository slug or stable identifier."
+          }
+        },
+        "required": [
+          "owner",
+          "identifier"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/repos/{{owner}}/{{identifier}}/",
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "redactResponseKeys": [
+        "ecdsa_keys",
+        "gpg_keys"
+      ]
+    },
+    "organizations.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 5242880,
+      "title": "List Organizations",
+      "description": "List Cloudsmith organizations associated with the authenticated principal.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "sort": {
+            "type": "string",
+            "enum": [
+              "name",
+              "-name",
+              "created_at",
+              "-created_at",
+              "slug",
+              "-slug"
+            ],
+            "description": "Sort by name, created_at, or slug. Prefix with - for descending order."
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Cloudsmith page number. Omit for the first page. The public API uses page, not a cursor URL."
+          },
+          "page_size": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 500,
+            "description": "Results per page. Cloudsmith documents a maximum of 500."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/orgs/",
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response}}"
+        },
+        "query": {
+          "sort": "{{sort}}",
+          "page": "{{page}}",
+          "page_size": "{{page_size}}"
+        }
+      }
+    },
+    "vulnerabilities.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 5242880,
+      "title": "List Repository Vulnerabilities",
+      "description": "List vulnerability scan summaries for packages in a repository.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "owner": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255,
+            "description": "Namespace slug that owns the resource."
+          },
+          "repo": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255,
+            "description": "Repository slug."
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Cloudsmith page number. Omit for the first page. The public API uses page, not a cursor URL."
+          },
+          "page_size": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 500,
+            "description": "Results per page. Cloudsmith documents a maximum of 500."
+          }
+        },
+        "required": [
+          "owner",
+          "repo"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/vulnerabilities/{{owner}}/{{repo}}/",
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response}}"
+        },
+        "query": {
+          "page": "{{page}}",
+          "page_size": "{{page_size}}"
+        }
+      }
+    },
+    "audit-log.search": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 5242880,
+      "title": "Search Audit Log",
+      "description": "Search paginated audit events for a namespace by event, actor, or timestamp text.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "owner": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255,
+            "description": "Namespace slug that owns the resource."
+          },
+          "query": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500,
+            "description": "Search term for audit event names, actors, or timestamps."
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Cloudsmith page number. Omit for the first page. The public API uses page, not a cursor URL."
+          },
+          "page_size": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 500,
+            "description": "Results per page. Cloudsmith documents a maximum of 500."
+          }
+        },
+        "required": [
+          "owner"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/audit-log/{{owner}}/",
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response}}"
+        },
+        "query": {
+          "query": "{{query}}",
+          "page": "{{page}}",
+          "page_size": "{{page_size}}"
+        }
+      }
+    },
+    "packages.search": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 5242880,
+      "title": "Search Packages",
+      "description": "Search packages in a repository by name, filename, version, distribution, architecture, format, or status. Results are JSON metadata, not package file bytes.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "owner": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255,
+            "description": "Namespace slug that owns the resource."
+          },
+          "repo": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255,
+            "description": "Repository slug."
+          },
+          "query": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500,
+            "description": "Search term or Cloudsmith package query."
+          },
+          "sort": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "Comma-separated package sort fields in order: name, format, version, status, size, downloads, or date. Prefix a field with - for descending order."
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Cloudsmith page number. Omit for the first page. The public API uses page, not a cursor URL."
+          },
+          "page_size": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 500,
+            "description": "Results per page. Cloudsmith documents a maximum of 500."
+          },
+          "include_connected_repositories": {
+            "type": "boolean",
+            "description": "Also search active connected target repositories. Download URLs are rewritten for the requested repository."
+          }
+        },
+        "required": [
+          "owner",
+          "repo"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/packages/{{owner}}/{{repo}}/",
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response}}"
+        },
+        "query": {
+          "query": "{{query}}",
+          "sort": "{{sort}}",
+          "page": "{{page}}",
+          "page_size": "{{page_size}}",
+          "include_connected_repositories": "{{include_connected_repositories}}"
+        }
+      }
+    },
+    "repositories.search": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 5242880,
+      "title": "Search Repositories",
+      "description": "Search repositories in a namespace and return identifiers and summary state. Signing key material is removed from the result.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "owner": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255,
+            "description": "Namespace slug that owns the resource."
+          },
+          "query": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500,
+            "description": "Search repository names or slugs. Cloudsmith also accepts broadcast_state and repository_type filters in this expression."
+          },
+          "sort": {
+            "type": "string",
+            "enum": [
+              "created_at",
+              "-created_at",
+              "downloads",
+              "-downloads",
+              "favorites",
+              "-favorites",
+              "name",
+              "-name",
+              "package_count",
+              "-package_count",
+              "size",
+              "-size"
+            ],
+            "description": "Sort by created_at, downloads, favorites, name, package_count, or size. Prefix with - for descending order."
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Cloudsmith page number. Omit for the first page. The public API uses page, not a cursor URL."
+          },
+          "page_size": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 500,
+            "description": "Results per page. Cloudsmith documents a maximum of 500."
+          }
+        },
+        "required": [
+          "owner"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/repos/{{owner}}/",
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response}}"
+        },
+        "query": {
+          "query": "{{query}}",
+          "sort": "{{sort}}",
+          "page": "{{page}}",
+          "page_size": "{{page_size}}"
+        }
+      },
+      "redactResponseKeys": [
+        "ecdsa_keys",
+        "gpg_keys"
+      ]
+    }
+  }
+}

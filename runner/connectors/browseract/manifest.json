@@ -1,0 +1,660 @@
+{
+  "key": "browseract",
+  "name": "BrowserAct",
+  "version": "0.1.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "utility",
+    "productivity"
+  ],
+  "auth": {
+    "type": "api_key",
+    "scopes": [],
+    "setup": {
+      "mode": "api_key",
+      "docsUrl": "https://docs.browseract.com/integrations/api-keys",
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "BrowserAct API key",
+          "required": true,
+          "secret": true
+        }
+      ]
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "api.browseract.com"
+    ]
+  },
+  "models": [
+    "task",
+    "bot",
+    "template",
+    "region"
+  ],
+  "http": {
+    "baseUrl": "https://api.browseract.com",
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "Authorization",
+      "value": "Bearer {{apiKey}}"
+    },
+    "errors": {
+      "messagePaths": [
+        "msg",
+        "message",
+        "error"
+      ]
+    },
+    "headers": {
+      "Accept": "application/json"
+    }
+  },
+  "operations": {
+    "tasks.cancel": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 8192,
+      "maxResponseBytes": 65536,
+      "title": "Cancel Task",
+      "description": "Cancel a running or paused BrowserAct task. POST /v3/bots/runs/{task_id}/cancel returns the JSON task status. Optional businessCode is the documented biz_code query parameter.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "taskId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Task ID of the run to cancel."
+          },
+          "businessCode": {
+            "type": "integer",
+            "description": "Optional caller-defined cancellation code sent as biz_code."
+          }
+        },
+        "required": [
+          "taskId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v3/bots/runs/{{taskId}}/cancel",
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response}}"
+        },
+        "query": {
+          "biz_code": "{{businessCode}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "workflows.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 8192,
+      "maxResponseBytes": 5242880,
+      "title": "Get Workflow",
+      "description": "Return one custom BrowserAct bot, including its published input and output schemas. GET /v3/bots/{bot_id} returns a JSON object. BrowserAct v3 calls a custom workflow a bot.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "botId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Public bot ID of the custom workflow."
+          }
+        },
+        "required": [
+          "botId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v3/bots/{{botId}}",
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "templates.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 8192,
+      "maxResponseBytes": 5242880,
+      "title": "Get Workflow Template",
+      "description": "Return one official BrowserAct template and its JSON input_schema. GET /v3/bots/templates/{template_id} returns a JSON object. detail_url in that object is a link, not an HTML body.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "templateId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Official template ID."
+          }
+        },
+        "required": [
+          "templateId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v3/bots/templates/{{templateId}}",
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "regions.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "title": "List Proxy Regions",
+      "description": "Return the proxy region codes visible to the API key. GET /v3/bots/regions returns a JSON array of code and name objects.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {},
+        "required": []
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v3/bots/regions",
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "tasks.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 5242880,
+      "title": "List Tasks",
+      "description": "Return one page of BrowserAct task runs. GET /v3/bots/runs accepts status, bot id, bot name, and inclusive created_at bounds and returns a JSON page object.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "botId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Return only tasks created from this public bot ID."
+          },
+          "botName": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Case-insensitive contains match on the bot name.",
+            "maxLength": 200
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "created",
+              "running",
+              "finished",
+              "canceled",
+              "pausing",
+              "paused",
+              "failed"
+            ],
+            "description": "Return only tasks in this lifecycle status."
+          },
+          "createdAtFrom": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Inclusive ISO 8601 lower bound for task creation time.",
+            "maxLength": 40
+          },
+          "createdAtTo": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Inclusive ISO 8601 upper bound for task creation time.",
+            "maxLength": 40
+          },
+          "page": {
+            "type": "integer",
+            "description": "Page number, starting at 1.",
+            "minimum": 1
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Maximum tasks in this page.",
+            "minimum": 1,
+            "maximum": 100
+          }
+        },
+        "required": []
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v3/bots/runs",
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response}}"
+        },
+        "query": {
+          "bot_id": "{{botId}}",
+          "bot_name": "{{botName}}",
+          "status": "{{status}}",
+          "created_at_from": "{{createdAtFrom}}",
+          "created_at_to": "{{createdAtTo}}",
+          "page": "{{page}}",
+          "limit": "{{limit}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "workflows.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 5242880,
+      "title": "List Workflows",
+      "description": "Return one page of published custom BrowserAct bots. GET /v3/bots accepts bot_type and keyword filters and returns a JSON page object.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "botType": {
+            "type": "string",
+            "enum": [
+              "workflow",
+              "agent"
+            ],
+            "description": "Optional bot type filter."
+          },
+          "keyword": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Case-insensitive bot name search.",
+            "maxLength": 200
+          },
+          "page": {
+            "type": "integer",
+            "description": "Page number, starting at 1.",
+            "minimum": 1
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Maximum bots in this page.",
+            "minimum": 1,
+            "maximum": 100
+          }
+        },
+        "required": []
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v3/bots",
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response}}"
+        },
+        "query": {
+          "bot_type": "{{botType}}",
+          "keyword": "{{keyword}}",
+          "page": "{{page}}",
+          "limit": "{{limit}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "templates.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 5242880,
+      "title": "List Workflow Templates",
+      "description": "Search official BrowserAct templates. GET /v3/bots/templates accepts keyword, page, and limit and returns a JSON page object.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "keyword": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Case-insensitive template name search.",
+            "maxLength": 200
+          },
+          "page": {
+            "type": "integer",
+            "description": "Page number, starting at 1.",
+            "minimum": 1
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Maximum templates in this page.",
+            "minimum": 1,
+            "maximum": 500
+          }
+        },
+        "required": []
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v3/bots/templates",
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response}}"
+        },
+        "query": {
+          "keyword": "{{keyword}}",
+          "page": "{{page}}",
+          "limit": "{{limit}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "tasks.resume": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 8192,
+      "maxResponseBytes": 65536,
+      "title": "Resume Task",
+      "description": "Resume a paused BrowserAct task. POST /v3/bots/runs/{task_id}/resume has no body and returns the JSON task status. The status can stay paused until processing continues.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "taskId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Task ID of a paused run."
+          }
+        },
+        "required": [
+          "taskId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v3/bots/runs/{{taskId}}/resume",
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "workflows.run": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Run Workflow",
+      "description": "Start a published custom BrowserAct bot. POST /v3/bots/{bot_id}/runs sends a JSON input object and returns the created task id and status. Callback URL fields are not accepted.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "botId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Public bot ID of the custom workflow to run."
+          },
+          "input": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Run input object. Its shape must match the bot or template input_schema. Use an empty object when the published schema has no inputs."
+          }
+        },
+        "required": [
+          "botId",
+          "input"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v3/bots/{{botId}}/runs",
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "input": "{{input}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "templates.run": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Run Workflow Template",
+      "description": "Start an official BrowserAct template. POST /v3/bots/templates/{template_id}/runs sends a JSON input object and optional proxy_region code and returns the created task id and status. Callback URL fields are not accepted.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "templateId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Official template ID to run."
+          },
+          "input": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Run input object. Its shape must match the bot or template input_schema. Use an empty object when the published schema has no inputs."
+          },
+          "proxyRegion": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Proxy region code from List Proxy Regions, such as US.",
+            "maxLength": 30
+          }
+        },
+        "required": [
+          "templateId",
+          "input"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v3/bots/templates/{{templateId}}/runs",
+        "success": [
+          200
+        ],
+        "result": {
+          "data": "{{response}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "input": "{{input}}",
+          "proxy_region": "{{proxyRegion}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    }
+  }
+}

@@ -1,0 +1,623 @@
+{
+  "key": "bsc-designer",
+  "name": "BSC Designer",
+  "version": "0.1.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "utility"
+  ],
+  "auth": {
+    "type": "api_key",
+    "scopes": [],
+    "setup": {
+      "mode": "api_key",
+      "docsUrl": "https://bscdesigner.com/webbsc_manual/api.htm",
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "BSC Designer API token",
+          "required": true,
+          "secret": true
+        }
+      ]
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "www.webbsc.com"
+    ]
+  },
+  "models": [
+    "document",
+    "scorecard-item",
+    "indicator-value"
+  ],
+  "http": {
+    "baseUrl": "https://www.webbsc.com",
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "token",
+      "value": "{{apiKey}}"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "Retry-After",
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "message",
+        "error",
+        "errorMessage"
+      ]
+    },
+    "headers": {
+      "Accept": "application/json"
+    }
+  },
+  "operations": {
+    "documents.list": {
+      "kind": "action",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "title": "List Documents",
+      "description": "List scorecard documents owned by or shared with the token user, including ids and aliases.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/rest/api/documents/list",
+        "success": [
+          200
+        ]
+      }
+    },
+    "documents.get": {
+      "kind": "action",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 262144,
+      "title": "Get Document",
+      "description": "Get metadata and sharing settings for one scorecard document by numeric ID or alias.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "documentIdOrAlias"
+        ],
+        "properties": {
+          "documentIdOrAlias": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "description": "Numeric document ID or alias returned by List Documents."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/rest/api/documents/list/{{documentIdOrAlias}}",
+        "success": [
+          200
+        ]
+      }
+    },
+    "scorecard-items.list": {
+      "kind": "action",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 8192,
+      "maxResponseBytes": 5242880,
+      "title": "List Scorecard Items",
+      "description": "List goals, perspectives, indicators, initiatives, risks, rationales, and expected outcomes in one scorecard. Composio item_type and value_data_only filters are applied locally and are not sent.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "documentIdOrAlias"
+        ],
+        "properties": {
+          "documentIdOrAlias": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "description": "Numeric document ID or alias returned by List Documents."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/rest/api/document/{{documentIdOrAlias}}/kpi/list",
+        "success": [
+          200
+        ]
+      }
+    },
+    "scorecard-items.get": {
+      "kind": "action",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 8192,
+      "maxResponseBytes": 1048576,
+      "title": "Get Scorecard Item",
+      "description": "Get one scorecard item, such as an indicator, goal, or initiative, by its exact identifier.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "documentIdOrAlias",
+          "itemId"
+        ],
+        "properties": {
+          "documentIdOrAlias": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "description": "Numeric document ID or alias returned by List Documents."
+          },
+          "itemId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "description": "Exact guid or symbolic item identifier from List Scorecard Items. Preserve braces and spelling."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/rest/api/document/{{documentIdOrAlias}}/kpi/{{itemId}}",
+        "success": [
+          200
+        ]
+      }
+    },
+    "indicators.get-value": {
+      "kind": "action",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 8192,
+      "maxResponseBytes": 262144,
+      "title": "Get Indicator Value",
+      "description": "Get one indicator's value, baseline, target, minimum, and maximum for an as-of date, including each metric's effective date.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "documentIdOrAlias",
+          "indicatorId",
+          "date"
+        ],
+        "properties": {
+          "documentIdOrAlias": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "description": "Numeric document ID or alias returned by List Documents."
+          },
+          "indicatorId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "description": "Exact identifier of a value-bearing indicator. Preserve braces, capitalization, and spelling."
+          },
+          "date": {
+            "type": "string",
+            "minLength": 10,
+            "maxLength": 10,
+            "description": "As-of lookup date in yyyy-MM-dd format."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/rest/api/document/{{documentIdOrAlias}}/kpi/indicator/{{indicatorId}}/value/{{date}}",
+        "success": [
+          200
+        ]
+      }
+    },
+    "indicators.grouped-values": {
+      "kind": "action",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 20000,
+      "maxInputBytes": 8192,
+      "maxResponseBytes": 1048576,
+      "title": "Get Grouped Indicator Values",
+      "description": "Get one indicator's values grouped by day, week, month, quarter, half-year, or year over an explicit date range.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "documentIdOrAlias",
+          "indicatorId",
+          "period",
+          "startDate",
+          "endDate"
+        ],
+        "properties": {
+          "documentIdOrAlias": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "description": "Numeric document ID or alias returned by List Documents."
+          },
+          "indicatorId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "description": "Exact identifier of a value-bearing indicator. Preserve braces, capitalization, and spelling."
+          },
+          "period": {
+            "type": "string",
+            "enum": [
+              "DAY",
+              "WEEK",
+              "MONTH",
+              "QUARTER",
+              "HALF_YEAR",
+              "YEAR"
+            ],
+            "description": "Time bucket used to group indicator values."
+          },
+          "startDate": {
+            "type": "string",
+            "minLength": 10,
+            "maxLength": 10,
+            "description": "Inclusive range start in yyyy-MM-dd format."
+          },
+          "endDate": {
+            "type": "string",
+            "minLength": 10,
+            "maxLength": 10,
+            "description": "Inclusive range end in yyyy-MM-dd format."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/rest/api/document/{{documentIdOrAlias}}/kpi/indicator/{{indicatorId}}/grouped-value/{{period}}/{{startDate}}/{{endDate}}",
+        "success": [
+          200
+        ]
+      }
+    },
+    "indicators.set-values": {
+      "kind": "action",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Set Indicator Values",
+      "description": "Set one or more indicators' value, baseline, target, minimum, or maximum for a date. BSC Designer may map the date onto each indicator's update schedule.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "documentIdOrAlias",
+          "date",
+          "values"
+        ],
+        "properties": {
+          "documentIdOrAlias": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "description": "Numeric document ID or alias returned by List Documents."
+          },
+          "date": {
+            "type": "string",
+            "minLength": 10,
+            "maxLength": 10,
+            "description": "Requested write date in yyyy-MM-dd format."
+          },
+          "values": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 200,
+            "description": "Indicator updates. Each entry needs item.guid and at least one metric.",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "minProperties": 2,
+              "required": [
+                "item"
+              ],
+              "properties": {
+                "item": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "guid"
+                  ],
+                  "properties": {
+                    "guid": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 256,
+                      "description": "Exact indicator identifier."
+                    }
+                  }
+                },
+                "baseline": {
+                  "type": "number",
+                  "description": "Baseline to write. Omit to leave it unspecified."
+                },
+                "max": {
+                  "type": "number",
+                  "description": "Maximum to write. Omit to leave it unspecified."
+                },
+                "min": {
+                  "type": "number",
+                  "description": "Minimum to write. Omit to leave it unspecified."
+                },
+                "target": {
+                  "type": "number",
+                  "description": "Target to write. Omit to leave it unspecified."
+                },
+                "value": {
+                  "type": "number",
+                  "description": "Value to write. Omit to leave it unspecified."
+                }
+              }
+            }
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/rest/api/document/{{documentIdOrAlias}}/kpi/batch/set-value/{{date}}",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "values": "{{values}}"
+        },
+        "success": [
+          200
+        ]
+      }
+    },
+    "indicators.update": {
+      "kind": "action",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 262144,
+      "title": "Update Indicator",
+      "description": "Update an indicator's name, description, or leading/lagging type. Omitted fields are not sent. Measured values are not changed.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "documentIdOrAlias",
+          "indicatorId"
+        ],
+        "properties": {
+          "documentIdOrAlias": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "description": "Numeric document ID or alias returned by List Documents."
+          },
+          "indicatorId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "description": "Exact indicator identifier from List Scorecard Items. Preserve braces, capitalization, and spelling."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500,
+            "description": "New indicator name. Omit to leave it unspecified."
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 8000,
+            "description": "New indicator description. Omit to leave it unspecified."
+          },
+          "indicatorType": {
+            "type": "string",
+            "enum": [
+              "LEADING",
+              "LAGGING"
+            ],
+            "description": "New business type. Omit to leave it unspecified."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/rest/api/document/{{documentIdOrAlias}}/kpi/{{indicatorId}}",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "name": "{{name}}",
+          "description": "{{description}}",
+          "indicatorType": "{{indicatorType}}"
+        },
+        "success": [
+          200
+        ]
+      }
+    },
+    "scorecards.balance-weights": {
+      "kind": "action",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 30000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "title": "Balance Scorecard Weights",
+      "description": "Recalculate and persist balanced indicator weights for one scorecard. The response lists each changed old and new weight.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "documentIdOrAlias"
+        ],
+        "properties": {
+          "documentIdOrAlias": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "description": "Numeric document ID or alias returned by List Documents."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/rest/api/document/{{documentIdOrAlias}}/kpi/weight-balance",
+        "success": [
+          200
+        ]
+      }
+    }
+  }
+}

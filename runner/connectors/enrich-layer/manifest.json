@@ -1,0 +1,634 @@
+{
+  "key": "enrich-layer",
+  "name": "Enrich Layer",
+  "version": "0.1.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "crm"
+  ],
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
+    }
+  },
+  "auth": {
+    "type": "api_key",
+    "scopes": [],
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "Enrich Layer API key",
+          "required": true,
+          "secret": true
+        }
+      ]
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "enrichlayer.com"
+    ]
+  },
+  "models": [
+    "person",
+    "company",
+    "email",
+    "credit"
+  ],
+  "http": {
+    "baseUrl": "https://enrichlayer.com/api/v2",
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "Authorization",
+      "value": "Bearer {{apiKey}}"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "Retry-After",
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "message",
+        "error",
+        "detail"
+      ]
+    },
+    "headers": {
+      "Accept": "application/json"
+    }
+  },
+  "operations": {
+    "email.checkType": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 5242880,
+      "title": "Check Email Type",
+      "description": "Check whether an email address is disposable and whether it belongs to a free email provider. GET /disposable-email.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "email": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 320,
+            "description": "Email address to classify."
+          }
+        },
+        "required": [
+          "email"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": [
+              "is_disposable_email",
+              "is_free_email"
+            ],
+            "properties": {
+              "is_disposable_email": {
+                "type": "boolean"
+              },
+              "is_free_email": {
+                "type": "boolean"
+              }
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/disposable-email",
+        "query": {
+          "email": "{{email}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "company.enrich": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 90000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 5242880,
+      "title": "Enrich Company",
+      "description": "Return a structured company profile from its LinkedIn company URL. GET /company. The value is the url query parameter; the request host stays enrichlayer.com.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "url": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2048,
+            "description": "LinkedIn company profile URL sent as the url query parameter."
+          }
+        },
+        "required": [
+          "url"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/company",
+        "query": {
+          "url": "{{url}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "person.enrich": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 90000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 5242880,
+      "title": "Enrich Person",
+      "description": "Return a structured person profile from exactly one LinkedIn, Twitter/X, or Facebook profile URL. GET /profile. skills is include or exclude.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "profile_url": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2048,
+            "description": "Person profile URL. Provide exactly one of profile_url, twitter_profile_url, or facebook_profile_url."
+          },
+          "twitter_profile_url": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2048,
+            "description": "Twitter/X profile URL. Provide exactly one profile identifier."
+          },
+          "facebook_profile_url": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2048,
+            "description": "Facebook profile URL. Provide exactly one profile identifier."
+          },
+          "skills": {
+            "type": "string",
+            "enum": [
+              "include",
+              "exclude"
+            ],
+            "description": "include appends historic or inferred skills. exclude omits them. No extra credit."
+          }
+        },
+        "oneOf": [
+          {
+            "required": [
+              "profile_url"
+            ]
+          },
+          {
+            "required": [
+              "twitter_profile_url"
+            ]
+          },
+          {
+            "required": [
+              "facebook_profile_url"
+            ]
+          }
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/profile",
+        "query": {
+          "profile_url": "{{profile_url}}",
+          "twitter_profile_url": "{{twitter_profile_url}}",
+          "facebook_profile_url": "{{facebook_profile_url}}",
+          "skills": "{{skills}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "person.findByEmail": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 90000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 5242880,
+      "title": "Find Person By Email",
+      "description": "Resolve social profile URLs from a personal or work email. GET /profile/resolve/email. superficial does not charge when no result is found; deep is the provider default.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "email": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 320,
+            "description": "Personal or work email address to resolve."
+          },
+          "lookup_depth": {
+            "type": "string",
+            "enum": [
+              "superficial",
+              "deep"
+            ],
+            "description": "superficial checks the provider database and does not charge on an empty result. deep may charge even when no match is found."
+          }
+        },
+        "required": [
+          "email"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/profile/resolve/email",
+        "query": {
+          "email": "{{email}}",
+          "lookup_depth": "{{lookup_depth}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "person.findByRole": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 90000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 5242880,
+      "title": "Find Person By Role",
+      "description": "Return the single person profile URL that most closely matches a role at a named company. GET /find/company/role/.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "role": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "Role or title to find."
+          },
+          "company_name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "Company where the person holds the role."
+          }
+        },
+        "required": [
+          "role",
+          "company_name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/find/company/role/",
+        "query": {
+          "role": "{{role}}",
+          "company_name": "{{company_name}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "person.findByPhone": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 90000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 5242880,
+      "title": "Find Social Profiles By Phone",
+      "description": "Find LinkedIn, Facebook, and Twitter/X profile URLs for one E.164 phone number. GET /resolve/phone.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "phone_number": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 16,
+            "description": "E.164 phone number, including the leading plus and country code."
+          }
+        },
+        "required": [
+          "phone_number"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/resolve/phone",
+        "query": {
+          "phone_number": "{{phone_number}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "credits.balance": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 5242880,
+      "title": "Get Credit Balance",
+      "description": "Return the connected account credit balance. GET /credit-balance. This call does not consume credits.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": [
+              "credit_balance"
+            ],
+            "properties": {
+              "credit_balance": {
+                "type": "integer"
+              }
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/credit-balance",
+        "query": {},
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "company.resolve": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 90000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 5242880,
+      "title": "Resolve Company",
+      "description": "Resolve a LinkedIn company profile URL from a company domain, company name, or both. GET /company/resolve. company_location is the ISO 3166-1 alpha-2 country code.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "company_name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "Company name. Provide this, company_domain, or both."
+          },
+          "company_domain": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 253,
+            "description": "Company website domain. Provide this, company_name, or both."
+          },
+          "company_location": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 2,
+            "description": "ISO 3166-1 alpha-2 country code used to disambiguate the company."
+          }
+        },
+        "anyOf": [
+          {
+            "required": [
+              "company_domain"
+            ]
+          },
+          {
+            "required": [
+              "company_name"
+            ]
+          }
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/company/resolve",
+        "query": {
+          "company_domain": "{{company_domain}}",
+          "company_name": "{{company_name}}",
+          "company_location": "{{company_location}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "person.resolve": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 90000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 5242880,
+      "title": "Resolve Person",
+      "description": "Return the closest person profile URL from a first name and a company name or domain. GET /profile/resolve. similarity_checks skip does not charge when the result is null; include can charge on null.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "company_domain": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 253,
+            "description": "Current company name or website domain."
+          },
+          "first_name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100,
+            "description": "Person first name."
+          },
+          "last_name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100,
+            "description": "Person last name."
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "Current job title used to disambiguate the person."
+          },
+          "location": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "Country, city, or state used to disambiguate the person."
+          },
+          "similarity_checks": {
+            "type": "string",
+            "enum": [
+              "include",
+              "skip"
+            ],
+            "description": "skip returns the closest match and does not charge when the result is null. include filters false positives and can charge on null."
+          }
+        },
+        "required": [
+          "company_domain",
+          "first_name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/profile/resolve",
+        "query": {
+          "company_domain": "{{company_domain}}",
+          "first_name": "{{first_name}}",
+          "similarity_checks": "{{similarity_checks}}",
+          "location": "{{location}}",
+          "title": "{{title}}",
+          "last_name": "{{last_name}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    }
+  }
+}
