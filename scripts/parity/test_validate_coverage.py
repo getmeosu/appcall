@@ -5,7 +5,7 @@ import unittest
 from contextlib import redirect_stdout
 from pathlib import Path
 
-from validate_coverage import main, validate_artifact
+from validate_coverage import main, validate_all, validate_artifact
 
 
 def manifest(operations):
@@ -393,6 +393,146 @@ class FullDepthFalseTests(ValidatorTestCase):
         self.assertNotIn("core.full_depth_false",
                          {finding["rule"] for finding in result["core"]})
         self.assertEqual(self.run_main("--root", str(root)), 0)
+
+
+class ComponentSplitTests(ValidatorTestCase):
+    def make_component_repo(self, components):
+        """components: {connector key: (artifact, operations)}"""
+        temp = tempfile.TemporaryDirectory()
+        root = Path(temp.name)
+        for key, (artifact, operations) in components.items():
+            connector = root / "runner/connectors" / key
+            connector.mkdir(parents=True)
+            (connector / "manifest.json").write_text(manifest(operations))
+            (root / "runner/connectors" / f"{key}.coverage.json").write_text(json.dumps(artifact))
+        self.addCleanup(temp.cleanup)
+        return root / "runner/connectors", root
+
+    def component_artifact(self, key, parent, tools, split):
+        return {
+            "key": key, "slug": "BLAZEMETER", "composio_tools": len(tools),
+            "mapped": [{"tool": tool, "operation": "get"} for tool in tools],
+            "missing_http": [], "missing_still": [], "full_depth": True,
+            "component_of": parent,
+            "notes": ("source=https://docs.composio.dev/toolkits/blazemeter; fetched=2026-10-14"
+                      f"; component_of={parent}; component_split={split}"),
+        }
+
+    def test_valid_component_artifact_passes(self):
+        components = {
+            "blaze-a": (self.component_artifact("blaze-a", "BLAZEMETER", ["BLAZEMETER_A"], "1/2"), GET_OP),
+            "blaze-b": (self.component_artifact("blaze-b", "BLAZEMETER", ["BLAZEMETER_B1", "BLAZEMETER_B2"],
+                                                "1/2"), GET_OP),
+        }
+        connectors, root = self.make_component_repo(components)
+        report = validate_all(connectors)
+        for result in report["artifacts"]:
+            self.assertEqual(result["format"], "canonical")
+            self.assertEqual(result["core"], [])
+            self.assertEqual(result["advisories"], [])
+        self.assertEqual(report["component_groups"][0]["split"], "1/2")
+        self.assertEqual(report["component_groups"][0]["duplicate_tools"], [])
+        self.assertEqual(self.run_main("--root", str(root)), 0)
+
+    def test_duplicate_tool_across_components_is_core(self):
+        components = {
+            "blaze-a": (self.component_artifact("blaze-a", "BLAZEMETER",
+                                                ["BLAZEMETER_A", "BLAZEMETER_SHARED"], "2/2"), GET_OP),
+            "blaze-b": (self.component_artifact("blaze-b", "BLAZEMETER",
+                                                ["BLAZEMETER_B", "BLAZEMETER_SHARED"], "2/2"), GET_OP),
+        }
+        connectors, root = self.make_component_repo(components)
+        report = validate_all(connectors)
+        flagged = [result["path"] for result in report["artifacts"]
+                   if any(finding["rule"] == "core.component_duplicate_tool" for finding in result["core"])]
+        self.assertEqual(flagged, ["runner/connectors/blaze-b.coverage.json"])
+        self.assertEqual(report["component_groups"][0]["duplicate_tools"], ["BLAZEMETER_SHARED"])
+        self.assertEqual(self.run_main("--root", str(root)), 1)
+
+    def test_component_split_mismatch_is_advisory(self):
+        components = {
+            "blaze-a": (self.component_artifact("blaze-a", "BLAZEMETER", ["BLAZEMETER_A"], "1/1"), GET_OP),
+            "blaze-b": (self.component_artifact("blaze-b", "BLAZEMETER", ["BLAZEMETER_B1", "BLAZEMETER_B2"],
+                                                "1/1"), GET_OP),
+        }
+        connectors, root = self.make_component_repo(components)
+        report = validate_all(connectors)
+        for result in report["artifacts"]:
+            self.assertEqual(result["core"], [])
+            self.assertIn("component_split_mismatch", {entry["rule"] for entry in result["advisories"]})
+        self.assertEqual(self.run_main("--root", str(root)), 0)
+        self.assertEqual(self.run_main("--root", str(root), "--strict"), 1)
+
+    def test_out_of_component_scope_why_is_accepted(self):
+        artifact = {
+            "key": "demo", "slug": "DEMO", "composio_tools": 1,
+            "mapped": [], "missing_http": [],
+            "missing_still": [{"tool": "BLAZEMETER_X",
+                               "why": ("reason=out_of_component_scope; evidence=https://docs.example/x; "
+                                       "fetched=2026-10-14")}],
+            "full_depth": True, "notes": CANONICAL_NOTES,
+        }
+        _, connectors, root = self.make_repo(artifact, GET_OP)
+        result = validate_artifact(root / "runner/connectors/demo.coverage.json", connectors)
+        self.assertEqual(result["format"], "canonical")
+        self.assert_clean(result)
+        self.assertEqual(self.run_main("--root", str(root)), 0)
+
+    def test_non_component_artifact_unchanged(self):
+        artifact = {
+            "key": "demo", "slug": "DEMO", "composio_tools": 1,
+            "mapped": [{"tool": "DEMO_GET", "operation": "get"}],
+            "missing_http": [], "missing_still": [], "full_depth": True, "notes": CANONICAL_NOTES,
+        }
+        _, connectors, root = self.make_repo(artifact, GET_OP)
+        result = validate_artifact(root / "runner/connectors/demo.coverage.json", connectors)
+        self.assertEqual(result["format"], "canonical")
+        self.assertIsNone(result["component_of"])
+        self.assert_clean(result)
+        self.assertEqual(self.run_main("--root", str(root)), 0)
+
+
+class InventoryNoteTests(ValidatorTestCase):
+    def canonical_artifact(self, notes):
+        return {
+            "key": "demo", "slug": "DEMO", "composio_tools": 1,
+            "mapped": [{"tool": "DEMO_GET", "operation": "get"}],
+            "missing_http": [], "missing_still": [], "full_depth": True, "notes": notes,
+        }
+
+    def test_canonical_with_inventory_note_passes(self):
+        notes = ("source=https://docs.composio.dev/toolkits/demo.md; fetched=2026-10-14"
+                 "; inventory_note=page_header_tools_27_vs_body_distinct_tool_slugs_28")
+        _, connectors, root = self.make_repo(self.canonical_artifact(notes), GET_OP)
+        result = validate_artifact(root / "runner/connectors/demo.coverage.json", connectors)
+        self.assertEqual(result["format"], "canonical")
+        self.assert_clean(result)
+        self.assertEqual(self.run_main("--root", str(root)), 0)
+
+    def test_bad_inventory_note_stays_legacy_advisory(self):
+        for bad in ("Bad-CAPS", "pageHeader27", "page header 27", ""):
+            notes = ("source=https://docs.composio.dev/toolkits/demo.md; fetched=2026-10-14"
+                     f"; inventory_note={bad}")
+            _, connectors, root = self.make_repo(self.canonical_artifact(notes), GET_OP)
+            result = validate_artifact(root / "runner/connectors/demo.coverage.json", connectors)
+            self.assertEqual(result["format"], "legacy", bad)
+            self.assertEqual(result["core"], [], bad)
+            self.assertIn("legacy.notes_prefix", {entry["rule"] for entry in result["advisories"]}, bad)
+            self.assertEqual(self.run_main("--root", str(root)), 0)
+
+    def test_dual_mapped_and_inventory_note_together_pass(self):
+        for notes in (
+            ("source=https://docs.composio.dev/toolkits/hubspot.md; fetched=2026-10-14"
+             "; dual_mapped=deals.delete:HUBSPOT_DELETE_DEAL_GDPR,HUBSPOT_REMOVE_DEAL"
+             "; inventory_note=page_header_tools_282_vs_body_distinct_tool_slugs_286"),
+            ("source=https://docs.composio.dev/toolkits/airtable.md; fetched=2026-10-14"
+             "; inventory_note=page_header_tools_27_vs_body_distinct_tool_slugs_28"
+             "; dual_mapped=healthcheck:AIRTABLE_GET_USER_INFO,AIRTABLE_WHO_AM_I"),
+        ):
+            _, connectors, root = self.make_repo(self.canonical_artifact(notes), GET_OP)
+            result = validate_artifact(root / "runner/connectors/demo.coverage.json", connectors)
+            self.assertEqual(result["format"], "canonical", notes)
+            self.assert_clean(result)
 
 
 if __name__ == "__main__":

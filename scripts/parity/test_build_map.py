@@ -3,7 +3,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from build_map import _alias_table, _load_optional_baseline, build_map_data, normalize_slug, resolve_slug
+from build_map import (_alias_table, _false_match_pairs, _load_optional_baseline,
+                       build_map_data, normalize_slug, resolve_slug)
 
 
 def index_fixture(*slugs):
@@ -30,11 +31,42 @@ class BuildMapTests(unittest.TestCase):
 
     def test_committed_aliases_are_self_contained(self):
         aliases = json.loads((Path(__file__).parent / "aliases.json").read_text(encoding="utf-8"))
-        self.assertEqual(len(aliases["verified_pairs"]), 302)
+        self.assertEqual(len(aliases["verified_pairs"]), 301)
         table = _alias_table(aliases, {})
         self.assertEqual(table["github"], "GITHUB")
         self.assertEqual(table["imagekit"], "IMAGEKIT_IO")
         self.assertEqual(table["blaze-meter-functional"], "BLAZEMETER")
+
+    def test_false_matches_are_never_resolved(self):
+        aliases = json.loads((Path(__file__).parent / "aliases.json").read_text(encoding="utf-8"))
+        false_pairs = _false_match_pairs(aliases)
+        self.assertIn(("breeze", "BREEZE"), false_pairs)
+        # A false pair never survives into the alias table, from any source.
+        self.assertNotIn("breeze", _alias_table(aliases, {}))
+        self.assertNotIn("breeze", _alias_table(aliases, {"breeze": "BREEZE"}))
+        slugs = {"BREEZE"}
+        # Neither the alias table nor name normalization may re-join the pair.
+        self.assertIsNone(resolve_slug("breeze", slugs, {"breeze": "BREEZE"}, false_pairs))
+        self.assertIsNone(resolve_slug("breeze", slugs, {}, false_pairs))
+        # A neighboring key is unaffected by the false-match guard.
+        self.assertEqual(resolve_slug("breezy-hr", slugs | {"BREEZY_HR"},
+                                     _alias_table(aliases, {}), false_pairs), "BREEZY_HR")
+
+    def test_map_leaves_false_matched_pair_unmatched(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            connector = root / "runner/connectors/breeze"
+            connector.mkdir(parents=True)
+            (connector / "manifest.json").write_text(json.dumps({
+                "key": "breeze", "version": "0.2.0", "operations": {},
+            }))
+            aliases = json.loads((Path(__file__).parent / "aliases.json").read_text(encoding="utf-8"))
+            data = build_map_data(root, index_fixture("BREEZE", "OTHER"), aliases)
+            row = next(row for row in data["rows"] if row["key"] == "breeze")
+            self.assertIsNone(row["slug"])
+            self.assertIsNone(row["composio_tools"])
+            self.assertEqual(data["totals"]["matched"], 0)
+            self.assertIn("BREEZE", [pool_row["slug"] for pool_row in data["breadth_pool"]])
 
     def test_optional_baseline_is_absent_safe(self):
         with tempfile.TemporaryDirectory() as temp:

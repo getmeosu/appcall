@@ -16,11 +16,31 @@ def normalize_slug(value):
     return re.sub(r"[^A-Z0-9]", "", value.upper())
 
 
-def resolve_slug(key, index_slugs, alias_table):
-    if key in alias_table and alias_table[key] in index_slugs:
+def _false_match_pairs(aliases):
+    """(appcall_key, composio_slug) pairs that must never be joined.
+
+    Same-name products can be unrelated (for example Breeze ChMS vs the
+    Composio BREEZE project-management toolkit); a declared pair is excluded
+    from both the alias table and name normalization.
+    """
+    pairs = set()
+    for entry in aliases.get("false_matches", []):
+        if not isinstance(entry, dict):
+            continue
+        key = entry.get("appcall_key")
+        slug = entry.get("composio_slug")
+        if isinstance(key, str) and key.strip() and isinstance(slug, str) and slug.strip():
+            pairs.add((key, slug))
+    return pairs
+
+
+def resolve_slug(key, index_slugs, alias_table, false_pairs=()):
+    forbidden = {slug for appcall_key, slug in false_pairs if appcall_key == key}
+    if key in alias_table and alias_table[key] in index_slugs and alias_table[key] not in forbidden:
         return alias_table[key]
     normalized = normalize_slug(key)
-    matches = [slug for slug in index_slugs if normalize_slug(slug) == normalized]
+    matches = [slug for slug in index_slugs
+               if normalize_slug(slug) == normalized and slug not in forbidden]
     return matches[0] if len(matches) == 1 else None
 
 
@@ -46,6 +66,9 @@ def _alias_table(aliases, baseline):
     for group in aliases.get("many_to_one", []):
         for key in group.get("keys", []):
             table.setdefault(key, group["slug"])
+    for key, slug in _false_match_pairs(aliases):
+        if table.get(key) == slug:
+            del table[key]
     return table
 
 
@@ -88,12 +111,13 @@ def build_map_data(repo_root, index, aliases, baseline=None):
     repo_root = Path(repo_root)
     connectors_root = repo_root / "runner/connectors"
     alias_table = _alias_table(aliases, baseline)
+    false_pairs = _false_match_pairs(aliases)
     rows_by_slug = {row["slug"]: row for row in index["toolkits"]}
     connector_rows = []
     for manifest_path in sorted(connectors_root.glob("*/manifest.json")):
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
         key = manifest.get("key", manifest_path.parent.name)
-        slug = resolve_slug(key, set(rows_by_slug), alias_table)
+        slug = resolve_slug(key, set(rows_by_slug), alias_table, false_pairs)
         toolkit = rows_by_slug.get(slug) if slug else None
         operations = manifest.get("operations", {})
         kinds = [operation.get("kind") for operation in operations.values() if isinstance(operation, dict)]
