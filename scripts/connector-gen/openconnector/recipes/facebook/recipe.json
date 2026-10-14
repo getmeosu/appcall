@@ -1563,6 +1563,2018 @@
         },
         "enforceOutputSchema": true,
         "responseFormat": "json"
+      },
+      "tasks.create": {
+        "kind": "action",
+        "title": "Assign tasks to a business-scoped user on the configured Page",
+        "description": "Assign Page tasks to a business-scoped or system user via POST /{page-id}/assigned_users. The token must be a Page access token with the MANAGE task and the pages_manage_metadata permission; regular Facebook user IDs are rejected.",
+        "timeoutMs": 10000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "sideEffect": "write",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "user": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Business-scoped user ID or system user ID to assign tasks to."
+            },
+            "tasks": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "description": "Page tasks to assign, such as MANAGE, CREATE_CONTENT, MODERATE, ADVERTISE, ANALYZE or MESSAGING."
+            }
+          },
+          "required": [
+            "user",
+            "tasks"
+          ],
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "success"
+          ],
+          "properties": {
+            "success": {
+              "type": "boolean",
+              "description": "Provider mutation acknowledgement."
+            }
+          }
+        },
+        "request": {
+          "method": "POST",
+          "path": "/{{pageId}}/assigned_users",
+          "success": [
+            200
+          ],
+          "body": {
+            "user": "{{user}}",
+            "tasks": "{{tasks}}"
+          },
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "result": {
+            "success": "{{response.success}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "posts.createMultiPhoto": {
+        "kind": "action",
+        "title": "Publish a multi-photo feed post to the configured Page",
+        "description": "Publish one Page feed post referencing already-uploaded unpublished photos via POST /{page-id}/feed with attached_media. Upload each photo first with published=false; this operation posts the feed story and does not upload files.",
+        "timeoutMs": 10000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "sideEffect": "write",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "message": {
+              "type": "string",
+              "description": "Optional text to publish with the photo post."
+            },
+            "attachedMedia": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "required": [
+                  "media_fbid"
+                ],
+                "properties": {
+                  "media_fbid": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "ID of an unpublished Page photo."
+                  }
+                },
+                "additionalProperties": false
+              },
+              "description": "Unpublished photo references attached to the feed post."
+            }
+          },
+          "required": [
+            "attachedMedia"
+          ],
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "postId"
+          ],
+          "properties": {
+            "postId": {
+              "type": "string",
+              "description": "Published Page post ID."
+            }
+          }
+        },
+        "request": {
+          "method": "POST",
+          "path": "/{{pageId}}/feed",
+          "success": [
+            200
+          ],
+          "body": {
+            "message": "{{message}}",
+            "attached_media": "{{attachedMedia}}"
+          },
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "result": {
+            "postId": "{{response.id}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "videos.publish": {
+        "kind": "action",
+        "title": "Publish a video to the configured Page from a public URL fetched by Meta",
+        "description": "Publish a video to the configured Facebook Page from a public file URL via POST /{page-id}/videos. No binary upload is performed; use a direct MP4 URL Meta can fetch.",
+        "timeoutMs": 10000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "sideEffect": "write",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "fileUrl": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Public video file URL that Meta can fetch."
+            },
+            "title": {
+              "type": "string",
+              "description": "Optional video title."
+            },
+            "description": {
+              "type": "string",
+              "description": "Optional video description."
+            },
+            "published": {
+              "type": "boolean",
+              "description": "Whether to publish immediately."
+            },
+            "scheduledPublishTime": {
+              "type": "integer",
+              "description": "Future Unix timestamp in seconds; requires published=false."
+            }
+          },
+          "required": [
+            "fileUrl"
+          ],
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "videoId"
+          ],
+          "properties": {
+            "videoId": {
+              "type": "string",
+              "description": "Published video ID."
+            }
+          }
+        },
+        "request": {
+          "method": "POST",
+          "path": "/{{pageId}}/videos",
+          "success": [
+            200
+          ],
+          "body": {
+            "file_url": "{{fileUrl}}",
+            "title": "{{title}}",
+            "description": "{{description}}",
+            "published": "{{published}}",
+            "scheduled_publish_time": "{{scheduledPublishTime}}"
+          },
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "result": {
+            "videoId": "{{response.id}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "messages.list": {
+        "kind": "action",
+        "title": "List messages in a Page conversation",
+        "description": "List messages in a Facebook Page conversation via GET /{conversation-id}/messages. Follow after cursors only while pages contain results.",
+        "timeoutMs": 10000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "sideEffect": "read",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "conversationId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Conversation ID such as t_3638640842939952 from conversations.list."
+            },
+            "limit": {
+              "type": "integer",
+              "description": "Requested page size; provider validates its allowed range."
+            },
+            "after": {
+              "type": "string",
+              "description": "Opaque after cursor from the prior response. Omit for the first page."
+            }
+          },
+          "required": [
+            "conversationId"
+          ],
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "messages"
+          ],
+          "properties": {
+            "messages": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              },
+              "description": "Provider records."
+            },
+            "after": {
+              "type": "string",
+              "description": "Opaque continuation cursor, if supplied by the provider."
+            }
+          }
+        },
+        "request": {
+          "method": "GET",
+          "path": "/{{conversationId}}/messages",
+          "success": [
+            200
+          ],
+          "query": {
+            "fields": "id,created_time,from,message",
+            "limit": "{{limit}}",
+            "after": "{{after}}"
+          },
+          "result": {
+            "messages": "{{response.data}}",
+            "after": "{{response.paging.cursors.after}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "objects.get": {
+        "kind": "action",
+        "title": "Read a Graph object by ID",
+        "description": "Read caller-selected fields from an identified Facebook Graph node via GET /{object-id}. Use me for the connected identity; permissions must already allow the requested fields.",
+        "timeoutMs": 10000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "sideEffect": "read",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "objectId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Facebook Graph object ID, or me for the connected user."
+            },
+            "fields": {
+              "type": "string",
+              "description": "Optional comma-separated Graph fields to return."
+            }
+          },
+          "required": [
+            "objectId"
+          ],
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "object"
+          ],
+          "properties": {
+            "object": {
+              "type": "object",
+              "description": "Requested Graph node fields."
+            }
+          }
+        },
+        "request": {
+          "method": "GET",
+          "path": "/{{objectId}}",
+          "success": [
+            200
+          ],
+          "query": {
+            "fields": "{{fields}}"
+          },
+          "result": {
+            "object": "{{response}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "messages.get": {
+        "kind": "action",
+        "title": "Get a Page message",
+        "description": "Read a message sent or received by the configured Page via GET /{message-id}.",
+        "timeoutMs": 10000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "sideEffect": "read",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "messageId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "ID of the message to retrieve."
+            },
+            "fields": {
+              "type": "string",
+              "description": "Optional comma-separated message fields to return."
+            }
+          },
+          "required": [
+            "messageId"
+          ],
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "message"
+          ],
+          "properties": {
+            "message": {
+              "type": "object",
+              "description": "Provider message node."
+            }
+          }
+        },
+        "request": {
+          "method": "GET",
+          "path": "/{{messageId}}",
+          "success": [
+            200
+          ],
+          "query": {
+            "fields": "{{fields}}"
+          },
+          "result": {
+            "message": "{{response}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "roles.list": {
+        "kind": "action",
+        "title": "List Page roles",
+        "description": "List people and their tasks on the configured Facebook Page via GET /{page-id}/roles. Business-scoped users appear on the assigned_users edge instead.",
+        "timeoutMs": 10000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "sideEffect": "read",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "limit": {
+              "type": "integer",
+              "description": "Requested page size; provider validates its allowed range."
+            },
+            "after": {
+              "type": "string",
+              "description": "Opaque after cursor from the prior response. Omit for the first page."
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "roles"
+          ],
+          "properties": {
+            "roles": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              },
+              "description": "Provider records."
+            },
+            "after": {
+              "type": "string",
+              "description": "Opaque continuation cursor, if supplied by the provider."
+            }
+          }
+        },
+        "request": {
+          "method": "GET",
+          "path": "/{{pageId}}/roles",
+          "success": [
+            200
+          ],
+          "query": {
+            "limit": "{{limit}}",
+            "after": "{{after}}"
+          },
+          "result": {
+            "roles": "{{response.data}}",
+            "after": "{{response.paging.cursors.after}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "tagged.list": {
+        "kind": "action",
+        "title": "List posts tagging the configured Page",
+        "description": "List public posts in which the configured Facebook Page is tagged via GET /{page-id}/tagged.",
+        "timeoutMs": 10000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "sideEffect": "read",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "limit": {
+              "type": "integer",
+              "description": "Requested page size; provider validates its allowed range."
+            },
+            "after": {
+              "type": "string",
+              "description": "Opaque after cursor from the prior response. Omit for the first page."
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "posts"
+          ],
+          "properties": {
+            "posts": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              },
+              "description": "Provider records."
+            },
+            "after": {
+              "type": "string",
+              "description": "Opaque continuation cursor, if supplied by the provider."
+            }
+          }
+        },
+        "request": {
+          "method": "GET",
+          "path": "/{{pageId}}/tagged",
+          "success": [
+            200
+          ],
+          "query": {
+            "fields": "id,message,created_time",
+            "limit": "{{limit}}",
+            "after": "{{after}}"
+          },
+          "result": {
+            "posts": "{{response.data}}",
+            "after": "{{response.paging.cursors.after}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "postInsights.get": {
+        "kind": "action",
+        "title": "Get post insights",
+        "description": "Read metrics for a specific Page post via GET /{post-id}/insights. New posts may return empty metric values.",
+        "timeoutMs": 10000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "sideEffect": "read",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "postId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Page post ID belonging to the Page represented by this token."
+            },
+            "metric": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Comma-separated post insight metric names."
+            },
+            "period": {
+              "type": "string",
+              "description": "Aggregation period such as lifetime."
+            }
+          },
+          "required": [
+            "postId",
+            "metric"
+          ],
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "insights"
+          ],
+          "properties": {
+            "insights": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              },
+              "description": "Provider insight results."
+            }
+          }
+        },
+        "request": {
+          "method": "GET",
+          "path": "/{{postId}}/insights",
+          "success": [
+            200
+          ],
+          "query": {
+            "metric": "{{metric}}",
+            "period": "{{period}}"
+          },
+          "result": {
+            "insights": "{{response.data}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "posts.listScheduled": {
+        "kind": "action",
+        "title": "List scheduled Page posts",
+        "description": "List scheduled and unpublished posts for the configured Page via GET /{page-id}/scheduled_posts. Use it to check for duplicates before scheduling.",
+        "timeoutMs": 10000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "sideEffect": "read",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "limit": {
+              "type": "integer",
+              "description": "Requested page size; provider validates its allowed range."
+            },
+            "after": {
+              "type": "string",
+              "description": "Opaque after cursor from the prior response. Omit for the first page."
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "posts"
+          ],
+          "properties": {
+            "posts": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              },
+              "description": "Provider records."
+            },
+            "after": {
+              "type": "string",
+              "description": "Opaque continuation cursor, if supplied by the provider."
+            }
+          }
+        },
+        "request": {
+          "method": "GET",
+          "path": "/{{pageId}}/scheduled_posts",
+          "success": [
+            200
+          ],
+          "query": {
+            "fields": "id,message,scheduled_publish_time",
+            "limit": "{{limit}}",
+            "after": "{{after}}"
+          },
+          "result": {
+            "posts": "{{response.data}}",
+            "after": "{{response.paging.cursors.after}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "likes.create": {
+        "kind": "action",
+        "title": "Like a post or comment as the configured Page",
+        "description": "Add a LIKE reaction to a Page post or comment via POST /{object-id}/likes. Only LIKE can be added programmatically and the Page must not have reacted already.",
+        "timeoutMs": 10000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "sideEffect": "write",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "objectId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Page post or comment ID to react to."
+            }
+          },
+          "required": [
+            "objectId"
+          ],
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "success"
+          ],
+          "properties": {
+            "success": {
+              "type": "boolean",
+              "description": "Provider mutation acknowledgement."
+            }
+          }
+        },
+        "request": {
+          "method": "POST",
+          "path": "/{{objectId}}/likes",
+          "success": [
+            200
+          ],
+          "result": {
+            "success": "{{response.success}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "adAccounts.list": {
+        "kind": "action",
+        "title": "List ad accounts for a user",
+        "description": "List ad accounts available to a Facebook user via GET /{user-id}/adaccounts. Use me for the connected user.",
+        "timeoutMs": 10000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "sideEffect": "read",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "userId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "User ID whose ad accounts to list, or me for the connected user."
+            },
+            "limit": {
+              "type": "integer",
+              "description": "Requested page size; provider validates its allowed range."
+            },
+            "after": {
+              "type": "string",
+              "description": "Opaque after cursor from the prior response. Omit for the first page."
+            }
+          },
+          "required": [
+            "userId"
+          ],
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "adAccounts"
+          ],
+          "properties": {
+            "adAccounts": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              },
+              "description": "Provider records."
+            },
+            "after": {
+              "type": "string",
+              "description": "Opaque continuation cursor, if supplied by the provider."
+            }
+          }
+        },
+        "request": {
+          "method": "GET",
+          "path": "/{{userId}}/adaccounts",
+          "success": [
+            200
+          ],
+          "query": {
+            "limit": "{{limit}}",
+            "after": "{{after}}"
+          },
+          "result": {
+            "adAccounts": "{{response.data}}",
+            "after": "{{response.paging.cursors.after}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "businesses.list": {
+        "kind": "action",
+        "title": "List businesses for a user",
+        "description": "List Business Manager businesses associated with a Facebook user via GET /{user-id}/businesses. Use me for the connected user.",
+        "timeoutMs": 10000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "sideEffect": "read",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "userId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "User ID whose businesses to list, or me for the connected user."
+            },
+            "limit": {
+              "type": "integer",
+              "description": "Requested page size; provider validates its allowed range."
+            },
+            "after": {
+              "type": "string",
+              "description": "Opaque after cursor from the prior response. Omit for the first page."
+            }
+          },
+          "required": [
+            "userId"
+          ],
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "businesses"
+          ],
+          "properties": {
+            "businesses": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              },
+              "description": "Provider records."
+            },
+            "after": {
+              "type": "string",
+              "description": "Opaque continuation cursor, if supplied by the provider."
+            }
+          }
+        },
+        "request": {
+          "method": "GET",
+          "path": "/{{userId}}/businesses",
+          "success": [
+            200
+          ],
+          "query": {
+            "limit": "{{limit}}",
+            "after": "{{after}}"
+          },
+          "result": {
+            "businesses": "{{response.data}}",
+            "after": "{{response.paging.cursors.after}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "managedPages.list": {
+        "kind": "action",
+        "title": "List Pages managed by a user",
+        "description": "List Facebook Pages managed by a user, including tasks and page tokens, via GET /{user-id}/accounts. Use me for the connected user; requires the pages_show_list permission.",
+        "timeoutMs": 10000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "sideEffect": "read",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "userId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "User ID whose managed Pages to list, or me for the connected user."
+            },
+            "limit": {
+              "type": "integer",
+              "description": "Requested page size; provider validates its allowed range."
+            },
+            "after": {
+              "type": "string",
+              "description": "Opaque after cursor from the prior response. Omit for the first page."
+            }
+          },
+          "required": [
+            "userId"
+          ],
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "pages"
+          ],
+          "properties": {
+            "pages": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              },
+              "description": "Provider records."
+            },
+            "after": {
+              "type": "string",
+              "description": "Opaque continuation cursor, if supplied by the provider."
+            }
+          }
+        },
+        "request": {
+          "method": "GET",
+          "path": "/{{userId}}/accounts",
+          "success": [
+            200
+          ],
+          "query": {
+            "limit": "{{limit}}",
+            "after": "{{after}}"
+          },
+          "result": {
+            "pages": "{{response.data}}",
+            "after": "{{response.paging.cursors.after}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "ownedPages.list": {
+        "kind": "action",
+        "title": "List Pages owned by a business",
+        "description": "List Facebook Pages owned by a Business Manager business via GET /{business-id}/owned_pages.",
+        "timeoutMs": 10000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "sideEffect": "read",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "businessId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Business Manager business ID whose owned Pages to list."
+            },
+            "limit": {
+              "type": "integer",
+              "description": "Requested page size; provider validates its allowed range."
+            },
+            "after": {
+              "type": "string",
+              "description": "Opaque after cursor from the prior response. Omit for the first page."
+            }
+          },
+          "required": [
+            "businessId"
+          ],
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "pages"
+          ],
+          "properties": {
+            "pages": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              },
+              "description": "Provider records."
+            },
+            "after": {
+              "type": "string",
+              "description": "Opaque continuation cursor, if supplied by the provider."
+            }
+          }
+        },
+        "request": {
+          "method": "GET",
+          "path": "/{{businessId}}/owned_pages",
+          "success": [
+            200
+          ],
+          "query": {
+            "limit": "{{limit}}",
+            "after": "{{after}}"
+          },
+          "result": {
+            "pages": "{{response.data}}",
+            "after": "{{response.paging.cursors.after}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "permissions.list": {
+        "kind": "action",
+        "title": "List permissions for a user",
+        "description": "List granted, declined or expired permissions for a Facebook user and app via GET /{user-id}/permissions. Use me for the connected user.",
+        "timeoutMs": 10000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "sideEffect": "read",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "userId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "User ID whose permissions to list, or me for the connected user."
+            },
+            "permission": {
+              "type": "string",
+              "description": "Optional permission name to filter, such as email."
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "granted",
+                "declined",
+                "expired"
+              ],
+              "description": "Optional permission status to filter."
+            }
+          },
+          "required": [
+            "userId"
+          ],
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "permissions"
+          ],
+          "properties": {
+            "permissions": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              },
+              "description": "Provider records."
+            },
+            "after": {
+              "type": "string",
+              "description": "Opaque continuation cursor, if supplied by the provider."
+            }
+          }
+        },
+        "request": {
+          "method": "GET",
+          "path": "/{{userId}}/permissions",
+          "success": [
+            200
+          ],
+          "query": {
+            "permission": "{{permission}}",
+            "status": "{{status}}"
+          },
+          "result": {
+            "permissions": "{{response.data}}",
+            "after": "{{response.paging.cursors.after}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "messages.updateSeen": {
+        "kind": "action",
+        "title": "Mark a user's message as seen by the configured Page",
+        "description": "Send the Send API sender_action mark_seen for a user's message via POST /{page-id}/messages. Requires an open messaging window with the recipient.",
+        "timeoutMs": 10000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "sideEffect": "write",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "recipientId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Page-scoped ID of the user whose message to mark as seen."
+            }
+          },
+          "required": [
+            "recipientId"
+          ],
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "recipientId"
+          ],
+          "properties": {
+            "recipientId": {
+              "type": "string",
+              "description": "Recipient the action applied to."
+            }
+          }
+        },
+        "request": {
+          "method": "POST",
+          "path": "/{{pageId}}/messages",
+          "success": [
+            200
+          ],
+          "body": {
+            "recipient": {
+              "id": "{{recipientId}}"
+            },
+            "sender_action": "mark_seen"
+          },
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "result": {
+            "recipientId": "{{response.recipient_id}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "posts.publish": {
+        "kind": "action",
+        "title": "Publish a scheduled or unpublished Page post",
+        "description": "Publish a scheduled or unpublished Page post immediately by setting is_published=true via POST /{post-id}.",
+        "timeoutMs": 10000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "sideEffect": "write",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "postId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Scheduled or unpublished Page post ID."
+            }
+          },
+          "required": [
+            "postId"
+          ],
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "success"
+          ],
+          "properties": {
+            "success": {
+              "type": "boolean",
+              "description": "Provider mutation acknowledgement."
+            }
+          }
+        },
+        "request": {
+          "method": "POST",
+          "path": "/{{postId}}",
+          "success": [
+            200
+          ],
+          "body": {
+            "is_published": true
+          },
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "result": {
+            "success": "{{response.success}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "scrape.update": {
+        "kind": "action",
+        "title": "Refresh the Facebook scrape cache for a URL",
+        "description": "Ask Facebook to rescrape a public URL via POST /?id={url}&scrape=true, optionally returning requested metadata fields.",
+        "timeoutMs": 10000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "sideEffect": "write",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "url": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Public HTTP or HTTPS URL whose scrape metadata should be refreshed."
+            },
+            "fields": {
+              "type": "string",
+              "description": "Optional comma-separated URL metadata fields to return after the refresh."
+            }
+          },
+          "required": [
+            "url"
+          ],
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "scrape"
+          ],
+          "properties": {
+            "scrape": {
+              "type": "object",
+              "description": "Refreshed scrape metadata for the URL."
+            }
+          }
+        },
+        "request": {
+          "method": "POST",
+          "path": "/",
+          "success": [
+            200
+          ],
+          "query": {
+            "id": "{{url}}",
+            "scrape": "true",
+            "fields": "{{fields}}"
+          },
+          "result": {
+            "scrape": "{{response}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "tasks.delete": {
+        "kind": "action",
+        "title": "Remove a user's tasks from the configured Page",
+        "description": "Remove a business-scoped user's tasks from the configured Page via DELETE /{page-id}/assigned_users?user={user}. Caller needs admin rights on the Page.",
+        "timeoutMs": 10000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "sideEffect": "write",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "user": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Business-scoped user ID or system user ID whose tasks to remove."
+            }
+          },
+          "required": [
+            "user"
+          ],
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "success"
+          ],
+          "properties": {
+            "success": {
+              "type": "boolean",
+              "description": "Provider mutation acknowledgement."
+            }
+          }
+        },
+        "request": {
+          "method": "DELETE",
+          "path": "/{{pageId}}/assigned_users",
+          "success": [
+            200
+          ],
+          "query": {
+            "user": "{{user}}"
+          },
+          "result": {
+            "success": "{{response.success}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "posts.reschedule": {
+        "kind": "action",
+        "title": "Reschedule an unpublished Page post",
+        "description": "Change scheduled_publish_time of a scheduled Page post via POST /{post-id}. The provider requires a future time within its scheduling window.",
+        "timeoutMs": 10000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "sideEffect": "write",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "postId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Scheduled Page post ID."
+            },
+            "scheduledPublishTime": {
+              "type": "integer",
+              "description": "New future Unix timestamp in seconds."
+            }
+          },
+          "required": [
+            "postId",
+            "scheduledPublishTime"
+          ],
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "success"
+          ],
+          "properties": {
+            "success": {
+              "type": "boolean",
+              "description": "Provider mutation acknowledgement."
+            }
+          }
+        },
+        "request": {
+          "method": "POST",
+          "path": "/{{postId}}",
+          "success": [
+            200
+          ],
+          "body": {
+            "scheduled_publish_time": "{{scheduledPublishTime}}"
+          },
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "result": {
+            "success": "{{response.success}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "targeting.search": {
+        "kind": "action",
+        "title": "Search geographic ad targeting locations",
+        "description": "Search current geographic keys accepted by Meta ad targeting via GET /search?type=adgeolocation.",
+        "timeoutMs": 10000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "sideEffect": "read",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "query": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Text prefix used to autocomplete locations."
+            },
+            "locationTypes": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "description": "Geographic location categories to include in the search."
+            },
+            "countryCode": {
+              "type": "string",
+              "description": "ISO country code used to constrain results."
+            },
+            "regionId": {
+              "type": "string",
+              "description": "Meta region ID used to constrain results."
+            },
+            "matchCountryCode": {
+              "type": "boolean",
+              "description": "Match the query against country codes instead of country names."
+            },
+            "limit": {
+              "type": "integer",
+              "description": "Requested page size; provider validates its allowed range."
+            },
+            "after": {
+              "type": "string",
+              "description": "Opaque after cursor from the prior response. Omit for the first page."
+            }
+          },
+          "required": [
+            "query"
+          ],
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "locations"
+          ],
+          "properties": {
+            "locations": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              },
+              "description": "Provider targeting locations."
+            }
+          }
+        },
+        "request": {
+          "method": "GET",
+          "path": "/search",
+          "success": [
+            200
+          ],
+          "query": {
+            "type": "adgeolocation",
+            "q": "{{query}}",
+            "location_types": "{{locationTypes}}",
+            "country_code": "{{countryCode}}",
+            "region_id": "{{regionId}}",
+            "match_country_code": "{{matchCountryCode}}",
+            "limit": "{{limit}}",
+            "after": "{{after}}"
+          },
+          "result": {
+            "locations": "{{response}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "pages.search": {
+        "kind": "action",
+        "title": "Search Facebook Pages",
+        "description": "Search Facebook Pages by query string via GET /pages/search. Requires the Page Public Metadata or Page Public Content Access app feature.",
+        "timeoutMs": 10000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "sideEffect": "read",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "query": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Search query such as a business name or topic."
+            },
+            "fields": {
+              "type": "string",
+              "description": "Optional comma-separated Page fields to return."
+            },
+            "limit": {
+              "type": "integer",
+              "description": "Requested page size; provider validates its allowed range."
+            }
+          },
+          "required": [
+            "query"
+          ],
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "pages"
+          ],
+          "properties": {
+            "pages": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              },
+              "description": "Provider records."
+            },
+            "after": {
+              "type": "string",
+              "description": "Opaque continuation cursor, if supplied by the provider."
+            }
+          }
+        },
+        "request": {
+          "method": "GET",
+          "path": "/pages/search",
+          "success": [
+            200
+          ],
+          "query": {
+            "q": "{{query}}",
+            "fields": "{{fields}}",
+            "limit": "{{limit}}"
+          },
+          "result": {
+            "pages": "{{response.data}}",
+            "after": "{{response.paging.cursors.after}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "messages.create": {
+        "kind": "action",
+        "title": "Send a text message from the configured Page",
+        "description": "Send a Messenger text message from the configured Page to a user via POST /{page-id}/messages. Requires an open messaging window or an eligible tag; the recipient must be a page-scoped ID.",
+        "timeoutMs": 10000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "sideEffect": "write",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "recipientId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Page-scoped ID of the message recipient."
+            },
+            "messageText": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Text content of the message."
+            },
+            "messagingType": {
+              "type": "string",
+              "enum": [
+                "RESPONSE",
+                "UPDATE",
+                "MESSAGE_TAG"
+              ],
+              "description": "Messaging type for the message."
+            },
+            "tag": {
+              "type": "string",
+              "description": "Message tag, required when messagingType is MESSAGE_TAG."
+            }
+          },
+          "required": [
+            "recipientId",
+            "messageText"
+          ],
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "recipientId",
+            "messageId"
+          ],
+          "properties": {
+            "recipientId": {
+              "type": "string",
+              "description": "Recipient the message was sent to."
+            },
+            "messageId": {
+              "type": "string",
+              "description": "ID of the sent message."
+            }
+          }
+        },
+        "request": {
+          "method": "POST",
+          "path": "/{{pageId}}/messages",
+          "success": [
+            200
+          ],
+          "body": {
+            "recipient": {
+              "id": "{{recipientId}}"
+            },
+            "message": {
+              "text": "{{messageText}}"
+            },
+            "messaging_type": "{{messagingType}}",
+            "tag": "{{tag}}"
+          },
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "result": {
+            "recipientId": "{{response.recipient_id}}",
+            "messageId": "{{response.message_id}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "messages.createMedia": {
+        "kind": "action",
+        "title": "Send a media message from the configured Page",
+        "description": "Send an image, video, audio or file message from the configured Page via POST /{page-id}/messages using a public media URL.",
+        "timeoutMs": 10000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "sideEffect": "write",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "recipientId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Page-scoped ID of the message recipient."
+            },
+            "mediaUrl": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Public URL of the media to send."
+            },
+            "mediaType": {
+              "type": "string",
+              "enum": [
+                "image",
+                "video",
+                "audio",
+                "file"
+              ],
+              "description": "Type of media being sent."
+            },
+            "isReusable": {
+              "type": "boolean",
+              "description": "Whether the attachment is reusable."
+            },
+            "messagingType": {
+              "type": "string",
+              "enum": [
+                "RESPONSE",
+                "UPDATE",
+                "MESSAGE_TAG"
+              ],
+              "description": "Messaging type for the message."
+            },
+            "tag": {
+              "type": "string",
+              "description": "Message tag, required when messagingType is MESSAGE_TAG."
+            }
+          },
+          "required": [
+            "recipientId",
+            "mediaUrl",
+            "mediaType"
+          ],
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "recipientId",
+            "messageId"
+          ],
+          "properties": {
+            "recipientId": {
+              "type": "string",
+              "description": "Recipient the message was sent to."
+            },
+            "messageId": {
+              "type": "string",
+              "description": "ID of the sent message."
+            }
+          }
+        },
+        "request": {
+          "method": "POST",
+          "path": "/{{pageId}}/messages",
+          "success": [
+            200
+          ],
+          "body": {
+            "recipient": {
+              "id": "{{recipientId}}"
+            },
+            "message": {
+              "attachment": {
+                "type": "{{mediaType}}",
+                "payload": {
+                  "url": "{{mediaUrl}}",
+                  "is_reusable": "{{isReusable}}"
+                }
+              }
+            },
+            "messaging_type": "{{messagingType}}",
+            "tag": "{{tag}}"
+          },
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "result": {
+            "recipientId": "{{response.recipient_id}}",
+            "messageId": "{{response.message_id}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "messages.updateTyping": {
+        "kind": "action",
+        "title": "Toggle the typing indicator for a Messenger user",
+        "description": "Show or hide the typing indicator for a user via POST /{page-id}/messages with sender_action typing_on or typing_off.",
+        "timeoutMs": 10000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "sideEffect": "write",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "recipientId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Page-scoped ID of the user to show or hide the indicator for."
+            },
+            "senderAction": {
+              "type": "string",
+              "enum": [
+                "typing_on",
+                "typing_off"
+              ],
+              "description": "Sender action to apply."
+            }
+          },
+          "required": [
+            "recipientId",
+            "senderAction"
+          ],
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "recipientId"
+          ],
+          "properties": {
+            "recipientId": {
+              "type": "string",
+              "description": "Recipient the action applied to."
+            }
+          }
+        },
+        "request": {
+          "method": "POST",
+          "path": "/{{pageId}}/messages",
+          "success": [
+            200
+          ],
+          "body": {
+            "recipient": {
+              "id": "{{recipientId}}"
+            },
+            "sender_action": "{{senderAction}}"
+          },
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "result": {
+            "recipientId": "{{response.recipient_id}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "likes.delete": {
+        "kind": "action",
+        "title": "Unlike a post or comment as the configured Page",
+        "description": "Remove the configured Page's LIKE reaction from a post or comment via DELETE /{object-id}/likes.",
+        "timeoutMs": 10000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "sideEffect": "write",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "objectId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Page post or comment ID to remove the like from."
+            }
+          },
+          "required": [
+            "objectId"
+          ],
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "success"
+          ],
+          "properties": {
+            "success": {
+              "type": "boolean",
+              "description": "Provider mutation acknowledgement."
+            }
+          }
+        },
+        "request": {
+          "method": "DELETE",
+          "path": "/{{objectId}}/likes",
+          "success": [
+            200
+          ],
+          "result": {
+            "success": "{{response.success}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "comments.update": {
+        "kind": "action",
+        "title": "Update a comment",
+        "description": "Update a comment's message or hidden state via POST /{comment-id}. The comment must belong to a post on a Page managed by the token.",
+        "timeoutMs": 10000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "sideEffect": "write",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "commentId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Comment ID on a Page post."
+            },
+            "message": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Replacement comment text."
+            },
+            "isHidden": {
+              "type": "boolean",
+              "description": "Whether to hide or unhide the comment."
+            }
+          },
+          "required": [
+            "commentId",
+            "message"
+          ],
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "success"
+          ],
+          "properties": {
+            "success": {
+              "type": "boolean",
+              "description": "Provider mutation acknowledgement."
+            }
+          }
+        },
+        "request": {
+          "method": "POST",
+          "path": "/{{commentId}}",
+          "success": [
+            200
+          ],
+          "body": {
+            "message": "{{message}}",
+            "is_hidden": "{{isHidden}}"
+          },
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "result": {
+            "success": "{{response.success}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "pages.update": {
+        "kind": "action",
+        "title": "Update settings of the configured Page",
+        "description": "Update updatable Page fields such as about, description, general_info, phone, website and emails via POST /{page-id}. Not all fields are available for every Page category.",
+        "timeoutMs": 10000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "sideEffect": "write",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "about": {
+              "type": "string",
+              "description": "Updated about section for the Page."
+            },
+            "description": {
+              "type": "string",
+              "description": "Updated description for the Page."
+            },
+            "generalInfo": {
+              "type": "string",
+              "description": "Updated general information."
+            },
+            "phone": {
+              "type": "string",
+              "description": "Updated phone number."
+            },
+            "website": {
+              "type": "string",
+              "description": "Updated website URL."
+            },
+            "emails": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "description": "Updated email addresses."
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "success"
+          ],
+          "properties": {
+            "success": {
+              "type": "boolean",
+              "description": "Provider mutation acknowledgement."
+            }
+          }
+        },
+        "request": {
+          "method": "POST",
+          "path": "/{{pageId}}",
+          "success": [
+            200
+          ],
+          "body": {
+            "about": "{{about}}",
+            "description": "{{description}}",
+            "general_info": "{{generalInfo}}",
+            "phone": "{{phone}}",
+            "website": "{{website}}",
+            "emails": "{{emails}}"
+          },
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "result": {
+            "success": "{{response.success}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "batch.create": {
+        "kind": "action",
+        "title": "Send a Graph API batch request",
+        "description": "Send up to 50 independent Graph API calls in one POST / request via the batch parameter. Each item has method, relative_url and an optional form-encoded body; the provider returns one JSON-encoded result per item.",
+        "timeoutMs": 10000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "sideEffect": "write",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "batch": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 50,
+              "items": {
+                "type": "object",
+                "required": [
+                  "method",
+                  "relative_url"
+                ],
+                "properties": {
+                  "method": {
+                    "type": "string",
+                    "enum": [
+                      "GET",
+                      "POST",
+                      "DELETE",
+                      "PUT"
+                    ],
+                    "description": "HTTP method of the batch item."
+                  },
+                  "relative_url": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "Graph path of the batch item, such as me/feed."
+                  },
+                  "body": {
+                    "type": "string",
+                    "description": "Form-encoded body for POST or PUT items."
+                  },
+                  "name": {
+                    "type": "string",
+                    "description": "Optional item name for result references."
+                  }
+                },
+                "additionalProperties": false
+              },
+              "description": "Batch items serialized as JSON on the batch query parameter."
+            }
+          },
+          "required": [
+            "batch"
+          ],
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              },
+              "description": "One result object per batch item."
+            }
+          }
+        },
+        "request": {
+          "method": "POST",
+          "path": "/",
+          "success": [
+            200
+          ],
+          "parameters": [
+            {
+              "wireName": "batch",
+              "inputName": "batch",
+              "in": "query",
+              "style": "form",
+              "explode": false,
+              "allowReserved": false,
+              "contentMediaType": "application/json"
+            }
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
       }
     },
     "models": [

@@ -58,6 +58,58 @@ const batchTools: Array<[string, string]> = [
   ["PLANETSCALE_GET_BRANCH_ANOMALY", "branchAnomalies.get"],
 ];
 
+// L2-11 batch: the next 48 missing_http rows implemented as declarative operations.
+const batch2Tools: Array<[string, string]> = [
+  ["PLANETSCALE_GET_BRANCH_CHANGE_REQUEST", "branchChangeRequests.get"],
+  ["PLANETSCALE_GET_BRANCH_METRICS", "branchMetrics.get"],
+  ["PLANETSCALE_GET_BRANCH_QUERY", "branchQueries.get"],
+  ["PLANETSCALE_GET_BRANCH_QUERY_ERROR", "branchQueryErrors.get"],
+  ["PLANETSCALE_GET_BRANCH_QUERY_METRICS", "branchQueryMetrics.get"],
+  ["PLANETSCALE_GET_BRANCH_QUERY_TAG", "branchQueryTags.get"],
+  ["PLANETSCALE_GET_BRANCH_RESIZE_REQUEST", "branchResizeRequests.get"],
+  ["PLANETSCALE_GET_BRANCH_SCHEMA", "branchSchemas.get"],
+  ["PLANETSCALE_GET_BRANCH_TAG_METRICS", "branchTagMetrics.get"],
+  ["PLANETSCALE_GET_CURRENT_USER", "users.current"],
+  ["PLANETSCALE_GET_DATABASE_POSTGRES_CIDR", "databaseCidrs.get"],
+  ["PLANETSCALE_GET_DATABASE_THROTTLER", "databaseThrottlers.get"],
+  ["PLANETSCALE_GET_DATA_TOPOLOGY", "dataTopologies.get"],
+  ["PLANETSCALE_GET_DEFAULT_ROLE", "defaultRoles.get"],
+  ["PLANETSCALE_GET_DEPLOYMENT", "deployments.get"],
+  ["PLANETSCALE_GET_DEPLOY_QUEUE", "deployQueues.get"],
+  ["PLANETSCALE_GET_DEPLOY_REQUEST", "deployRequests.get"],
+  ["PLANETSCALE_GET_DEPLOY_REQUEST_THROTTLER", "deployRequestThrottlers.get"],
+  ["PLANETSCALE_GET_INSIGHTS_AGENT_RUN", "insightsAgentRuns.get"],
+  ["PLANETSCALE_GET_INSTANT_BRANCH_METRICS", "instantBranchMetrics.get"],
+  ["PLANETSCALE_GET_INSTANT_TABLET_METRICS", "instantTabletMetrics.get"],
+  ["PLANETSCALE_GET_INVOICE", "invoices.get"],
+  ["PLANETSCALE_GET_INVOICE_LINE_ITEMS", "invoiceLineItems.get"],
+  ["PLANETSCALE_GET_MAINTENANCE_SCHEDULE", "maintenanceSchedules.get"],
+  ["PLANETSCALE_GET_NEKI_CHANGE_REQUEST", "nekiChangeRequests.get"],
+  ["PLANETSCALE_GET_ORGANIZATION", "organizations.get"],
+  ["PLANETSCALE_GET_ORGANIZATION_BILLING_PAYMENT_METHOD", "billingPaymentMethods.get"],
+  ["PLANETSCALE_GET_ORGANIZATION_MEMBERSHIP", "memberships.get"],
+  ["PLANETSCALE_GET_ORGANIZATION_SSO", "sso.get"],
+  ["PLANETSCALE_GET_ORGANIZATION_SSO_DOMAIN", "ssoDomains.get"],
+  ["PLANETSCALE_GET_ORGANIZATION_TEAM", "teams.get"],
+  ["PLANETSCALE_GET_ORGANIZATION_TEAM_MEMBER", "teamMembers.get"],
+  ["PLANETSCALE_GET_PASSWORD", "passwords.get"],
+  ["PLANETSCALE_GET_PAYMENT_METHOD_SETUP", "paymentMethodSetups.get"],
+  ["PLANETSCALE_GET_QUERY_PATTERNS_REPORT_STATUS", "queryPatternsReports.get"],
+  ["PLANETSCALE_GET_QUERY_STATISTICS", "queryStatistics.get"],
+  ["PLANETSCALE_GET_QUERY_SUMMARY", "querySummaries.get"],
+  ["PLANETSCALE_GET_READ_ONLY_REPLICA", "dedicatedReadReplicas.get"],
+  ["PLANETSCALE_GET_ROLE", "roles.get"],
+  ["PLANETSCALE_GET_ROUTER", "routers.get"],
+  ["PLANETSCALE_GET_SCHEMA_RECOMMENDATION", "schemaRecommendations.get"],
+  ["PLANETSCALE_GET_SHARD", "shards.get"],
+  ["PLANETSCALE_GET_SHARD_CONFIGURATION_PROFILE", "configurationProfiles.get"],
+  ["PLANETSCALE_GET_SHARD_CONFIGURATION_PROFILE_SHARD", "configurationProfileShards.get"],
+  ["PLANETSCALE_GET_SIDECAR", "sidecars.get"],
+  ["PLANETSCALE_GET_SWITCHOVER", "switchovers.get"],
+  ["PLANETSCALE_GET_TABLET_METRICS", "tabletMetrics.get"],
+  ["PLANETSCALE_GET_TRAFFIC_BUDGET", "trafficBudgets.get"],
+];
+
 describe("PlanetScale contract", () => {
   test("coverage artifact accounts for all 245 tools exactly once", () => {
     const tools = [...coverage.mapped, ...coverage.missing_http, ...coverage.missing_still].map((row) => row.tool);
@@ -73,6 +125,17 @@ describe("PlanetScale contract", () => {
       expect(mapped.get(tool), tool).toBe(operation);
       const definition = operations[operation];
       expect(typeof definition?.request?.method, tool).toBe("string");
+      expect(typeof definition?.request?.path, tool).toBe("string");
+      expect(typeof actions[operation], tool).toBe("function");
+    }
+  });
+
+  test("the 48 batch-2 tools are mapped to compiled declarative actions", () => {
+    const mapped = new Map(coverage.mapped.map((row) => [row.tool, row.operation]));
+    for (const [tool, operation] of batch2Tools) {
+      expect(mapped.get(tool), tool).toBe(operation);
+      const definition = operations[operation];
+      expect(definition?.request?.method, tool).toBe("GET");
       expect(typeof definition?.request?.path, tool).toBe("string");
       expect(typeof actions[operation], tool).toBe("function");
     }

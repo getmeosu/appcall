@@ -7,10 +7,18 @@ const exists = existsSync(manifestPath);
 it("has an executable manifest", () => expect(exists).toBe(true));
 const manifest = exists ? JSON.parse(readFileSync(manifestPath, "utf8")) : {operations:{}};
 const { actions } = compileDeclarativeConnector(manifest);
+const isStrict = (op:string) => (manifest.operations as Record<string,{validationMode?:string}>)[op]?.validationMode === "strict-generated";
+const parameterized = (op:string) => ((manifest.operations as Record<string,{request?:{parameters?:Array<{in?:string}>}}>)[op]?.request?.parameters ?? []).some(p=>p.in==="query");
 for (const c of cases) describe(c.op, () => {
   it("validates without exposing undeclared data", async () => {
     expect(actions[c.op]).toBeFunction();
-    const result = await actions[c.op]!({...c.input, unexpected:"ignored"});
+    if (isStrict(c.op)) {
+      let calls = 0;
+      await expect(actions[c.op]!({...c.input, accessToken:"fixture-token", pageId:"page123", unexpected:"ignored", fetch:async()=>{calls++;return Response.json({});}}))
+        .rejects.toMatchObject({code:"INVALID_ACTION_INPUT"});
+      expect(calls).toBe(0);
+    }
+    const result = await actions[c.op]!({...c.input, ...(isStrict(c.op) ? {} : {unexpected:"ignored"})});
     expect(result).toMatchObject(c.op === "healthcheck" ? {status:"ok"} : {validated:c.input});
     expect(JSON.stringify(result)).not.toContain("ignored");
   });
@@ -19,7 +27,15 @@ for (const c of cases) describe(c.op, () => {
     let calls = 0;
     const result = await actions[c.op]!({...c.input, accessToken:"fixture-token",pageId:"page123", fetch:async(url:unknown, init?:RequestInit)=>{
       calls++;
-      expect(String(url)).toBe(manifest.http.baseUrl+c.path+(c.path.includes("?")?"&":"?")+"access_token=fixture-token");
+      const expectedUrl = manifest.http.baseUrl+c.path+(c.path.includes("?")?"&":"?")+"access_token=fixture-token";
+      if (parameterized(c.op)) {
+        const actual = new URL(String(url));
+        const expected = new URL(expectedUrl);
+        expect(actual.pathname).toBe(expected.pathname);
+        expect([...actual.searchParams.entries()].sort()).toEqual([...expected.searchParams.entries()].sort());
+      } else {
+        expect(String(url)).toBe(expectedUrl);
+      }
       expect(init?.method).toBe(c.method);
       const headers = new Headers(init?.headers);
       expect(headers.get("Authorization")).toBeNull();
