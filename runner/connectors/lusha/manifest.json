@@ -23,6 +23,24 @@
       "api.lusha.com"
     ]
   },
+  "http": {
+    "baseUrl": "https://api.lusha.com",
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "api_key"
+    },
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after",
+      "defaultRetryAfterSeconds": 10
+    }
+  },
   "operations": {
     "healthcheck": {
       "kind": "action",
@@ -397,6 +415,474 @@
           "source": { "type": "string" },
           "credits": { "type": "object", "description": "Credit usage details including used, remaining, and limit." }
         }
+      }
+    },
+    "contacts.search": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "Search Contacts",
+      "description": "Find contacts by identifier via POST /v3/contacts/search. Look up to 100 contacts by id, linkedinUrl, email, or firstName + lastName + companyName/companyDomain, and return non-PII previews with the has and canReveal data points.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "contacts": {
+            "type": "array",
+            "items": { "type": "object" },
+            "description": "Contact identifiers (1-100). Each item requires at least one of id, linkedinUrl, email, or firstName + lastName + companyName/companyDomain."
+          },
+          "options": { "type": "object", "description": "Search options such as includePartialProfiles." },
+          "signals": { "type": "object", "description": "Optional signals filter (e.g. promotion, companyChange)." }
+        },
+        "required": ["contacts"],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": { "type": "object", "description": "V3ContactsSearchResponse with requestId, results, and billing." }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v3/contacts/search",
+        "body": {
+          "contacts": "{{contacts}}",
+          "options": "{{options}}",
+          "signals": "{{signals}}"
+        },
+        "success": [200]
+      }
+    },
+    "contacts.enrich": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "Enrich Contacts",
+      "description": "Reveal full contact data for up to 100 contact IDs returned by a search via POST /v3/contacts/enrich. Use reveal to unlock emails and/or phones, and pass tableId to persist the revealed contacts to a Lusha table.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "ids": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Lusha contact IDs from a prior search (1-100)."
+          },
+          "reveal": {
+            "type": "array",
+            "items": { "type": "string", "enum": ["emails", "phones"] },
+            "description": "Data points to reveal. Omit to reveal both."
+          },
+          "waterfallEnabled": {
+            "type": "boolean",
+            "description": "Allow this call to fall through to enabled third-party providers when Lusha has no match."
+          },
+          "tableId": { "type": "string", "description": "Optional. Add the revealed contacts to this Lusha table." }
+        },
+        "required": ["ids"],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": { "type": "object", "description": "V3ContactsEnrichResponse with requestId, results, billing, and an optional async job." }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v3/contacts/enrich",
+        "body": {
+          "ids": "{{ids}}",
+          "reveal": "{{reveal}}",
+          "waterfallEnabled": "{{waterfallEnabled}}",
+          "tableId": "{{tableId}}"
+        },
+        "success": [200]
+      }
+    },
+    "contacts.search_and_enrich": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "Search and Enrich Contacts",
+      "description": "Find contacts and reveal their full data in a single call via POST /v3/contacts/search-and-enrich. Provide identifiers as in Search Contacts and use reveal to control which fields are unlocked.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "contacts": {
+            "type": "array",
+            "items": { "type": "object" },
+            "description": "Contact identifiers (1-100). Each item requires at least one of id, linkedinUrl, email, or firstName + lastName + companyName/companyDomain."
+          },
+          "reveal": {
+            "type": "array",
+            "items": { "type": "string", "enum": ["emails", "phones"] },
+            "description": "Data points to reveal. Omit to reveal both."
+          },
+          "options": { "type": "object", "description": "Search options such as includePartialProfiles." }
+        },
+        "required": ["contacts"],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": { "type": "object", "description": "V3ContactsSearchAndEnrichResponse with requestId, results, and billing." }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v3/contacts/search-and-enrich",
+        "body": {
+          "contacts": "{{contacts}}",
+          "reveal": "{{reveal}}",
+          "options": "{{options}}"
+        },
+        "success": [200]
+      }
+    },
+    "contacts.prospecting": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "Prospect Contacts",
+      "description": "Filter-based contact search via POST /v3/contacts/prospecting. Apply rich filters across title, seniority, location, and signals, with pagination; pass tableId to also persist matches to a Lusha table.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "pagination": { "type": "object", "description": "Pagination request, e.g. { page, size }." },
+          "filters": { "type": "object", "description": "Prospecting contact filters (title, seniority, location, signals, ...)." },
+          "tableId": { "type": "string", "description": "Optional. Persist matching results to this Lusha table." },
+          "options": { "type": "object", "description": "Optional controls such as includePartialProfiles, excludeDnc, and maxContactsPerCompany." }
+        },
+        "required": ["pagination", "filters"],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": { "type": "object", "description": "V3ProspectingContactsResponse with requestId, pagination, results, and billing." }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v3/contacts/prospecting",
+        "body": {
+          "pagination": "{{pagination}}",
+          "filters": "{{filters}}",
+          "tableId": "{{tableId}}",
+          "options": "{{options}}"
+        },
+        "success": [200]
+      }
+    },
+    "account.usage": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Get Account Usage",
+      "description": "Retrieve current credit usage, rate limits, plan details, and pricing from GET /v3/account/usage.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "required": [],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": { "type": "object", "description": "AccountUsageResponse with credits, rateLimits, plan, and pricing." }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v3/account/usage",
+        "success": [200]
+      }
+    },
+    "companies.filters.values": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Get Company Filter Values",
+      "description": "Fetch valid values for a company prospecting filter type via GET /v3/companies/prospecting/filters/{filterType}. Filter types include sizes, revenues, locations, industriesLabels, technologies, and intentTopics.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "filterType": { "type": "string", "description": "Company filter type, e.g. sizes or industriesLabels." },
+          "query": { "type": "string", "description": "Optional search text to narrow the returned values." }
+        },
+        "required": ["filterType"],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": { "type": "object", "description": "FilterValuesResponse with a values field whose shape depends on the filter type." }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v3/companies/prospecting/filters/{{filterType}}",
+        "query": {
+          "query": "{{query}}"
+        },
+        "success": [200]
+      }
+    },
+    "subscriptions.create": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 262144,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Create Subscriptions",
+      "description": "Create webhook subscriptions (bulk supported, up to 25 items) via POST /api/subscriptions. Provide shared defaults (HTTPS webhook URL, entity type, signal types) and one entry per entity to watch.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "defaults": { "type": "object", "description": "Shared subscription defaults; url is required." },
+          "subscriptions": {
+            "type": "array",
+            "items": { "type": "object" },
+            "description": "Subscriptions to create (1-25). Each item requires entityId and may override entityType, signalTypes, and name."
+          },
+          "name": { "type": "string", "description": "Default subscription name prefix." }
+        },
+        "required": ["defaults", "subscriptions"],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": { "type": "object", "description": "CreateSubscriptionResponse with total, successful, failed, and per-subscription results." }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/api/subscriptions",
+        "body": {
+          "defaults": "{{defaults}}",
+          "subscriptions": "{{subscriptions}}",
+          "name": "{{name}}"
+        },
+        "success": [201]
+      }
+    },
+    "subscriptions.list": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "List Subscriptions",
+      "description": "List webhook subscriptions via GET /api/subscriptions with limit/offset pagination.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "limit": { "type": "integer", "description": "Maximum number of results (1-100, default 10)." },
+          "offset": { "type": "integer", "description": "Number of results to skip (default 0)." }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": { "type": "object", "description": "SubscriptionListResponse with data and pagination." }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/subscriptions",
+        "query": {
+          "limit": "{{limit}}",
+          "offset": "{{offset}}"
+        },
+        "success": [200]
+      }
+    },
+    "subscriptions.get": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "sideEffect": "read",
+      "title": "Get Subscription",
+      "description": "Retrieve one webhook subscription by ID via GET /api/subscriptions/{id}. The webhook secret is never returned by this endpoint.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "description": "Subscription ID." }
+        },
+        "required": ["id"],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": { "type": "object", "description": "SubscriptionWithoutSecret for the requested subscription." }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/subscriptions/{{id}}",
+        "success": [200]
+      }
+    },
+    "subscriptions.update": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Update Subscription",
+      "description": "Update a webhook subscription's URL, name, signal types, or active state via PATCH /api/subscriptions/{id}. Set regenerateSecret to rotate and return a new webhook secret.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "description": "Subscription ID." },
+          "signalTypes": { "type": "array", "items": { "type": "string" }, "description": "New signal types to subscribe to." },
+          "url": { "type": "string", "description": "New HTTPS webhook URL." },
+          "name": { "type": "string", "description": "New subscription name." },
+          "isActive": { "type": "boolean", "description": "Enable or disable the subscription." },
+          "regenerateSecret": { "type": "boolean", "description": "Generate a new webhook secret, returned in the response." }
+        },
+        "required": ["id"],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": { "type": "object", "description": "SubscriptionResponse for the updated subscription." }
+        }
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/api/subscriptions/{{id}}",
+        "body": {
+          "signalTypes": "{{signalTypes}}",
+          "url": "{{url}}",
+          "name": "{{name}}",
+          "isActive": "{{isActive}}",
+          "regenerateSecret": "{{regenerateSecret}}"
+        },
+        "success": [200]
+      }
+    },
+    "subscriptions.delete": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 262144,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "destructive",
+      "title": "Delete Subscriptions",
+      "description": "Delete webhook subscriptions (bulk supported, up to 25 IDs) via POST /api/subscriptions/delete. The response reports per-ID success and failure.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "ids": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Subscription IDs to delete (1-25)."
+          }
+        },
+        "required": ["ids"],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": { "type": "object", "description": "DeleteSubscriptionResponse with total, successful, failed, and per-ID results." }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/api/subscriptions/delete",
+        "body": {
+          "ids": "{{ids}}"
+        },
+        "success": [200]
+      }
+    },
+    "audit_logs.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "Get Audit Logs",
+      "description": "List webhook delivery audit logs via GET /api/audit-logs, optionally filtered by subscription ID or delivery status, with limit/offset pagination.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "subscriptionId": { "type": "string", "description": "Filter by subscription ID." },
+          "status": { "type": "string", "enum": ["success", "failed", "permanent_failure"], "description": "Filter by delivery status." },
+          "limit": { "type": "integer", "description": "Maximum number of results (1-100, default 50)." },
+          "offset": { "type": "integer", "description": "Number of results to skip (default 0)." }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": { "type": "object", "description": "AuditLogsResponse with delivery log data and pagination." }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/audit-logs",
+        "query": {
+          "subscriptionId": "{{subscriptionId}}",
+          "status": "{{status}}",
+          "limit": "{{limit}}",
+          "offset": "{{offset}}"
+        },
+        "success": [200]
+      }
+    },
+    "audit_logs.stats": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "sideEffect": "read",
+      "title": "Get Audit Log Statistics",
+      "description": "Retrieve webhook delivery statistics (total, success, failed, success rate) via GET /api/audit-logs/stats, optionally filtered by subscription ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "subscriptionId": { "type": "string", "description": "Filter statistics by subscription ID." }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": { "type": "object", "description": "AuditLogStatsResponse with total, success, failed, and successRate." }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/audit-logs/stats",
+        "query": {
+          "subscriptionId": "{{subscriptionId}}"
+        },
+        "success": [200]
       }
     }
   },

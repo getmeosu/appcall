@@ -25,6 +25,10 @@ export const TT1_DESTRUCTIVE_OPS = [
   // linus ruling (#665): bc.partners.add restores membership, not the specific
   // asset_ids/asset_type shares, and no op re-shares assets to a partner.
   "bc.partner_assets.delete",
+  // L2-27: the L2 batch adds one more irreversible delete. TikTok documents
+  // DELETE /gmv_max/creation/custom_anchor_video_list/delete/ as a permanent
+  // deletion of shop-level customized posts; there is no restore route.
+  "gmv_max.customized_posts.delete",
 ] as const;
 
 // Reversible deletes kept as write, with the op that restores the state.

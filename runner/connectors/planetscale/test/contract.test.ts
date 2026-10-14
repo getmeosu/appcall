@@ -162,6 +162,60 @@ const batch3Tools: Array<[string, string]> = [
   ["PLANETSCALE_LIST_SHARDS", "shards.list"],
 ];
 
+// L2-23 batch: the final 47 missing_http rows implemented as declarative operations.
+// PLANETSCALE_OAUTH_TOKEN_INFO is reclassified to missing_still (OAuth-only route on
+// auth.planetscale.com requiring a Bearer access token this service-token connector
+// does not carry).
+const batch4Tools: Array<[string, string]> = [
+  ["PLANETSCALE_LIST_SHARD_CONFIGURATION_PROFILES", "configurationProfiles.list"],
+  ["PLANETSCALE_LIST_SHARD_CONFIGURATION_PROFILE_EXTENSIONS", "configurationProfileExtensions.list"],
+  ["PLANETSCALE_LIST_SHARD_CONFIGURATION_PROFILE_PARAMETERS", "configurationProfileParameters.list"],
+  ["PLANETSCALE_LIST_SHARD_CONFIGURATION_PROFILE_SHARDS", "configurationProfileShards.list"],
+  ["PLANETSCALE_LIST_SIDECARS", "sidecars.list"],
+  ["PLANETSCALE_LIST_SIDECAR_PARAMETERS", "sidecarParameters.list"],
+  ["PLANETSCALE_LIST_SWITCHOVERS", "switchovers.list"],
+  ["PLANETSCALE_LIST_TRAFFIC_BUDGETS", "trafficBudgets.list"],
+  ["PLANETSCALE_LIST_TRAFFIC_BUDGETS_FOR_QUERY", "queryTrafficBudgets.list"],
+  ["PLANETSCALE_LIST_WEBHOOKS", "webhooks.list"],
+  ["PLANETSCALE_PROMOTE_BRANCH", "branches.promote"],
+  ["PLANETSCALE_QUEUE_DEPLOY_REQUEST", "deployRequests.queue"],
+  ["PLANETSCALE_RENEW_PASSWORD", "passwords.renew"],
+  ["PLANETSCALE_RENEW_ROLE", "roles.renew"],
+  ["PLANETSCALE_RESET_DEFAULT_ROLE", "roles.resetDefault"],
+  ["PLANETSCALE_RESET_ROLE", "roles.reset"],
+  ["PLANETSCALE_REVIEW_DEPLOY_REQUEST", "deployRequestReviews.create"],
+  ["PLANETSCALE_SET_DEFAULT_SHARD_CONFIGURATION_PROFILE", "configurationProfiles.setDefault"],
+  ["PLANETSCALE_SKIP_REVERT_PERIOD", "deployRequests.skipRevert"],
+  ["PLANETSCALE_UPDATE_ADMIN", "admins.update"],
+  ["PLANETSCALE_UPDATE_AUTO_APPLY", "deployRequests.updateAutoApply"],
+  ["PLANETSCALE_UPDATE_AUTO_DELETE_BRANCH", "deployRequests.updateAutoDeleteBranch"],
+  ["PLANETSCALE_UPDATE_BACKUP", "backups.update"],
+  ["PLANETSCALE_UPDATE_BACKUP_POLICY", "backupPolicies.update"],
+  ["PLANETSCALE_UPDATE_BOUNCER_RESIZE_REQUEST", "bouncerResizeRequests.upsert"],
+  ["PLANETSCALE_UPDATE_BRANCH", "branches.update"],
+  ["PLANETSCALE_UPDATE_BRANCH_CHANGE_REQUEST", "branchChangeRequests.upsert"],
+  ["PLANETSCALE_UPDATE_BRANCH_RESIZE_REQUEST", "branchResizeRequests.upsert"],
+  ["PLANETSCALE_UPDATE_DATABASE_POSTGRES_CIDR", "databaseCidrs.update"],
+  ["PLANETSCALE_UPDATE_DATABASE_SETTINGS", "databases.update"],
+  ["PLANETSCALE_UPDATE_DATABASE_THROTTLER", "databaseThrottlers.update"],
+  ["PLANETSCALE_UPDATE_DATA_TOPOLOGY", "dataTopologies.update"],
+  ["PLANETSCALE_UPDATE_DEPLOY_REQUEST_THROTTLER", "deployRequestThrottlers.update"],
+  ["PLANETSCALE_UPDATE_INSIGHTS_AGENT_SCHEDULE", "insightsAgentSchedules.update"],
+  ["PLANETSCALE_UPDATE_ORGANIZATION", "organizations.update"],
+  ["PLANETSCALE_UPDATE_ORGANIZATION_MEMBERSHIP", "memberships.update"],
+  ["PLANETSCALE_UPDATE_ORGANIZATION_TEAM", "teams.update"],
+  ["PLANETSCALE_UPDATE_PASSWORD", "passwords.update"],
+  ["PLANETSCALE_UPDATE_READ_ONLY_REPLICA", "dedicatedReadReplicas.update"],
+  ["PLANETSCALE_UPDATE_ROLE", "roles.update"],
+  ["PLANETSCALE_UPDATE_ROUTER", "routers.update"],
+  ["PLANETSCALE_UPDATE_SAFE_MIGRATIONS", "safeMigrations.update"],
+  ["PLANETSCALE_UPDATE_SHARD_CONFIGURATION_PROFILE", "configurationProfiles.update"],
+  ["PLANETSCALE_UPDATE_SHARD_CONFIGURATION_PROFILE_SHARD", "configurationProfileShards.update"],
+  ["PLANETSCALE_UPDATE_SIDECAR", "sidecars.update"],
+  ["PLANETSCALE_UPDATE_TRAFFIC_BUDGET", "trafficBudgets.update"],
+  ["PLANETSCALE_UPDATE_WEBHOOK", "webhooks.update"],
+];
+
 describe("PlanetScale contract", () => {
   test("coverage artifact accounts for all 245 tools exactly once", () => {
     const tools = [...coverage.mapped, ...coverage.missing_http, ...coverage.missing_still].map((row) => row.tool);
@@ -202,6 +256,22 @@ describe("PlanetScale contract", () => {
       expect(typeof definition?.request?.path, tool).toBe("string");
       expect(typeof actions[operation], tool).toBe("function");
     }
+  });
+
+  test("the 47 batch-4 tools are mapped to compiled declarative actions", () => {
+    const mapped = new Map(coverage.mapped.map((row) => [row.tool, row.operation]));
+    for (const [tool, operation] of batch4Tools) {
+      expect(mapped.get(tool), tool).toBe(operation);
+      const definition = operations[operation];
+      expect(typeof definition?.request?.method, tool).toBe("string");
+      expect(typeof definition?.request?.path, tool).toBe("string");
+      expect(typeof actions[operation], tool).toBe("function");
+    }
+  });
+
+  test("missing_http is empty and every source slug is accounted for exactly once", () => {
+    expect(coverage.missing_http).toEqual([]);
+    expect(coverage.missing_still.map((row) => row.tool)).toContain("PLANETSCALE_OAUTH_TOKEN_INFO");
   });
 
   test("every mapped tool resolves to a compiled declarative action", () => {

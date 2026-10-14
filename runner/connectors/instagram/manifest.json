@@ -1,7 +1,7 @@
 {
   "key": "instagram",
   "name": "Instagram (Facebook Login)",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "runtime": "bun",
   "visibility": "public",
   "categories": [
@@ -1106,6 +1106,1245 @@
       "enforceOutputSchema": true,
       "validationMode": "strict-generated",
       "responseFormat": "json"
+    },
+    "containers.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create media container",
+      "description": "Create an unpublished image, Reel or story container from a public URL. Omit mediaType for a plain image; REELS requires videoUrl and STORIES accepts either URL. This does not publish; poll containers.get and publish explicitly when ready.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "mediaType": {
+            "type": "string",
+            "enum": [
+              "REELS",
+              "STORIES"
+            ],
+            "description": "Container media type. Omit for a plain image; Meta treats the deprecated VIDEO type as REELS."
+          },
+          "imageUrl": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Publicly accessible JPEG URL; Meta retrieves the file."
+          },
+          "videoUrl": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Publicly accessible MP4 or MOV URL; Meta retrieves the file."
+          },
+          "caption": {
+            "type": "string",
+            "description": "Caption text, subject to provider content limits."
+          },
+          "altText": {
+            "type": "string",
+            "description": "Alternative text for an image container."
+          },
+          "shareToFeed": {
+            "type": "boolean",
+            "description": "Whether a Reel also appears in the feed."
+          },
+          "coverUrl": {
+            "type": "string",
+            "description": "Publicly accessible cover image URL for a Reel."
+          },
+          "thumbOffset": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Cover frame offset in milliseconds; coverUrl takes precedence."
+          },
+          "locationId": {
+            "type": "string",
+            "description": "Facebook Page ID of a location to tag."
+          },
+          "isCarouselItem": {
+            "type": "boolean",
+            "description": "Marks an image or video container as a carousel child."
+          }
+        },
+        "additionalProperties": false,
+        "anyOf": [
+          {
+            "required": [
+              "imageUrl"
+            ]
+          },
+          {
+            "required": [
+              "videoUrl"
+            ]
+          }
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/{{instagramUserId}}/media",
+        "success": [
+          200
+        ],
+        "body": {
+          "media_type": "{{mediaType}}",
+          "image_url": "{{imageUrl}}",
+          "video_url": "{{videoUrl}}",
+          "caption": "{{caption}}",
+          "alt_text": "{{altText}}",
+          "share_to_feed": "{{shareToFeed}}",
+          "cover_url": "{{coverUrl}}",
+          "thumb_offset": "{{thumbOffset}}",
+          "location_id": "{{locationId}}",
+          "is_carousel_item": "{{isCarouselItem}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "containers.createCarousel": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create carousel container",
+      "description": "Create an unpublished carousel container from 2-10 child container IDs. Children must be FINISHED before the carousel is published.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "children": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Comma-separated list of 2-10 image or video container IDs in slide order."
+          },
+          "caption": {
+            "type": "string",
+            "description": "Caption text, subject to provider content limits."
+          },
+          "locationId": {
+            "type": "string",
+            "description": "Facebook Page ID of a location to tag."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "children"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/{{instagramUserId}}/media",
+        "success": [
+          200
+        ],
+        "body": {
+          "media_type": "CAROUSEL",
+          "children": "{{children}}",
+          "caption": "{{caption}}",
+          "location_id": "{{locationId}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "media.children.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List carousel children",
+      "description": "List the media objects inside a carousel album. Child media do not expose insights; query those at the parent album level.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "mediaId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Instagram carousel album media ID."
+          },
+          "fields": {
+            "type": "string",
+            "description": "Comma-separated child media fields."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "mediaId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/{{mediaId}}/children",
+        "success": [
+          200
+        ],
+        "query": {
+          "fields": "{{fields}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "media.setCommentEnabled": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Set media comment availability",
+      "description": "Enable or disable new comments on an owned published media object. Live video media is not supported.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "mediaId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Numeric Graph API ID of owned published Instagram media."
+          },
+          "commentEnabled": {
+            "type": "boolean",
+            "description": "True enables new comments; false disables them."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "mediaId",
+          "commentEnabled"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/{{mediaId}}",
+        "success": [
+          200
+        ],
+        "query": {
+          "comment_enabled": "{{commentEnabled}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "comments.replies.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List comment replies",
+      "description": "List replies to a top-level Instagram comment.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "commentId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Parent Instagram comment ID."
+          },
+          "fields": {
+            "type": "string",
+            "description": "Comma-separated reply fields."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Provider page size."
+          },
+          "after": {
+            "type": "string",
+            "description": "Opaque after cursor from a prior response."
+          },
+          "before": {
+            "type": "string",
+            "description": "Opaque before cursor from a prior response."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "commentId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/{{commentId}}/replies",
+        "success": [
+          200
+        ],
+        "query": {
+          "fields": "{{fields}}",
+          "limit": "{{limit}}",
+          "after": "{{after}}",
+          "before": "{{before}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "comments.replies.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create comment reply",
+      "description": "Reply to a top-level Instagram comment. Replies to replies attach to the top-level comment and hidden comments cannot be answered.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "commentId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Parent Instagram comment ID."
+          },
+          "message": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Reply text, subject to provider content limits."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "commentId",
+          "message"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/{{commentId}}/replies",
+        "success": [
+          200
+        ],
+        "query": {
+          "message": "{{message}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "conversations.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get conversation",
+      "description": "Read one Instagram DM conversation, including its participants, by conversation ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "conversationId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Conversation ID from conversations.list."
+          },
+          "fields": {
+            "type": "string",
+            "description": "Comma-separated conversation fields such as id, updated_time, participants."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "conversationId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/{{conversationId}}",
+        "success": [
+          200
+        ],
+        "query": {
+          "fields": "{{fields}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "conversations.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List conversations",
+      "description": "List one page of Instagram DM conversations for the bound professional account. Pass userId to find the conversation with one participant; request-folder conversations inactive for 30 days are omitted by the provider.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Instagram-scoped user ID (IGSID) of one participant."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Provider page size."
+          },
+          "after": {
+            "type": "string",
+            "description": "Opaque after cursor from a prior response."
+          },
+          "fields": {
+            "type": "string",
+            "description": "Comma-separated conversation fields such as id, is_owner, messages, participants, updated_time."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/{{instagramUserId}}/conversations",
+        "success": [
+          200
+        ],
+        "query": {
+          "platform": "instagram",
+          "user_id": "{{userId}}",
+          "limit": "{{limit}}",
+          "after": "{{after}}",
+          "fields": "{{fields}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "conversations.listByPage": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List page conversations",
+      "description": "List conversations on a Facebook Page. Set platform to INSTAGRAM to keep only Instagram conversations.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "pageId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Facebook Page ID whose conversations are read."
+          },
+          "platform": {
+            "type": "string",
+            "enum": [
+              "INSTAGRAM",
+              "MESSENGER"
+            ],
+            "description": "Platform filter; INSTAGRAM returns Instagram conversations only."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Provider page size."
+          },
+          "after": {
+            "type": "string",
+            "description": "Opaque after cursor from a prior response."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "pageId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/{{pageId}}/conversations",
+        "success": [
+          200
+        ],
+        "query": {
+          "platform": "{{platform}}",
+          "limit": "{{limit}}",
+          "after": "{{after}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "messages.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List messages",
+      "description": "List one page of messages in an Instagram DM conversation. Only the 20 most recent messages expose their full details.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "conversationId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Conversation ID from conversations.list."
+          },
+          "fields": {
+            "type": "string",
+            "description": "Comma-separated message fields such as id, created_time, from, to, message."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Provider page size."
+          },
+          "after": {
+            "type": "string",
+            "description": "Opaque after cursor from a prior response."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "conversationId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/{{conversationId}}/messages",
+        "success": [
+          200
+        ],
+        "query": {
+          "fields": "{{fields}}",
+          "limit": "{{limit}}",
+          "after": "{{after}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "messages.sendText": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Send text message",
+      "description": "Send a text DM to an Instagram user in an existing conversation. The recipient must have messaged the account within the provider messaging window.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "recipientId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Recipient Instagram-scoped user ID (IGSID), not a username."
+          },
+          "text": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Message text, up to the provider byte limit."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "recipientId",
+          "text"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/{{instagramUserId}}/messages",
+        "success": [
+          200
+        ],
+        "body": {
+          "recipient": {
+            "id": "{{recipientId}}"
+          },
+          "message": {
+            "text": "{{text}}"
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "messages.sendImage": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Send image message",
+      "description": "Send one image DM by public URL to an Instagram user in an existing conversation.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "recipientId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Recipient Instagram-scoped user ID (IGSID), not a username."
+          },
+          "imageUrl": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Publicly accessible image URL; Meta retrieves the file."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "recipientId",
+          "imageUrl"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/{{instagramUserId}}/messages",
+        "success": [
+          200
+        ],
+        "body": {
+          "recipient": {
+            "id": "{{recipientId}}"
+          },
+          "message": {
+            "attachment": {
+              "type": "image",
+              "payload": {
+                "url": "{{imageUrl}}"
+              }
+            }
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "messages.markSeen": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Mark messages seen",
+      "description": "Send the mark_seen sender action for one Instagram user. Marking is visible to the recipient and requires an open messaging window.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "recipientId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Recipient Instagram-scoped user ID (IGSID), not a username."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "recipientId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/{{instagramUserId}}/messages",
+        "success": [
+          200
+        ],
+        "body": {
+          "recipient": {
+            "id": "{{recipientId}}"
+          },
+          "sender_action": "mark_seen"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "mentions.reply": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Reply to mention",
+      "description": "Reply to a caption or comment mention by creating a comment on the media that contains it. Stories mentions and tagged-photo comments are not supported.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "mediaId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Media ID that contains the mention."
+          },
+          "message": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Reply text posted as a comment."
+          },
+          "commentId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Comment ID of the mention; omit to comment on the media itself."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "mediaId",
+          "message"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/{{instagramUserId}}/mentions",
+        "success": [
+          200
+        ],
+        "query": {
+          "media_id": "{{mediaId}}",
+          "comment_id": "{{commentId}}",
+          "message": "{{message}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "liveMedia.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List live media",
+      "description": "List live video media broadcasting at request time for the bound professional account.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "fields": {
+            "type": "string",
+            "description": "Comma-separated media fields such as id, media_type, media_url, timestamp, permalink."
+          },
+          "since": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Unix timestamp lower bound for time-based pagination."
+          },
+          "until": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Unix timestamp upper bound for time-based pagination."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/{{instagramUserId}}/live_media",
+        "success": [
+          200
+        ],
+        "query": {
+          "fields": "{{fields}}",
+          "since": "{{since}}",
+          "until": "{{until}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "nodes.getMultiple": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get multiple nodes",
+      "description": "Read one shared field projection for several Graph nodes in a single request, preserving the provider's ID-to-object mapping.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "ids": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Comma-separated Graph node IDs, up to 50 per call."
+          },
+          "fields": {
+            "type": "string",
+            "description": "Optional exact field projection valid for every requested node."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "ids"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/",
+        "success": [
+          200
+        ],
+        "query": {
+          "ids": "{{ids}}",
+          "fields": "{{fields}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "messengerProfile.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get messenger profile",
+      "description": "Read messaging configuration for the bound professional account, such as ice breakers and the persistent menu.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "fields": {
+            "type": "string",
+            "description": "Comma-separated messenger profile fields such as ice_breakers or persistent_menu."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/{{instagramUserId}}/messenger_profile",
+        "success": [
+          200
+        ],
+        "query": {
+          "fields": "{{fields}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "messengerProfile.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Update messenger profile",
+      "description": "Set ice breaker questions for the bound professional account. At most four questions are supported.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "iceBreakers": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 4,
+            "items": {
+              "type": "object",
+              "properties": {
+                "question": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Suggested question shown when a conversation starts."
+                },
+                "payload": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Payload delivered when the question is tapped."
+                }
+              },
+              "required": [
+                "question",
+                "payload"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "iceBreakers"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/{{instagramUserId}}/messenger_profile",
+        "success": [
+          200
+        ],
+        "body": {
+          "platform": "instagram",
+          "ice_breakers": [
+            {
+              "call_to_actions": "{{iceBreakers}}"
+            }
+          ]
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "messengerProfile.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Delete messenger profile fields",
+      "description": "Remove ice breakers or the persistent menu from the messenger profile of the bound professional account.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "fields": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string",
+              "enum": [
+                "ice_breakers",
+                "persistent_menu"
+              ]
+            },
+            "description": "Messenger profile properties to delete."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "fields"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/{{instagramUserId}}/messenger_profile",
+        "success": [
+          200
+        ],
+        "body": {
+          "fields": "{{fields}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "subscribedApps.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List subscribed apps",
+      "description": "List the apps enabled for webhook notifications on the bound professional account, including their subscribed fields.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/{{instagramUserId}}/subscribed_apps",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "subscribedApps.subscribe": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Enable webhook subscriptions",
+      "description": "Enable webhook fields for delivery to the bound professional account. The Meta app must be Live with Advanced Access and a configured callback before this is used.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "subscribedFields": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Comma-separated webhook fields such as comments, live_comments, messages, messaging_postbacks."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "subscribedFields"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/{{instagramUserId}}/subscribed_apps",
+        "success": [
+          200
+        ],
+        "query": {
+          "subscribed_fields": "{{subscribedFields}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
     }
   },
   "provenance": {
@@ -1122,5 +2361,5 @@
       "status": "unverified"
     }
   },
-  "description": "Read professional Instagram media and explicitly create, inspect, and publish public-URL image or Reel containers."
+  "description": "Read professional Instagram media and insights, moderate comments, manage messaging conversations and webhook subscriptions, and explicitly create, inspect, and publish public-URL containers."
 }

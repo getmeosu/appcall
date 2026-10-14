@@ -7027,6 +7027,754 @@
         }
       }
     },
+    "account.triggerStatistics": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Get account trigger statistics",
+      "description": "Retrieve account-level trigger and automation execution statistics with the account_trigger_statistics query. The optional filters argument narrows the result by board_id (Int) and user_ids ([Int!]); omit it for the whole account. Verified against the live schema (query account_trigger_statistics(filters: AccountTriggerStatisticsFiltersInput): AccountTriggerStatistics with fields id, success, failure, total).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "filters": {
+            "type": "object",
+            "description": "Optional AccountTriggerStatisticsFiltersInput object: board_id (Int) and user_ids ([Int!])."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "statistics": {
+            "type": "object"
+          }
+        }
+      },
+      "sample": {},
+      "request": {
+        "method": "POST",
+        "path": "/v2",
+        "body": {
+          "query": "query ($filters: AccountTriggerStatisticsFiltersInput) { account_trigger_statistics(filters: $filters) { id success failure total } }",
+          "variables": {
+            "filters": "{{filters}}"
+          }
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "statistics": "{{response.data.account_trigger_statistics}}"
+        }
+      }
+    },
+    "objects.addSubscribers": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Add subscribers to object",
+      "description": "Add subscribers or owners to any monday object with the add_subscribers_to_object mutation. id is the object ID (ID!); user_ids is a non-empty [ID!]! list; kind is the optional SubscriberKind enum (OWNER or SUBSCRIBER, provider default SUBSCRIBER). Returns the object with its subscribers. Verified against the live schema.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Object ID to add subscribers to (ID!). Required."
+          },
+          "userIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "User IDs to add ([ID!]!). Required."
+          },
+          "kind": {
+            "type": "string",
+            "description": "SubscriberKind: OWNER (full control) or SUBSCRIBER (notification access). Optional; provider default SUBSCRIBER."
+          }
+        },
+        "required": [
+          "id",
+          "userIds"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "object": {
+            "type": "object"
+          }
+        }
+      },
+      "sample": {
+        "id": "12345",
+        "userIds": [
+          "1234567890"
+        ],
+        "kind": "SUBSCRIBER"
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v2",
+        "body": {
+          "query": "mutation ($id: ID!, $userIds: [ID!]!, $kind: SubscriberKind) { add_subscribers_to_object(id: $id, user_ids: $userIds, kind: $kind) { id name subscribers { id name } } }",
+          "variables": {
+            "id": "{{id}}",
+            "userIds": "{{userIds}}",
+            "kind": "{{kind}}"
+          }
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "object": "{{response.data.add_subscribers_to_object}}"
+        }
+      }
+    },
+    "aggregate.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Aggregate board data",
+      "description": "Run the root aggregate query with an AggregateQueryInput object (from, select, optional group_by, query, limit) to compute COUNT/SUM/AVERAGE/MIN/MAX and grouped summaries without paging items. query is required and is the whole AggregateQueryInput. Verified against the live schema (aggregate(query: AggregateQueryInput!): AggregateQueryResult).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "object",
+            "description": "AggregateQueryInput object: from ({type, id}), select (aggregation or column elements), optional group_by, query (filters), limit. Required."
+          }
+        },
+        "required": [
+          "query"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "results": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "sample": {
+        "query": {
+          "from": {
+            "type": "TABLE",
+            "id": 1234567890
+          },
+          "select": [
+            {
+              "type": "FUNCTION",
+              "function": {
+                "function": "COUNT_ITEMS"
+              },
+              "as": "total_items"
+            }
+          ]
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v2",
+        "body": {
+          "query": "query ($query: AggregateQueryInput!) { aggregate(query: $query) { results { entries { alias value { ... on AggregateBasicAggregationResult { result } ... on AggregateGroupByResult { value } } } } } }",
+          "variables": {
+            "query": "{{query}}"
+          }
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "results": "{{response.data.aggregate.results}}"
+        }
+      }
+    },
+    "objects.archive": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Archive object",
+      "description": "Archive any monday object (board, item, workspace, ...) with archive_object, changing its state to archived instead of deleting it. id is the object ID (ID!). Verified against the live schema.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Object ID to archive (ID!). Required."
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "object": {
+            "type": "object"
+          }
+        }
+      },
+      "sample": {
+        "id": "12345"
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v2",
+        "body": {
+          "query": "mutation ($id: ID!) { archive_object(id: $id) { id name state } }",
+          "variables": {
+            "id": "{{id}}"
+          }
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "object": "{{response.data.archive_object}}"
+        }
+      }
+    },
+    "connections.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Get connections",
+      "description": "List the account integrations with the root connections query. page, pageSize, order, connectionState, withAutomations, withStateValidation, withPartialScopes and pagination are the documented optional arguments. Verified against the live schema (connections: [Connection!]).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer",
+            "description": "Offset page index (Int), starts at 1."
+          },
+          "pageSize": {
+            "type": "integer",
+            "description": "Records per page (Int)."
+          },
+          "order": {
+            "type": "string",
+            "description": "Ordering, e.g. 'createdAt' ascending or '-createdAt' descending."
+          },
+          "connectionState": {
+            "type": "string",
+            "description": "Filter by connection state, e.g. 'active'."
+          },
+          "withAutomations": {
+            "type": "boolean",
+            "description": "Only return connections with automations attached."
+          },
+          "withStateValidation": {
+            "type": "boolean",
+            "description": "Validate each connection state before returning."
+          },
+          "withPartialScopes": {
+            "type": "boolean",
+            "description": "Include connections created with partial scopes."
+          },
+          "pagination": {
+            "type": "object",
+            "description": "Cursor pagination input: {limit: Int, lastId: Int}."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connections": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "sample": {
+        "page": 1,
+        "pageSize": 25
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v2",
+        "body": {
+          "query": "query ($page: Int, $pageSize: Int, $order: String, $withAutomations: Boolean, $withStateValidation: Boolean, $withPartialScopes: Boolean, $connectionState: String, $pagination: PaginationInput) { connections(page: $page, pageSize: $pageSize, order: $order, withAutomations: $withAutomations, withStateValidation: $withStateValidation, withPartialScopes: $withPartialScopes, connectionState: $connectionState, pagination: $pagination) { id accountId userId provider name method providerAccountIdentifier state createdAt updatedAt } }",
+          "variables": {
+            "page": "{{page}}",
+            "pageSize": "{{pageSize}}",
+            "order": "{{order}}",
+            "withAutomations": "{{withAutomations}}",
+            "withStateValidation": "{{withStateValidation}}",
+            "withPartialScopes": "{{withPartialScopes}}",
+            "connectionState": "{{connectionState}}",
+            "pagination": "{{pagination}}"
+          }
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "connections": "{{response.data.connections}}"
+        }
+      }
+    },
+    "objects.delete": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Delete object",
+      "description": "Permanently delete any monday object with delete_object. The provider keeps a 30-day recovery grace period before the object is gone. id is the object ID (ID!). Verified against the live schema.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Object ID to delete (ID!). Required."
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "object": {
+            "type": "object"
+          }
+        }
+      },
+      "sample": {
+        "id": "12345"
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v2",
+        "body": {
+          "query": "mutation ($id: ID!) { delete_object(id: $id) { id name state } }",
+          "variables": {
+            "id": "{{id}}"
+          }
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "object": "{{response.data.delete_object}}"
+        }
+      }
+    },
+    "team.delete": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Delete team",
+      "description": "Delete a monday team with delete_team. teamId is the team ID (ID!). Verified against the live schema and the Teams reference (delete_team(team_id: ID!): Team).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "teamId": {
+            "type": "string",
+            "description": "Team ID to delete (ID!). Required."
+          }
+        },
+        "required": [
+          "teamId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "team": {
+            "type": "object"
+          }
+        }
+      },
+      "sample": {
+        "teamId": "111"
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v2",
+        "body": {
+          "query": "mutation ($teamId: ID!) { delete_team(team_id: $teamId) { id } }",
+          "variables": {
+            "teamId": "{{teamId}}"
+          }
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "team": "{{response.data.delete_team}}"
+        }
+      }
+    },
+    "version.get": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Get API version",
+      "description": "Read the API version used to make the call with the root version query, monday's own debugging aid. Distinct from versions.list, which lists every supported version. Takes no input.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "object"
+          }
+        }
+      },
+      "sample": {},
+      "request": {
+        "method": "POST",
+        "path": "/v2",
+        "body": {
+          "query": "query { version { kind value display_name } }",
+          "variables": {}
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "version": "{{response.data.version}}"
+        }
+      }
+    },
+    "objects.publish": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Publish object",
+      "description": "Publish a monday object with publish_object. id is the object ID (ID!); the response reports success. Verified against the live schema (publish_object(id: ID!): ObjectOperationResponse).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Object ID to publish (ID!). Required."
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          }
+        }
+      },
+      "sample": {
+        "id": "12345"
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v2",
+        "body": {
+          "query": "mutation ($id: ID!) { publish_object(id: $id) { success } }",
+          "variables": {
+            "id": "{{id}}"
+          }
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "success": "{{response.data.publish_object.success}}"
+        }
+      }
+    },
+    "objects.unpublish": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Unpublish object",
+      "description": "Unpublish a monday object with unpublish_object. id is the object ID (ID!); success is false when the object was never published or is not in a publishable state. Verified against the live schema (unpublish_object(id: ID!): ObjectOperationResponse).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Object ID to unpublish (ID!). Required."
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          }
+        }
+      },
+      "sample": {
+        "id": "12345"
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v2",
+        "body": {
+          "query": "mutation ($id: ID!) { unpublish_object(id: $id) { success } }",
+          "variables": {
+            "id": "{{id}}"
+          }
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "success": "{{response.data.unpublish_object.success}}"
+        }
+      }
+    },
+    "users.updateEmailDomain": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Update email domain",
+      "description": "Migrate users to a new email domain with update_email_domain. userIds and newDomain are the two UpdateEmailDomainAttributesInput fields (user_ids: [ID!]!, new_domain: String!); the operation nests them into the required input object. Requires admin privileges. Verified against the live schema.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "userIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "User IDs whose email domain will change ([ID!]!). Required."
+          },
+          "newDomain": {
+            "type": "string",
+            "description": "The new email domain, e.g. 'newcompany.com' (String!). Required."
+          }
+        },
+        "required": [
+          "userIds",
+          "newDomain"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "updatedUsers": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "errors": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "sample": {
+        "userIds": [
+          "12345678"
+        ],
+        "newDomain": "newcompany.com"
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v2",
+        "body": {
+          "query": "mutation ($input: UpdateEmailDomainAttributesInput!) { update_email_domain(input: $input) { updated_users { id name email } errors { user_id code message } } }",
+          "variables": {
+            "input": {
+              "user_ids": "{{userIds}}",
+              "new_domain": "{{newDomain}}"
+            }
+          }
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "updatedUsers": "{{response.data.update_email_domain.updated_users}}",
+          "errors": "{{response.data.update_email_domain.errors}}"
+        }
+      }
+    },
+    "users.updateMultiple": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Update multiple users",
+      "description": "Batch-update user profiles with update_multiple_users. userUpdates is the required [UserUpdateInput!]! list; each entry is {user_id: ID!, user_attribute_updates: UserAttributesInput!} where UserAttributesInput carries name, email, title, department, location, phone, mobile_phone, birthday or join_date. Verified against the live schema.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "userUpdates": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            },
+            "description": "UserUpdateInput list: [{user_id, user_attribute_updates: {name, email, title, department, location, phone, mobile_phone, birthday, join_date}}]. Required."
+          }
+        },
+        "required": [
+          "userUpdates"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "updatedUsers": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "errors": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "sample": {
+        "userUpdates": [
+          {
+            "user_id": "12345678",
+            "user_attribute_updates": {
+              "title": "Product Manager"
+            }
+          }
+        ]
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v2",
+        "body": {
+          "query": "mutation ($userUpdates: [UserUpdateInput!]!) { update_multiple_users(user_updates: $userUpdates) { updated_users { id name email } errors { user_id code message } } }",
+          "variables": {
+            "userUpdates": "{{userUpdates}}"
+          }
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "updatedUsers": "{{response.data.update_multiple_users.updated_users}}",
+          "errors": "{{response.data.update_multiple_users.errors}}"
+        }
+      }
+    },
+    "userConnections.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Get user connections",
+      "description": "List the integrations connected by the authenticated user with the root user_connections query. page, pageSize, order, withAutomations, withStateValidation and pagination are the documented optional arguments. Verified against the live schema (user_connections: [Connection!]).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer",
+            "description": "Offset page index (Int), starts at 1."
+          },
+          "pageSize": {
+            "type": "integer",
+            "description": "Records per page (Int)."
+          },
+          "order": {
+            "type": "string",
+            "description": "Ordering, e.g. 'createdAt' ascending or '-createdAt' descending."
+          },
+          "withAutomations": {
+            "type": "boolean",
+            "description": "Only return connections with automations attached."
+          },
+          "withStateValidation": {
+            "type": "boolean",
+            "description": "Validate each connection state before returning."
+          },
+          "pagination": {
+            "type": "object",
+            "description": "Cursor pagination input: {limit: Int, lastId: Int}."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connections": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "sample": {
+        "page": 1,
+        "pageSize": 25
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v2",
+        "body": {
+          "query": "query ($page: Int, $pageSize: Int, $order: String, $withAutomations: Boolean, $withStateValidation: Boolean, $pagination: PaginationInput) { user_connections(page: $page, pageSize: $pageSize, order: $order, withAutomations: $withAutomations, withStateValidation: $withStateValidation, pagination: $pagination) { id accountId userId provider name method providerAccountIdentifier state createdAt updatedAt } }",
+          "variables": {
+            "page": "{{page}}",
+            "pageSize": "{{pageSize}}",
+            "order": "{{order}}",
+            "withAutomations": "{{withAutomations}}",
+            "withStateValidation": "{{withStateValidation}}",
+            "pagination": "{{pagination}}"
+          }
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "connections": "{{response.data.user_connections}}"
+        }
+      }
+    },
     "webhook.column_created": {
       "kind": "webhook",
       "timeoutMs": 30000,
