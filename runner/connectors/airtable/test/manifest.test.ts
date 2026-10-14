@@ -30,7 +30,7 @@ describe("airtable manifest", () => {
       expect(String(operation.title ?? "").length).toBeGreaterThan(0);
       expect(String(operation.description ?? "").length).toBeGreaterThan(0);
       expect((operation.inputSchema as Record<string, unknown>).type).toBe("object");
-      expect(["read", "write"]).toContain(operation.sideEffect as string);
+      expect(["read", "write", "destructive"]).toContain(operation.sideEffect as string);
       expect(operation.request, `${key} must declare a request block`).toBeDefined();
     }
   });
@@ -61,14 +61,14 @@ describe("airtable manifest", () => {
     expect((operation.inputSchema as { required?: string[] }).required).toContain("baseId");
   });
 
-  it("keeps every request inside the declared outbound host", () => {
+  it("keeps every request inside the declared outbound allowlist", () => {
     for (const operation of Object.values(operations)) {
       if (operation.kind === "webhook") continue;
       const request = operation.request as Record<string, unknown>;
       const baseUrl = String(request.baseUrl ?? manifest.http.baseUrl);
-      expect(new URL(baseUrl).hostname).toBe("api.airtable.com");
-      expect(manifest.network.allowedHosts).toContain("api.airtable.com");
+      expect(manifest.network.allowedHosts).toContain(new URL(baseUrl).hostname);
     }
+    expect(manifest.network.allowedHosts).toEqual(["api.airtable.com", "content.airtable.com"]);
   });
 
   it("only interpolates path placeholders that the operation's schema requires", () => {

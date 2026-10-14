@@ -69,6 +69,7 @@ export const uploadAdImage = createTikTokMultipartUpload("files.image.upload", "
 export const uploadMusic = createTikTokMultipartUpload("files.music.upload", "/file/music/upload/", "music_file");
 export const uploadTemporaryFile = createTikTokMultipartUpload("files.temporary.upload", "/file/temporarily/upload/", "file");
 export const uploadCustomAudienceFile = createTikTokMultipartUpload("custom_audiences.file.upload", "/dmp/custom_audience/file/upload/", "file");
+export const uploadCatalogProductSet = createTikTokMultipartUpload("catalogs.product_sets.upload", "/catalog/set/upload/", "file");
 export const uploadBcImage = createTikTokMultipartUpload("bc.image.upload", "/bc/image/upload/", "image_file");
 export const uploadPlayable = createTikTokMultipartUpload("playables.upload", "/playable/upload/", "playable_package");
 export const uploadFileChunk = createTikTokMultipartUpload("files.transfer.upload", "/file/transfer/upload/", "file");

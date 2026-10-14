@@ -27,17 +27,30 @@ describe("airtable manifest compiles to handlers", () => {
       .sort();
     expect(Object.keys(actions).sort()).toEqual(actionKeys);
     expect(actionKeys).toEqual([
+      "bases.create",
       "bases.get",
+      "bases.get_metadata",
       "bases.list",
       "comments.create",
+      "comments.delete",
       "comments.list",
+      "comments.update",
+      "fields.create",
+      "fields.update",
       "healthcheck",
       "records.create",
       "records.delete",
+      "records.delete_multiple",
       "records.get",
       "records.list",
       "records.update",
+      "records.update_multiple",
+      "records.update_multiple_put",
+      "records.update_put",
+      "records.upload_attachment",
+      "tables.create",
       "tables.list",
+      "tables.update",
     ]);
   });
 
@@ -299,7 +312,7 @@ describe("healthcheck", () => {
 });
 
 describe("outbound boundary", () => {
-  it("only allows api.airtable.com", () => {
-    expect(manifest.network.allowedHosts).toEqual(["api.airtable.com"]);
+  it("only allows the documented Airtable API and content hosts", () => {
+    expect(manifest.network.allowedHosts).toEqual(["api.airtable.com", "content.airtable.com"]);
   });
 });

@@ -373,11 +373,24 @@ const v070Operations = [
   "account.verification.upload",
 ];
 
-const addedOperations = [...catalogAudienceOperations, ...campaignReportPixelOperations, ...waveOperations, ...v050Operations, ...v060Operations, ...v070Operations];
+// L2-27 batch: the documented single-route rows from the Composio missing_http
+// backlog, implemented as real request-backed actions.
+const l2BatchOperations = [
+  "leads.download_task.check",
+  "catalogs.product_sets.upload",
+  "gmv_max.customized_posts.create",
+  "gmv_max.customized_posts.list",
+  "gmv_max.customized_posts.delete",
+  "gmv_max.video_anchors.get",
+  "targeting.interests.search",
+  "creatives.smart_text.feedback",
+];
+
+const addedOperations = [...catalogAudienceOperations, ...campaignReportPixelOperations, ...waveOperations, ...v050Operations, ...v060Operations, ...v070Operations, ...l2BatchOperations];
 
 describe("TikTok Ads v1.3 coverage", () => {
   it("adds the documented catalog, audience, campaign, reporting, pixel, BC, Smart+, GMV Max, comment, and tool operations as real request-backed actions", () => {
-    expect(Object.keys(manifest.operations)).toHaveLength(424);
+    expect(Object.keys(manifest.operations)).toHaveLength(432);
     for (const key of addedOperations) {
       const operation = manifest.operations[key];
       expect(operation, key).toBeDefined();
@@ -457,11 +470,33 @@ describe("TikTok Ads v1.3 coverage", () => {
   });
 
   it("declares reads as read-only and mutations as writes", () => {
-    for (const key of addedOperations) {
+    // The L2 batch classifies by documented semantics instead of the HTTP
+    // method, because TikTok v1.3 polls and lists over POST; those three
+    // read ops are pinned in the dedicated test below.
+    for (const key of addedOperations.filter((key) => !l2BatchOperations.includes(key))) {
       const operation = manifest.operations[key];
       // TT-1: irreversible deletes are destructive (pinned in tt1.test.ts).
       const expected = operation.request.method === "GET" ? "read" : TT1_DESTRUCTIVE.has(key) ? "destructive" : "write";
       expect(operation.sideEffect, key).toBe(expected);
+    }
+  });
+
+  it("classifies the L2 batch by documented semantics, not the HTTP method", () => {
+    // POST /page/lead/task/ polls a task, POST .../custom_anchor_video_list/get/
+    // lists posts, and POST .../shop_video/video_anchors/ reads links; all
+    // three are documented reads even though TikTok v1.3 serves them over POST.
+    const expected: Record<string, string> = {
+      "leads.download_task.check": "read",
+      "catalogs.product_sets.upload": "write",
+      "gmv_max.customized_posts.create": "write",
+      "gmv_max.customized_posts.list": "read",
+      "gmv_max.customized_posts.delete": "destructive",
+      "gmv_max.video_anchors.get": "read",
+      "targeting.interests.search": "read",
+      "creatives.smart_text.feedback": "write",
+    };
+    for (const [key, sideEffect] of Object.entries(expected)) {
+      expect(manifest.operations[key].sideEffect, key).toBe(sideEffect);
     }
   });
 

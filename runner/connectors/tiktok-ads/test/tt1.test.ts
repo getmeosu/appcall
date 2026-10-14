@@ -26,12 +26,12 @@ async function run(op: string, input: Record<string, unknown>, fixtureName: stri
 describe("TT-1 TT-EFFECTS: delete sideEffects", () => {
   const deletes = Object.keys(ops).filter((k) => k.endsWith(".delete"));
 
-  it("covers exactly the 25 delete ops", () => {
-    expect(deletes).toHaveLength(25);
+  it("covers exactly the 26 delete ops", () => {
+    expect(deletes).toHaveLength(26);
     expect(new Set(deletes)).toEqual(new Set([...TT1_DESTRUCTIVE_OPS, ...Object.keys(TT1_REVERSIBLE_DELETES)]));
   });
 
-  it("pins the destructive set to the 20 irreversible deletes", () => {
+  it("pins the destructive set to the 21 irreversible deletes", () => {
     const destructive = Object.entries(ops).filter(([, op]) => op.sideEffect === "destructive").map(([k]) => k).sort();
     expect(destructive).toEqual([...TT1_DESTRUCTIVE_OPS].sort());
   });
@@ -51,9 +51,9 @@ describe("TT-1 TT-EFFECTS: delete sideEffects", () => {
     expect(JSON.stringify(manifest)).not.toMatch(/idempotent/i);
   });
 
-  it("keeps sideEffect counts at 235 read, 169 write, 20 destructive", () => {
+  it("keeps sideEffect counts at 239 read, 172 write, 21 destructive", () => {
     const count = (s: string) => Object.values(ops).filter((op) => op.sideEffect === s).length;
-    expect([count("read"), count("write"), count("destructive")]).toEqual([235, 169, 20]);
+    expect([count("read"), count("write"), count("destructive")]).toEqual([239, 172, 21]);
   });
 });
 
