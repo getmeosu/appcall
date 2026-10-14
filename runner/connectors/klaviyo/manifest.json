@@ -1,7 +1,7 @@
 {
   "key": "klaviyo",
   "name": "Klaviyo",
-  "version": "0.4.3",
+  "version": "0.5.0",
   "runtime": "bun",
   "categories": [
     "email-marketing"
@@ -154,7 +154,29 @@
           }
         }
       },
-      "sideEffect": "write"
+      "sideEffect": "write",
+      "request": {
+        "method": "POST",
+        "path": "/api/profiles",
+        "success": [
+          201,
+          200
+        ],
+        "body": {
+          "data": {
+            "type": "profile",
+            "attributes": {
+              "email": "{{email}}",
+              "first_name": "{{firstName}}",
+              "last_name": "{{lastName}}",
+              "phone_number": "{{phone}}"
+            }
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated"
     },
     "profiles.get": {
       "kind": "action",
@@ -221,7 +243,17 @@
           }
         }
       },
-      "sideEffect": "read"
+      "sideEffect": "read",
+      "request": {
+        "method": "GET",
+        "path": "/api/profiles/{{profileId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated"
     },
     "profiles.update": {
       "kind": "action",
@@ -308,7 +340,30 @@
           }
         }
       },
-      "sideEffect": "write"
+      "sideEffect": "write",
+      "request": {
+        "method": "PATCH",
+        "path": "/api/profiles/{{profileId}}",
+        "success": [
+          200
+        ],
+        "body": {
+          "data": {
+            "type": "profile",
+            "id": "{{profileId}}",
+            "attributes": {
+              "email": "{{email}}",
+              "first_name": "{{firstName}}",
+              "last_name": "{{lastName}}",
+              "phone_number": "{{phone}}",
+              "properties": "{{properties}}"
+            }
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated"
     },
     "lists.create": {
       "kind": "action",
@@ -366,7 +421,26 @@
           }
         }
       },
-      "sideEffect": "write"
+      "sideEffect": "write",
+      "request": {
+        "method": "POST",
+        "path": "/api/lists",
+        "success": [
+          201,
+          200
+        ],
+        "body": {
+          "data": {
+            "type": "list",
+            "attributes": {
+              "name": "{{name}}"
+            }
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated"
     },
     "lists.get": {
       "kind": "action",
@@ -424,7 +498,17 @@
           }
         }
       },
-      "sideEffect": "read"
+      "sideEffect": "read",
+      "request": {
+        "method": "GET",
+        "path": "/api/lists/{{listId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated"
     },
     "profiles.addToList": {
       "kind": "action",
@@ -661,7 +745,17 @@
           }
         }
       },
-      "sideEffect": "read"
+      "sideEffect": "read",
+      "request": {
+        "method": "GET",
+        "path": "/api/segments/{{segmentId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated"
     },
     "campaigns.create": {
       "kind": "action",
@@ -755,7 +849,53 @@
           }
         }
       },
-      "sideEffect": "write"
+      "sideEffect": "write",
+      "request": {
+        "method": "POST",
+        "path": "/api/campaigns",
+        "success": [
+          201,
+          200
+        ],
+        "body": {
+          "data": {
+            "type": "campaign",
+            "attributes": {
+              "name": "{{name}}",
+              "audiences": {
+                "included": [
+                  "{{listId}}"
+                ]
+              },
+              "send_strategy": {
+                "method": "static",
+                "datetime": "{{sendTime}}"
+              },
+              "campaign-messages": {
+                "data": [
+                  {
+                    "type": "campaign-message",
+                    "attributes": {
+                      "definition": {
+                        "channel": "{{channel}}",
+                        "content": {
+                          "subject": "{{subject}}",
+                          "from_email": "{{fromEmail}}",
+                          "from_label": "{{fromLabel}}",
+                          "body": "{{body}}"
+                        }
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated"
     },
     "healthcheck": {
       "kind": "action",
@@ -854,7 +994,22 @@
           }
         }
       },
-      "sideEffect": "read"
+      "sideEffect": "read",
+      "request": {
+        "method": "GET",
+        "path": "/api/events/{{eventId}}",
+        "success": [
+          200
+        ],
+        "query": {
+          "include": "metric,profile",
+          "fields[metric]": "name",
+          "fields[profile]": "email"
+        }
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated"
     },
     "events.list": {
       "kind": "action",
@@ -884,7 +1039,22 @@
           }
         }
       },
-      "sideEffect": "read"
+      "sideEffect": "read",
+      "request": {
+        "method": "GET",
+        "path": "/api/events",
+        "success": [
+          200
+        ],
+        "query": {
+          "include": "metric,profile",
+          "fields[metric]": "name",
+          "fields[profile]": "email"
+        }
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated"
     },
     "campaigns.get": {
       "kind": "action",
@@ -922,7 +1092,21 @@
           }
         }
       },
-      "sideEffect": "read"
+      "sideEffect": "read",
+      "request": {
+        "method": "GET",
+        "path": "/api/campaigns/{{campaignId}}",
+        "success": [
+          200
+        ],
+        "query": {
+          "include": "campaign-messages",
+          "fields[campaign-message]": "definition.channel"
+        }
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated"
     },
     "campaigns.update": {
       "kind": "action",
@@ -964,7 +1148,26 @@
           }
         }
       },
-      "sideEffect": "write"
+      "sideEffect": "write",
+      "request": {
+        "method": "PATCH",
+        "path": "/api/campaigns/{{campaignId}}",
+        "success": [
+          200
+        ],
+        "body": {
+          "data": {
+            "type": "campaign",
+            "id": "{{campaignId}}",
+            "attributes": {
+              "name": "{{name}}"
+            }
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated"
     },
     "campaigns.send": {
       "kind": "action",
@@ -1032,7 +1235,17 @@
           }
         }
       },
-      "sideEffect": "read"
+      "sideEffect": "read",
+      "request": {
+        "method": "GET",
+        "path": "/api/metrics",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated"
     },
     "metrics.get": {
       "kind": "action",
@@ -1070,7 +1283,17 @@
           }
         }
       },
-      "sideEffect": "read"
+      "sideEffect": "read",
+      "request": {
+        "method": "GET",
+        "path": "/api/metrics/{{metricId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated"
     },
     "catalog.items.list": {
       "kind": "action",
@@ -1100,7 +1323,17 @@
           }
         }
       },
-      "sideEffect": "read"
+      "sideEffect": "read",
+      "request": {
+        "method": "GET",
+        "path": "/api/catalog-items",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated"
     },
     "catalog.items.get": {
       "kind": "action",
@@ -1138,7 +1371,17 @@
           }
         }
       },
-      "sideEffect": "read"
+      "sideEffect": "read",
+      "request": {
+        "method": "GET",
+        "path": "/api/catalog-items/{{itemId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated"
     },
     "segments.list": {
       "kind": "action",
@@ -1168,7 +1411,17 @@
           }
         }
       },
-      "sideEffect": "read"
+      "sideEffect": "read",
+      "request": {
+        "method": "GET",
+        "path": "/api/segments",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated"
     },
     "templates.list": {
       "kind": "action",
@@ -1198,7 +1451,17 @@
           }
         }
       },
-      "sideEffect": "read"
+      "sideEffect": "read",
+      "request": {
+        "method": "GET",
+        "path": "/api/templates",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated"
     },
     "templates.get": {
       "kind": "action",
@@ -1236,7 +1499,17 @@
           }
         }
       },
-      "sideEffect": "read"
+      "sideEffect": "read",
+      "request": {
+        "method": "GET",
+        "path": "/api/templates/{{templateId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated"
     },
     "flows.list": {
       "kind": "action",
@@ -1266,7 +1539,17 @@
           }
         }
       },
-      "sideEffect": "read"
+      "sideEffect": "read",
+      "request": {
+        "method": "GET",
+        "path": "/api/flows",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated"
     },
     "profiles.subscribe": {
       "kind": "action",
@@ -20180,7 +20463,17 @@
       "outputSchema": {
         "type": "object",
         "additionalProperties": true
-      }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/events/{{id}}/relationships/{{relatedResource}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated"
     },
     "segments.relationships.get": {
       "kind": "action",
@@ -20219,7 +20512,39 @@
       "outputSchema": {
         "type": "object",
         "additionalProperties": true
-      }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/segments/{{id}}/relationships/{{relatedResource}}",
+        "success": [
+          200
+        ],
+        "query": {
+          "page[size]": "{{page[size]}}",
+          "page[cursor]": "{{page[cursor]}}"
+        },
+        "parameters": [
+          {
+            "wireName": "page[cursor]",
+            "inputName": "page[cursor]",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "allowReserved": false
+          },
+          {
+            "wireName": "page[size]",
+            "inputName": "page[size]",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "allowReserved": false
+          }
+        ]
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated"
     },
     "tags.relationships.get": {
       "kind": "action",
@@ -20255,7 +20580,17 @@
       "outputSchema": {
         "type": "object",
         "additionalProperties": true
-      }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/tags/{{id}}/relationships/{{relatedResource}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated"
     },
     "profiles.relationships.get": {
       "kind": "action",
@@ -20288,7 +20623,17 @@
       "outputSchema": {
         "type": "object",
         "additionalProperties": true
-      }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/profiles/{{id}}/relationships/{{relatedResource}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated"
     },
     "profiles.unsubscribeBulk": {
       "kind": "action",
@@ -20351,6 +20696,156 @@
         "type": "object",
         "additionalProperties": true
       }
+    },
+    "flows.create": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Create Flow",
+      "description": "Create a Klaviyo flow (automation) from a name and a flow definition. The definition carries the triggers and actions; new actions use a temporary_id rather than an id. Returns the created flow resource.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Name for the new flow."
+          },
+          "definition": {
+            "type": "object",
+            "description": "Encoded flow definition (triggers, actions, entry_action_id, optional reentry_criteria and profile_filter)."
+          }
+        },
+        "required": [
+          "name",
+          "definition"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/api/flows",
+        "success": [
+          201
+        ],
+        "body": {
+          "data": {
+            "type": "flow",
+            "attributes": {
+              "name": "{{name}}",
+              "definition": "{{definition}}"
+            }
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated"
+    },
+    "translations.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "List Translations",
+      "description": "List Klaviyo translations from the beta API. The beta revision header (2026-07-15.pre) is required for this route; each translation resource carries its source locale, target locales, and channel.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "page[cursor]": {
+            "type": "string",
+            "description": "Pagination cursor for the next page of translations."
+          },
+          "page[size]": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Number of translations per page. Default: 20."
+          },
+          "sort": {
+            "type": "string",
+            "enum": [
+              "id",
+              "-id"
+            ],
+            "description": "Sort translations by id, ascending (id) or descending (-id)."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/translations",
+        "headers": {
+          "revision": "2026-07-15.pre"
+        },
+        "query": {
+          "page[cursor]": "{{page[cursor]}}",
+          "page[size]": "{{page[size]}}",
+          "sort": "{{sort}}"
+        },
+        "success": [
+          200
+        ],
+        "parameters": [
+          {
+            "wireName": "page[cursor]",
+            "inputName": "page[cursor]",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "allowReserved": false
+          },
+          {
+            "wireName": "page[size]",
+            "inputName": "page[size]",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "allowReserved": false
+          },
+          {
+            "wireName": "sort",
+            "inputName": "sort",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "allowReserved": false
+          }
+        ]
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated"
     }
   },
   "models": [

@@ -6,8 +6,8 @@ describe("Recruitee manifest", () => {
     expect(manifest.key).toBe("recruitee");
   });
 
-  it("has version 0.3.0", () => {
-    expect(manifest.version).toBe("0.3.0");
+  it("has version 0.4.0", () => {
+    expect(manifest.version).toBe("0.4.0");
   });
 
   it("uses bun runtime", () => {
@@ -30,16 +30,33 @@ describe("Recruitee manifest", () => {
     ]);
   });
 
-  it("declares P0+P1 ops including careers jobs.list", () => {
+  it("declares P0+P1 ops plus the L2 declarative backlog", () => {
     expect(Object.keys(manifest.operations).sort()).toEqual([
+      "candidates.create",
+      "candidates.delete",
       "candidates.get",
       "candidates.list",
+      "candidates.notes.create",
+      "candidates.notes.list",
       "candidates.search",
+      "candidates.update",
+      "company.get",
+      "departments.list",
+      "eeo.job_categories.list",
       "healthcheck",
       "interview_events.list",
+      "invoices.list",
       "jobs.list",
+      "localization_settings.get",
+      "locations.list",
+      "offers.create",
       "offers.list",
+      "offers.public.get",
+      "offers.update",
       "pipeline_stages.list",
+      "share.countries.list",
+      "share.eeo.answers.list",
+      "tags.list",
     ]);
     expect(manifest.operations["jobs.list"].kind).toBe("sync");
     expect(manifest.operations["candidates.list"].kind).toBe("sync");
@@ -48,6 +65,43 @@ describe("Recruitee manifest", () => {
     expect(manifest.operations["interview_events.list"].kind).toBe("sync");
     expect(manifest.operations["offers.list"].kind).toBe("sync");
     expect(manifest.operations["pipeline_stages.list"].kind).toBe("sync");
+    for (const key of [
+      "candidates.create",
+      "candidates.update",
+      "candidates.delete",
+      "candidates.notes.create",
+      "candidates.notes.list",
+      "company.get",
+      "departments.list",
+      "eeo.job_categories.list",
+      "invoices.list",
+      "localization_settings.get",
+      "locations.list",
+      "offers.create",
+      "offers.public.get",
+      "offers.update",
+      "share.countries.list",
+      "share.eeo.answers.list",
+      "tags.list",
+    ]) {
+      const operation = manifest.operations[key as keyof typeof manifest.operations] as {
+        kind?: string;
+        request?: { method?: string; path?: string };
+      };
+      expect(operation.kind).toBe("action");
+      expect(operation.request?.method).toBeTruthy();
+      expect(operation.request?.path).toBeTruthy();
+    }
+  });
+
+  it("declares the ATS API base URL and bearer header", () => {
+    expect(manifest.http.baseUrl).toBe("https://api.recruitee.com/c/{{company}}");
+    expect(manifest.http.auth).toEqual({
+      field: "accessToken",
+      in: "header",
+      name: "Authorization",
+      value: "Bearer {{accessToken}}",
+    });
   });
 
   it("declares job, candidate, offer, pipeline_stage, interview_event models", () => {
