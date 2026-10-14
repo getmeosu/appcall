@@ -17,9 +17,9 @@ const LISTING_WRITES = ["product-listings.update", "product-listings.delete",
   "collection-listings.update", "collection-listings.delete"];
 
 describe("shopify SH-0 correctness", () => {
-  test("version 0.4.2 with 468 ops; Checkout API ops (shut down 2025-04-01) removed", () => {
+  test("version 0.4.2 with 509 ops; Checkout API ops (shut down 2025-04-01) removed", () => {
     expect(manifest.version).toBe("0.4.2");
-    expect(Object.keys(ops)).toHaveLength(468);
+    expect(Object.keys(ops)).toHaveLength(509);
     for (const k of REMOVED) expect(ops[k]).toBeUndefined();
     for (const op of Object.values(ops)) expect(op.request?.path ?? "").not.toMatch(/^\/checkouts\/\{\{/);
   });
@@ -48,7 +48,7 @@ describe("shopify SH-0 correctness", () => {
 
   test("deletes are destructive and carry no effect keys", () => {
     const destructive = Object.entries(ops).filter(([, op]) => op.sideEffect === "destructive").map(([k]) => k);
-    expect(destructive).toHaveLength(52);
+    expect(destructive).toHaveLength(55);
     for (const [k, op] of Object.entries(ops)) {
       if (op.request?.method === "DELETE") expect(`${k}:${op.sideEffect}`).toBe(`${k}:destructive`);
       if (op.sideEffect === "destructive") {
@@ -108,7 +108,7 @@ describe("shopify SH-0 correctness", () => {
 
   test("every fixture case replays and targets a declared op", async () => {
     const cases = loadFixtureCases(new URL("../fixtures/cases", import.meta.url).pathname);
-    expect(cases).toHaveLength(402);
+    expect(cases).toHaveLength(443);
     const runs = await runCandidateFixtures(JSON.stringify(manifest), cases);
     expect(runs.filter((r) => r.status !== "passed").map((r) => `${r.caseId}:${r.error ?? ""}`)).toEqual([]);
     for (const c of cases) expect(ops[c.operation]).toBeDefined();

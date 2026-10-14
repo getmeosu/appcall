@@ -4,7 +4,7 @@ import manifest from "../manifest.json";
 describe("klaviyo manifest", () => {
   it("has correct key and version", () => {
     expect(manifest.key).toBe("klaviyo");
-    expect(manifest.version).toBe("0.4.3");
+    expect(manifest.version).toBe("0.5.0");
     expect(manifest.runtime).toBe("bun");
   });
 
@@ -53,6 +53,9 @@ describe("klaviyo manifest", () => {
     expect(ops).toContain("templates.get");
     expect(ops).toContain("flows.list");
     expect(ops).toContain("profiles.subscribe");
+    // L2 missing_http backlog additions
+    expect(ops).toContain("flows.create");
+    expect(ops).toContain("translations.list");
   });
 
   it("has correct models", () => {

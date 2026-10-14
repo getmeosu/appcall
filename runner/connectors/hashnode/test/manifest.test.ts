@@ -15,8 +15,12 @@ it("has complete declarative contracts", () => {
     }
     expect(op.kind).toBe("action");
     expect((op.inputSchema as { type?: string }).type).toBe("object");
+    const request = op.request as { method?: string; body?: { query?: string } } | undefined;
+    expect(request?.method).toBe("POST");
+    const document = String(request?.body?.query ?? "").trimStart();
+    expect(document.length).toBeGreaterThan(0);
     if (/remove|delete/.test(key)) expect(op.sideEffect).toBe("destructive");
-    else if (/create|update|publish|submit/.test(key)) expect(op.sideEffect).toBe("write");
+    else if (document.startsWith("mutation")) expect(op.sideEffect).toBe("write");
     else expect(op.sideEffect).toBe("read");
   }
 });

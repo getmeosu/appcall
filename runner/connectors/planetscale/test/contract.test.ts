@@ -110,6 +110,58 @@ const batch2Tools: Array<[string, string]> = [
   ["PLANETSCALE_GET_TRAFFIC_BUDGET", "trafficBudgets.get"],
 ];
 
+// L2-17 batch: the next 48 missing_http rows implemented as declarative operations.
+const batch3Tools: Array<[string, string]> = [
+  ["PLANETSCALE_GET_WEBHOOK", "webhooks.get"],
+  ["PLANETSCALE_LINT_BRANCH_SCHEMA", "branchSchemas.lint"],
+  ["PLANETSCALE_LIST_ADMIN_PARAMETERS", "adminParameters.list"],
+  ["PLANETSCALE_LIST_ADMIN_SIZE_SKUS", "adminSizeSkus.list"],
+  ["PLANETSCALE_LIST_AUDIT_LOGS", "auditLogs.list"],
+  ["PLANETSCALE_LIST_BACKUPS", "backups.list"],
+  ["PLANETSCALE_LIST_BACKUP_POLICIES", "backupPolicies.list"],
+  ["PLANETSCALE_LIST_BOUNCERS", "bouncers.list"],
+  ["PLANETSCALE_LIST_BOUNCER_RESIZE_REQUESTS", "bouncerResizeRequests.list"],
+  ["PLANETSCALE_LIST_BRANCH_ANOMALIES", "branchAnomalies.list"],
+  ["PLANETSCALE_LIST_BRANCH_BOUNCER_RESIZE_REQUESTS", "branchBouncerResizeRequests.list"],
+  ["PLANETSCALE_LIST_BRANCH_CHANGE_REQUESTS", "branchChangeRequests.list"],
+  ["PLANETSCALE_LIST_BRANCH_QUERIES", "branchQueries.list"],
+  ["PLANETSCALE_LIST_BRANCH_QUERY_ERRORS", "branchQueryErrors.list"],
+  ["PLANETSCALE_LIST_BRANCH_QUERY_TAGS", "branchQueryTags.list"],
+  ["PLANETSCALE_LIST_BRANCH_QUERY_TAG_SUMMARIES", "branchQueryTagSummaries.list"],
+  ["PLANETSCALE_LIST_BRANCH_RESIZE_REQUESTS", "branchResizeRequests.list"],
+  ["PLANETSCALE_LIST_CLUSTER_SIZE_SKUS", "clusterSizeSkus.list"],
+  ["PLANETSCALE_LIST_DATABASE_POSTGRES_CIDRS", "databaseCidrs.list"],
+  ["PLANETSCALE_LIST_DATABASE_REGIONS", "databaseRegions.list"],
+  ["PLANETSCALE_LIST_DEPLOY_OPERATIONS", "deployOperations.list"],
+  ["PLANETSCALE_LIST_DEPLOY_REQUESTS", "deployRequests.list"],
+  ["PLANETSCALE_LIST_DEPLOY_REQUEST_REVIEWS", "deployRequestReviews.list"],
+  ["PLANETSCALE_LIST_EXTENSIONS", "extensions.list"],
+  ["PLANETSCALE_LIST_GENERATED_QUERY_PATTERNS_REPORTS", "queryPatternsReports.list"],
+  ["PLANETSCALE_LIST_INSIGHTS_AGENT_RUNS", "insightsAgentRuns.list"],
+  ["PLANETSCALE_LIST_INSIGHTS_AGENT_SCHEDULES", "insightsAgentSchedules.list"],
+  ["PLANETSCALE_LIST_INVOICES", "invoices.list"],
+  ["PLANETSCALE_LIST_MAINTENANCE_SCHEDULES", "maintenanceSchedules.list"],
+  ["PLANETSCALE_LIST_MAINTENANCE_WINDOWS", "maintenanceWindows.list"],
+  ["PLANETSCALE_LIST_NEKI_CHANGE_REQUESTS", "nekiChangeRequests.list"],
+  ["PLANETSCALE_LIST_ORGANIZATION_MEMBERS", "organizationMembers.list"],
+  ["PLANETSCALE_LIST_ORGANIZATION_SSO_DOMAINS", "ssoDomains.list"],
+  ["PLANETSCALE_LIST_ORGANIZATION_TEAMS", "teams.list"],
+  ["PLANETSCALE_LIST_ORGANIZATION_TEAM_MEMBERS", "teamMembers.list"],
+  ["PLANETSCALE_LIST_PARAMETERS", "parameters.list"],
+  ["PLANETSCALE_LIST_PASSWORDS", "passwords.list"],
+  ["PLANETSCALE_LIST_POSTGRES_VERSIONS", "postgresVersions.list"],
+  ["PLANETSCALE_LIST_READ_ONLY_REGIONS", "readOnlyRegions.list"],
+  ["PLANETSCALE_LIST_READ_ONLY_REPLICAS", "dedicatedReadReplicas.list"],
+  ["PLANETSCALE_LIST_READ_ONLY_REPLICA_CHANGE_REQUESTS", "dedicatedReadReplicaChangeRequests.list"],
+  ["PLANETSCALE_LIST_REGIONS_FOR_ORGANIZATION", "regions.list"],
+  ["PLANETSCALE_LIST_ROLES", "roles.list"],
+  ["PLANETSCALE_LIST_ROUTERS", "routers.list"],
+  ["PLANETSCALE_LIST_ROUTER_PARAMETERS", "routerParameters.list"],
+  ["PLANETSCALE_LIST_ROUTER_SIZE_SKUS", "routerSizeSkus.list"],
+  ["PLANETSCALE_LIST_SCHEMA_RECOMMENDATIONS", "schemaRecommendations.list"],
+  ["PLANETSCALE_LIST_SHARDS", "shards.list"],
+];
+
 describe("PlanetScale contract", () => {
   test("coverage artifact accounts for all 245 tools exactly once", () => {
     const tools = [...coverage.mapped, ...coverage.missing_http, ...coverage.missing_still].map((row) => row.tool);
@@ -133,6 +185,17 @@ describe("PlanetScale contract", () => {
   test("the 48 batch-2 tools are mapped to compiled declarative actions", () => {
     const mapped = new Map(coverage.mapped.map((row) => [row.tool, row.operation]));
     for (const [tool, operation] of batch2Tools) {
+      expect(mapped.get(tool), tool).toBe(operation);
+      const definition = operations[operation];
+      expect(definition?.request?.method, tool).toBe("GET");
+      expect(typeof definition?.request?.path, tool).toBe("string");
+      expect(typeof actions[operation], tool).toBe("function");
+    }
+  });
+
+  test("the 48 batch-3 tools are mapped to compiled declarative actions", () => {
+    const mapped = new Map(coverage.mapped.map((row) => [row.tool, row.operation]));
+    for (const [tool, operation] of batch3Tools) {
       expect(mapped.get(tool), tool).toBe(operation);
       const definition = operations[operation];
       expect(definition?.request?.method, tool).toBe("GET");
