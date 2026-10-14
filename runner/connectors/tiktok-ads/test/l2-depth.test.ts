@@ -4,6 +4,7 @@
 import { describe, expect, it } from "bun:test";
 import { loadFixtureCases, runCandidateFixtures } from "../../../../scripts/connector-gen/openconnector/recipe-fixtures";
 import { compileDeclarativeConnector } from "../../../bun/src/declarative/compile";
+import { defaultConnectorRegistry } from "../../../bun/src/registry";
 import coverage from "../../tiktok-ads.coverage.json";
 import manifest from "../manifest.json";
 
@@ -128,10 +129,9 @@ describe("tiktok-ads L2 depth batch", () => {
     expect(JSON.parse(String(sent?.body))).toEqual({ task_id: "task-1" });
   });
 
-  it("posts the catalog product-set CSV as multipart form data", async () => {
-    const { uploadCatalogProductSet } = await import("../src/uploads.ts");
+  it("posts the catalog product-set CSV as multipart form data through the default registry", async () => {
     const calls: Array<{ url: string; init: RequestInit }> = [];
-    const result = await uploadCatalogProductSet({
+    const result = defaultConnectorRegistry.executeAction("tiktok-ads", "catalogs.product_sets.upload", {
       accessToken: "fixture-access-token",
       bc_id: "bc-1",
       catalog_id: "cat-1",
@@ -146,20 +146,108 @@ describe("tiktok-ads L2 depth batch", () => {
           headers: { "content-type": "application/json" },
         });
       },
-    }) as { data: { product_set_id: string } };
+    });
 
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const output = await result.output;
     expect(calls).toHaveLength(1);
     const url = new URL(calls[0]!.url);
     expect(url.pathname).toBe("/open_api/v1.3/catalog/set/upload/");
     expect(calls[0]!.init.method).toBe("POST");
     expect(new Headers(calls[0]!.init.headers).get("Access-Token")).toBe("fixture-access-token");
-    const form = calls[0]!.init.body as FormData;
+    expect(new Headers(calls[0]!.init.headers).get("Content-Type")).toBeNull();
+    const form = calls[0]!.init.body;
     expect(form).toBeInstanceOf(FormData);
+    if (!(form instanceof FormData)) return;
     expect(form.get("bc_id")).toBe("bc-1");
     expect(form.get("catalog_id")).toBe("cat-1");
     expect(form.get("product_set_name")).toBe("Summer Set");
     expect(form.get("file_signature")).toBe("d41d8cd98f00b204e9800998ecf8427e");
-    expect(form.get("file")).toBeInstanceOf(Blob);
-    expect(result.data.product_set_id).toBe("set-1");
+    expect(form.has("accessToken")).toBe(false);
+    expect(form.has("fileBase64")).toBe(false);
+    expect(form.has("fileName")).toBe(false);
+    const file = form.get("file");
+    expect(file).toBeInstanceOf(File);
+    if (!(file instanceof File)) return;
+    expect(file.name).toBe("summer-set.csv");
+    expect(Buffer.from(await file.arrayBuffer()).toString("utf8")).toBe("product_set_id,condition\nset-1,ALL");
+    expect(output).toMatchObject({
+      connector: "tiktok-ads",
+      action: "catalogs.product_sets.upload",
+      source: "connector",
+      data: { product_set_id: "set-1" },
+    });
+  });
+
+  it("maps TikTok catalog permission failures with the operation's required scopes", async () => {
+    let dispatches = 0;
+    const result = defaultConnectorRegistry.executeAction("tiktok-ads", "catalogs.product_sets.upload", {
+      accessToken: "fixture-access-token",
+      bc_id: "bc-1",
+      catalog_id: "cat-1",
+      product_set_name: "Summer Set",
+      file_signature: "d41d8cd98f00b204e9800998ecf8427e",
+      fetch: async () => {
+        dispatches += 1;
+        return Response.json({ code: 40001, message: "Permission denied" }, { status: 200 });
+      },
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    await expect(result.output).rejects.toMatchObject({
+      code: "CONNECTOR_CAPABILITY_MISSING",
+      reason: "permission_missing",
+      missingScopes: ["DPA Catalog Management"],
+      requiredScopes: ["DPA Catalog Management"],
+      reconsentRequired: true,
+    });
+    expect(dispatches).toBe(1);
+  });
+
+  it("rejects missing upload credentials before dispatch through the default registry", async () => {
+    let dispatches = 0;
+    const result = defaultConnectorRegistry.executeAction("tiktok-ads", "catalogs.product_sets.upload", {
+      bc_id: "bc-1",
+      catalog_id: "cat-1",
+      product_set_name: "Summer Set",
+      file_signature: "d41d8cd98f00b204e9800998ecf8427e",
+      fetch: async () => {
+        dispatches += 1;
+        return Response.json({ code: 0, data: { product_set_id: "set-1" } });
+      },
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    await expect(result.output).rejects.toMatchObject({
+      code: "INVALID_ACTION_INPUT",
+      message: "accessToken is required",
+    });
+    expect(dispatches).toBe(0);
+  });
+
+  it("rejects invalid upload input before dispatch through the default registry", () => {
+    let dispatches = 0;
+    const result = defaultConnectorRegistry.executeAction("tiktok-ads", "catalogs.product_sets.upload", {
+      accessToken: "fixture-access-token",
+      bc_id: "bc-1",
+      catalog_id: "cat-1",
+      product_set_name: "Summer Set",
+      file_signature: "d41d8cd98f00b204e9800998ecf8427e",
+      unexpected: true,
+      fetch: async () => {
+        dispatches += 1;
+        return Response.json({ code: 0, data: { product_set_id: "set-1" } });
+      },
+    });
+
+    expect(result).toMatchObject({
+      ok: false,
+      code: "INVALID_ACTION_INPUT",
+      message: "tiktok-ads.catalogs.product_sets.upload: Unsupported input field: unexpected",
+    });
+    expect(dispatches).toBe(0);
   });
 });
