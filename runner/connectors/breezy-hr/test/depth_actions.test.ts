@@ -8,11 +8,11 @@ const response = (body: unknown, status = 200, headers: Record<string, string> =
   new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json", ...headers } });
 
 describe("breezy-hr depth", () => {
-  test("keeps the connector key and bumps to 0.2.0 with 16 HTTP actions", () => {
+  test("keeps the connector key and bumps to 0.3.0 with 46 HTTP actions", () => {
     expect(manifest.key).toBe("breezy-hr");
-    expect(manifest.version).toBe("0.2.0");
+    expect(manifest.version).toBe("0.3.0");
     const ops = Object.entries(manifest.operations);
-    expect(ops.filter(([, spec]) => spec.kind === "action")).toHaveLength(16);
+    expect(ops.filter(([, spec]) => spec.kind === "action")).toHaveLength(46);
     expect(ops.filter(([, spec]) => spec.kind === "webhook")).toEqual([]);
     expect(ops.every(([, spec]) => spec.kind === "webhook" || Boolean(spec.request))).toBe(true);
     expect(actions["webhook.candidate_added"]).toBeUndefined();
@@ -89,5 +89,63 @@ describe("breezy-hr depth", () => {
         fetch: async () => response({ message: "slow" }, 429, { "retry-after": "17" }),
       }),
     ).rejects.toMatchObject({ code: "CONNECTOR_RATE_LIMITED", retryAfterSeconds: 17 });
+  });
+
+  test("uploads candidate documents as raw octet-stream bodies", async () => {
+    let seen: Request | undefined;
+    const result = await actions["candidates.documents.create"]!({
+      ...cred,
+      companyId: "c1",
+      positionId: "p1",
+      candidateId: "cand1",
+      content: "Ada Lovelace resume",
+      fetch: async (url: string, init?: RequestInit) => {
+        seen = new Request(url, init);
+        return response({ _id: "doc1", file_name: "resume.txt" });
+      },
+    });
+    expect(seen?.url).toBe("https://api.breezy.hr/v3/company/c1/position/p1/candidate/cand1/documents");
+    expect(seen?.method).toBe("POST");
+    expect(seen?.headers.get("content-type")).toBe("application/octet-stream");
+    expect(await seen!.clone().text()).toBe("Ada Lovelace resume");
+    expect(result).toMatchObject({ data: { _id: "doc1" } });
+  });
+
+  test("creates webhook endpoints with the documented events body", async () => {
+    let seen: Request | undefined;
+    const result = await actions["webhooks.create"]!({
+      ...cred,
+      companyId: "c1",
+      url: "https://example.com/hooks/breezy",
+      events: ["candidateAdded", "candidateStatusUpdated"],
+      description: "Recruiting updates",
+      fetch: async (url: string, init?: RequestInit) => {
+        seen = new Request(url, init);
+        return response({ id: "wh1", secret: "whsec_demo" }, 201);
+      },
+    });
+    expect(seen?.method).toBe("POST");
+    expect(await seen!.clone().json()).toEqual({
+      url: "https://example.com/hooks/breezy",
+      events: ["candidateAdded", "candidateStatusUpdated"],
+      description: "Recruiting updates",
+    });
+    expect(result).toMatchObject({ data: { id: "wh1" } });
+  });
+
+  test("lists candidate stream activity with the skip cursor", async () => {
+    let seen: Request | undefined;
+    await actions["candidates.stream.list"]!({
+      ...cred,
+      companyId: "c1",
+      positionId: "p1",
+      candidateId: "cand1",
+      skip: 20,
+      fetch: async (url: string, init?: RequestInit) => {
+        seen = new Request(url, init);
+        return response([]);
+      },
+    });
+    expect(seen?.url).toContain("/company/c1/position/p1/candidate/cand1/stream?skip=20");
   });
 });

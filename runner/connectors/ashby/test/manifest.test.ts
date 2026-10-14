@@ -49,27 +49,39 @@ describe("Ashby manifest", () => {
       "applications.reject",
       "applications.transfer",
       "applications.update",
+      "applications.update_history",
+      "approvals.list",
       "archive_reasons.list",
+      "brands.list",
       "candidate_tags.create",
       "candidate_tags.list",
       "candidates.add_project",
       "candidates.add_tag",
+      "candidates.anonymize",
       "candidates.create",
       "candidates.create_note",
       "candidates.get",
       "candidates.list",
+      "candidates.list_client_info",
       "candidates.list_notes",
       "candidates.list_projects",
       "candidates.search",
       "candidates.update",
       "close_reasons.list",
       "communication_templates.list",
+      "custom_fields.create",
       "custom_fields.get",
       "custom_fields.list",
       "custom_fields.set_value",
       "custom_fields.set_values",
+      "custom_fields.update_selectable_values",
+      "departments.archive",
+      "departments.create",
       "departments.get",
       "departments.list",
+      "departments.move",
+      "departments.restore",
+      "departments.update",
       "feedback_form_definitions.get",
       "feedback_form_definitions.list",
       "files.get",
@@ -83,10 +95,19 @@ describe("Ashby manifest", () => {
       "interview_stage_groups.list",
       "interview_stages.get",
       "interview_stages.list",
+      "interviewer_pools.add_user",
+      "interviewer_pools.archive",
+      "interviewer_pools.create",
+      "interviewer_pools.get",
+      "interviewer_pools.list",
+      "interviewer_pools.remove_user",
+      "interviewer_pools.restore",
+      "interviewer_pools.update",
       "interviews.cancel",
       "interviews.get",
       "interviews.list",
       "interviews.schedule",
+      "job_boards.list",
       "job_interview_plans.get",
       "job_postings.get",
       "job_postings.list",
@@ -99,9 +120,19 @@ describe("Ashby manifest", () => {
       "jobs.search",
       "jobs.set_status",
       "jobs.update",
+      "jobs.update_compensation",
+      "locations.archive",
+      "locations.create",
       "locations.get",
       "locations.list",
+      "locations.move",
+      "locations.restore",
+      "locations.update_address",
+      "locations.update_external_name",
+      "locations.update_name",
+      "locations.update_workplace_type",
       "offer_processes.start",
+      "offers.approve",
       "offers.create",
       "offers.get",
       "offers.list",
@@ -121,10 +152,18 @@ describe("Ashby manifest", () => {
       "projects.search",
       "referral_forms.get",
       "referrals.create",
+      "source_tracking_links.list",
       "sources.list",
+      "survey_form_definitions.get",
+      "survey_form_definitions.list",
+      "survey_requests.create",
+      "survey_submissions.create",
+      "survey_submissions.list",
       "users.get",
+      "users.get_interviewer_settings",
       "users.list",
       "users.search",
+      "users.update_interviewer_settings",
       "webhook.application_submitted",
       "webhook.candidate_updated",
       "webhook.interview_scheduled",
@@ -203,8 +242,8 @@ describe("Ashby manifest", () => {
     expect(update.reconcile).toBe("candidates.get");
   });
 
-  it("declares 94 operations (G5 +4) and no interview_schedules.get (Ashby-0 cite-drop)", () => {
-    expect(Object.keys(manifest.operations)).toHaveLength(94);
+  it("declares 133 operations (L2 +39) and no interview_schedules.get (Ashby-0 cite-drop)", () => {
+    expect(Object.keys(manifest.operations)).toHaveLength(133);
     expect(manifest.operations["interview_schedules.get"]).toBeUndefined();
   });
 
@@ -421,7 +460,7 @@ describe("Ashby G4 effect keys", () => {
     for (const [id, op] of Object.entries(manifest.operations as Record<string, any>)) {
       expect(op.effectPolicy === "Idempotent").toBe(false);
     }
-    expect(Object.keys(manifest.operations)).toHaveLength(94);
+    expect(Object.keys(manifest.operations)).toHaveLength(133);
   });
 
   it("jobs.list description cites documented board path without /jobs", () => {
