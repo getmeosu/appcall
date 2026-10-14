@@ -1,3 +1,5 @@
+import { tiktokFailure } from "./runtime";
+
 type UploadInput = Record<string, unknown>;
 
 const SKIPPED_INPUTS = new Set([
@@ -48,6 +50,7 @@ export function createTikTokMultipartUpload(action: string, path: string, fileFi
     } catch {
       parsed = text;
     }
+    if (!response.ok) throw tiktokFailure(action, response.status, parsed);
     if (isRecord(parsed) && "code" in parsed && parsed.code !== 0) {
       throw {
         ok: false,

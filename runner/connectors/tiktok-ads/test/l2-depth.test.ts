@@ -37,6 +37,32 @@ const reclassified: Array<[string, string[]]> = [
   ["TIKTOK_ADS_UPLOAD_FILE_CHUNKED", ["https://business-api.tiktok.com/portal/docs?id=1737721229896705", "https://docs.composio.dev/toolkits/tiktok_ads.md"]],
 ];
 
+async function dispatchCatalogUploadFailure(response: Response) {
+  let dispatches = 0;
+  const result = defaultConnectorRegistry.executeAction("tiktok-ads", "catalogs.product_sets.upload", {
+    accessToken: "fixture-access-token",
+    bc_id: "bc-1",
+    catalog_id: "cat-1",
+    product_set_name: "Summer Set",
+    file_signature: "d41d8cd98f00b204e9800998ecf8427e",
+    fileBase64: Buffer.from("product_set_id,condition\nset-1,ALL").toString("base64"),
+    fileName: "summer-set.csv",
+    fetch: async () => {
+      dispatches += 1;
+      return response;
+    },
+  });
+
+  if (!result.ok) return { error: result, dispatches };
+  let error: unknown;
+  try {
+    await result.output;
+  } catch (caught) {
+    error = caught;
+  }
+  return { error, dispatches };
+}
+
 describe("tiktok-ads L2 depth batch", () => {
   it("accounts for all 403 tools exactly once with no missing_http", () => {
     const tools = [...coverage.mapped, ...coverage.missing_http, ...coverage.missing_still].map((row) => row.tool);
@@ -178,6 +204,83 @@ describe("tiktok-ads L2 depth batch", () => {
       source: "connector",
       data: { product_set_id: "set-1" },
     });
+  });
+
+  it("maps status-only HTTP 403 to a scope-aware capability error", async () => {
+    const { error, dispatches } = await dispatchCatalogUploadFailure(
+      Response.json({ message: "Forbidden" }, { status: 403 }),
+    );
+
+    expect(error).toMatchObject({
+      code: "CONNECTOR_CAPABILITY_MISSING",
+      reason: "permission_missing",
+      missingScopes: ["DPA Catalog Management"],
+      requiredScopes: ["DPA Catalog Management"],
+      reconsentRequired: true,
+    });
+    expect(JSON.stringify(error)).not.toContain("fixture-access-token");
+    expect(error).not.toHaveProperty("data");
+    expect(dispatches).toBe(1);
+  });
+
+  it("maps status-only HTTP 429 to a rate-limit error with retry guidance", async () => {
+    const { error, dispatches } = await dispatchCatalogUploadFailure(
+      Response.json({ message: "Too many requests" }, { status: 429 }),
+    );
+
+    expect(error).toMatchObject({
+      code: "CONNECTOR_RATE_LIMITED",
+      retryAfterSeconds: 30,
+    });
+    expect(JSON.stringify(error)).not.toContain("fixture-access-token");
+    expect(error).not.toHaveProperty("data");
+    expect(dispatches).toBe(1);
+  });
+
+  it("maps status-only HTTP 503 to an upstream error", async () => {
+    const { error, dispatches } = await dispatchCatalogUploadFailure(
+      Response.json({ message: "Service unavailable" }, { status: 503 }),
+    );
+
+    expect(error).toMatchObject({
+      code: "CONNECTOR_UPSTREAM_ERROR",
+      message: "Service unavailable",
+    });
+    expect(JSON.stringify(error)).not.toContain("fixture-access-token");
+    expect(error).not.toHaveProperty("data");
+    expect(dispatches).toBe(1);
+  });
+
+  it("does not echo a non-JSON HTTP error body", async () => {
+    const body = "private upstream diagnostic fixture-access-token";
+    const { error, dispatches } = await dispatchCatalogUploadFailure(
+      new Response(body, { status: 503 }),
+    );
+
+    expect(error).toMatchObject({
+      code: "CONNECTOR_UPSTREAM_ERROR",
+      message: "TikTok Ads rejected the catalogs.product_sets.upload request.",
+    });
+    expect(JSON.stringify(error)).not.toContain(body);
+    expect(JSON.stringify(error)).not.toContain("fixture-access-token");
+    expect(error).not.toHaveProperty("data");
+    expect(dispatches).toBe(1);
+  });
+
+  it("rejects HTTP errors even when the response envelope has code zero", async () => {
+    const body = JSON.stringify({
+      code: 0,
+      message: "OK",
+      data: { product_set_id: "must-not-be-returned" },
+    });
+    const { error, dispatches } = await dispatchCatalogUploadFailure(
+      new Response(body, { status: 503, headers: { "content-type": "application/json" } }),
+    );
+
+    expect(error).toMatchObject({ code: "CONNECTOR_UPSTREAM_ERROR" });
+    expect(JSON.stringify(error)).not.toContain("must-not-be-returned");
+    expect(error).not.toHaveProperty("data");
+    expect(dispatches).toBe(1);
   });
 
   it("maps TikTok catalog permission failures with the operation's required scopes", async () => {
