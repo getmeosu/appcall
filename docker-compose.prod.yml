@@ -8,9 +8,16 @@
 #   make docker-prep                  # validate the locked Rust build
 #   cp .env.production.example .env.production   # then fill in real values
 #   docker compose -f docker-compose.prod.yml --env-file .env.production up -d --build --wait
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   db:
     image: postgres:16-alpine@sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685
+    logging: *default-logging
     environment:
       POSTGRES_DB: appcall
       POSTGRES_USER: appcall
@@ -26,6 +33,7 @@ services:
     networks: [internal]
 
   runner:
+    logging: *default-logging
     build:
       context: .
       dockerfile: Dockerfile.runner
@@ -43,6 +51,7 @@ services:
     networks: [internal]
 
   api:
+    logging: *default-logging
     build:
       context: .
       dockerfile: Dockerfile.api
@@ -73,6 +82,7 @@ services:
     networks: [internal]
 
   worker:
+    logging: *default-logging
     build:
       context: .
       dockerfile: Dockerfile.api
