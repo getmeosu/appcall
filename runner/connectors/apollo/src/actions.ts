@@ -176,11 +176,10 @@ export function searchPeople(input: unknown): Record<string, unknown> | Promise<
     }).search(input).then((result) => {
       if (!result.ok) throwIfError(result);
       return {
-        connector: "apollo",
-        action: "people.search",
-        source: "connector",
-        people: result.people,
-        pagination: result.pagination,
+        data: {
+          people: result.people,
+          pagination: result.pagination,
+        },
         ...("total_entries" in result ? { total_entries: result.total_entries } : {}),
       };
     });
