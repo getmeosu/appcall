@@ -1,4 +1,5 @@
 import { createApolloClient, parseApolloRateLimit, isRecord } from "./http";
+import { markOperationMetadata } from "../../../bun/src/operation-metadata";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -175,14 +176,14 @@ export function searchPeople(input: unknown): Record<string, unknown> | Promise<
       fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
     }).search(input).then((result) => {
       if (!result.ok) throwIfError(result);
-      return {
-        connector: "apollo",
-        action: "people.search",
-        source: "connector",
-        people: result.people,
-        pagination: result.pagination,
+      return markOperationMetadata({
+        data: {
+          people: result.people,
+          pagination: result.pagination,
+        },
+        source: "provider",
         ...("total_entries" in result ? { total_entries: result.total_entries } : {}),
-      };
+      }, ["source"]);
     });
   }
   return { connector: "apollo", action: "people.search", source: "connector", validated: validatePeopleSearchInput(input) };

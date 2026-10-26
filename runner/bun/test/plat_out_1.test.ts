@@ -10,6 +10,8 @@ import { markOperationMetadata, splitOperationMetadata } from "../src/operation-
 // ride on the result envelope.
 const manifest = JSON.parse(readFileSync(join(import.meta.dir, "../../connectors/ambient-weather/manifest.json"), "utf8"));
 const healthcheckSchema = manifest.operations.healthcheck.outputSchema;
+const apolloManifest = JSON.parse(readFileSync(join(import.meta.dir, "../../connectors/apollo/manifest.json"), "utf8"));
+const apolloPeopleSearchSchema = apolloManifest.operations["people.search"].outputSchema;
 
 let original: typeof fetch;
 let providerCalls: string[] = [];
@@ -57,6 +59,49 @@ describe("PLAT-OUT-1 action path", () => {
     });
     const legacy = { ...body.result.output, connector: "ambient-weather", action: "healthcheck", source: "provider" };
     expect(() => assertOutputSchema(legacy, healthcheckSchema)).toThrow("Unexpected property");
+  });
+
+  test("registered Apollo people.search matches its closed manifest output and keeps metadata on the envelope", async () => {
+    const providerResponse = {
+      people: [{ id: "person-1", name: "Ada Lovelace" }],
+      pagination: { page: 1, per_page: 25, total_entries: 1, next_page_token: "next-page" },
+      total_entries: 1,
+    };
+    const providerRequests: Request[] = [];
+    globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+      const request = new Request(input, init);
+      providerRequests.push(request);
+      return Response.json(providerResponse);
+    }) as typeof fetch;
+
+    const { status, body } = await rpc("connector.action.execute", {
+      connectorKey: "apollo",
+      action: "people.search",
+      input: { q_keywords: "Ada", apiKey: "synthetic-apollo-key" },
+    });
+
+    expect(status).toBe(200);
+    expect(providerRequests).toHaveLength(1);
+    expect(providerRequests[0].method).toBe("POST");
+    expect(new URL(providerRequests[0].url).pathname).toBe("/api/v1/mixed_people/api_search");
+    expect(await providerRequests[0].json()).toEqual({ q_keywords: "Ada" });
+    expect(body.result.output).toEqual({
+      data: {
+        people: providerResponse.people,
+        pagination: {
+          ...providerResponse.pagination,
+          total_pages: 1,
+        },
+      },
+      total_entries: 1,
+    });
+    expect(body.result.output).not.toHaveProperty("connector");
+    expect(body.result.output).not.toHaveProperty("action");
+    expect(body.result.output).not.toHaveProperty("source");
+    expect(body.result.connector).toBe("apollo");
+    expect(body.result.action).toBe("people.search");
+    expect(body.result.source).toBe("provider");
+    expect(() => assertOutputSchema(body.result.output, apolloPeopleSearchSchema)).not.toThrow();
   });
 });
 
